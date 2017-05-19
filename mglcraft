@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Set working directory
+cd /opt/mglcraft
+
+# Execute the game
+bin/game
