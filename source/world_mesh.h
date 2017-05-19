@@ -111,6 +111,21 @@ class world_mesh
                 uv += 0.5;
             }
         }
+        else if (atlas_id == 2)
+        {
+            for (auto &uv : box_mesh.uv)
+            {
+                uv *= 0.5;
+            }
+        }
+        else if (atlas_id == 3)
+        {
+            for (auto &uv : box_mesh.uv)
+            {
+                uv *= 0.5;
+                uv.x(uv.x() + 0.5);
+            }
+        }
 
         return box_mesh;
     }

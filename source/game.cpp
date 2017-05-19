@@ -71,12 +71,20 @@ class mglcraft
         auto &keyboard = _win.get_keyboard();
         keyboard.add(min::window::key_code::KEY1);
         keyboard.add(min::window::key_code::KEY2);
+        keyboard.add(min::window::key_code::KEY3);
+        keyboard.add(min::window::key_code::KEY4);
 
         // Register callback function KEY1 for switching texture to 'grass'
         keyboard.register_keydown(min::window::key_code::KEY1, mglcraft::switch_grass, (void *)&_world);
 
         // Register callback function KEY2 for switching texture to 'stone'
         keyboard.register_keydown(min::window::key_code::KEY2, mglcraft::switch_stone, (void *)&_world);
+
+        // Register callback function KEY2 for switching texture to 'sand'
+        keyboard.register_keydown(min::window::key_code::KEY3, mglcraft::switch_sand, (void *)&_world);
+
+        // Register callback function KEY2 for switching texture to 'wood'
+        keyboard.register_keydown(min::window::key_code::KEY4, mglcraft::switch_wood, (void *)&_world);
 
         // Register click callback function for placing path
         _win.register_data((void *)this);
@@ -103,6 +111,26 @@ class mglcraft
             // Cast to world_mesh pointer type and set atlas id to '1'
             game::world_mesh *world = reinterpret_cast<game::world_mesh *>(ptr);
             world->set_atlas_id(1);
+        }
+    }
+    static void switch_sand(void *ptr, double step)
+    {
+        // Call back function for switching texture to sand
+        if (ptr)
+        {
+            // Cast to world_mesh pointer type and set atlas id to '2'
+            game::world_mesh *world = reinterpret_cast<game::world_mesh *>(ptr);
+            world->set_atlas_id(2);
+        }
+    }
+    static void switch_wood(void *ptr, double step)
+    {
+        // Call back function for switching texture to wood
+        if (ptr)
+        {
+            // Cast to world_mesh pointer type and set atlas id to '3'
+            game::world_mesh *world = reinterpret_cast<game::world_mesh *>(ptr);
+            world->set_atlas_id(3);
         }
     }
     static void place_block(void *ptr, const uint16_t x, const uint16_t y)
@@ -155,7 +183,7 @@ class mglcraft
         // Load light into uniform buffer
         min::vec4<float> light_color(1.0, 1.0, 1.0, 1.0);
         min::vec4<float> light_position(0.0, 100.0, 0.0, 1.0);
-        min::vec4<float> light_alpha(0.0, 0.0, 0.0, 1.0);
+        min::vec4<float> light_alpha(0.5, 1.0, 0.0, 1.0);
         _light_id = _ubuffer.add_light(min::light<float>(light_color, light_position, light_alpha));
 
         // Load projection and view matrix into uniform buffer
@@ -179,8 +207,7 @@ class mglcraft
         // Change light alpha for terrain
         min::vec4<float> light_color(1.0, 1.0, 1.0, 1.0);
         min::vec4<float> light_position(0.0, 100.0, 0.0, 1.0);
-        min::vec4<float> light_alpha(0.0, 0.0, 0.0, 1.0);
-        _ubuffer.set_light(min::light<float>(light_color, light_position, min::vec4<float>(0.3, 1.5, 0.0, 1.0)), _light_id);
+        _ubuffer.set_light(min::light<float>(light_color, light_position, min::vec4<float>(0.5, 1.0, 0.0, 1.0)), _light_id);
 
         // Update matrix uniforms
         _ubuffer.set_matrix(_cam.get_pv_matrix(), _proj_view_id);
@@ -195,7 +222,7 @@ class mglcraft
         _world.draw_terrain();
 
         // Change light alpha for placemark
-        _ubuffer.set_light(min::light<float>(light_color, light_position, min::vec4<float>(0.3, 1.5, 0.0, 0.5)), _light_id);
+        _ubuffer.set_light(min::light<float>(light_color, light_position, min::vec4<float>(0.5, 1.0, 0.0, 0.5)), _light_id);
         _ubuffer.update_lights();
 
         // Draw the placemark
