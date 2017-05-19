@@ -29,16 +29,18 @@ LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_P
 TEST_SOURCES = -Itest
 
 # Default run target
-default: build tests
-
-build:
+build: tests
 	g++ $(LIB_SOURCES) $(NATIVE) $(GAME) $(LINKER) 2> "gcc.txt"
-build32:
+build32: tests32
 	g++ $(LIB_SOURCES) $(BUILD32) $(GAME) $(LINKER) 2> "gcc.txt"
-build64:
+build64: tests64
 	g++ $(LIB_SOURCES) $(BUILD64) $(GAME) $(LINKER) 2> "gcc.txt"
 tests:	
 	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(NATIVE) $(TEST) $(LINKER) 2> "gcc.txt"
+tests32:	
+	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD32) $(TEST) $(LINKER) 2> "gcc.txt"
+tests64:	
+	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD64) $(TEST) $(LINKER) 2> "gcc.txt"
 
 # clean targets
 clean:
