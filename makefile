@@ -47,4 +47,3 @@ clean:
 	rm -f gcc.txt
 	rm -f bin/game
 	rm -f bin/tests
-	rm -f bin/ex1

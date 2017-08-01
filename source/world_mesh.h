@@ -48,30 +48,65 @@ class world_mesh
     min::program _terrain_program;
     min::uniform_buffer<float> _preview;
     min::uniform_buffer<float> _geom;
-    min::vertex_buffer<float, uint32_t, min::static_vertex, GL_FLOAT, GL_UNSIGNED_INT> _buffer;
+    min::vertex_buffer<float, uint32_t, min::static_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
+    min::vertex_buffer<float, uint32_t, min::static_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     min::texture_buffer _tbuffer;
     GLuint _bmp_id;
-
-    // Geometry stuff
-    std::vector<min::aabbox<float, min::vec3>> _boxes;
-    std::vector<size_t> _atlas;
     min::bmp _bmp;
-    uint8_t _atlas_id;
 
+    // User stuff
+    int8_t _atlas_id;
+    min::vec3<unsigned> _scale;
+
+    // Grid stuff
+    uint32_t _gsize;
+    uint32_t _gsize3;
+    std::vector<int8_t> _grid;
+    min::aabbox<float, min::vec3> _root;
+
+    // Adds the preview shape to the grid
+    void add_geometry(const min::vec3<float> &center, const min::vec3<unsigned> &scale, const size_t atlas_id)
+    {
+        // Store start point
+        min::vec3<float> p = center;
+
+        // x axis
+        for (size_t i = 0; i < scale.x(); i++)
+        {
+            // y axis
+            p.y(center.y());
+            for (size_t j = 0; j < scale.y(); j++)
+            {
+                // z axis
+                p.z(center.z());
+                for (size_t k = 0; k < scale.z(); k++)
+                {
+                    uint32_t key = grid_key(p);
+                    _grid[key] = atlas_id;
+                    p.z(p.z() + 1.0);
+                }
+                p.y(p.y() + 1.0);
+            }
+            p.x(p.x() + 1.0);
+        }
+    }
     void draw_placemark() const
     {
+        // Bind VAO
+        _pb.bind();
+
         // Draw placemarker
-        _buffer.draw(GL_TRIANGLES, 0);
+        _pb.draw_all(GL_TRIANGLES);
     }
     void draw_terrain() const
     {
+        // Bind VAO
+        _gb.bind();
+
         // Draw graph-mesh
-        if (_boxes.size() > 0)
-        {
-            _buffer.draw_all_after(GL_TRIANGLES, 0);
-        }
+        _gb.draw_all(GL_TRIANGLES);
     }
-    static min::mesh<float, uint32_t> create_box_mesh(const min::aabbox<float, min::vec3> &box, const uint8_t atlas_id)
+    static min::mesh<float, uint32_t> create_box_mesh(const min::aabbox<float, min::vec3> &box, const int8_t atlas_id)
     {
         min::mesh<float, uint32_t> box_mesh = min::to_mesh<float, uint32_t>(box);
         if (atlas_id == 0)
@@ -117,12 +152,105 @@ class world_mesh
         // return the box
         return min::aabbox<float, min::vec3>(min, max);
     }
-    void generate_block(const min::aabbox<float, min::vec3> &box, const size_t atlas_id)
+    // Generate all geometry in grid and adds it to geometry buffer
+    void generate_gb()
     {
-        const min::mesh<float, uint32_t> box_mesh = create_box_mesh(box, atlas_id);
+        // Reset the buffer
+        _gb.clear();
 
-        // upload meshes
-        _buffer.add_mesh(box_mesh);
+        // For all grid cells generate block
+        const size_t size = _grid.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            const int8_t atlas = _grid[i];
+            if (atlas != -1)
+            {
+                // Get center from grid position
+                min::vec3<float> p = grid_center(i);
+                const min::aabbox<float, min::vec3> box = create_box(p);
+                const min::mesh<float, uint32_t> box_mesh = create_box_mesh(box, atlas);
+                _gb.add_mesh(box_mesh);
+            }
+        }
+
+        // Bind the gb VAO
+        _gb.bind();
+
+        // Upload contents to the vertex buffer
+        _gb.upload();
+    }
+    // Generates the preview geometry and adds it to preview buffer
+    void generate_pb()
+    {
+        // Reset the buffer
+        _pb.clear();
+
+        // Store start point => (0,0,0)
+        min::vec3<float> p;
+
+        // x axis
+        for (size_t i = 0; i < _scale.x(); i++)
+        {
+            // y axis
+            p.y(0.0);
+            for (size_t j = 0; j < _scale.y(); j++)
+            {
+                // z axis
+                p.z(0.0);
+                for (size_t k = 0; k < _scale.z(); k++)
+                {
+                    const min::aabbox<float, min::vec3> box = create_box(p);
+                    const min::mesh<float, uint32_t> box_mesh = create_box_mesh(box, _atlas_id);
+                    _pb.add_mesh(box_mesh);
+                    p.z(p.z() + 1.0);
+                }
+                p.y(p.y() + 1.0);
+            }
+            p.x(p.x() + 1.0);
+        }
+
+        //Bind the pb VAO
+        _pb.bind();
+
+        // Upload contents to the vertex buffer
+        _pb.upload();
+    }
+    inline min::vec3<float> grid_center(const uint32_t index) const
+    {
+        if (index >= _gsize3)
+        {
+            throw std::runtime_error("world_mesh: index is not inside the world cell");
+        }
+
+        // Precalculate the square scale
+        const uint32_t scale2 = _gsize * _gsize;
+
+        // Calculate row, col and height
+        const uint32_t row = index / scale2;
+        const uint32_t col = (index - row * scale2) / _gsize;
+        const uint32_t hei = index - row * scale2 - col * _gsize;
+
+        // Calculate the center point of the box cell
+        const float x = row + _root.get_min().x() + 0.5;
+        const float y = col + _root.get_min().y() + 0.5;
+        const float z = hei + _root.get_min().z() + 0.5;
+
+        return min::vec3<float>(x, y, z);
+    }
+    inline uint32_t grid_key(const min::vec3<float> &point) const
+    {
+        if (!_root.point_inside(point))
+        {
+            throw std::runtime_error("world_mesh: point is not inside the world cell");
+        }
+
+        // Calculate grid index
+        const uint32_t row = (point.x() - _root.get_min().x());
+        const uint32_t col = (point.y() - _root.get_min().y());
+        const uint32_t hei = (point.z() - _root.get_min().z());
+
+        // Compute the grid index from point
+        return row * _gsize * _gsize + col * _gsize + hei;
     }
     void load_uniform()
     {
@@ -157,7 +285,7 @@ class world_mesh
     void update_uniform(min::camera<float> &cam)
     {
         // Calculate new placemark point and snap to grid
-        const min::vec3<float> translate = cam.project_point(4.0);
+        const min::vec3<float> translate = snap(cam.project_point(6.0));
 
         // Update geom matrix uniforms
         _geom.set_matrix(cam.get_pv_matrix(), 0);
@@ -180,7 +308,10 @@ class world_mesh
           _preview(1, 3),
           _geom(1, 3),
           _bmp(texture_file),
-          _atlas_id(0)
+          _atlas_id(0),
+          _scale(1, 1, 1),
+          _gsize(2.0 * size), _gsize3(_gsize * _gsize * _gsize), _grid(_gsize3, -1),
+          _root(min::vec3<float>(-(float)size, -(float)size, -(float)size), min::vec3<float>(size, size, size))
     {
         // Load texture buffer
         _bmp_id = _tbuffer.add_bmp_texture(_bmp);
@@ -188,26 +319,24 @@ class world_mesh
         // Load uniform buffers
         load_uniform();
 
-        // Generate the buffer
-        generate();
+        // Generate the preview buffer
+        generate_pb();
     }
 
     void add_block(const min::vec3<float> &center)
     {
-        // Add box to queue
-        const min::aabbox<float, min::vec3> box = create_box(center);
-        _boxes.push_back(box);
+        const min::vec3<float> snapped = snap(center);
 
-        // Record current atlas
-        _atlas.push_back(_atlas_id);
+        // Add to grid
+        add_geometry(snapped, _scale, _atlas_id);
+
+        // generate new mesh
+        generate_gb();
     }
     void draw(min::camera<float> &cam)
     {
         // Bind this texture for drawing
         _tbuffer.bind(_bmp_id, 0);
-
-        // Bind VAO
-        _buffer.bind();
 
         // update camera matrices
         update_uniform(cam);
@@ -227,32 +356,57 @@ class world_mesh
         // Draw the placemark
         draw_placemark();
     }
-    void generate()
-    {
-        // Reset the buffer
-        _buffer.clear();
-
-        // Create the placemark
-        min::aabbox<float, min::vec3> box = create_box(min::vec3<float>());
-        generate_block(box, _atlas_id);
-
-        // Generate all boxes
-        const size_t size = _boxes.size();
-        for (size_t i = 0; i < size; i++)
-        {
-            const min::aabbox<float, min::vec3> &b = _boxes[i];
-            generate_block(b, _atlas[i]);
-        }
-
-        // Upload contents to the vertex buffer
-        _buffer.upload();
-    }
-    void set_atlas_id(const uint8_t id)
+    void set_atlas_id(const int8_t id)
     {
         _atlas_id = id;
 
-        // Regenerate the mesh
-        generate();
+        // Regenerate the preview mesh
+        generate_pb();
+    }
+    void set_scale_x(unsigned dx)
+    {
+        if (_scale.x() < 5)
+        {
+            _scale.x(_scale.x() + dx);
+
+            // Regenerate the preview mesh
+            generate_pb();
+        }
+    }
+    void set_scale_y(unsigned dy)
+    {
+        if (_scale.y() < 5)
+        {
+            _scale.y(_scale.y() + dy);
+
+            // Regenerate the preview mesh
+            generate_pb();
+        }
+    }
+    void set_scale_z(unsigned dz)
+    {
+        if (_scale.z() < 5)
+        {
+            _scale.z(_scale.z() + dz);
+
+            // Regenerate the preview mesh
+            generate_pb();
+        }
+    }
+    void reset_scale()
+    {
+        _scale = min::vec3<unsigned>(1, 1, 1);
+
+        // Regenerate the preview mesh
+        generate_pb();
+    }
+    inline min::vec3<float> snap(const min::vec3<float> &point)
+    {
+        const float x = point.x();
+        const float y = point.y();
+        const float z = point.z();
+
+        return min::vec3<float>(std::floor(x) + 0.5, std::floor(y) + 0.5, std::floor(z) + 0.5);
     }
 };
 }

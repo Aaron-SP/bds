@@ -37,9 +37,6 @@ bool test_world_mesh()
     world.add_block(min::vec3<float>(1.0, 1.0, 1.0));
     world.add_block(min::vec3<float>(2.0, 2.0, 2.0));
 
-    // Generate the mesh
-    world.generate();
-
     // return status
     return out;
 }

@@ -48,7 +48,8 @@ class controls
 
         // Register click callback function for placing path
         _window->register_data((void *)this);
-        _window->register_click(controls::place_block);
+        _window->register_lclick(controls::place_block);
+        _window->register_rclick(controls::reset);
 
         // Add FPS(WADS) keys to watch
         keyboard.add(min::window::key_code::KEYQ);
@@ -56,6 +57,9 @@ class controls
         keyboard.add(min::window::key_code::KEYS);
         keyboard.add(min::window::key_code::KEYA);
         keyboard.add(min::window::key_code::KEYD);
+        keyboard.add(min::window::key_code::KEYZ);
+        keyboard.add(min::window::key_code::KEYX);
+        keyboard.add(min::window::key_code::KEYC);
         keyboard.add(min::window::key_code::KEY1);
         keyboard.add(min::window::key_code::KEY2);
         keyboard.add(min::window::key_code::KEY3);
@@ -79,6 +83,15 @@ class controls
         // Register callback function S
         keyboard.register_keydown(min::window::key_code::KEYS, controls::back, (void *)_camera);
         keyboard.set_per_frame(min::window::key_code::KEYS, true);
+
+        // Register callback function Z
+        keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
+
+        // Register callback function X
+        keyboard.register_keydown(min::window::key_code::KEYX, controls::add_y, (void *)_world);
+
+        // Register callback function C
+        keyboard.register_keydown(min::window::key_code::KEYC, controls::add_z, (void *)_world);
 
         // Register callback function KEY1 for switching texture to 'grass'
         keyboard.register_keydown(min::window::key_code::KEY1, controls::switch_grass, (void *)_world);
@@ -169,6 +182,30 @@ class controls
         game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
         world->set_atlas_id(3);
     }
+    static void add_x(void *ptr, double step)
+    {
+        // Cast to world_mesh pointer type
+        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+
+        // Increase x scale
+        world->set_scale_x(1);
+    }
+    static void add_y(void *ptr, double step)
+    {
+        // Cast to world_mesh pointer type
+        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+
+        // Increase x scale
+        world->set_scale_y(1);
+    }
+    static void add_z(void *ptr, double step)
+    {
+        // Cast to world_mesh pointer type
+        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+
+        // Increase x scale
+        world->set_scale_z(1);
+    }
     static void place_block(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to camera pointer type and move camera
@@ -179,13 +216,21 @@ class controls
         game::world_mesh *const world = control->get_world();
 
         // Calculate new point to add
-        const min::vec3<float> point = camera->project_point(4.0);
+        const min::vec3<float> point = camera->project_point(6.0);
 
         // Add block to world
         world->add_block(point);
+    }
+    static void reset(void *ptr, const uint16_t x, const uint16_t y)
+    {
+        // Cast to camera pointer type and move camera
+        controls *control = reinterpret_cast<controls *>(ptr);
 
-        // Generate a new mesh
-        world->generate();
+        // Get the world pointer
+        game::world_mesh *const world = control->get_world();
+
+        // Reset scale
+        world->reset_scale();
     }
 };
 }

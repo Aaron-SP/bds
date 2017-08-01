@@ -48,6 +48,9 @@ class mglcraft
         // Create camera, set location and look at
         _cam.set_position(pos);
         _cam.set_look_at(look);
+        auto &f = _cam.get_frustum();
+        f.set_far(1000.0);
+        f.set_fov(90.0);
         _cam.set_perspective();
     }
 
