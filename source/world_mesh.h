@@ -235,7 +235,7 @@ class world_mesh
             if (atlas != -1)
             {
                 // Get center from grid position
-                min::vec3<float> p = grid_center(i);
+                const min::vec3<float> p = grid_center(i);
                 const min::aabbox<float, min::vec3> box = create_box(p);
 
                 // Create mesh from box
@@ -436,6 +436,34 @@ class world_mesh
         // generate new mesh
         generate_gb();
     }
+    void character_jump(const min::vec3<float> &vel)
+    {
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // If not jumping or falling, allow jump
+        if (std::abs(body.get_linear_velocity().y()) < 1.0)
+        {
+            // Update the position
+            body.add_force(vel * 4000.0 * body.get_mass());
+        }
+    }
+    void character_move(const min::vec3<float> &vel)
+    {
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Get the current position and set y movement to zero
+        const min::vec3<float> dxz = min::vec3<float>(vel.x(), 0.0, vel.z()).normalize();
+
+        // Update the position
+        body.add_force(dxz * 1E2 * body.get_mass());
+    }
+    const min::vec3<float> &character_position() const
+    {
+        const min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Return the character position
+        return body.get_position();
+    }
     void draw(min::camera<float> &cam, const float dt)
     {
         // Get the player physics object
@@ -447,14 +475,14 @@ class world_mesh
             // Get player position
             const min::vec3<float> &p = body.get_position();
 
-            std::vector<min::aabbox<float, min::vec3>> col_blocks = create_collision_cells(p);
+            const std::vector<min::aabbox<float, min::vec3>> col_blocks = create_collision_cells(p);
 
             // Add friction force
-            min::vec3<float> v = body.get_linear_velocity();
-            v.y(0.0);
+            const min::vec3<float> &vel = body.get_linear_velocity();
+            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
 
             // Add friction force opposing lateral motion
-            body.add_force(v * body.get_mass() * -2.0);
+            body.add_force(xz * body.get_mass() * -2.0);
 
             _simulation.solve_static(col_blocks, _char_id, dt / 10.0, 10.0);
         }
@@ -479,31 +507,6 @@ class world_mesh
 
         // Draw the placemark
         draw_placemark();
-    }
-    void character_jump(const min::vec3<float> &vel)
-    {
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Update the position
-        body.add_force(vel * 1E4 * body.get_mass());
-    }
-    void character_move(const min::vec3<float> &vel)
-    {
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Get the current position and set y movement to zero
-        min::vec3<float> dxz = vel;
-        dxz.y(0.0);
-
-        // Update the position
-        body.add_force(dxz * 1E2 * body.get_mass());
-    }
-    const min::vec3<float> &character_position() const
-    {
-        const min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Return the character position
-        return body.get_position();
     }
     void set_atlas_id(const int8_t id)
     {
