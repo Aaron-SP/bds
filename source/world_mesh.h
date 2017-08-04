@@ -24,10 +24,12 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/bmp.h>
 #include <min/camera.h>
 #include <min/convert.h>
+#include <min/physics.h>
 #include <min/program.h>
 #include <min/shader.h>
 #include <min/static_vertex.h>
 #include <min/texture_buffer.h>
+#include <min/tree.h>
 #include <min/uniform_buffer.h>
 #include <min/vec2.h>
 #include <min/vec3.h>
@@ -62,49 +64,55 @@ class world_mesh
     uint32_t _gsize;
     uint32_t _gsize3;
     std::vector<int8_t> _grid;
-    min::aabbox<float, min::vec3> _root;
+    min::aabbox<float, min::vec3> _world;
+
+    // Physics stuff
+    min::vec3<float> _gravity;
+    min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::tree> _simulation;
+    size_t _char_id;
+    size_t _block_count;
 
     // Adds the preview shape to the grid
     void add_geometry(const min::vec3<float> &center, const min::vec3<unsigned> &scale, const size_t atlas_id)
     {
-        // Store start point
-        min::vec3<float> p = center;
+        // Snap center to grid and generate grid cells
+        const min::vec3<float> snapped = snap(center);
+        min::vec3<float> p = snapped;
 
         // x axis
         for (size_t i = 0; i < scale.x(); i++)
         {
             // y axis
-            p.y(center.y());
+            p.y(snapped.y());
             for (size_t j = 0; j < scale.y(); j++)
             {
                 // z axis
-                p.z(center.z());
+                p.z(snapped.z());
                 for (size_t k = 0; k < scale.z(); k++)
                 {
-                    uint32_t key = grid_key(p);
+                    // Calculate grid key index
+                    const uint32_t key = grid_key(p);
+
+                    // Check if this is a new box to add to simulation
+                    if (_grid[key] == -1)
+                    {
+                        _block_count++;
+                    }
+
+                    // Set grid atlas
                     _grid[key] = atlas_id;
+
+                    // Increment z axis
                     p.z(p.z() + 1.0);
                 }
+
+                // Increment y axis
                 p.y(p.y() + 1.0);
             }
+
+            // Increment x axis
             p.x(p.x() + 1.0);
         }
-    }
-    void draw_placemark() const
-    {
-        // Bind VAO
-        _pb.bind();
-
-        // Draw placemarker
-        _pb.draw_all(GL_TRIANGLES);
-    }
-    void draw_terrain() const
-    {
-        // Bind VAO
-        _gb.bind();
-
-        // Draw graph-mesh
-        _gb.draw_all(GL_TRIANGLES);
     }
     static min::mesh<float, uint32_t> create_box_mesh(const min::aabbox<float, min::vec3> &box, const int8_t atlas_id)
     {
@@ -146,11 +154,72 @@ class world_mesh
     min::aabbox<float, min::vec3> create_box(const min::vec3<float> &center) const
     {
         // Create box at center
-        const min::vec3<float> min = min::vec3<float>(-0.5, -0.5, -0.5) + center;
-        const min::vec3<float> max = min::vec3<float>(0.5, 0.5, 0.5) + center;
+        const min::vec3<float> min = center - min::vec3<float>(0.5, 0.5, 0.5);
+        const min::vec3<float> max = center + min::vec3<float>(0.5, 0.5, 0.5);
 
         // return the box
         return min::aabbox<float, min::vec3>(min, max);
+    }
+    std::vector<min::aabbox<float, min::vec3>> create_collision_cells(const min::vec3<float> &center) const
+    {
+        // Surrounding cells
+        std::vector<min::aabbox<float, min::vec3>> out;
+        out.reserve(36);
+
+        // Snap center to grid and generate grid cells
+        const min::vec3<float> snapped = snap(center);
+        min::vec3<float> p = snapped - min::vec3<float>(1.0, 1.5, 1.0);
+
+        // x axis
+        for (size_t i = 0; i < 3; i++)
+        {
+            // y axis
+            p.y(snapped.y() - 1.5);
+            for (size_t j = 0; j < 4; j++)
+            {
+                // z axis
+                p.z(snapped.z() - 1.0);
+                for (size_t k = 0; k < 3; k++)
+                {
+                    // Calculate grid key index
+                    const uint32_t key = grid_key(p);
+
+                    // Check if this is a new box to add to simulation
+                    if (_grid[key] != -1)
+                    {
+                        // Create box at this point
+                        out.push_back(create_box(p));
+                    }
+
+                    // Increment z axis
+                    p.z(p.z() + 1.0);
+                }
+
+                // Increment y axis
+                p.y(p.y() + 1.0);
+            }
+
+            // Increment x axis
+            p.x(p.x() + 1.0);
+        }
+
+        return out;
+    }
+    void draw_placemark() const
+    {
+        // Bind VAO
+        _pb.bind();
+
+        // Draw placemarker
+        _pb.draw_all(GL_TRIANGLES);
+    }
+    void draw_terrain() const
+    {
+        // Bind VAO
+        _gb.bind();
+
+        // Draw graph-mesh
+        _gb.draw_all(GL_TRIANGLES);
     }
     // Generate all geometry in grid and adds it to geometry buffer
     void generate_gb()
@@ -168,7 +237,11 @@ class world_mesh
                 // Get center from grid position
                 min::vec3<float> p = grid_center(i);
                 const min::aabbox<float, min::vec3> box = create_box(p);
+
+                // Create mesh from box
                 const min::mesh<float, uint32_t> box_mesh = create_box_mesh(box, atlas);
+
+                // Add mesh to geometry buffer for drawing
                 _gb.add_mesh(box_mesh);
             }
         }
@@ -231,26 +304,39 @@ class world_mesh
         const uint32_t hei = index - row * scale2 - col * _gsize;
 
         // Calculate the center point of the box cell
-        const float x = row + _root.get_min().x() + 0.5;
-        const float y = col + _root.get_min().y() + 0.5;
-        const float z = hei + _root.get_min().z() + 0.5;
+        const float x = row + _world.get_min().x() + 0.5;
+        const float y = col + _world.get_min().y() + 0.5;
+        const float z = hei + _world.get_min().z() + 0.5;
 
         return min::vec3<float>(x, y, z);
     }
     inline uint32_t grid_key(const min::vec3<float> &point) const
     {
-        if (!_root.point_inside(point))
+        if (!_world.point_inside(point))
         {
             throw std::runtime_error("world_mesh: point is not inside the world cell");
         }
 
         // Calculate grid index
-        const uint32_t row = (point.x() - _root.get_min().x());
-        const uint32_t col = (point.y() - _root.get_min().y());
-        const uint32_t hei = (point.z() - _root.get_min().z());
+        const uint32_t col = (point.x() - _world.get_min().x());
+        const uint32_t row = (point.y() - _world.get_min().y());
+        const uint32_t zin = (point.z() - _world.get_min().z());
 
         // Compute the grid index from point
-        return row * _gsize * _gsize + col * _gsize + hei;
+        return col * _gsize * _gsize + row * _gsize + zin;
+    }
+    void load_character(const min::vec3<float> &p)
+    {
+        // Create a box for camera movement and add to simulation
+        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
+        const min::aabbox<float, min::vec3> box(p - half_extent, p + half_extent);
+        _char_id = _simulation.add_body(box, 10.0, 1);
+
+        // Get the physics body for editing
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Set this body to be unrotatable
+        body.set_no_rotate();
     }
     void load_uniform()
     {
@@ -285,7 +371,11 @@ class world_mesh
     void update_uniform(min::camera<float> &cam)
     {
         // Calculate new placemark point and snap to grid
-        const min::vec3<float> translate = snap(cam.project_point(6.0));
+        const min::vec3<float> translate = snap(cam.project_point(3.0));
+
+        // Set camera at the character position
+        const min::vec3<float> &p = character_position();
+        cam.set_position(p + min::vec3<float>(0.0, 1.0, 0.0));
 
         // Update geom matrix uniforms
         _geom.set_matrix(cam.get_pv_matrix(), 0);
@@ -309,9 +399,12 @@ class world_mesh
           _geom(1, 3),
           _bmp(texture_file),
           _atlas_id(0),
-          _scale(1, 1, 1),
+          _scale(2, 1, 2),
           _gsize(2.0 * size), _gsize3(_gsize * _gsize * _gsize), _grid(_gsize3, -1),
-          _root(min::vec3<float>(-(float)size, -(float)size, -(float)size), min::vec3<float>(size, size, size))
+          _world(min::vec3<float>(-(float)size, -(float)size, -(float)size), min::vec3<float>(size, size, size)),
+          _gravity(0.0, -10.0, 0.0),
+          _simulation(_world, _gravity),
+          _block_count(0)
     {
         // Load texture buffer
         _bmp_id = _tbuffer.add_bmp_texture(_bmp);
@@ -319,22 +412,53 @@ class world_mesh
         // Load uniform buffers
         load_uniform();
 
+        // Add starting blocks to simulation
+        add_block(min::vec3<float>(-1.0, 0.0, -1.0));
+
+        // Reset scale
+        _scale = min::vec3<unsigned>(1, 1, 1);
+
         // Generate the preview buffer
         generate_pb();
+
+        // Set the collision elasticity of the physics simulation
+        _simulation.set_elasticity(0.1);
+
+        // Reload the character
+        load_character(min::vec3<float>(0.0, 2.0, 0.0));
     }
 
     void add_block(const min::vec3<float> &center)
     {
-        const min::vec3<float> snapped = snap(center);
-
         // Add to grid
-        add_geometry(snapped, _scale, _atlas_id);
+        add_geometry(center, _scale, _atlas_id);
 
         // generate new mesh
         generate_gb();
     }
-    void draw(min::camera<float> &cam)
+    void draw(min::camera<float> &cam, const float dt)
     {
+        // Get the player physics object
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Solve the physics simulation
+        for (int i = 0; i < 10; i++)
+        {
+            // Get player position
+            const min::vec3<float> &p = body.get_position();
+
+            std::vector<min::aabbox<float, min::vec3>> col_blocks = create_collision_cells(p);
+
+            // Add friction force
+            min::vec3<float> v = body.get_linear_velocity();
+            v.y(0.0);
+
+            // Add friction force opposing lateral motion
+            body.add_force(v * body.get_mass() * -2.0);
+
+            _simulation.solve_static(col_blocks, _char_id, dt / 10.0, 10.0);
+        }
+
         // Bind this texture for drawing
         _tbuffer.bind(_bmp_id, 0);
 
@@ -355,6 +479,31 @@ class world_mesh
 
         // Draw the placemark
         draw_placemark();
+    }
+    void character_jump(const min::vec3<float> &vel)
+    {
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Update the position
+        body.add_force(vel * 1E4 * body.get_mass());
+    }
+    void character_move(const min::vec3<float> &vel)
+    {
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Get the current position and set y movement to zero
+        min::vec3<float> dxz = vel;
+        dxz.y(0.0);
+
+        // Update the position
+        body.add_force(dxz * 1E2 * body.get_mass());
+    }
+    const min::vec3<float> &character_position() const
+    {
+        const min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Return the character position
+        return body.get_position();
     }
     void set_atlas_id(const int8_t id)
     {
@@ -400,7 +549,7 @@ class world_mesh
         // Regenerate the preview mesh
         generate_pb();
     }
-    inline min::vec3<float> snap(const min::vec3<float> &point)
+    inline min::vec3<float> snap(const min::vec3<float> &point) const
     {
         const float x = point.x();
         const float y = point.y();

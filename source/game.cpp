@@ -74,10 +74,10 @@ class mglcraft
         glClearBufferfv(GL_COLOR, 0, color);
         glClear(GL_DEPTH_BUFFER_BIT);
     }
-    void draw()
+    void draw(const float dt)
     {
         // Draw world geometry
-        _world.draw(_cam);
+        _world.draw(_cam, dt);
     }
     bool is_closed() const
     {
@@ -139,7 +139,7 @@ void run()
     // Setup controller to run at 60 frames per second
     const int frames = 60;
     min::loop_sync sync(frames);
-    double step = 0;
+    double frame_time = 0.0;
 
     // User can close with Q or use window manager
     while (!game.is_closed())
@@ -153,16 +153,16 @@ void run()
             game.clear_background();
 
             // Update the camera movement
-            game.update_camera(step);
+            game.update_camera(frame_time);
 
             // Draw the model
-            game.draw();
+            game.draw(frame_time);
 
             // Update the window after draw command
             game.update_window();
 
             // Calculate needed delay to hit target
-            step = sync.sync();
+            frame_time = sync.sync();
         }
 
         // Calculate the number of 'average' frames per second

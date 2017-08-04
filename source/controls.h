@@ -57,6 +57,7 @@ class controls
         keyboard.add(min::window::key_code::KEYS);
         keyboard.add(min::window::key_code::KEYA);
         keyboard.add(min::window::key_code::KEYD);
+        keyboard.add(min::window::key_code::SPACE);
         keyboard.add(min::window::key_code::KEYZ);
         keyboard.add(min::window::key_code::KEYX);
         keyboard.add(min::window::key_code::KEYC);
@@ -69,20 +70,23 @@ class controls
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::close_window, (void *)_window);
 
         // Register callback function W
-        keyboard.register_keydown(min::window::key_code::KEYW, controls::forward, (void *)_camera);
+        keyboard.register_keydown(min::window::key_code::KEYW, controls::forward, (void *)this);
         keyboard.set_per_frame(min::window::key_code::KEYW, true);
 
         // Register callback function A
-        keyboard.register_keydown(min::window::key_code::KEYA, controls::left, (void *)_camera);
+        keyboard.register_keydown(min::window::key_code::KEYA, controls::left, (void *)this);
         keyboard.set_per_frame(min::window::key_code::KEYA, true);
 
         // Register callback function D
-        keyboard.register_keydown(min::window::key_code::KEYD, controls::right, (void *)_camera);
+        keyboard.register_keydown(min::window::key_code::KEYD, controls::right, (void *)this);
         keyboard.set_per_frame(min::window::key_code::KEYD, true);
 
         // Register callback function S
-        keyboard.register_keydown(min::window::key_code::KEYS, controls::back, (void *)_camera);
+        keyboard.register_keydown(min::window::key_code::KEYS, controls::back, (void *)this);
         keyboard.set_per_frame(min::window::key_code::KEYS, true);
+
+        // Register callback function SPACE
+        keyboard.register_keyup(min::window::key_code::SPACE, controls::jump, (void *)this);
 
         // Register callback function Z
         keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
@@ -126,37 +130,67 @@ class controls
         // Alert that we received the call back
         std::cout << "controls: Shutdown called by user" << std::endl;
     }
+    static void stop(void *ptr, double step)
+    {
+        // Cast to camera pointer type and move camera
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world pointers
+        game::world_mesh *const world = control->get_world();
+        world->character_move(min::vec3<float>());
+    }
     static void forward(void *ptr, double step)
     {
         // Cast to camera pointer type and move camera
-        min::camera<float> *const cam = reinterpret_cast<min::camera<float> *>(ptr);
-        const min::vec3<float> &direction = cam->get_forward();
-        const min::vec3<float> &position = cam->get_position();
-        cam->set_position(position + direction * step * 4.0);
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the camera and world pointers
+        min::camera<float> *const camera = control->get_camera();
+        game::world_mesh *const world = control->get_world();
+        const min::vec3<float> &direction = camera->get_forward();
+        world->character_move(direction);
     }
     static void left(void *ptr, double step)
     {
         // Cast to camera pointer type and move camera
-        min::camera<float> *const cam = reinterpret_cast<min::camera<float> *>(ptr);
-        const min::vec3<float> &right = cam->get_frustum().get_right();
-        const min::vec3<float> &position = cam->get_position();
-        cam->set_position(position - right * step * 4.0);
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the camera and world pointers
+        min::camera<float> *const camera = control->get_camera();
+        game::world_mesh *const world = control->get_world();
+        const min::vec3<float> &right = camera->get_frustum().get_right();
+        world->character_move(right * -1.0);
     }
     static void right(void *ptr, double step)
     {
         // Cast to camera pointer type and move camera
-        min::camera<float> *const cam = reinterpret_cast<min::camera<float> *>(ptr);
-        const min::vec3<float> &right = cam->get_frustum().get_right();
-        const min::vec3<float> &position = cam->get_position();
-        cam->set_position(position + right * step * 4.0);
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the camera and world pointers
+        min::camera<float> *const camera = control->get_camera();
+        game::world_mesh *const world = control->get_world();
+        const min::vec3<float> &right = camera->get_frustum().get_right();
+        world->character_move(right);
     }
     static void back(void *ptr, double step)
     {
         // Cast to camera pointer type and move camera
-        min::camera<float> *const cam = reinterpret_cast<min::camera<float> *>(ptr);
-        const min::vec3<float> direction = cam->get_forward();
-        const min::vec3<float> &position = cam->get_position();
-        cam->set_position(position - direction * step * 4.0);
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the camera and world pointers
+        min::camera<float> *const camera = control->get_camera();
+        game::world_mesh *const world = control->get_world();
+        const min::vec3<float> &direction = camera->get_forward();
+        world->character_move(direction * -1.0);
+    }
+    static void jump(void *ptr, double step)
+    {
+        // Cast to camera pointer type and move camera
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world pointer
+        game::world_mesh *const world = control->get_world();
+        world->character_jump(min::vec3<float>(0.0, 1.0, 0.0));
     }
     static void switch_grass(void *ptr, double step)
     {
@@ -216,7 +250,7 @@ class controls
         game::world_mesh *const world = control->get_world();
 
         // Calculate new point to add
-        const min::vec3<float> point = camera->project_point(6.0);
+        const min::vec3<float> point = camera->project_point(3.0);
 
         // Add block to world
         world->add_block(point);
