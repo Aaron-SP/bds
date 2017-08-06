@@ -20,6 +20,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <iostream>
 #include <min/camera.h>
+#include <min/ray.h>
 #include <min/window.h>
 #include <stdexcept>
 #include <world_mesh.h>
@@ -49,7 +50,7 @@ class controls
         // Register click callback function for placing path
         _window->register_data((void *)this);
         _window->register_lclick(controls::place_block);
-        _window->register_rclick(controls::reset);
+        _window->register_rclick(controls::remove_block);
 
         // Add FPS(WADS) keys to watch
         keyboard.add(min::window::key_code::KEYQ);
@@ -57,6 +58,7 @@ class controls
         keyboard.add(min::window::key_code::KEYS);
         keyboard.add(min::window::key_code::KEYA);
         keyboard.add(min::window::key_code::KEYD);
+        keyboard.add(min::window::key_code::KEYE);
         keyboard.add(min::window::key_code::SPACE);
         keyboard.add(min::window::key_code::KEYZ);
         keyboard.add(min::window::key_code::KEYX);
@@ -80,6 +82,9 @@ class controls
         // Register callback function D
         keyboard.register_keydown(min::window::key_code::KEYD, controls::right, (void *)this);
         keyboard.set_per_frame(min::window::key_code::KEYD, true);
+
+        // Register callback function E
+        keyboard.register_keydown(min::window::key_code::KEYE, controls::reset, (void *)this);
 
         // Register callback function S
         keyboard.register_keydown(min::window::key_code::KEYS, controls::back, (void *)this);
@@ -240,6 +245,17 @@ class controls
         // Increase x scale
         world->set_scale_z(1);
     }
+    static void reset(void *ptr, double step)
+    {
+        // Cast to camera pointer type and move camera
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world pointer
+        game::world_mesh *const world = control->get_world();
+
+        // Reset scale
+        world->reset_scale();
+    }
     static void place_block(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to camera pointer type and move camera
@@ -252,19 +268,29 @@ class controls
         // Calculate new point to add
         const min::vec3<float> point = camera->project_point(3.0);
 
+        // Create a ray from camera to destination
+        const min::ray<float, min::vec3> r(camera->get_position(), point);
+
         // Add block to world
-        world->add_block(point);
+        world->add_block(r);
     }
-    static void reset(void *ptr, const uint16_t x, const uint16_t y)
+    static void remove_block(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to camera pointer type and move camera
         controls *control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world pointer
+        // Get the camera and world pointers
+        min::camera<float> *const camera = control->get_camera();
         game::world_mesh *const world = control->get_world();
 
-        // Reset scale
-        world->reset_scale();
+        // Calculate point to remove from
+        const min::vec3<float> point = camera->project_point(3.0);
+
+        // Create a ray from camera to destination
+        const min::ray<float, min::vec3> r(camera->get_position(), point);
+
+        // Remove block from world
+        world->remove_block(r);
     }
 };
 }

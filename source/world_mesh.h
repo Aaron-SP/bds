@@ -26,12 +26,12 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/convert.h>
 #include <min/physics.h>
 #include <min/program.h>
+#include <min/ray.h>
 #include <min/shader.h>
 #include <min/static_vertex.h>
 #include <min/texture_buffer.h>
 #include <min/tree.h>
 #include <min/uniform_buffer.h>
-#include <min/vec2.h>
 #include <min/vec3.h>
 #include <min/vec4.h>
 #include <min/vertex_buffer.h>
@@ -71,6 +71,49 @@ class world_mesh
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::tree> _simulation;
     size_t _char_id;
     size_t _block_count;
+
+    // Removes the preview shape from the grid
+    void remove_geometry(const min::vec3<float> &center, const min::vec3<unsigned> &scale)
+    {
+        // Snap center to grid and generate grid cells
+        const min::vec3<float> snapped = snap(center);
+        min::vec3<float> p = snapped;
+
+        // x axis
+        for (size_t i = 0; i < scale.x(); i++)
+        {
+            // y axis
+            p.y(snapped.y());
+            for (size_t j = 0; j < scale.y(); j++)
+            {
+                // z axis
+                p.z(snapped.z());
+                for (size_t k = 0; k < scale.z(); k++)
+                {
+                    // Calculate grid key index
+                    const uint32_t key = grid_key(p);
+
+                    // Check if this is an existing box to remove from the simulation
+                    if (_grid[key] != -1)
+                    {
+                        _block_count--;
+
+                        // Reset the cell atlas id
+                        _grid[key] = -1;
+                    }
+
+                    // Increment z axis
+                    p.z(p.z() + 1.0);
+                }
+
+                // Increment y axis
+                p.y(p.y() + 1.0);
+            }
+
+            // Increment x axis
+            p.x(p.x() + 1.0);
+        }
+    }
 
     // Adds the preview shape to the grid
     void add_geometry(const min::vec3<float> &center, const min::vec3<unsigned> &scale, const size_t atlas_id)
@@ -317,13 +360,9 @@ class world_mesh
             throw std::runtime_error("world_mesh: point is not inside the world cell");
         }
 
-        // Calculate grid index
-        const uint32_t col = (point.x() - _world.get_min().x());
-        const uint32_t row = (point.y() - _world.get_min().y());
-        const uint32_t zin = (point.z() - _world.get_min().z());
-
         // Compute the grid index from point
-        return col * _gsize * _gsize + row * _gsize + zin;
+        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
+        return min::vec3<float>::grid_key(_world.get_min(), cell_extent, _gsize, point);
     }
     void load_character(const min::vec3<float> &p)
     {
@@ -368,10 +407,64 @@ class world_mesh
         _preview.update();
         _geom.update();
     }
+    min::vec3<float> ray_trace_after(const min::ray<float, min::vec3> &r)
+    {
+        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
+
+        // Calculate the ray trajectory for tracing in grid
+        auto grid_ray = min::vec3<float>::grid_ray(cell_extent, r.get_origin(), r.get_direction(), r.get_inverse());
+
+        // Calculate start point in grid index format
+        auto index = min::vec3<float>::grid_index(_world.get_min(), cell_extent, r.get_origin());
+
+        // Trace a ray from origin and stop at first populated cell
+        size_t next_key = grid_key(r.get_origin());
+        bool bad_flag = false;
+        unsigned count = 0;
+        while (_grid[next_key] == -1 && !bad_flag && count < 5)
+        {
+            next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _gsize);
+            count++;
+        }
+
+        // return the point to add geometry
+        return grid_center(next_key);
+    }
+    min::vec3<float> ray_trace_before(const min::ray<float, min::vec3> &r)
+    {
+        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
+
+        // Calculate the ray trajectory for tracing in grid
+        auto grid_ray = min::vec3<float>::grid_ray(cell_extent, r.get_origin(), r.get_direction(), r.get_inverse());
+
+        // Calculate start point in grid index format
+        auto index = min::vec3<float>::grid_index(_world.get_min(), cell_extent, r.get_origin());
+
+        // Trace a ray from origin and stop at before populated cell
+        size_t next_key = grid_key(r.get_origin());
+        size_t before_key = next_key;
+        bool bad_flag = false;
+        unsigned count = 0;
+        while (_grid[next_key] == -1 && !bad_flag && count < 4)
+        {
+            before_key = next_key;
+            next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _gsize);
+            count++;
+        }
+
+        // return the point to add geometry
+        return grid_center(before_key);
+    }
     void update_uniform(min::camera<float> &cam)
     {
         // Calculate new placemark point and snap to grid
-        const min::vec3<float> translate = snap(cam.project_point(3.0));
+        const min::vec3<float> dest = snap(cam.project_point(3.0));
+
+        // Create a ray from camera to destination
+        const min::ray<float, min::vec3> r(cam.get_position(), dest);
+
+        // Trace a ray to the destination point to find placement position
+        const min::vec3<float> translate = snap(ray_trace_before(r));
 
         // Set camera at the character position
         const min::vec3<float> &p = character_position();
@@ -428,10 +521,32 @@ class world_mesh
         load_character(min::vec3<float>(0.0, 2.0, 0.0));
     }
 
+    void remove_block(const min::ray<float, min::vec3> &r)
+    {
+        // Trace a ray to the destination point to find placement position
+        const min::vec3<float> traced = ray_trace_after(r);
+
+        // remove from grid
+        remove_geometry(traced, _scale);
+
+        // generate new mesh
+        generate_gb();
+    }
     void add_block(const min::vec3<float> &center)
     {
         // Add to grid
         add_geometry(center, _scale, _atlas_id);
+
+        // generate new mesh
+        generate_gb();
+    }
+    void add_block(const min::ray<float, min::vec3> &r)
+    {
+        // Trace a ray to the destination point to find placement position
+        const min::vec3<float> traced = ray_trace_before(r);
+
+        // Add to grid
+        add_geometry(traced, _scale, _atlas_id);
 
         // generate new mesh
         generate_gb();
