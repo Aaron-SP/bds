@@ -96,7 +96,7 @@ class mglcraft
         keyboard.update(step);
 
         // Get the offset from screen center
-        const float sensitivity = 0.1;
+        const float sensitivity = 0.5;
         float x = sensitivity * (c.first - (_win.get_width() / 2));
         float y = sensitivity * (c.second - (_win.get_height() / 2));
 

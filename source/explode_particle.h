@@ -40,9 +40,6 @@ class explode_particle
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
 
-    // Uniform stuff
-    min::uniform_buffer<float> _ubuffer;
-
     // Particle stuff
     min::emitter_buffer<float, GL_FLOAT> _ebuffer;
     float _time;
@@ -55,20 +52,6 @@ class explode_particle
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(b);
     }
-    void load_uniforms()
-    {
-        // Load projection matrix into uniform buffer
-        _ubuffer.add_matrix(min::mat4<float>());
-
-        // Load camera position matrix into uniform buffer
-        _ubuffer.add_matrix(min::mat4<float>());
-
-        // Load the uniform buffer with program we will use
-        _ubuffer.set_program(_prog);
-
-        // Load the buffer with data
-        _ubuffer.update();
-    }
     void step(const float dt)
     {
         // Update the particle positions
@@ -77,33 +60,22 @@ class explode_particle
         // Upload data to GPU
         _ebuffer.upload();
     }
-    void update_uniform(min::camera<float> &cam)
-    {
-        // Update geom matrix uniforms
-        _ubuffer.set_matrix(cam.get_pv_matrix(), 0);
-        _ubuffer.set_matrix(min::mat4<float>(cam.get_position()), 1);
-        _ubuffer.update_matrix();
-    }
 
   public:
     explode_particle()
         : _vertex("data/shader/emitter.vertex", GL_VERTEX_SHADER),
           _fragment("data/shader/emitter.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _ubuffer(0, 2),
           _ebuffer(min::vec3<float>(), 50, 5, 0.10, 5.0, 5.0),
           _time(0.0)
     {
         // Load textures
         load_textures();
 
-        // Load uniforms
-        load_uniforms();
-
         // Set the particle gravity
         _ebuffer.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
     }
-    void draw(min::camera<float> &cam, const float dt)
+    void draw(const min::uniform_buffer<float> &uniforms, min::camera<float> &cam, const float dt)
     {
         // Update the emitter buffer
         step(dt);
@@ -122,15 +94,17 @@ class explode_particle
             // Use the shader program to draw models
             _prog.use();
 
-            // Update camera position
-            update_uniform(cam);
-
-            // Bind the uniform buffer
-            _ubuffer.bind();
+            // Bind this uniform buffer
+            uniforms.bind();
 
             // Draw the particles
             _ebuffer.draw();
         }
+    }
+    void set_uniforms(const min::uniform_buffer<float> &uniforms)
+    {
+        // Load use this uniform buffer for drawing
+        uniforms.set_program(_prog);
     }
     void load(const min::vec3<float> &position, const min::vec3<float> &direction, const float time)
     {

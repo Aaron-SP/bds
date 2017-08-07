@@ -397,10 +397,13 @@ class world_mesh
         _preview.set_program(_terrain_program);
         _geom.set_program(_terrain_program);
 
+        // Let the particle system use this uniform buffer
+        _particles.set_uniforms(_preview);
+
         // Change light alpha for placemark
         const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
         const min::vec4<float> pos1(0.0, 100.0, 0.0, 1.0);
-        const min::vec4<float> pow1(0.5, 1.0, 0.0, 0.5);
+        const min::vec4<float> pow1(0.5, 1.0, 0.0, 0.25);
         _preview.add_light(min::light<float>(col1, pos1, pow1));
 
         // Add light to scene
@@ -413,6 +416,8 @@ class world_mesh
         _preview.add_matrix(min::mat4<float>());
         _preview.add_matrix(min::mat4<float>());
         _preview.add_matrix(min::mat4<float>());
+        _preview.add_matrix(min::mat4<float>());
+        _geom.add_matrix(min::mat4<float>());
         _geom.add_matrix(min::mat4<float>());
         _geom.add_matrix(min::mat4<float>());
         _geom.add_matrix(min::mat4<float>());
@@ -494,6 +499,7 @@ class world_mesh
         _preview.set_matrix(cam.get_pv_matrix(), 0);
         _preview.set_matrix(cam.get_v_matrix(), 1);
         _preview.set_matrix(translate, 2);
+        _preview.set_matrix(min::mat4<float>(cam.get_position()), 3);
         _preview.update_matrix();
     }
 
@@ -502,8 +508,8 @@ class world_mesh
         : _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
           _tf("data/shader/terrain.fragment", GL_FRAGMENT_SHADER),
           _terrain_program(_tv, _tf),
-          _preview(1, 3),
-          _geom(1, 3),
+          _preview(1, 4),
+          _geom(1, 4),
           _bmp(texture_file),
           _atlas_id(0),
           _scale(2, 1, 2),
@@ -645,7 +651,7 @@ class world_mesh
         draw_placemark();
 
         // Draw the particles
-        _particles.draw(cam, dt);
+        _particles.draw(_preview, cam, dt);
     }
     void set_atlas_id(const int8_t id)
     {

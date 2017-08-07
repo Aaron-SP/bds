@@ -2,43 +2,77 @@
 
 layout (location = 0) in vec4 position;
 
-#define MAX_NUM_TOTAL_MATRIX 2
+#define MAX_NUM_TOTAL_LIGHTS 1
+struct light
+{
+    vec4 color;
+    vec4 position;
+    vec4 power;
+};
+
+layout(std140) uniform light_block
+{
+    light lights[MAX_NUM_TOTAL_LIGHTS];
+    int size;
+} light_buffer;
+
+#define MAX_NUM_TOTAL_MATRIX 4
 layout(std140) uniform matrix_block
 {
     mat4 matrix[MAX_NUM_TOTAL_MATRIX];
     int size;
 } matrix_buffer;
 
-out vec4 vcolor;
+out vec4 out_color;
 
 void main(void)
 {
 	// Get the proj_view matrix from the uniform buffer
 	mat4 pv = matrix_buffer.matrix[0];
-	mat4 mp = matrix_buffer.matrix[1];
+	mat4 mp = matrix_buffer.matrix[3];
 
 	vec4 camera_position = mp[3];
 
 	// Set particle size by distance from camera
-	float len = length(position - camera_position);
+	float len = length(camera_position - position);
 	gl_PointSize = 20.0 / len;
 
 	// Set a gradient based on particle distance from origin
-	if(len > 1.0 && len < 5.0)
+	if(len > 1.0 && len < 1.5)
 	{
 		float d = clamp(10.0 / len - 1.0, 0.0, 2.0);
-		vcolor = vec4(d*1.5, d, d*0.667, 1.0);
+		out_color = vec4(d * 1.5, d, d * 0.667, 1.0);
 	}
-	else if(len > 5.5 && len < 10.0)
+	else if(len >= 2.0 && len < 3.0)
 	{
 		float d = clamp(11.0 / len - 1.0, 0.0, 2.0);
-		vcolor = vec4(d*4, d*1.333, d*0.8333, 1.0);
+		out_color = vec4(d * 4, d * 1.333, d * 0.8333, 1.0);
 	}
-	else if(len > 10.15)
+	else if(len >= 3.0)
 	{
 		float d = clamp(17.5 / len - 1.0, 0.0, 2.0);
-		vcolor = vec4(d*1.5, d*0.333, d*0.333, 1.0);
+		out_color = vec4(d * 1.5, d * 0.333, d * 0.333, 1.0);
 	}
+
+	// Initialize reference color
+    vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+
+    // For all lights in the scene
+    for(int i = 0; i < light_buffer.size; i++)
+    {
+        // Calculate the light direction in world space
+        vec4 light_direction = light_buffer.lights[i].position - position;
+		float d = 1.0 / length(light_direction);
+
+        // Calculate ambient, diffuse and specular
+        float ambient = light_buffer.lights[i].power.x;
+		float diffuse = light_buffer.lights[i].power.y * d;
+
+        // Calculate the output color
+        color += light_buffer.lights[i].color * (ambient + diffuse);
+    }
+
+	out_color *= color;
 
 	// Calculate transformed position
 	gl_Position =  pv * position;
