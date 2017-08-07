@@ -20,6 +20,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cmath>
 #include <cstdint>
+#include <explode_particle.h>
 #include <min/aabbox.h>
 #include <min/bmp.h>
 #include <min/camera.h>
@@ -72,9 +73,15 @@ class world_mesh
     size_t _char_id;
     size_t _block_count;
 
+    // Particle stuff
+    explode_particle _particles;
+
     // Removes the preview shape from the grid
-    void remove_geometry(const min::vec3<float> &center, const min::vec3<unsigned> &scale)
+    int remove_geometry(const min::vec3<float> &center, const min::vec3<unsigned> &scale)
     {
+        // Removed geometry
+        int out = 0;
+
         // Snap center to grid and generate grid cells
         const min::vec3<float> snapped = snap(center);
         min::vec3<float> p = snapped;
@@ -96,10 +103,11 @@ class world_mesh
                     // Check if this is an existing box to remove from the simulation
                     if (_grid[key] != -1)
                     {
-                        _block_count--;
-
                         // Reset the cell atlas id
                         _grid[key] = -1;
+
+                        // Increment the out counter
+                        out++;
                     }
 
                     // Increment z axis
@@ -113,6 +121,12 @@ class world_mesh
             // Increment x axis
             p.x(p.x() + 1.0);
         }
+
+        // Record the changed block count
+        _block_count -= out;
+
+        // Return the number of removed blocks
+        return out;
     }
 
     // Adds the preview shape to the grid
@@ -526,11 +540,18 @@ class world_mesh
         // Trace a ray to the destination point to find placement position
         const min::vec3<float> traced = ray_trace_after(r);
 
-        // remove from grid
-        remove_geometry(traced, _scale);
+        // Try to remove geometry from the grid
+        const int removed = remove_geometry(traced, _scale);
 
         // generate new mesh
         generate_gb();
+
+        // If we removed geometry, play particles
+        if (removed > 0)
+        {
+            // Add particle effects
+            _particles.load(traced, r.get_direction() * -1.0, 5.0);
+        }
     }
     void add_block(const min::vec3<float> &center)
     {
@@ -622,6 +643,9 @@ class world_mesh
 
         // Draw the placemark
         draw_placemark();
+
+        // Draw the particles
+        _particles.draw(cam, dt);
     }
     void set_atlas_id(const int8_t id)
     {
