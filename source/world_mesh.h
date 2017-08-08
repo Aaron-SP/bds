@@ -21,6 +21,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <cmath>
 #include <cstdint>
 #include <explode_particle.h>
+#include <mandelbulb.h>
 #include <min/aabbox.h>
 #include <min/bmp.h>
 #include <min/camera.h>
@@ -62,52 +63,59 @@ class world_mesh
     min::vec3<unsigned> _scale;
 
     // Grid stuff
-    uint32_t _gsize;
-    uint32_t _gsize3;
+    size_t _grid_size;
     std::vector<int8_t> _grid;
+    size_t _chunk_size;
+    size_t _chunk_scale;
+    std::vector<min::mesh<float, uint32_t>> _chunks;
     min::aabbox<float, min::vec3> _world;
 
     // Physics stuff
     min::vec3<float> _gravity;
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::tree> _simulation;
     size_t _char_id;
-    size_t _block_count;
 
     // Particle stuff
     explode_particle _particles;
 
     // Removes the preview shape from the grid
-    int remove_geometry(const min::vec3<float> &center, const min::vec3<unsigned> &scale)
+    unsigned set_geometry(const min::vec3<float> &start, const min::vec3<unsigned> &scale, const int8_t atlas_id)
     {
         // Removed geometry
-        int out = 0;
+        unsigned out = 0;
 
-        // Snap center to grid and generate grid cells
-        const min::vec3<float> snapped = snap(center);
-        min::vec3<float> p = snapped;
+        min::vec3<float> p = start;
+
+        // Record all modified chunks and store them ofr updating
+        std::vector<size_t> chunk_keys;
+        chunk_keys.reserve(scale.x() * scale.y() * scale.z());
 
         // x axis
         for (size_t i = 0; i < scale.x(); i++)
         {
             // y axis
-            p.y(snapped.y());
+            p.y(start.y());
             for (size_t j = 0; j < scale.y(); j++)
             {
                 // z axis
-                p.z(snapped.z());
+                p.z(start.z());
                 for (size_t k = 0; k < scale.z(); k++)
                 {
                     // Calculate grid key index
-                    const uint32_t key = grid_key(p);
+                    const size_t gkey = grid_key(p);
 
-                    // Check if this is an existing box to remove from the simulation
-                    if (_grid[key] != -1)
+                    // Count changed blocks
+                    if (_grid[gkey] != atlas_id)
                     {
-                        // Reset the cell atlas id
-                        _grid[key] = -1;
-
                         // Increment the out counter
                         out++;
+
+                        // Get the chunk_key for updating
+                        const size_t ckey = chunk_key(p);
+                        chunk_keys.push_back(ckey);
+
+                        // Set the cell with atlas id
+                        _grid[gkey] = atlas_id;
                     }
 
                     // Increment z axis
@@ -122,54 +130,21 @@ class world_mesh
             p.x(p.x() + 1.0);
         }
 
-        // Record the changed block count
-        _block_count -= out;
+        // Sort chunk_keys and make the vector unique
+        std::sort(chunk_keys.begin(), chunk_keys.end());
+        const auto last = std::unique(chunk_keys.begin(), chunk_keys.end());
+
+        // Erase empty spaces in vector
+        chunk_keys.erase(last, chunk_keys.end());
+
+        // Update all modified chunks
+        for (const auto k : chunk_keys)
+        {
+            chunk_update(k);
+        }
 
         // Return the number of removed blocks
         return out;
-    }
-
-    // Adds the preview shape to the grid
-    void add_geometry(const min::vec3<float> &center, const min::vec3<unsigned> &scale, const size_t atlas_id)
-    {
-        // Snap center to grid and generate grid cells
-        const min::vec3<float> snapped = snap(center);
-        min::vec3<float> p = snapped;
-
-        // x axis
-        for (size_t i = 0; i < scale.x(); i++)
-        {
-            // y axis
-            p.y(snapped.y());
-            for (size_t j = 0; j < scale.y(); j++)
-            {
-                // z axis
-                p.z(snapped.z());
-                for (size_t k = 0; k < scale.z(); k++)
-                {
-                    // Calculate grid key index
-                    const uint32_t key = grid_key(p);
-
-                    // Check if this is a new box to add to simulation
-                    if (_grid[key] == -1)
-                    {
-                        _block_count++;
-                    }
-
-                    // Set grid atlas
-                    _grid[key] = atlas_id;
-
-                    // Increment z axis
-                    p.z(p.z() + 1.0);
-                }
-
-                // Increment y axis
-                p.y(p.y() + 1.0);
-            }
-
-            // Increment x axis
-            p.x(p.x() + 1.0);
-        }
     }
     static min::mesh<float, uint32_t> create_box_mesh(const min::aabbox<float, min::vec3> &box, const int8_t atlas_id)
     {
@@ -239,7 +214,7 @@ class world_mesh
                 for (size_t k = 0; k < 3; k++)
                 {
                     // Calculate grid key index
-                    const uint32_t key = grid_key(p);
+                    const size_t key = grid_key(p);
 
                     // Check if this is a new box to add to simulation
                     if (_grid[key] != -1)
@@ -262,7 +237,7 @@ class world_mesh
 
         return out;
     }
-    void draw_placemark() const
+    inline void draw_placemark() const
     {
         // Bind VAO
         _pb.bind();
@@ -270,7 +245,7 @@ class world_mesh
         // Draw placemarker
         _pb.draw_all(GL_TRIANGLES);
     }
-    void draw_terrain() const
+    inline void draw_terrain() const
     {
         // Bind VAO
         _gb.bind();
@@ -278,28 +253,101 @@ class world_mesh
         // Draw graph-mesh
         _gb.draw_all(GL_TRIANGLES);
     }
+    void chunk_update(const size_t chunk_key)
+    {
+        // Get start point of chunk from chunk key
+        const min::vec3<float> start = chunk_start(chunk_key);
+        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
+        min::vec3<float> p = start;
+
+        // Clear this chunk
+        _chunks[chunk_key].clear();
+
+        // x axis
+        for (size_t i = 0; i < _chunk_size; i++)
+        {
+            // y axis
+            p.y(start.y());
+            for (size_t j = 0; j < _chunk_size; j++)
+            {
+                // z axis
+                p.z(start.z());
+                for (size_t k = 0; k < _chunk_size; k++)
+                {
+                    // Get grid index from point
+                    const auto t = min::vec3<float>::grid_index(_world.get_min(), cell_extent, p);
+                    const size_t index = min::vec3<float>::grid_key(t, _grid_size);
+                    const int8_t atlas = _grid[index];
+                    if (atlas != -1)
+                    {
+                        // Find out if we are on a world edge
+                        const size_t edge = _grid_size - 1;
+                        if (std::get<0>(t) % edge == 0 || std::get<1>(t) % edge == 0 || std::get<2>(t) % edge == 0)
+                        {
+                            const min::aabbox<float, min::vec3> box = create_box(p);
+
+                            // Create mesh from box
+                            const min::mesh<float, uint32_t> box_mesh = create_box_mesh(box, atlas);
+
+                            // Add mesh to chunk
+                            _chunks[chunk_key].merge(box_mesh);
+                        }
+                        else
+                        {
+                            // Get surrounding 6 cells
+                            const size_t x1 = grid_key(min::vec3<float>(p.x() - 1.0, p.y(), p.z()));
+                            const size_t x2 = grid_key(min::vec3<float>(p.x() + 1.0, p.y(), p.z()));
+                            const size_t y1 = grid_key(min::vec3<float>(p.x(), p.y() - 1.0, p.z()));
+                            const size_t y2 = grid_key(min::vec3<float>(p.x(), p.y() + 1.0, p.z()));
+                            const size_t z1 = grid_key(min::vec3<float>(p.x(), p.y(), p.z() - 1.0));
+                            const size_t z2 = grid_key(min::vec3<float>(p.x(), p.y(), p.z() + 1.0));
+
+                            const bool bx1 = _grid[x1] != -1;
+                            const bool bx2 = _grid[x2] != -1;
+                            const bool by1 = _grid[y1] != -1;
+                            const bool by2 = _grid[y2] != -1;
+                            const bool bz1 = _grid[z1] != -1;
+                            const bool bz2 = _grid[z2] != -1;
+
+                            // Only generate if not
+                            const bool skip = bx1 && bx2 && by1 && by2 && bz1 && bz2;
+                            if (!skip)
+                            {
+                                const min::aabbox<float, min::vec3> box = create_box(p);
+
+                                // Create mesh from box
+                                const min::mesh<float, uint32_t> box_mesh = create_box_mesh(box, atlas);
+
+                                // Add mesh to chunk
+                                _chunks[chunk_key].merge(box_mesh);
+                            }
+                        }
+                    }
+
+                    // Increment z axis
+                    p.z(p.z() + 1.0);
+                }
+
+                // Increment y axis
+                p.y(p.y() + 1.0);
+            }
+
+            // Increment x axis
+            p.x(p.x() + 1.0);
+        }
+    }
     // Generate all geometry in grid and adds it to geometry buffer
     void generate_gb()
     {
         // Reset the buffer
         _gb.clear();
 
-        // For all grid cells generate block
-        const size_t size = _grid.size();
-        for (size_t i = 0; i < size; i++)
+        // Add all chunks to the geometry buffer
+        for (const auto &chunk : _chunks)
         {
-            const int8_t atlas = _grid[i];
-            if (atlas != -1)
+            if (chunk.vertex.size() > 0)
             {
-                // Get center from grid position
-                const min::vec3<float> p = grid_center(i);
-                const min::aabbox<float, min::vec3> box = create_box(p);
-
-                // Create mesh from box
-                const min::mesh<float, uint32_t> box_mesh = create_box_mesh(box, atlas);
-
-                // Add mesh to geometry buffer for drawing
-                _gb.add_mesh(box_mesh);
+                _gb.add_mesh(chunk);
             }
         }
 
@@ -345,20 +393,53 @@ class world_mesh
         // Upload contents to the vertex buffer
         _pb.upload();
     }
-    inline min::vec3<float> grid_center(const uint32_t index) const
+    inline size_t chunk_key(const min::vec3<float> &point) const
     {
-        if (index >= _gsize3)
+        if (!_world.point_inside(point))
         {
-            throw std::runtime_error("world_mesh: index is not inside the world cell");
+            throw std::runtime_error("world_mesh: point is not inside the world cell");
+        }
+
+        // Compute the chunk index from point
+        const min::vec3<float> cell_extent(_chunk_size, _chunk_size, _chunk_size);
+        return min::vec3<float>::grid_key(_world.get_min(), cell_extent, _chunk_scale, point);
+    }
+    inline min::vec3<float> chunk_start(const size_t index) const
+    {
+        if (index >= _chunks.size())
+        {
+            throw std::runtime_error("world_mesh: chunk index is not inside the world");
         }
 
         // Precalculate the square scale
-        const uint32_t scale2 = _gsize * _gsize;
+        const size_t chunk_scale2 = _chunk_scale * _chunk_scale;
 
         // Calculate row, col and height
-        const uint32_t row = index / scale2;
-        const uint32_t col = (index - row * scale2) / _gsize;
-        const uint32_t hei = index - row * scale2 - col * _gsize;
+        const size_t row = index / chunk_scale2;
+        const size_t col = (index - row * chunk_scale2) / _chunk_scale;
+        const size_t hei = index - row * chunk_scale2 - col * _chunk_scale;
+
+        // Calculate the center point of the box cell
+        const float x = row * _chunk_size + _world.get_min().x() + 0.5;
+        const float y = col * _chunk_size + _world.get_min().y() + 0.5;
+        const float z = hei * _chunk_size + _world.get_min().z() + 0.5;
+
+        return min::vec3<float>(x, y, z);
+    }
+    inline min::vec3<float> grid_center(const size_t index) const
+    {
+        if (index >= _grid.size())
+        {
+            throw std::runtime_error("world_mesh: grid index is not inside the world cell");
+        }
+
+        // Precalculate the square scale
+        const size_t scale2 = _grid_size * _grid_size;
+
+        // Calculate row, col and height
+        const size_t row = index / scale2;
+        const size_t col = (index - row * scale2) / _grid_size;
+        const size_t hei = index - row * scale2 - col * _grid_size;
 
         // Calculate the center point of the box cell
         const float x = row + _world.get_min().x() + 0.5;
@@ -367,16 +448,16 @@ class world_mesh
 
         return min::vec3<float>(x, y, z);
     }
-    inline uint32_t grid_key(const min::vec3<float> &point) const
+    inline size_t grid_key(const min::vec3<float> &point) const
     {
         if (!_world.point_inside(point))
         {
-            throw std::runtime_error("world_mesh: point is not inside the world cell");
+            throw std::runtime_error("world_mesh: point is not inside the world");
         }
 
         // Compute the grid index from point
         const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
-        return min::vec3<float>::grid_key(_world.get_min(), cell_extent, _gsize, point);
+        return min::vec3<float>::grid_key(_world.get_min(), cell_extent, _grid_size, point);
     }
     void load_character(const min::vec3<float> &p)
     {
@@ -426,6 +507,20 @@ class world_mesh
         _preview.update();
         _geom.update();
     }
+    void generate_world()
+    {
+        // generate mandelbulb world using mandelbulb generator
+        mandelbulb::generate(_grid, _grid_size, [this](const size_t i) {
+            return this->grid_center(i);
+        });
+
+        // Update all chunks
+        const size_t chunks = _chunks.size();
+        for (size_t i = 0; i < chunks; i++)
+        {
+            chunk_update(i);
+        }
+    }
     min::vec3<float> ray_trace_after(const min::ray<float, min::vec3> &r)
     {
         const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
@@ -442,11 +537,11 @@ class world_mesh
         unsigned count = 0;
         while (_grid[next_key] == -1 && !bad_flag && count < 5)
         {
-            next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _gsize);
+            next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);
             count++;
         }
 
-        // return the point to add geometry
+        // return the snapped point
         return grid_center(next_key);
     }
     min::vec3<float> ray_trace_before(const min::ray<float, min::vec3> &r)
@@ -467,23 +562,31 @@ class world_mesh
         while (_grid[next_key] == -1 && !bad_flag && count < 4)
         {
             before_key = next_key;
-            next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _gsize);
+            next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);
             count++;
         }
 
-        // return the point to add geometry
+        // return the snapped point
         return grid_center(before_key);
     }
-    void update_uniform(min::camera<float> &cam)
+    inline min::vec3<float> snap(const min::vec3<float> &point) const
     {
-        // Calculate new placemark point and snap to grid
-        const min::vec3<float> dest = snap(cam.project_point(3.0));
+        const float x = point.x();
+        const float y = point.y();
+        const float z = point.z();
+
+        return min::vec3<float>(std::floor(x) + 0.5, std::floor(y) + 0.5, std::floor(z) + 0.5);
+    }
+    inline void update_uniform(min::camera<float> &cam)
+    {
+        // Calculate new placemark point
+        const min::vec3<float> dest = cam.project_point(3.0);
 
         // Create a ray from camera to destination
         const min::ray<float, min::vec3> r(cam.get_position(), dest);
 
-        // Trace a ray to the destination point to find placement position
-        const min::vec3<float> translate = snap(ray_trace_before(r));
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        const min::vec3<float> translate = ray_trace_before(r);
 
         // Set camera at the character position
         const min::vec3<float> &p = character_position();
@@ -504,7 +607,7 @@ class world_mesh
     }
 
   public:
-    world_mesh(const std::string &texture_file, const uint32_t size)
+    world_mesh(const std::string &texture_file, const size_t grid_size, const size_t chunk_size)
         : _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
           _tf("data/shader/terrain.fragment", GL_FRAGMENT_SHADER),
           _terrain_program(_tv, _tf),
@@ -512,21 +615,40 @@ class world_mesh
           _geom(1, 4),
           _bmp(texture_file),
           _atlas_id(0),
-          _scale(2, 1, 2),
-          _gsize(2.0 * size), _gsize3(_gsize * _gsize * _gsize), _grid(_gsize3, -1),
-          _world(min::vec3<float>(-(float)size, -(float)size, -(float)size), min::vec3<float>(size, size, size)),
+          _scale(3, 3, 3),
+          _grid_size(2.0 * grid_size),
+          _grid(_grid_size * _grid_size * _grid_size, -1),
+          _chunk_size(chunk_size),
+          _chunk_scale(_grid_size / _chunk_size),
+          _chunks(_chunk_scale * _chunk_scale * _chunk_scale, min::mesh<float, uint32_t>("chunk")),
+          _world(min::vec3<float>(-(float)grid_size, -(float)grid_size, -(float)grid_size), min::vec3<float>(_grid_size, _grid_size, _grid_size)),
           _gravity(0.0, -10.0, 0.0),
-          _simulation(_world, _gravity),
-          _block_count(0)
+          _simulation(_world, _gravity)
     {
+        // Check if chunk_size is valid
+        if (grid_size % chunk_size != 0)
+        {
+            throw std::runtime_error("world_mesh: chunk_size must be integer multiple of grid_size");
+        }
+
         // Load texture buffer
         _bmp_id = _tbuffer.add_bmp_texture(_bmp);
+
+        // Set the collision elasticity of the physics simulation
+        _simulation.set_elasticity(0.1);
 
         // Load uniform buffers
         load_uniform();
 
         // Add starting blocks to simulation
-        add_block(min::vec3<float>(-1.0, 0.0, -1.0));
+        generate_world();
+
+        // Reload the character
+        min::vec3<float> position(0.0, 2.0, 0.0);
+        load_character(position);
+
+        // Remove geometry around player
+        remove_block(min::vec3<float>(-1.0, -0.0, -1.0), position);
 
         // Reset scale
         _scale = min::vec3<unsigned>(1, 1, 1);
@@ -534,27 +656,39 @@ class world_mesh
         // Generate the preview buffer
         generate_pb();
 
-        // Set the collision elasticity of the physics simulation
-        _simulation.set_elasticity(0.1);
-
-        // Reload the character
-        load_character(min::vec3<float>(0.0, 2.0, 0.0));
-    }
-
-    void remove_block(const min::ray<float, min::vec3> &r)
-    {
-        // Trace a ray to the destination point to find placement position
-        const min::vec3<float> traced = ray_trace_after(r);
-
-        // Try to remove geometry from the grid
-        const int removed = remove_geometry(traced, _scale);
-
         // generate new mesh
         generate_gb();
+    }
+    void remove_block(const min::vec3<float> &point, const min::vec3<float> &position)
+    {
+        // Try to remove geometry from the grid
+        const unsigned removed = set_geometry(snap(point), _scale, -1);
 
         // If we removed geometry, play particles
         if (removed > 0)
         {
+            // generate new mesh
+            generate_gb();
+
+            // Add particle effects
+            const min::vec3<float> direction = (position - point).normalize();
+            _particles.load(point, direction, 5.0);
+        }
+    }
+    void remove_block(const min::ray<float, min::vec3> &r)
+    {
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        const min::vec3<float> traced = ray_trace_after(r);
+
+        // Try to remove geometry from the grid
+        const unsigned removed = set_geometry(traced, _scale, -1);
+
+        // If we removed geometry, play particles
+        if (removed > 0)
+        {
+            // generate new mesh
+            generate_gb();
+
             // Add particle effects
             _particles.load(traced, r.get_direction() * -1.0, 5.0);
         }
@@ -562,18 +696,18 @@ class world_mesh
     void add_block(const min::vec3<float> &center)
     {
         // Add to grid
-        add_geometry(center, _scale, _atlas_id);
+        set_geometry(snap(center), _scale, _atlas_id);
 
         // generate new mesh
         generate_gb();
     }
     void add_block(const min::ray<float, min::vec3> &r)
     {
-        // Trace a ray to the destination point to find placement position
+        // Trace a ray to the destination point to find placement position, return point is snapped
         const min::vec3<float> traced = ray_trace_before(r);
 
         // Add to grid
-        add_geometry(traced, _scale, _atlas_id);
+        set_geometry(traced, _scale, _atlas_id);
 
         // generate new mesh
         generate_gb();
@@ -696,14 +830,6 @@ class world_mesh
 
         // Regenerate the preview mesh
         generate_pb();
-    }
-    inline min::vec3<float> snap(const min::vec3<float> &point) const
-    {
-        const float x = point.x();
-        const float y = point.y();
-        const float z = point.z();
-
-        return min::vec3<float>(std::floor(x) + 0.5, std::floor(y) + 0.5, std::floor(z) + 0.5);
     }
 };
 }

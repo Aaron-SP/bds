@@ -49,7 +49,7 @@ class mglcraft
         _cam.set_position(pos);
         _cam.set_look_at(look);
         auto &f = _cam.get_frustum();
-        f.set_far(1000.0);
+        f.set_far(100.0);
         f.set_fov(90.0);
         _cam.set_perspective();
     }
@@ -58,7 +58,7 @@ class mglcraft
     // Load window shaders and program
     mglcraft()
         : _win("MGLCRAFT: FPS: ", 720, 480, 3, 3),
-          _world("data/texture/atlas.bmp", 64),
+          _world("data/texture/atlas.bmp", 64, 8),
           _controls(_win, _cam, _world)
     {
         // Set depth and cull settings
@@ -96,16 +96,26 @@ class mglcraft
         keyboard.update(step);
 
         // Get the offset from screen center
-        const float sensitivity = 0.5;
+        const float sensitivity = 0.10;
         float x = sensitivity * (c.first - (_win.get_width() / 2));
         float y = sensitivity * (c.second - (_win.get_height() / 2));
 
         // If the mouse coordinates moved at all
         if (std::abs(x) > 1E-3 || std::abs(y) > 1E-3)
         {
-            // Limit maximum jump
-            min::clamp<float>(x, -2.0, 2.0);
-            min::clamp<float>(y, -2.0, 2.0);
+            // Get the camera forward vector
+            const min::vec3<float> &forward = _cam.get_forward();
+
+            // Check if we have looked too far on the global y axis
+            const float dy = forward.dot(min::vec3<float>::up());
+            if (dy > 0.975 && y < 0.0)
+            {
+                y = 0.0;
+            }
+            else if (dy < -0.975 && y > 0.0)
+            {
+                y = 0.0;
+            }
 
             // Adjust the camera by the offset from screen center
             _cam.move_look_at(x, y);

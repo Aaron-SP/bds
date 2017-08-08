@@ -31,7 +31,7 @@ bool test_world_mesh()
     min::window window("test world mesh", 720, 480, 3, 3);
 
     // Load the graph mesh with 128 pixel tile size
-    game::world_mesh world("data/texture/atlas.bmp", 64);
+    game::world_mesh world("data/texture/atlas.bmp", 64, 8);
 
     world.add_block(min::vec3<float>(0.0, 0.0, 0.0));
     world.add_block(min::vec3<float>(1.0, 1.0, 1.0));
