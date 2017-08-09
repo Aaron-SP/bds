@@ -23,7 +23,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/ray.h>
 #include <min/window.h>
 #include <stdexcept>
-#include <world_mesh.h>
+#include <world.h>
 
 namespace game
 {
@@ -33,10 +33,10 @@ class controls
   private:
     min::window *_window;
     min::camera<float> *_camera;
-    game::world_mesh *_world;
+    game::world *_world;
 
   public:
-    controls(min::window &window, min::camera<float> &camera, game::world_mesh &world) : _window(&window), _camera(&camera), _world(&world)
+    controls(min::window &window, min::camera<float> &camera, game::world &world) : _window(&window), _camera(&camera), _world(&world)
     {
         // Check that pointers are valid
         if (!_window || !_camera || !_world)
@@ -118,7 +118,7 @@ class controls
     {
         return _camera;
     }
-    game::world_mesh *get_world()
+    game::world *get_world()
     {
         return _world;
     }
@@ -141,7 +141,7 @@ class controls
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointers
-        game::world_mesh *const world = control->get_world();
+        game::world *const world = control->get_world();
         world->character_move(min::vec3<float>());
     }
     static void forward(void *ptr, double step)
@@ -151,7 +151,7 @@ class controls
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
-        game::world_mesh *const world = control->get_world();
+        game::world *const world = control->get_world();
         const min::vec3<float> &direction = camera->get_forward();
         world->character_move(direction);
     }
@@ -162,7 +162,7 @@ class controls
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
-        game::world_mesh *const world = control->get_world();
+        game::world *const world = control->get_world();
         const min::vec3<float> &right = camera->get_frustum().get_right();
         world->character_move(right * -1.0);
     }
@@ -173,7 +173,7 @@ class controls
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
-        game::world_mesh *const world = control->get_world();
+        game::world *const world = control->get_world();
         const min::vec3<float> &right = camera->get_frustum().get_right();
         world->character_move(right);
     }
@@ -184,7 +184,7 @@ class controls
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
-        game::world_mesh *const world = control->get_world();
+        game::world *const world = control->get_world();
         const min::vec3<float> &direction = camera->get_forward();
         world->character_move(direction * -1.0);
     }
@@ -194,53 +194,53 @@ class controls
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointer
-        game::world_mesh *const world = control->get_world();
+        game::world *const world = control->get_world();
         world->character_jump(min::vec3<float>(0.0, 1.0, 0.0));
     }
     static void switch_grass(void *ptr, double step)
     {
-        // Cast to world_mesh pointer type and set atlas id to '0'
-        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+        // Cast to world pointer type and set atlas id to '0'
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
         world->set_atlas_id(0);
     }
     static void switch_stone(void *ptr, double step)
     {
-        // Cast to world_mesh pointer type and set atlas id to '1'
-        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+        // Cast to world pointer type and set atlas id to '1'
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
         world->set_atlas_id(1);
     }
     static void switch_sand(void *ptr, double step)
     {
-        // Cast to world_mesh pointer type and set atlas id to '2'
-        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+        // Cast to world pointer type and set atlas id to '2'
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
         world->set_atlas_id(2);
     }
     static void switch_wood(void *ptr, double step)
     {
-        // Cast to world_mesh pointer type and set atlas id to '3'
-        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+        // Cast to world pointer type and set atlas id to '3'
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
         world->set_atlas_id(3);
     }
     static void add_x(void *ptr, double step)
     {
-        // Cast to world_mesh pointer type
-        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+        // Cast to world pointer type
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
 
         // Increase x scale
         world->set_scale_x(1);
     }
     static void add_y(void *ptr, double step)
     {
-        // Cast to world_mesh pointer type
-        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+        // Cast to world pointer type
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
 
         // Increase x scale
         world->set_scale_y(1);
     }
     static void add_z(void *ptr, double step)
     {
-        // Cast to world_mesh pointer type
-        game::world_mesh *const world = reinterpret_cast<game::world_mesh *>(ptr);
+        // Cast to world pointer type
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
 
         // Increase x scale
         world->set_scale_z(1);
@@ -251,7 +251,7 @@ class controls
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointer
-        game::world_mesh *const world = control->get_world();
+        game::world *const world = control->get_world();
 
         // Reset scale
         world->reset_scale();
@@ -263,7 +263,7 @@ class controls
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
-        game::world_mesh *const world = control->get_world();
+        game::world *const world = control->get_world();
 
         // Calculate new point to add
         const min::vec3<float> point = camera->project_point(3.0);
@@ -281,7 +281,7 @@ class controls
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
-        game::world_mesh *const world = control->get_world();
+        game::world *const world = control->get_world();
 
         // Calculate point to remove from
         const min::vec3<float> point = camera->project_point(3.0);

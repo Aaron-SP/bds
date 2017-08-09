@@ -24,7 +24,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/utility.h>
 #include <min/window.h>
 #include <string>
-#include <world_mesh.h>
+#include <world.h>
 
 class mglcraft
 {
@@ -35,7 +35,7 @@ class mglcraft
     min::camera<float> _cam;
 
     // Game specific classes
-    game::world_mesh _world;
+    game::world _world;
     game::controls _controls;
 
     void load_camera()
@@ -58,7 +58,7 @@ class mglcraft
     // Load window shaders and program
     mglcraft()
         : _win("MGLCRAFT: FPS: ", 720, 480, 3, 3),
-          _world("data/texture/atlas.bmp", 64, 8),
+          _world("data/texture/atlas.bmp", 64, 8, 7),
           _controls(_win, _cam, _world)
     {
         // Set depth and cull settings

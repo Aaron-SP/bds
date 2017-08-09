@@ -15,15 +15,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __TESTWORLDMESH__
-#define __TESTWORLDMESH__
+#ifndef __TESTWORLD__
+#define __TESTWORLD__
 
 #include <min/window.h>
 #include <stdexcept>
 #include <test.h>
-#include <world_mesh.h>
+#include <world.h>
 
-bool test_world_mesh()
+bool test_world()
 {
     bool out = true;
 
@@ -31,7 +31,7 @@ bool test_world_mesh()
     min::window window("test world mesh", 720, 480, 3, 3);
 
     // Load the graph mesh with 128 pixel tile size
-    game::world_mesh world("data/texture/atlas.bmp", 64, 8);
+    game::world world("data/texture/atlas.bmp", 64, 8, 7);
 
     world.add_block(min::vec3<float>(0.0, 0.0, 0.0));
     world.add_block(min::vec3<float>(1.0, 1.0, 1.0));
