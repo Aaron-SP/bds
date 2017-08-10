@@ -28,7 +28,7 @@ namespace game
 class mandelbulb
 {
   private:
-    static int8_t do_mandelbulb(const min::vec3<float> &p, const size_t size)
+    int8_t do_mandelbulb(const min::vec3<float> &p, const size_t size)
     {
         // Copy point
         float x0, x1;
@@ -83,21 +83,23 @@ class mandelbulb
         // If we converged return atlas
         if (converged)
         {
-            return iterations % 4;
+            return iterations % 8;
         }
 
         return -1;
     }
 
   public:
-    static void generate(std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
+    mandelbulb()
+    {
+    }
+    void generate(std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
     {
         // Create a threadpool for doing work in parallel
         thread_pool pool;
 
         // Create working function
-        const auto work = [&grid, gsize, &f](const size_t i) {
-
+        const auto work = [this, &grid, gsize, &f](const size_t i) {
             // Do work
             grid[i] = do_mandelbulb(f(i), gsize);
         };

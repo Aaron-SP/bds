@@ -58,11 +58,17 @@ class mglcraft
     // Load window shaders and program
     mglcraft()
         : _win("MGLCRAFT: FPS: ", 720, 480, 3, 3),
-          _world("data/texture/atlas.bmp", 64, 8, 7),
+          _world("data/texture/atlas.dds", 64, 8, 7),
           _controls(_win, _cam, _world)
     {
         // Set depth and cull settings
         min::settings::initialize();
+
+        // Turn off cursor
+        _win.display_cursor(false);
+
+        // Maximize window
+        _win.maximize();
 
         // Load the camera and fill uniform buffers with light and model matrix
         load_camera();
@@ -92,6 +98,7 @@ class mglcraft
         // Get the cursor coordinates
         const auto c = _win.get_cursor();
 
+        // Update the keyboard
         auto &keyboard = _win.get_keyboard();
         keyboard.update(step);
 

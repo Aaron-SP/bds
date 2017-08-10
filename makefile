@@ -9,7 +9,7 @@ ifeq ($(OS),Windows_NT)
 	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll
 else
 	MGL_PATH = /usr/include/mgl
-	LINKER = -lX11 -lGL -lfreetype
+	LINKER = -lX11 -lGL -lfreetype -pthread
 endif
 
 # Override if MGL_DESTDIR specified

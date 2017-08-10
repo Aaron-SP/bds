@@ -74,35 +74,83 @@ class cgrid
     static min::mesh<float, uint32_t> create_box_mesh(const min::aabbox<float, min::vec3> &box, const int8_t atlas_id)
     {
         min::mesh<float, uint32_t> box_mesh = min::to_mesh<float, uint32_t>(box);
-        if (atlas_id == 0)
+
+        // grass
+        if (atlas_id == 5)
         {
             for (auto &uv : box_mesh.uv)
             {
-                uv *= 0.5;
-                uv.y(uv.y() + 0.5);
+                uv *= 0.248;
+                uv.x(uv.x() + 0.001);
+                uv.y(uv.y() + 0.751);
             }
         }
+        // stone
+        else if (atlas_id == 0)
+        {
+            for (auto &uv : box_mesh.uv)
+            {
+                uv *= 0.248;
+                uv.x(uv.x() + 0.251);
+                uv.y(uv.y() + 0.751);
+            }
+        }
+        // sand
         else if (atlas_id == 1)
         {
             for (auto &uv : box_mesh.uv)
             {
-                uv *= 0.5;
-                uv += 0.5;
+                uv *= 0.248;
+                uv.x(uv.x() + 0.501);
+                uv.y(uv.y() + 0.751);
             }
         }
-        else if (atlas_id == 2)
-        {
-            for (auto &uv : box_mesh.uv)
-            {
-                uv *= 0.5;
-            }
-        }
+        // wood
         else if (atlas_id == 3)
         {
             for (auto &uv : box_mesh.uv)
             {
-                uv *= 0.5;
-                uv.x(uv.x() + 0.5);
+                uv *= 0.248;
+                uv += 0.751;
+            }
+        }
+        // dirt
+        else if (atlas_id == 4)
+        {
+            for (auto &uv : box_mesh.uv)
+            {
+                uv *= 0.248;
+                uv.x(uv.x() + 0.001);
+                uv.y(uv.y() + 0.501);
+            }
+        }
+        // lava
+        else if (atlas_id == 2)
+        {
+            for (auto &uv : box_mesh.uv)
+            {
+                uv *= 0.248;
+                uv.x(uv.x() + 0.251);
+                uv.y(uv.y() + 0.501);
+            }
+        }
+        // water
+        else if (atlas_id == 6)
+        {
+            for (auto &uv : box_mesh.uv)
+            {
+                uv *= 0.248;
+                uv += 0.501;
+            }
+        }
+        // sulphur
+        else if (atlas_id == 7)
+        {
+            for (auto &uv : box_mesh.uv)
+            {
+                uv *= 0.248;
+                uv.x(uv.x() + 0.751);
+                uv.y(uv.y() + 0.501);
             }
         }
 
@@ -220,7 +268,7 @@ class cgrid
     void generate_world()
     {
         // generate mandelbulb world using mandelbulb generator
-        mandelbulb::generate(_grid, _grid_size, [this](const size_t i) {
+        mandelbulb().generate(_grid, _grid_size, [this](const size_t i) {
             return this->grid_center(i);
         });
 
@@ -402,7 +450,20 @@ class cgrid
     {
         return _world;
     }
-    min::vec3<float> ray_trace_after(const min::ray<float, min::vec3> &r)
+    int grid_value(const min::vec3<float> &point) const
+    {
+        // Lookup grid index from point
+        bool is_valid = true;
+        size_t next_key = grid_key(point, is_valid);
+        if (is_valid)
+        {
+            // Return the atlas id at grid cell
+            return _grid[next_key];
+        }
+
+        return -1;
+    }
+    min::vec3<float> ray_trace_after(const min::ray<float, min::vec3> &r, const size_t length)
     {
         const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
 
@@ -417,9 +478,10 @@ class cgrid
         size_t next_key = grid_key(r.get_origin(), is_valid);
         if (is_valid)
         {
+            // bad flag signals that we have hit the last valid cell
             bool bad_flag = false;
             unsigned count = 0;
-            while (_grid[next_key] == -1 && !bad_flag && count < 5)
+            while (_grid[next_key] == -1 && !bad_flag && count < length)
             {
                 next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);
                 count++;
@@ -432,7 +494,7 @@ class cgrid
         // return ray start point since it is not in the grid
         return r.get_origin();
     }
-    min::vec3<float> ray_trace_before(const min::ray<float, min::vec3> &r)
+    min::vec3<float> ray_trace_before(const min::ray<float, min::vec3> &r, const size_t length)
     {
         const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
 
@@ -447,10 +509,11 @@ class cgrid
         size_t next_key = grid_key(r.get_origin(), is_valid);
         if (is_valid)
         {
+            // bad flag signals that we have hit the last valid cell
             size_t before_key = next_key;
             bool bad_flag = false;
             unsigned count = 0;
-            while (_grid[next_key] == -1 && !bad_flag && count < 4)
+            while (_grid[next_key] == -1 && !bad_flag && count < length)
             {
                 before_key = next_key;
                 next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);

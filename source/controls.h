@@ -49,10 +49,12 @@ class controls
 
         // Register click callback function for placing path
         _window->register_data((void *)this);
-        _window->register_lclick(controls::place_block);
-        _window->register_rclick(controls::remove_block);
+        _window->register_lclick(controls::left_click);
+        _window->register_rclick(controls::right_click);
+        _window->register_update(controls::on_resize);
 
         // Add FPS(WADS) keys to watch
+        keyboard.add(min::window::key_code::F1);
         keyboard.add(min::window::key_code::KEYQ);
         keyboard.add(min::window::key_code::KEYW);
         keyboard.add(min::window::key_code::KEYS);
@@ -69,7 +71,10 @@ class controls
         keyboard.add(min::window::key_code::KEY4);
 
         // Register callback function for closing window
-        keyboard.register_keydown(min::window::key_code::KEYQ, controls::close_window, (void *)_window);
+        keyboard.register_keydown(min::window::key_code::F1, controls::close_window, (void *)_window);
+
+        // Register callback function Q
+        keyboard.register_keydown(min::window::key_code::KEYQ, controls::toggle, (void *)this);
 
         // Register callback function W
         keyboard.register_keydown(min::window::key_code::KEYW, controls::forward, (void *)this);
@@ -135,14 +140,14 @@ class controls
         // Alert that we received the call back
         std::cout << "controls: Shutdown called by user" << std::endl;
     }
-    static void stop(void *ptr, double step)
+    static void toggle(void *ptr, double step)
     {
         // Cast to camera pointer type and move camera
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointers
         game::world *const world = control->get_world();
-        world->character_move(min::vec3<float>());
+        world->toggle_edit_mode();
     }
     static void forward(void *ptr, double step)
     {
@@ -256,7 +261,41 @@ class controls
         // Reset scale
         world->reset_scale();
     }
-    static void place_block(void *ptr, const uint16_t x, const uint16_t y)
+    static void left_click(void *ptr, const uint16_t x, const uint16_t y)
+    {
+        // Cast to camera pointer type and move camera
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the camera and world pointers
+        min::camera<float> *const camera = control->get_camera();
+        game::world *const world = control->get_world();
+
+        // Check if we are in edit mode
+        const bool mode = world->get_edit_mode();
+        if (mode)
+        {
+            // Calculate new point to add
+            const min::vec3<float> point = camera->project_point(3.0);
+
+            // Create a ray from camera to destination
+            const min::ray<float, min::vec3> r(camera->get_position(), point);
+
+            // Add block to world
+            world->add_block(r);
+        }
+        else
+        {
+            // Calculate point to remove from
+            const min::vec3<float> point = camera->project_point(3.0);
+
+            // Create a ray from camera to destination
+            const min::ray<float, min::vec3> r(camera->get_position(), point);
+
+            // Remove block from world
+            world->remove_block(r);
+        }
+    }
+    static void right_click(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to camera pointer type and move camera
         controls *control = reinterpret_cast<controls *>(ptr);
@@ -271,26 +310,25 @@ class controls
         // Create a ray from camera to destination
         const min::ray<float, min::vec3> r(camera->get_position(), point);
 
-        // Add block to world
-        world->add_block(r);
+        // Fire grappling hook
+        world->grappling(r);
     }
-    static void remove_block(void *ptr, const uint16_t x, const uint16_t y)
+    static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {
         // Cast to camera pointer type and move camera
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and world pointers
-        min::camera<float> *const camera = control->get_camera();
+        min::camera<float> *camera = control->get_camera();
         game::world *const world = control->get_world();
 
-        // Calculate point to remove from
-        const min::vec3<float> point = camera->project_point(3.0);
+        // Get camera frustum
+        auto &f = camera->get_frustum();
 
-        // Create a ray from camera to destination
-        const min::ray<float, min::vec3> r(camera->get_position(), point);
-
-        // Remove block from world
-        world->remove_block(r);
+        // Update the aspect ratio
+        f.set_aspect_ratio(width, height);
+        f.make_dirty();
+        camera->make_dirty();
     }
 };
 }

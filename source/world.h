@@ -22,8 +22,8 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <cmath>
 #include <cstdint>
 #include <explode_particle.h>
-#include <min/bmp.h>
 #include <min/camera.h>
+#include <min/dds.h>
 #include <min/physics.h>
 #include <min/program.h>
 #include <min/shader.h>
@@ -50,11 +50,12 @@ class world
     min::vertex_buffer<float, uint32_t, min::stream_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
     min::vertex_buffer<float, uint32_t, min::stream_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     min::texture_buffer _tbuffer;
-    GLuint _bmp_id;
-    min::bmp _bmp;
+    GLuint _dds_id;
+    min::dds _dds;
 
     // User stuff
     min::vec3<unsigned> _scale;
+    bool _show_preview;
 
     // Grid
     cgrid _grid;
@@ -168,13 +169,13 @@ class world
         // Change light alpha for placemark
         const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
         const min::vec4<float> pos1(0.0, 100.0, 0.0, 1.0);
-        const min::vec4<float> pow1(0.5, 1.0, 0.0, 0.25);
+        const min::vec4<float> pow1(0.3, 0.7, 0.0, 0.25);
         _preview.add_light(min::light<float>(col1, pos1, pow1));
 
         // Add light to scene
         const min::vec4<float> col2(1.0, 1.0, 1.0, 1.0);
         const min::vec4<float> pos2(0.0, 100.0, 0.0, 1.0);
-        const min::vec4<float> pow2(0.5, 1.0, 0.0, 1.0);
+        const min::vec4<float> pow2(0.3, 0.7, 0.0, 1.0);
         _geom.add_light(min::light<float>(col2, pos2, pow2));
 
         // Load projection and view matrix into uniform buffer
@@ -208,7 +209,7 @@ class world
         const min::ray<float, min::vec3> r(cam.get_position(), dest);
 
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> translate = _grid.ray_trace_before(r);
+        const min::vec3<float> translate = _grid.ray_trace_before(r, 4);
 
         // Set camera at the character position
         const min::vec3<float> &p = character_position();
@@ -235,8 +236,9 @@ class world
           _terrain_program(_tv, _tf),
           _preview(1, 4),
           _geom(1, 4),
-          _bmp(texture_file),
+          _dds(texture_file),
           _scale(3, 3, 3),
+          _show_preview(false),
           _grid(grid_size, chunk_size, view_chunk_size),
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity)
@@ -248,7 +250,7 @@ class world
         }
 
         // Load texture buffer
-        _bmp_id = _tbuffer.add_bmp_texture(_bmp);
+        _dds_id = _tbuffer.add_dds_texture(_dds);
 
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);
@@ -294,7 +296,7 @@ class world
     void remove_block(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_after(r);
+        const min::vec3<float> traced = _grid.ray_trace_after(r, 5);
 
         // Try to remove geometry from the grid
         const unsigned removed = _grid.set_geometry(traced, _scale, -1);
@@ -320,7 +322,7 @@ class world
     void add_block(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_before(r);
+        const min::vec3<float> traced = _grid.ray_trace_before(r, 4);
 
         // Add to grid
         _grid.set_geometry(traced, _scale, _grid.get_atlas());
@@ -335,7 +337,7 @@ class world
         // If not jumping or falling, allow jump
         if (std::abs(body.get_linear_velocity().y()) < 1.0)
         {
-            // Update the position
+            // Add force to body
             body.add_force(vel * 4000.0 * body.get_mass());
         }
     }
@@ -346,7 +348,7 @@ class world
         // Get the current position and set y movement to zero
         const min::vec3<float> dxz = min::vec3<float>(vel.x(), 0.0, vel.z()).normalize();
 
-        // Update the position
+        // Add force to body
         body.add_force(dxz * 1E2 * body.get_mass());
     }
     const min::vec3<float> &character_position() const
@@ -393,7 +395,7 @@ class world
         }
 
         // Bind this texture for drawing
-        _tbuffer.bind(_bmp_id, 0);
+        _tbuffer.bind(_dds_id, 0);
 
         // update camera matrices
         update_uniform(cam);
@@ -407,14 +409,25 @@ class world
         // Draw the world geometry
         draw_terrain();
 
-        // Activate the uniform buffer
-        _preview.bind();
+        // Only draw if toggled
+        if (_show_preview)
+        {
+            // Activate the uniform buffer
+            _preview.bind();
 
-        // Draw the placemark
-        draw_placemark();
+            // Draw the placemark
+            draw_placemark();
+        }
 
         // Draw the particles
         _particles.draw(_preview, cam, dt);
+    }
+    void reset_scale()
+    {
+        _scale = min::vec3<unsigned>(1, 1, 1);
+
+        // Regenerate the preview mesh
+        generate_pb();
     }
     void set_atlas_id(const int8_t id)
     {
@@ -453,12 +466,43 @@ class world
             generate_pb();
         }
     }
-    void reset_scale()
+    bool get_edit_mode()
     {
-        _scale = min::vec3<unsigned>(1, 1, 1);
+        return _show_preview;
+    }
+    void toggle_edit_mode()
+    {
+        _show_preview = !_show_preview;
+    }
+    void grappling(const min::ray<float, min::vec3> &r)
+    {
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        const min::vec3<float> traced = _grid.ray_trace_after(r, 100);
 
-        // Regenerate the preview mesh
-        generate_pb();
+        // Get grid atlas at point
+        const int atlas = _grid.grid_value(traced);
+
+        // See if we hit a block
+        if (atlas != -1)
+        {
+            // Compute force along the way proportional to the distance
+            const min::vec3<float> d = (traced - r.get_origin());
+
+            // Get character body
+            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+            // Calculate distance of ray
+            const float mag = d.magnitude();
+
+            // If the distance is too short give boost
+            const float d_factor = (mag < 20.0) ? 1.0 : 0.5;
+
+            // If the pointing down weaken
+            const float y_factor = (r.get_direction().y() < -0.5) ? 0.25 : 1.0;
+
+            // Add force to body
+            body.add_force(d * 1E3 * d_factor * y_factor * body.get_mass());
+        }
     }
 };
 }
