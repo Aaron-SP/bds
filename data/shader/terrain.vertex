@@ -37,7 +37,7 @@ void main(void)
     vec4 trans_vertex;
 
 	// Calculate transformed position
-    if(light_buffer.lights[0].power.a > 0.251)
+    if(light_buffer.lights[0].power.a > 0.51)
     {
         // Terrain
         trans_vertex = vertex;

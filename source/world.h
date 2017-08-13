@@ -32,6 +32,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/tree.h>
 #include <min/uniform_buffer.h>
 #include <min/vertex_buffer.h>
+#include <sky.h>
 #include <stdexcept>
 #include <vector>
 
@@ -51,10 +52,11 @@ class world
     min::vertex_buffer<float, uint32_t, min::stream_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
-    min::dds _dds;
 
     // User stuff
     min::vec3<unsigned> _scale;
+    min::vec3<float> _cached_offset;
+    min::vec3<float> _preview_offset;
     bool _show_preview;
 
     // Grid
@@ -67,6 +69,9 @@ class world
 
     // Particle stuff
     explode_particle _particles;
+
+    // Skybox
+    sky _sky;
 
     inline void draw_placemark() const
     {
@@ -115,6 +120,9 @@ class world
         // Reset the buffer
         _pb.clear();
 
+        // Lock in the preview offset
+        _preview_offset = _cached_offset;
+
         // Store start point => (0,0,0)
         min::vec3<float> p;
 
@@ -131,11 +139,11 @@ class world
                 {
                     const min::mesh<float, uint32_t> box_mesh = _grid.atlas_box(p);
                     _pb.add_mesh(box_mesh);
-                    p.z(p.z() + 1.0);
+                    p.z(p.z() + _preview_offset.z());
                 }
                 p.y(p.y() + 1.0);
             }
-            p.x(p.x() + 1.0);
+            p.x(p.x() + _preview_offset.x());
         }
 
         //Bind the pb VAO
@@ -169,7 +177,7 @@ class world
         // Change light alpha for placemark
         const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
         const min::vec4<float> pos1(0.0, 100.0, 0.0, 1.0);
-        const min::vec4<float> pow1(0.3, 0.7, 0.0, 0.25);
+        const min::vec4<float> pow1(0.3, 0.7, 0.0, 0.50);
         _preview.add_light(min::light<float>(col1, pos1, pow1));
 
         // Add light to scene
@@ -215,6 +223,26 @@ class world
         const min::vec3<float> &p = character_position();
         cam.set_position(p + min::vec3<float>(0.0, 1.0, 0.0));
 
+        // Update offset x-vector
+        if (cam.get_forward().x() >= 0.0)
+        {
+            _cached_offset.x(1.0);
+        }
+        else
+        {
+            _cached_offset.x(-1.0);
+        }
+
+        // Update offset z-vector
+        if (cam.get_forward().z() >= 0.0)
+        {
+            _cached_offset.z(1.0);
+        }
+        else
+        {
+            _cached_offset.z(-1.0);
+        }
+
         // Update geom matrix uniforms
         _geom.set_matrix(cam.get_pv_matrix(), 0);
         _geom.set_matrix(cam.get_v_matrix(), 1);
@@ -230,18 +258,20 @@ class world
     }
 
   public:
-    world(const std::string &texture_file, const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
+    world(const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
         : _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
           _tf("data/shader/terrain.fragment", GL_FRAGMENT_SHADER),
           _terrain_program(_tv, _tf),
           _preview(1, 4),
           _geom(1, 4),
-          _dds(texture_file),
           _scale(3, 3, 3),
+          _cached_offset(1.0, 1.0, 1.0),
+          _preview_offset(1.0, 1.0, 1.0),
           _show_preview(false),
           _grid(grid_size, chunk_size, view_chunk_size),
           _gravity(0.0, -10.0, 0.0),
-          _simulation(_grid.get_world(), _gravity)
+          _simulation(_grid.get_world(), _gravity),
+          _sky(_geom, grid_size)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)
@@ -249,8 +279,11 @@ class world
             throw std::runtime_error("world: chunk_size must be integer multiple of grid_size");
         }
 
+        // Load texture
+        min::dds tex("data/texture/atlas.dds");
+
         // Load texture buffer
-        _dds_id = _tbuffer.add_dds_texture(_dds);
+        _dds_id = _tbuffer.add_dds_texture(tex);
 
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);
@@ -280,7 +313,7 @@ class world
     void remove_block(const min::vec3<float> &point, const min::vec3<float> &position)
     {
         // Try to remove geometry from the grid
-        const unsigned removed = _grid.set_geometry(snap(point), _scale, -1);
+        const unsigned removed = _grid.set_geometry(snap(point), _scale, _preview_offset, -1);
 
         // If we removed geometry, play particles
         if (removed > 0)
@@ -299,7 +332,7 @@ class world
         const min::vec3<float> traced = _grid.ray_trace_after(r, 5);
 
         // Try to remove geometry from the grid
-        const unsigned removed = _grid.set_geometry(traced, _scale, -1);
+        const unsigned removed = _grid.set_geometry(traced, _scale, _preview_offset, -1);
 
         // If we removed geometry, play particles
         if (removed > 0)
@@ -314,7 +347,7 @@ class world
     void add_block(const min::vec3<float> &center)
     {
         // Add to grid
-        _grid.set_geometry(snap(center), _scale, _grid.get_atlas());
+        _grid.set_geometry(snap(center), _scale, _preview_offset, _grid.get_atlas());
 
         // generate new mesh
         generate_gb();
@@ -325,7 +358,7 @@ class world
         const min::vec3<float> traced = _grid.ray_trace_before(r, 4);
 
         // Add to grid
-        _grid.set_geometry(traced, _scale, _grid.get_atlas());
+        _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
 
         // generate new mesh
         generate_gb();
@@ -394,11 +427,14 @@ class world
             _simulation.solve_static(col_blocks, _char_id, dt / 10.0, 10.0);
         }
 
-        // Bind this texture for drawing
-        _tbuffer.bind(_dds_id, 0);
-
         // update camera matrices
         update_uniform(cam);
+
+        // Draw the sky
+        _sky.draw();
+
+        // Bind the terrain texture for drawing
+        _tbuffer.bind(_dds_id, 0);
 
         // Use the terrain program for drawing
         _terrain_program.use();
@@ -502,6 +538,9 @@ class world
 
             // Add force to body
             body.add_force(d * 1E3 * d_factor * y_factor * body.get_mass());
+
+            // Destroy block
+            remove_block(traced, r.get_origin());
         }
     }
 };

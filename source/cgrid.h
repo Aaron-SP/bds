@@ -528,7 +528,7 @@ class cgrid
         return r.get_origin();
     }
     // Modifies the geometry in grid
-    unsigned set_geometry(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const int8_t atlas_id)
+    unsigned set_geometry(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const min::vec3<float> &offset, const int8_t atlas_id)
     {
         // Modified geometry
         unsigned out = 0;
@@ -539,7 +539,6 @@ class cgrid
 
         // Get cubic function properties
         const min::vec3<float> &start = point;
-        const min::vec3<float> offset(1.0, 1.0, 1.0);
         const min::vec3<unsigned> &length = scale;
 
         // Create cubic function, for each cell in cubic space

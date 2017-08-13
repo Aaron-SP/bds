@@ -66,7 +66,7 @@ class explode_particle
         : _vertex("data/shader/emitter.vertex", GL_VERTEX_SHADER),
           _fragment("data/shader/emitter.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _ebuffer(min::vec3<float>(), 50, 5, 0.10, 5.0, 5.0),
+          _ebuffer(min::vec3<float>(), 200, 5, 0.10, 5.0, 5.0),
           _time(0.0)
     {
         // Load textures

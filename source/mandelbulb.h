@@ -28,6 +28,22 @@ namespace game
 class mandelbulb
 {
   private:
+    inline static float pow9(const float x)
+    {
+        return x * x * x * x * x * x * x * x * x;
+    }
+    inline static float pow7(const float x)
+    {
+        return x * x * x * x * x * x * x;
+    }
+    inline static float pow5(const float x)
+    {
+        return x * x * x * x * x;
+    }
+    inline static float pow3(const float x)
+    {
+        return x * x * x;
+    }
     int8_t do_mandelbulb(const min::vec3<float> &p, const size_t size)
     {
         // Copy point
@@ -36,7 +52,7 @@ class mandelbulb
         float z0, z1;
 
         // Set start point
-        const size_t d = size / 2.0;
+        const size_t d = size / 2;
         x0 = p.x() / d;
         y0 = p.y() / d;
         z0 = p.z() / d;
@@ -51,21 +67,21 @@ class mandelbulb
             const float dx2 = dx * dx;
             const float dx3 = dx2 * dx;
             const float dx4 = dx3 * dx;
-            x1 = std::pow(x0, 9) - 36.0 * std::pow(x0, 7) * dx + 126.0 * std::pow(x0, 5) * dx2 - 84.0 * std::pow(x0, 3) * dx3 + 9.0 * x0 * dx4 + x0;
+            x1 = pow9(x0) - 36.0 * pow7(x0) * dx + 126.0 * pow5(x0) * dx2 - 84.0 * pow3(x0) * dx3 + 9.0 * x0 * dx4 + x0;
 
             // Y coordinate
             const float dy = (z0 * z0 + x0 * x0);
             const float dy2 = dy * dy;
             const float dy3 = dy2 * dy;
             const float dy4 = dy3 * dy;
-            y1 = std::pow(y0, 9) - 36.0 * std::pow(y0, 7) * dy + 126.0 * std::pow(y0, 5) * dy2 - 84.0 * std::pow(y0, 3) * dy3 + 9.0 * y0 * dy4 + y0;
+            y1 = pow9(y0) - 36.0 * pow7(y0) * dy + 126.0 * pow5(y0) * dy2 - 84.0 * pow3(y0) * dy3 + 9.0 * y0 * dy4 + y0;
 
             // Z coordinate
             const float dz = (x0 * x0 + y0 * y0);
             const float dz2 = dz * dz;
             const float dz3 = dz2 * dz;
             const float dz4 = dz3 * dz;
-            z1 = std::pow(z0, 9) - 36.0 * std::pow(z0, 7) * dz + 126.0 * std::pow(z0, 5) * dz2 - 84.0 * std::pow(z0, 3) * dz3 + 9.0 * z0 * dz4 + z0;
+            z1 = pow9(z0) - 36.0 * pow7(z0) * dz + 126.0 * pow5(z0) * dz2 - 84.0 * pow3(z0) * dz3 + 9.0 * z0 * dz4 + z0;
 
             if (std::abs(x1 - x0) < 1E-3 && std::abs(y1 - y0) < 1E-3 && std::abs(z1 - z0) < 1E-3)
             {

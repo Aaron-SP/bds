@@ -23,6 +23,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/ray.h>
 #include <min/window.h>
 #include <stdexcept>
+#include <text.h>
 #include <world.h>
 
 namespace game
@@ -33,15 +34,16 @@ class controls
   private:
     min::window *_window;
     min::camera<float> *_camera;
+    game::text *_text;
     game::world *_world;
 
   public:
-    controls(min::window &window, min::camera<float> &camera, game::world &world) : _window(&window), _camera(&camera), _world(&world)
+    controls(min::window &window, min::camera<float> &camera, game::text &text, game::world &world) : _window(&window), _camera(&camera), _text(&text), _world(&world)
     {
         // Check that pointers are valid
-        if (!_window || !_camera || !_world)
+        if (!_window || !_camera || !_text || !_world)
         {
-            throw std::runtime_error("control: Invalid contorl pointers");
+            throw std::runtime_error("control: Invalid control pointers");
         }
 
         // Get access to the keyboard
@@ -55,6 +57,7 @@ class controls
 
         // Add FPS(WADS) keys to watch
         keyboard.add(min::window::key_code::F1);
+        keyboard.add(min::window::key_code::F2);
         keyboard.add(min::window::key_code::KEYQ);
         keyboard.add(min::window::key_code::KEYW);
         keyboard.add(min::window::key_code::KEYS);
@@ -70,8 +73,11 @@ class controls
         keyboard.add(min::window::key_code::KEY3);
         keyboard.add(min::window::key_code::KEY4);
 
-        // Register callback function for closing window
+        // Register callback function F1
         keyboard.register_keydown(min::window::key_code::F1, controls::close_window, (void *)_window);
+
+        // Register callback function F2
+        keyboard.register_keydown(min::window::key_code::F2, controls::toggle_text, (void *)_text);
 
         // Register callback function Q
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::toggle, (void *)this);
@@ -123,6 +129,10 @@ class controls
     {
         return _camera;
     }
+    game::text *get_text()
+    {
+        return _text;
+    }
     game::world *get_world()
     {
         return _world;
@@ -140,6 +150,14 @@ class controls
         // Alert that we received the call back
         std::cout << "controls: Shutdown called by user" << std::endl;
     }
+    static void toggle_text(void *ptr, double step)
+    {
+        // Cast to text pointer type and toggle draw
+        game::text *text = reinterpret_cast<game::text *>(ptr);
+
+        // Enable / Disable drawing text
+        text->toggle_draw();
+    }
     static void toggle(void *ptr, double step)
     {
         // Cast to camera pointer type and move camera
@@ -147,7 +165,12 @@ class controls
 
         // Get the world pointers
         game::world *const world = control->get_world();
+
+        // toggle edit mode
         world->toggle_edit_mode();
+
+        // reset scale
+        world->reset_scale();
     }
     static void forward(void *ptr, double step)
     {
@@ -318,9 +341,9 @@ class controls
         // Cast to camera pointer type and move camera
         controls *control = reinterpret_cast<controls *>(ptr);
 
-        // Get the camera and world pointers
+        // Get the camera pointer
         min::camera<float> *camera = control->get_camera();
-        game::world *const world = control->get_world();
+        game::text *text = control->get_text();
 
         // Get camera frustum
         auto &f = camera->get_frustum();
@@ -329,6 +352,9 @@ class controls
         f.set_aspect_ratio(width, height);
         f.make_dirty();
         camera->make_dirty();
+
+        // Update the text screen size
+        text->set_screen(width, height);
     }
 };
 }

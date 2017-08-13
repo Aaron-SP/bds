@@ -18,9 +18,10 @@ ifdef MGL_DESTDIR
 endif
 
 # Compile parameters
-NATIVE = -std=c++14 -Wall -O3 -march=native -fomit-frame-pointer -freciprocal-math -ffast-math
-BUILD32 = -std=c++14 -Wall -O3 -m32 -static -static-libgcc -static-libstdc++
-BUILD64 = -std=c++14 -Wall -O3 -m64 -static -static-libgcc -static-libstdc++
+CPP = -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math -static -static-libgcc -static-libstdc++
+NATIVE = $(CPP) -march=native
+BUILD32 = $(CPP) -m32
+BUILD64 = $(CPP) -m64
 GAME = -DGLEW_STATIC $(MGL_PATH)/platform/min/glew.cpp source/game.cpp -o bin/game
 TEST = -DGLEW_STATIC $(MGL_PATH)/platform/min/glew.cpp test/test.cpp -o bin/tests
 

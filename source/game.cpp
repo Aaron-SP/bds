@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <controls.h>
+#include <iomanip>
 #include <iostream>
 #include <min/bmp.h>
 #include <min/camera.h>
@@ -23,7 +24,9 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/settings.h>
 #include <min/utility.h>
 #include <min/window.h>
+#include <sstream>
 #include <string>
+#include <text.h>
 #include <world.h>
 
 class mglcraft
@@ -37,32 +40,51 @@ class mglcraft
     // Game specific classes
     game::world _world;
     game::controls _controls;
+    game::text _text;
 
     void load_camera()
     {
         // Move and camera to -X and look at origin
-        const min::vec3<float> pos = min::vec3<float>(-1.0, 2.0, 0.0);
-        const min::vec3<float> look = min::vec3<float>(0.0, 0.0, 0.0);
+        const min::vec3<float> pos = min::vec3<float>(0.0, 2.0, 0.0);
+        const min::vec3<float> look = min::vec3<float>(1.0, 2.0, 0.0);
 
         // Test perspective projection
         // Create camera, set location and look at
         _cam.set_position(pos);
         _cam.set_look_at(look);
         auto &f = _cam.get_frustum();
-        f.set_far(100.0);
+        f.set_far(5000.0);
         f.set_fov(90.0);
         _cam.set_perspective();
+    }
+    void load_text()
+    {
+        // Set the screen size
+        _text.set_screen(720, 480);
+
+        // Add test text
+        _text.add_text("MGLCRAFT:Official Demo", 10, 460);
+
+        // Add cross hairs
+        _text.add_text("(X)", 360, 240);
+
+        // Add character position
+        _text.add_text("X:Y:Z:", 10, 432);
     }
 
   public:
     // Load window shaders and program
     mglcraft()
         : _win("MGLCRAFT: FPS: ", 720, 480, 3, 3),
-          _world("data/texture/atlas.dds", 64, 8, 7),
-          _controls(_win, _cam, _world)
+          _world(64, 8, 7),
+          _controls(_win, _cam, _text, _world),
+          _text(28)
     {
         // Set depth and cull settings
         min::settings::initialize();
+
+        // Load text into the text buffer
+        load_text();
 
         // Turn off cursor
         _win.display_cursor(false);
@@ -84,6 +106,9 @@ class mglcraft
     {
         // Draw world geometry
         _world.draw(_cam, dt);
+
+        // Draw the text
+        _text.draw();
     }
     bool is_closed() const
     {
@@ -140,6 +165,17 @@ class mglcraft
         // Center cursor in middle of window
         _win.set_cursor(w / 2, h / 2);
     }
+    void update_text()
+    {
+        // Update player position debug text
+        const min::vec3<float> &p = _world.character_position();
+        std::ostringstream stream;
+        stream << std::fixed << std::setprecision(4) << "X:" << p.x() << ",Y:" << p.y() << ",Z:" << p.z();
+        _text.update_text(stream.str(), 2);
+
+        // Uploads changes
+        _text.upload();
+    }
     void update_window()
     {
         // Update and swap buffers
@@ -181,6 +217,9 @@ void run()
             // Calculate needed delay to hit target
             frame_time = sync.sync();
         }
+
+        // Update the debug test
+        game.update_text();
 
         // Calculate the number of 'average' frames per second
         const double fps = sync.get_fps();
