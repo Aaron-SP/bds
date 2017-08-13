@@ -40,7 +40,7 @@ class cgrid
     min::aabbox<float, min::vec3> _world;
     int8_t _atlas_id;
 
-    static inline void cubic(const min::vec3<float> &start, const min::vec3<float> &offset, const min::vec3<unsigned> &length, const std::function<void(const min::vec3<float> &)> &f)
+    static inline void cubic(const min::vec3<float> &start, const min::vec3<int> &offset, const min::vec3<unsigned> &length, const std::function<void(const min::vec3<float> &)> &f)
     {
         // Begin at start position
         min::vec3<float> p = start;
@@ -197,7 +197,7 @@ class cgrid
 
         // Get cubic function properties
         const min::vec3<float> start = chunk_start(key);
-        const min::vec3<float> offset(1.0, 1.0, 1.0);
+        const min::vec3<int> offset(1, 1, 1);
         const min::vec3<unsigned> length(_chunk_size, _chunk_size, _chunk_size);
 
         // Create cubic function, for each cell in cubic space
@@ -286,8 +286,8 @@ class cgrid
         out.push_back(key);
 
         // Get cubic function properties
-        const min::vec3<float> offset(_chunk_size, _chunk_size, _chunk_size);
-        const min::vec3<float> start = chunk_start(key) - offset;
+        const min::vec3<float> start = chunk_start(key) - min::vec3<float>(_chunk_size, _chunk_size, _chunk_size);
+        const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
         const min::vec3<unsigned> length(3, 3, 3);
 
         // Create cubic function, for each cell in cubic space
@@ -380,7 +380,7 @@ class cgrid
 
         // Get cubic function properties
         const min::vec3<float> start = center - min::vec3<float>(1.0, 1.5, 1.0);
-        const min::vec3<float> offset(1.0, 1.0, 1.0);
+        const min::vec3<int> offset(1, 1, 1);
         const min::vec3<unsigned> length(3, 4, 3);
 
         // Create cubic function, for each cell in cubic space
@@ -428,7 +428,7 @@ class cgrid
         // Get the chunk starting point
         const size_t half_width = (_view_chunk_size / 2) - 1;
         const min::vec3<float> start = chunk_start(_recent_chunk) - min::vec3<float>(_chunk_size, _chunk_size, _chunk_size) * half_width;
-        const min::vec3<float> offset(_chunk_size, _chunk_size, _chunk_size);
+        const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
         const min::vec3<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
 
         // Create cubic function, for each cell in cubic space
@@ -528,7 +528,7 @@ class cgrid
         return r.get_origin();
     }
     // Modifies the geometry in grid
-    unsigned set_geometry(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const min::vec3<float> &offset, const int8_t atlas_id)
+    unsigned set_geometry(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const min::vec3<int> &offset, const int8_t atlas_id)
     {
         // Modified geometry
         unsigned out = 0;

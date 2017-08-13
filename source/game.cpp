@@ -66,10 +66,13 @@ class mglcraft
         _text.add_text("MGLCRAFT:Official Demo", 10, 460);
 
         // Add cross hairs
-        _text.add_text("(X)", 360, 240);
+        _text.add_text("(X)", 346, 226);
 
         // Add character position
         _text.add_text("X:Y:Z:", 10, 432);
+
+        // Add character direction
+        _text.add_text("X:Y:Z:", 10, 404);
     }
 
   public:
@@ -173,7 +176,16 @@ class mglcraft
         stream << std::fixed << std::setprecision(4) << "X:" << p.x() << ",Y:" << p.y() << ",Z:" << p.z();
         _text.update_text(stream.str(), 2);
 
-        // Uploads changes
+        // Clear and reset the stream
+        stream.clear();
+        stream.str(std::string());
+
+        // Update player direction debug text
+        const min::vec3<float> &f = _cam.get_forward();
+        stream << "X:" << f.x() << ",Y:" << f.y() << ",Z:" << f.z();
+        _text.update_text(stream.str(), 3);
+
+        // Upload changes
         _text.upload();
     }
     void update_window()
@@ -218,7 +230,7 @@ void run()
             frame_time = sync.sync();
         }
 
-        // Update the debug test
+        // Update the debug text
         game.update_text();
 
         // Calculate the number of 'average' frames per second

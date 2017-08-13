@@ -72,6 +72,10 @@ class controls
         keyboard.add(min::window::key_code::KEY2);
         keyboard.add(min::window::key_code::KEY3);
         keyboard.add(min::window::key_code::KEY4);
+        keyboard.add(min::window::key_code::KEY5);
+        keyboard.add(min::window::key_code::KEY6);
+        keyboard.add(min::window::key_code::KEY7);
+        keyboard.add(min::window::key_code::KEY8);
 
         // Register callback function F1
         keyboard.register_keydown(min::window::key_code::F1, controls::close_window, (void *)_window);
@@ -80,7 +84,7 @@ class controls
         keyboard.register_keydown(min::window::key_code::F2, controls::toggle_text, (void *)_text);
 
         // Register callback function Q
-        keyboard.register_keydown(min::window::key_code::KEYQ, controls::toggle, (void *)this);
+        keyboard.register_keydown(min::window::key_code::KEYQ, controls::toggle_edit_mode, (void *)this);
 
         // Register callback function W
         keyboard.register_keydown(min::window::key_code::KEYW, controls::forward, (void *)this);
@@ -124,6 +128,18 @@ class controls
 
         // Register callback function KEY2 for switching texture to 'wood'
         keyboard.register_keydown(min::window::key_code::KEY4, controls::switch_wood, (void *)_world);
+
+        // Register callback function KEY1 for switching texture to 'dirt'
+        keyboard.register_keydown(min::window::key_code::KEY5, controls::switch_dirt, (void *)_world);
+
+        // Register callback function KEY2 for switching texture to 'lava'
+        keyboard.register_keydown(min::window::key_code::KEY6, controls::switch_lava, (void *)_world);
+
+        // Register callback function KEY2 for switching texture to 'water'
+        keyboard.register_keydown(min::window::key_code::KEY7, controls::switch_water, (void *)_world);
+
+        // Register callback function KEY2 for switching texture to 'sulphur'
+        keyboard.register_keydown(min::window::key_code::KEY8, controls::switch_sulphur, (void *)_world);
     }
     min::camera<float> *get_camera()
     {
@@ -158,7 +174,7 @@ class controls
         // Enable / Disable drawing text
         text->toggle_draw();
     }
-    static void toggle(void *ptr, double step)
+    static void toggle_edit_mode(void *ptr, double step)
     {
         // Cast to camera pointer type and move camera
         controls *control = reinterpret_cast<controls *>(ptr);
@@ -227,27 +243,51 @@ class controls
     }
     static void switch_grass(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to '0'
+        // Cast to world pointer type and set atlas id to 'grass'
         game::world *const world = reinterpret_cast<game::world *>(ptr);
-        world->set_atlas_id(0);
+        world->set_atlas_id(5);
     }
     static void switch_stone(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to '1'
+        // Cast to world pointer type and set atlas id to 'stone'
         game::world *const world = reinterpret_cast<game::world *>(ptr);
-        world->set_atlas_id(1);
+        world->set_atlas_id(0);
     }
     static void switch_sand(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to '2'
+        // Cast to world pointer type and set atlas id to 'sand'
         game::world *const world = reinterpret_cast<game::world *>(ptr);
-        world->set_atlas_id(2);
+        world->set_atlas_id(1);
     }
     static void switch_wood(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to '3'
+        // Cast to world pointer type and set atlas id to 'wood'
         game::world *const world = reinterpret_cast<game::world *>(ptr);
         world->set_atlas_id(3);
+    }
+    static void switch_dirt(void *ptr, double step)
+    {
+        // Cast to world pointer type and set atlas id to 'dirt'
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world->set_atlas_id(4);
+    }
+    static void switch_lava(void *ptr, double step)
+    {
+        // Cast to world pointer type and set atlas id to 'lava'
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world->set_atlas_id(2);
+    }
+    static void switch_water(void *ptr, double step)
+    {
+        // Cast to world pointer type and set atlas id to 'water'
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world->set_atlas_id(6);
+    }
+    static void switch_sulphur(void *ptr, double step)
+    {
+        // Cast to world pointer type and set atlas id to 'sulphur'
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world->set_atlas_id(7);
     }
     static void add_x(void *ptr, double step)
     {
@@ -341,7 +381,7 @@ class controls
         // Cast to camera pointer type and move camera
         controls *control = reinterpret_cast<controls *>(ptr);
 
-        // Get the camera pointer
+        // Get the camera and text pointer
         min::camera<float> *camera = control->get_camera();
         game::text *text = control->get_text();
 

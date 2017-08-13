@@ -55,9 +55,9 @@ class world
 
     // User stuff
     min::vec3<unsigned> _scale;
-    min::vec3<float> _cached_offset;
-    min::vec3<float> _preview_offset;
-    bool _show_preview;
+    min::vec3<int> _cached_offset;
+    min::vec3<int> _preview_offset;
+    bool _edit_mode;
 
     // Grid
     cgrid _grid;
@@ -226,21 +226,21 @@ class world
         // Update offset x-vector
         if (cam.get_forward().x() >= 0.0)
         {
-            _cached_offset.x(1.0);
+            _cached_offset.x(1);
         }
         else
         {
-            _cached_offset.x(-1.0);
+            _cached_offset.x(-1);
         }
 
         // Update offset z-vector
         if (cam.get_forward().z() >= 0.0)
         {
-            _cached_offset.z(1.0);
+            _cached_offset.z(1);
         }
         else
         {
-            _cached_offset.z(-1.0);
+            _cached_offset.z(-1);
         }
 
         // Update geom matrix uniforms
@@ -265,9 +265,9 @@ class world
           _preview(1, 4),
           _geom(1, 4),
           _scale(3, 3, 3),
-          _cached_offset(1.0, 1.0, 1.0),
-          _preview_offset(1.0, 1.0, 1.0),
-          _show_preview(false),
+          _cached_offset(1, 1, 1),
+          _preview_offset(1, 1, 1),
+          _edit_mode(false),
           _grid(grid_size, chunk_size, view_chunk_size),
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity),
@@ -446,7 +446,7 @@ class world
         draw_terrain();
 
         // Only draw if toggled
-        if (_show_preview)
+        if (_edit_mode)
         {
             // Activate the uniform buffer
             _preview.bind();
@@ -474,41 +474,65 @@ class world
     }
     void set_scale_x(unsigned dx)
     {
-        if (_scale.x() < 5)
+        if (_edit_mode)
         {
-            _scale.x(_scale.x() + dx);
+            if (_cached_offset.x() != _preview_offset.x())
+            {
+                // Regenerate the preview mesh
+                generate_pb();
+            }
+            else if (_scale.x() < 5)
+            {
+                _scale.x(_scale.x() + dx);
 
-            // Regenerate the preview mesh
-            generate_pb();
+                // Regenerate the preview mesh
+                generate_pb();
+            }
         }
     }
     void set_scale_y(unsigned dy)
     {
-        if (_scale.y() < 5)
+        if (_edit_mode)
         {
-            _scale.y(_scale.y() + dy);
+            if (_cached_offset.y() != _preview_offset.y())
+            {
+                // Regenerate the preview mesh
+                generate_pb();
+            }
+            else if (_scale.y() < 5)
+            {
+                _scale.y(_scale.y() + dy);
 
-            // Regenerate the preview mesh
-            generate_pb();
+                // Regenerate the preview mesh
+                generate_pb();
+            }
         }
     }
     void set_scale_z(unsigned dz)
     {
-        if (_scale.z() < 5)
+        if (_edit_mode)
         {
-            _scale.z(_scale.z() + dz);
+            if (_cached_offset.z() != _preview_offset.z())
+            {
+                // Regenerate the preview mesh
+                generate_pb();
+            }
+            else if (_scale.z() < 5)
+            {
+                _scale.z(_scale.z() + dz);
 
-            // Regenerate the preview mesh
-            generate_pb();
+                // Regenerate the preview mesh
+                generate_pb();
+            }
         }
     }
     bool get_edit_mode()
     {
-        return _show_preview;
+        return _edit_mode;
     }
     void toggle_edit_mode()
     {
-        _show_preview = !_show_preview;
+        _edit_mode = !_edit_mode;
     }
     void grappling(const min::ray<float, min::vec3> &r)
     {
@@ -538,6 +562,9 @@ class world
 
             // Add force to body
             body.add_force(d * 1E3 * d_factor * y_factor * body.get_mass());
+
+            // Reset the scale
+            reset_scale();
 
             // Destroy block
             remove_block(traced, r.get_origin());
