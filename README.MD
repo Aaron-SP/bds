@@ -62,12 +62,16 @@ PLAYER INSTRUCTIONS:
 
 1.) Keys [WASD] to move
 
-2.) Keys [ZXC] to scale unit block
+2.) Enter/Exit block edit mode
 
-3.) Keys [1-4] to switch textures
+3.) Keys [ZXC] to scale unit block
 
-4.) Left mouse to place and remove blocks
+4.) Keys [1-8] to switch textures (edit mode)
 
-5.) Right mouse button to clear scale
+5.) Left mouse button to place and remove blocks (edit mode)
 
-6.) Key [Q] to quit
+6.) Right mouse button to launch a grappling hook
+
+7.) Key [F1] to quit
+
+8.) Key [F2] to toggle debug text
