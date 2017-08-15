@@ -152,19 +152,6 @@ class world
         // Upload contents to the vertex buffer
         _pb.upload();
     }
-    void load_character(const min::vec3<float> &p)
-    {
-        // Create a box for camera movement and add to simulation
-        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
-        const min::aabbox<float, min::vec3> box(p - half_extent, p + half_extent);
-        _char_id = _simulation.add_body(box, 10.0, 1);
-
-        // Get the physics body for editing
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Set this body to be unrotatable
-        body.set_no_rotate();
-    }
     void load_uniform()
     {
         // Load the uniform buffer with program we will use
@@ -264,7 +251,7 @@ class world
           _terrain_program(_tv, _tf),
           _preview(1, 4),
           _geom(1, 4),
-          _scale(3, 3, 3),
+          _scale(1, 1, 1),
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
           _edit_mode(false),
@@ -291,21 +278,24 @@ class world
         // Load uniform buffers
         load_uniform();
 
-        // Reload the character
-        min::vec3<float> position(0.0, 2.0, 0.0);
-        load_character(position);
-
-        // Update recent chunk
-        _grid.update(position);
-
-        // Remove geometry around player
-        remove_block(min::vec3<float>(-1.0, -0.0, -1.0), position);
-
-        // Reset scale
-        _scale = min::vec3<unsigned>(1, 1, 1);
-
         // Generate the preview buffer
         generate_pb();
+    }
+    void add_block(const min::vec3<float> &center)
+    {
+        // Add to grid
+        _grid.set_geometry(snap(center), _scale, _preview_offset, _grid.get_atlas());
+
+        // generate new mesh
+        generate_gb();
+    }
+    void add_block(const min::ray<float, min::vec3> &r)
+    {
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        const min::vec3<float> traced = _grid.ray_trace_before(r, 4);
+
+        // Add to grid
+        _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
 
         // generate new mesh
         generate_gb();
@@ -344,25 +334,6 @@ class world
             _particles.load(traced, r.get_direction() * -1.0, 5.0);
         }
     }
-    void add_block(const min::vec3<float> &center)
-    {
-        // Add to grid
-        _grid.set_geometry(snap(center), _scale, _preview_offset, _grid.get_atlas());
-
-        // generate new mesh
-        generate_gb();
-    }
-    void add_block(const min::ray<float, min::vec3> &r)
-    {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_before(r, 4);
-
-        // Add to grid
-        _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
-
-        // generate new mesh
-        generate_gb();
-    }
     void character_jump(const min::vec3<float> &vel)
     {
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
@@ -372,6 +343,39 @@ class world
         {
             // Add force to body
             body.add_force(vel * 4000.0 * body.get_mass());
+        }
+    }
+    // character_load should only be called once!
+    void character_load(const min::vec3<float> &position, const bool persist)
+    {
+        // Create a hitbox for character world collisions
+        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
+        const min::aabbox<float, min::vec3> box(position - half_extent, position + half_extent);
+        _char_id = _simulation.add_body(box, 10.0, 1);
+
+        // Get the physics body for editing
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Set this body to be unrotatable
+        body.set_no_rotate();
+
+        // Update recent chunk
+        _grid.update(position);
+
+        // Generate a new geometry mesh
+        generate_gb();
+
+        // If this the first time we load
+        if (!persist)
+        {
+            // Set scale to 3x3x3
+            _scale = min::vec3<unsigned>(3, 3, 3);
+
+            // Remove geometry around player
+            remove_block(min::vec3<float>(-1.0, -0.0, -1.0), position);
+
+            // Reset scale to default value
+            _scale = min::vec3<unsigned>(1, 1, 1);
         }
     }
     void character_move(const min::vec3<float> &vel)

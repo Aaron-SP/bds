@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <controls.h>
+#include <file.h>
 #include <iomanip>
 #include <iostream>
 #include <min/bmp.h>
@@ -42,15 +43,10 @@ class mglcraft
     game::controls _controls;
     game::text _text;
 
-    void load_camera()
+    void load_camera(const min::vec3<float> &p, const min::vec3<float> &look)
     {
-        // Move and camera to -X and look at origin
-        const min::vec3<float> pos = min::vec3<float>(0.0, 2.0, 0.0);
-        const min::vec3<float> look = min::vec3<float>(1.0, 2.0, 0.0);
-
-        // Test perspective projection
         // Create camera, set location and look at
-        _cam.set_position(pos);
+        _cam.set_position(p + min::vec3<float>(0.0, 1.0, 0.0));
         _cam.set_look_at(look);
         auto &f = _cam.get_frustum();
         f.set_far(5000.0);
@@ -63,16 +59,81 @@ class mglcraft
         _text.set_screen(720, 480);
 
         // Add test text
-        _text.add_text("MGLCRAFT:Official Demo", 10, 460);
+        _text.add_text("MGLCRAFT: Official Demo", 10, 460);
 
         // Add cross hairs
         _text.add_text("(X)", 346, 226);
 
         // Add character position
-        _text.add_text("X:Y:Z:", 10, 432);
+        _text.add_text("X: Y: Z:", 10, 432);
 
         // Add character direction
-        _text.add_text("X:Y:Z:", 10, 404);
+        _text.add_text("X: Y: Z:", 10, 404);
+    }
+    void load_game()
+    {
+        // Create output stream for loading world
+        std::vector<uint8_t> stream;
+
+        // Load data into stream from file
+        game::load_file("bin/game.state", stream);
+
+        // If load failed dont try to parse stream data
+        if (stream.size() != 0)
+        {
+            // Character position
+            size_t next = 0;
+            const float x = min::read_le<float>(stream, next);
+            const float y = min::read_le<float>(stream, next);
+            const float z = min::read_le<float>(stream, next);
+
+            // Load character at this position
+            const min::vec3<float> p(x, y, z);
+            _world.character_load(p, true);
+
+            // Look direction
+            const float lx = min::read_le<float>(stream, next);
+            const float ly = min::read_le<float>(stream, next);
+            const float lz = min::read_le<float>(stream, next);
+
+            // Load camera settings
+            const min::vec3<float> look(lx, ly, lz);
+            load_camera(p, look);
+        }
+        else
+        {
+            // Load character at the default position
+            const min::vec3<float> p(0.0, 2.0, 0.0);
+            _world.character_load(p, false);
+
+            // Load camera settings
+            const min::vec3<float> look(1.0, 2.0, 0.0);
+            load_camera(p, look);
+        }
+    }
+    void save_game()
+    {
+        // Create output stream for saving world
+        std::vector<uint8_t> stream;
+
+        // Get character position
+        const min::vec3<float> &p = _world.character_position();
+
+        // Write position into stream
+        min::write_le<float>(stream, p.x());
+        min::write_le<float>(stream, p.y());
+        min::write_le<float>(stream, p.z());
+
+        // Get the camera look position
+        const min::vec3<float> look = _cam.project_point(3.0);
+
+        // Write look into stream
+        min::write_le<float>(stream, look.x());
+        min::write_le<float>(stream, look.y());
+        min::write_le<float>(stream, look.z());
+
+        // Write data to file
+        game::save_file("bin/game.state", stream);
     }
 
   public:
@@ -86,6 +147,9 @@ class mglcraft
         // Set depth and cull settings
         min::settings::initialize();
 
+        // Load game data
+        load_game();
+
         // Load text into the text buffer
         load_text();
 
@@ -95,8 +159,13 @@ class mglcraft
         // Maximize window
         _win.maximize();
 
-        // Load the camera and fill uniform buffers with light and model matrix
-        load_camera();
+        // Update cursor position for tracking
+        update_cursor();
+    }
+    ~mglcraft()
+    {
+        // Save game data to file
+        save_game();
     }
     void clear_background() const
     {
@@ -173,7 +242,7 @@ class mglcraft
         // Update player position debug text
         const min::vec3<float> &p = _world.character_position();
         std::ostringstream stream;
-        stream << std::fixed << std::setprecision(4) << "X:" << p.x() << ",Y:" << p.y() << ",Z:" << p.z();
+        stream << std::fixed << std::setprecision(4) << "X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
         _text.update_text(stream.str(), 2);
 
         // Clear and reset the stream
@@ -182,7 +251,7 @@ class mglcraft
 
         // Update player direction debug text
         const min::vec3<float> &f = _cam.get_forward();
-        stream << "X:" << f.x() << ",Y:" << f.y() << ",Z:" << f.z();
+        stream << "X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
         _text.update_text(stream.str(), 3);
 
         // Upload changes

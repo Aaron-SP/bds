@@ -18,11 +18,13 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __CHUNK_GRID__
 #define __CHUNK_GRID__
 
+#include <file.h>
 #include <mandelbulb.h>
 #include <min/aabbox.h>
 #include <min/convert.h>
 #include <min/mesh.h>
 #include <min/ray.h>
+#include <min/serial.h>
 
 namespace game
 {
@@ -271,13 +273,6 @@ class cgrid
         mandelbulb().generate(_grid, _grid_size, [this](const size_t i) {
             return this->grid_center(i);
         });
-
-        // Update all chunks
-        const size_t chunks = _chunks.size();
-        for (size_t i = 0; i < chunks; i++)
-        {
-            chunk_update(i);
-        }
     }
     std::vector<size_t> get_surrounding_chunks(const size_t key) const
     {
@@ -339,6 +334,62 @@ class cgrid
         const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
         return min::vec3<float>::grid_key(_world.get_min(), cell_extent, _grid_size, point);
     }
+    void world_load()
+    {
+        // Create output stream for loading world
+        std::vector<uint8_t> stream;
+
+        // Load data into stream from file
+        load_file("bin/world.bmesh", stream);
+
+        // If load failed dont try to parse stream data
+        if (stream.size() != 0)
+        {
+            // Load grid with file
+            size_t next = 0;
+            _grid = min::read_le_vector<int8_t>(stream, next);
+
+            // Check that grid load correctly
+            const size_t cubic_size = _grid_size * _grid_size * _grid_size;
+            if (_grid.size() == cubic_size)
+            {
+                // Update all chunks
+                const size_t chunks = _chunks.size();
+                for (size_t i = 0; i < chunks; i++)
+                {
+                    chunk_update(i);
+                }
+
+                // return before generating world
+                return;
+            }
+        }
+
+        // Else generate world
+        generate_world();
+
+        // Update all chunks
+        const size_t chunks = _chunks.size();
+        for (size_t i = 0; i < chunks; i++)
+        {
+            chunk_update(i);
+        }
+    }
+    void world_save()
+    {
+        // Create output stream for saving world
+        std::vector<uint8_t> stream;
+
+        // Reserve space for grid
+        const size_t cubic_size = _grid_size * _grid_size * _grid_size;
+        stream.reserve(cubic_size * sizeof(int8_t));
+
+        // Write data into stream
+        min::write_le_vector<int8_t>(stream, _grid);
+
+        // Write data to file
+        save_file("bin/world.bmesh", stream);
+    }
 
   public:
     cgrid(const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
@@ -353,7 +404,12 @@ class cgrid
           _atlas_id(0)
     {
         // Add starting blocks to simulation
-        generate_world();
+        world_load();
+    }
+    ~cgrid()
+    {
+        // Save the world state in file
+        world_save();
     }
     min::mesh<float, uint32_t> atlas_box(const min::vec3<float> &p)
     {
