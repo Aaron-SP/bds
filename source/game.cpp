@@ -26,6 +26,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/utility.h>
 #include <min/window.h>
 #include <sstream>
+#include <state.h>
 #include <string>
 #include <text.h>
 #include <world.h>
@@ -39,9 +40,10 @@ class mglcraft
     min::camera<float> _cam;
 
     // Game specific classes
+    game::state _state;
+    game::text _text;
     game::world _world;
     game::controls _controls;
-    game::text _text;
 
     void load_camera(const min::vec3<float> &p, const min::vec3<float> &look)
     {
@@ -140,9 +142,9 @@ class mglcraft
     // Load window shaders and program
     mglcraft()
         : _win("MGLCRAFT: FPS: ", 720, 480, 3, 3),
+          _text(28),
           _world(64, 8, 7),
-          _controls(_win, _cam, _text, _world),
-          _text(28)
+          _controls(_win, _cam, _state, _text, _world)
     {
         // Set depth and cull settings
         min::settings::initialize();
@@ -178,6 +180,9 @@ class mglcraft
     {
         // Draw world geometry
         _world.draw(_cam, dt);
+
+        // Draw things related to game state
+        _state.draw(_cam, dt);
 
         // Draw the text
         _text.draw();
@@ -239,23 +244,27 @@ class mglcraft
     }
     void update_text()
     {
-        // Update player position debug text
-        const min::vec3<float> &p = _world.character_position();
-        std::ostringstream stream;
-        stream << std::fixed << std::setprecision(4) << "X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
-        _text.update_text(stream.str(), 2);
+        // If drawing text mode is on, update text
+        if (_text.get_draw())
+        {
+            // Update player position debug text
+            const min::vec3<float> &p = _world.character_position();
+            std::ostringstream stream;
+            stream << std::fixed << std::setprecision(4) << "X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
+            _text.update_text(stream.str(), 2);
 
-        // Clear and reset the stream
-        stream.clear();
-        stream.str(std::string());
+            // Clear and reset the stream
+            stream.clear();
+            stream.str(std::string());
 
-        // Update player direction debug text
-        const min::vec3<float> &f = _cam.get_forward();
-        stream << "X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
-        _text.update_text(stream.str(), 3);
+            // Update player direction debug text
+            const min::vec3<float> &f = _cam.get_forward();
+            stream << "X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
+            _text.update_text(stream.str(), 3);
 
-        // Upload changes
-        _text.upload();
+            // Upload changes
+            _text.upload();
+        }
     }
     void update_window()
     {

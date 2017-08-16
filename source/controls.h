@@ -22,6 +22,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/camera.h>
 #include <min/ray.h>
 #include <min/window.h>
+#include <state.h>
 #include <stdexcept>
 #include <text.h>
 #include <world.h>
@@ -34,14 +35,16 @@ class controls
   private:
     min::window *_window;
     min::camera<float> *_camera;
+    game::state *_state;
     game::text *_text;
     game::world *_world;
 
   public:
-    controls(min::window &window, min::camera<float> &camera, game::text &text, game::world &world) : _window(&window), _camera(&camera), _text(&text), _world(&world)
+    controls(min::window &window, min::camera<float> &camera, game::state &state, game::text &text, game::world &world)
+        : _window(&window), _camera(&camera), _state(&state), _text(&text), _world(&world)
     {
         // Check that pointers are valid
-        if (!_window || !_camera || !_text || !_world)
+        if (!_window || !_camera || !_state || !_text || !_world)
         {
             throw std::runtime_error("control: Invalid control pointers");
         }
@@ -144,6 +147,10 @@ class controls
     min::camera<float> *get_camera()
     {
         return _camera;
+    }
+    game::state *get_state()
+    {
+        return _state;
     }
     game::text *get_text()
     {
@@ -332,6 +339,7 @@ class controls
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
 
         // Check if we are in edit mode
         const bool mode = world->get_edit_mode();
@@ -357,6 +365,9 @@ class controls
             // Remove block from world
             world->remove_block(r);
         }
+
+        // Activate shoot animation
+        state->animate_shoot_player();
     }
     static void right_click(void *ptr, const uint16_t x, const uint16_t y)
     {
@@ -366,6 +377,7 @@ class controls
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
 
         // Calculate new point to add
         const min::vec3<float> point = camera->project_point(3.0);
@@ -375,6 +387,9 @@ class controls
 
         // Fire grappling hook
         world->grappling(r);
+
+        // Activate shoot animation
+        state->animate_shoot_player();
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {

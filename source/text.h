@@ -93,6 +93,10 @@ class text
             _text_buffer.draw_all();
         }
     }
+    bool get_draw() const
+    {
+        return _draw;
+    }
     void toggle_draw()
     {
         _draw = !_draw;
