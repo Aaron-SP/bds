@@ -18,14 +18,14 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __CONTROLS__
 #define __CONTROLS__
 
+#include <game/state.h>
+#include <game/text.h>
+#include <game/world.h>
 #include <iostream>
 #include <min/camera.h>
 #include <min/ray.h>
 #include <min/window.h>
-#include <state.h>
 #include <stdexcept>
-#include <text.h>
-#include <world.h>
 
 namespace game
 {

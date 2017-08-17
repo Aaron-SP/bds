@@ -6,9 +6,11 @@ FREETYPE2_INCLUDE = $(shell freetype-config --cflags)
 # Linker parameters
 ifeq ($(OS),Windows_NT)
 	MGL_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mgl
+	MML_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mml
 	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll
 else
 	MGL_PATH = /usr/include/mgl
+	MML_PATH = /usr/include/mml
 	LINKER = -lX11 -lGL -lfreetype -pthread
 endif
 
@@ -26,7 +28,7 @@ GAME = -DGLEW_STATIC $(MGL_PATH)/platform/min/glew.cpp source/game.cpp -o bin/ga
 TEST = -DGLEW_STATIC $(MGL_PATH)/platform/min/glew.cpp test/test.cpp -o bin/tests
 
 # Include directories
-LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_PATH)/platform -I$(MGL_PATH)/scene -I$(MGL_PATH)/renderer -Isource $(FREETYPE2_INCLUDE)
+LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_PATH)/platform -I$(MGL_PATH)/scene -I$(MGL_PATH)/renderer -Isource -I$(MML_PATH)/math $(FREETYPE2_INCLUDE)
 TEST_SOURCES = -Itest
 
 # Default run target

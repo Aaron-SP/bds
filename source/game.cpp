@@ -15,8 +15,11 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <controls.h>
-#include <file.h>
+#include <game/controls.h>
+#include <game/file.h>
+#include <game/state.h>
+#include <game/text.h>
+#include <game/world.h>
 #include <iomanip>
 #include <iostream>
 #include <min/bmp.h>
@@ -26,11 +29,8 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/utility.h>
 #include <min/window.h>
 #include <sstream>
-#include <state.h>
 #include <string>
-#include <text.h>
 #include <utility>
-#include <world.h>
 
 class mglcraft
 {

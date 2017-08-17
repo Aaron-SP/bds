@@ -19,8 +19,8 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #define __MANDELBULB__
 
 #include <functional>
+#include <game/thread_pool.h>
 #include <min/vec3.h>
-#include <thread_pool.h>
 
 namespace game
 {

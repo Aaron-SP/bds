@@ -18,8 +18,8 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __CHUNK_GRID__
 #define __CHUNK_GRID__
 
-#include <file.h>
-#include <mandelbulb.h>
+#include <game/file.h>
+#include <game/mandelbulb.h>
 #include <min/aabbox.h>
 #include <min/convert.h>
 #include <min/mesh.h>

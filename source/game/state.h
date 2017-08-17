@@ -18,7 +18,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __GAME_STATE__
 #define __GAME_STATE__
 
-#include <character.h>
+#include <game/character.h>
 
 namespace game
 {

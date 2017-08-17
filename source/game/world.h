@@ -18,10 +18,11 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __WORLD__
 #define __WORLD__
 
-#include <cgrid.h>
 #include <cmath>
 #include <cstdint>
-#include <explode_particle.h>
+#include <game/cgrid.h>
+#include <game/explode_particle.h>
+#include <game/sky.h>
 #include <min/camera.h>
 #include <min/dds.h>
 #include <min/physics.h>
@@ -32,7 +33,6 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/tree.h>
 #include <min/uniform_buffer.h>
 #include <min/vertex_buffer.h>
-#include <sky.h>
 #include <stdexcept>
 #include <vector>
 
