@@ -73,6 +73,40 @@ class world
     // Skybox
     sky _sky;
 
+    // character_load should only be called once!
+    void character_load(const std::pair<min::vec3<float>, bool> &state)
+    {
+        // Create a hitbox for character world collisions
+        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
+        const min::vec3<float> &position = state.first;
+        const min::aabbox<float, min::vec3> box(position - half_extent, position + half_extent);
+        _char_id = _simulation.add_body(box, 10.0, 1);
+
+        // Get the physics body for editing
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Set this body to be unrotatable
+        body.set_no_rotate();
+
+        // Update recent chunk
+        _grid.update(position);
+
+        // Generate a new geometry mesh
+        generate_gb();
+
+        // If this the first time we load
+        if (!state.second)
+        {
+            // Set scale to 3x3x3
+            _scale = min::vec3<unsigned>(3, 3, 3);
+
+            // Remove geometry around player
+            remove_block(min::vec3<float>(-1.0, -0.0, -1.0), position);
+
+            // Reset scale to default value
+            _scale = min::vec3<unsigned>(1, 1, 1);
+        }
+    }
     inline void draw_placemark() const
     {
         // Bind VAO
@@ -206,10 +240,6 @@ class world
         // Trace a ray to the destination point to find placement position, return point is snapped
         const min::vec3<float> translate = _grid.ray_trace_before(r, 4);
 
-        // Set camera at the character position
-        const min::vec3<float> &p = character_position();
-        cam.set_position(p + min::vec3<float>(0.0, 1.0, 0.0));
-
         // Update offset x-vector
         if (cam.get_forward().x() >= 0.0)
         {
@@ -245,7 +275,7 @@ class world
     }
 
   public:
-    world(const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
+    world(const std::pair<min::vec3<float>, bool> &state, const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
         : _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
           _tf("data/shader/terrain.fragment", GL_FRAGMENT_SHADER),
           _terrain_program(_tv, _tf),
@@ -280,6 +310,9 @@ class world
 
         // Generate the preview buffer
         generate_pb();
+
+        // Load character
+        character_load(state);
     }
     void add_block(const min::vec3<float> &center)
     {
@@ -345,39 +378,6 @@ class world
             body.add_force(vel * 4000.0 * body.get_mass());
         }
     }
-    // character_load should only be called once!
-    void character_load(const min::vec3<float> &position, const bool persist)
-    {
-        // Create a hitbox for character world collisions
-        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
-        const min::aabbox<float, min::vec3> box(position - half_extent, position + half_extent);
-        _char_id = _simulation.add_body(box, 10.0, 1);
-
-        // Get the physics body for editing
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Set this body to be unrotatable
-        body.set_no_rotate();
-
-        // Update recent chunk
-        _grid.update(position);
-
-        // Generate a new geometry mesh
-        generate_gb();
-
-        // If this the first time we load
-        if (!persist)
-        {
-            // Set scale to 3x3x3
-            _scale = min::vec3<unsigned>(3, 3, 3);
-
-            // Remove geometry around player
-            remove_block(min::vec3<float>(-1.0, -0.0, -1.0), position);
-
-            // Reset scale to default value
-            _scale = min::vec3<unsigned>(1, 1, 1);
-        }
-    }
     void character_move(const min::vec3<float> &vel)
     {
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
@@ -395,7 +395,7 @@ class world
         // Return the character position
         return body.get_position();
     }
-    void draw(min::camera<float> &cam, const float dt)
+    void update(min::camera<float> &cam, const float dt)
     {
         // Get the player physics object
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
@@ -434,6 +434,14 @@ class world
         // update camera matrices
         update_uniform(cam);
 
+        // Update the particle buffer
+        _particles.update(dt);
+    }
+    void draw(const float dt)
+    {
+        // Activate the uniform buffer
+        _geom.bind();
+
         // Draw the sky
         _sky.draw();
 
@@ -442,9 +450,6 @@ class world
 
         // Use the terrain program for drawing
         _terrain_program.use();
-
-        // Activate the uniform buffer
-        _geom.bind();
 
         // Draw the world geometry
         draw_terrain();
@@ -460,7 +465,7 @@ class world
         }
 
         // Draw the particles
-        _particles.draw(_preview, cam, dt);
+        _particles.draw(_preview, dt);
     }
     void reset_scale()
     {

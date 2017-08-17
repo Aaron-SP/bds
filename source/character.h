@@ -198,6 +198,7 @@ class character
     void set_animation_count(const unsigned count)
     {
         _md5_model.get_current_animation().set_loop_count(count);
+        _md5_model.get_current_animation().set_time(0);
     }
 };
 }

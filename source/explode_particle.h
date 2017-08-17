@@ -52,14 +52,6 @@ class explode_particle
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(b);
     }
-    void step(const float dt)
-    {
-        // Update the particle positions
-        _ebuffer.step(dt);
-
-        // Upload data to GPU
-        _ebuffer.upload();
-    }
 
   public:
     explode_particle()
@@ -75,11 +67,8 @@ class explode_particle
         // Set the particle gravity
         _ebuffer.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
     }
-    void draw(const min::uniform_buffer<float> &uniforms, min::camera<float> &cam, const float dt)
+    void draw(const min::uniform_buffer<float> &uniforms, const float dt)
     {
-        // Update the emitter buffer
-        step(dt);
-
         if (_time > 0.0)
         {
             // Remove some of the time
@@ -101,11 +90,6 @@ class explode_particle
             _ebuffer.draw();
         }
     }
-    void set_uniforms(const min::uniform_buffer<float> &uniforms)
-    {
-        // Load use this uniform buffer for drawing
-        uniforms.set_program(_prog);
-    }
     void load(const min::vec3<float> &position, const min::vec3<float> &direction, const float time)
     {
         // Set speed direction
@@ -119,6 +103,19 @@ class explode_particle
 
         // Add more time to the clock
         _time = time;
+    }
+    void set_uniforms(const min::uniform_buffer<float> &uniforms)
+    {
+        // Load use this uniform buffer for drawing
+        uniforms.set_program(_prog);
+    }
+    void update(const float dt)
+    {
+        // Update the particle positions
+        _ebuffer.step(dt);
+
+        // Upload data to GPU
+        _ebuffer.upload();
     }
 };
 }

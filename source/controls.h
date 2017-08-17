@@ -186,11 +186,15 @@ class controls
         // Cast to camera pointer type and move camera
         controls *control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world pointers
+        // Get the world and state pointers
         game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
 
         // toggle edit mode
         world->toggle_edit_mode();
+
+        // toggle fire mode if not in edit mode
+        state->set_fire_mode(!world->get_edit_mode());
 
         // reset scale
         world->reset_scale();
@@ -364,10 +368,10 @@ class controls
 
             // Remove block from world
             world->remove_block(r);
-        }
 
-        // Activate shoot animation
-        state->animate_shoot_player();
+            // Activate shoot animation
+            state->animate_shoot_player();
+        }
     }
     static void right_click(void *ptr, const uint16_t x, const uint16_t y)
     {
@@ -379,17 +383,21 @@ class controls
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
 
-        // Calculate new point to add
-        const min::vec3<float> point = camera->project_point(3.0);
+        // Only allow grappling if in fire mode
+        if (state->get_fire_mode())
+        {
+            // Calculate new point to add
+            const min::vec3<float> point = camera->project_point(3.0);
 
-        // Create a ray from camera to destination
-        const min::ray<float, min::vec3> r(camera->get_position(), point);
+            // Create a ray from camera to destination
+            const min::ray<float, min::vec3> r(camera->get_position(), point);
 
-        // Fire grappling hook
-        world->grappling(r);
+            // Fire grappling hook
+            world->grappling(r);
 
-        // Activate shoot animation
-        state->animate_shoot_player();
+            // Activate shoot animation
+            state->animate_shoot_player();
+        }
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {

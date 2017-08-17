@@ -29,6 +29,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <state.h>
 #include <string>
 #include <text.h>
+#include <utility>
 #include <world.h>
 
 class mglcraft
@@ -36,25 +37,12 @@ class mglcraft
   private:
     min::window _win;
 
-    // Camera and uniform data
-    min::camera<float> _cam;
-
     // Game specific classes
     game::state _state;
     game::text _text;
     game::world _world;
     game::controls _controls;
 
-    void load_camera(const min::vec3<float> &p, const min::vec3<float> &look)
-    {
-        // Create camera, set location and look at
-        _cam.set_position(p + min::vec3<float>(0.0, 1.0, 0.0));
-        _cam.set_look_at(look);
-        auto &f = _cam.get_frustum();
-        f.set_far(5000.0);
-        f.set_fov(90.0);
-        _cam.set_perspective();
-    }
     void load_text()
     {
         // Set the screen size
@@ -72,13 +60,13 @@ class mglcraft
         // Add character direction
         _text.add_text("X: Y: Z:", 10, 404);
     }
-    void load_game()
+    std::pair<min::vec3<float>, bool> load_state()
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
 
         // Load data into stream from file
-        game::load_file("bin/game.state", stream);
+        game::load_file("bin/state", stream);
 
         // If load failed dont try to parse stream data
         if (stream.size() != 0)
@@ -91,7 +79,6 @@ class mglcraft
 
             // Load character at this position
             const min::vec3<float> p(x, y, z);
-            _world.character_load(p, true);
 
             // Look direction
             const float lx = min::read_le<float>(stream, next);
@@ -100,20 +87,25 @@ class mglcraft
 
             // Load camera settings
             const min::vec3<float> look(lx, ly, lz);
-            load_camera(p, look);
+            _state.set_camera(p, look);
+
+            // return the state
+            return std::make_pair(p, true);
         }
         else
         {
             // Load character at the default position
             const min::vec3<float> p(0.0, 2.0, 0.0);
-            _world.character_load(p, false);
 
             // Load camera settings
             const min::vec3<float> look(1.0, 2.0, 0.0);
-            load_camera(p, look);
+            _state.set_camera(p, look);
+
+            // return the state
+            return std::make_pair(p, false);
         }
     }
-    void save_game()
+    void save_state()
     {
         // Create output stream for saving world
         std::vector<uint8_t> stream;
@@ -127,7 +119,7 @@ class mglcraft
         min::write_le<float>(stream, p.z());
 
         // Get the camera look position
-        const min::vec3<float> look = _cam.project_point(3.0);
+        const min::vec3<float> look = _state.get_camera().project_point(3.0);
 
         // Write look into stream
         min::write_le<float>(stream, look.x());
@@ -135,7 +127,7 @@ class mglcraft
         min::write_le<float>(stream, look.z());
 
         // Write data to file
-        game::save_file("bin/game.state", stream);
+        game::save_file("bin/state", stream);
     }
 
   public:
@@ -143,14 +135,11 @@ class mglcraft
     mglcraft()
         : _win("MGLCRAFT: FPS: ", 720, 480, 3, 3),
           _text(28),
-          _world(64, 8, 7),
-          _controls(_win, _cam, _state, _text, _world)
+          _world(load_state(), 64, 8, 7),
+          _controls(_win, _state.get_camera(), _state, _text, _world)
     {
         // Set depth and cull settings
         min::settings::initialize();
-
-        // Load game data
-        load_game();
 
         // Load text into the text buffer
         load_text();
@@ -167,7 +156,7 @@ class mglcraft
     ~mglcraft()
     {
         // Save game data to file
-        save_game();
+        save_state();
     }
     void clear_background() const
     {
@@ -178,11 +167,30 @@ class mglcraft
     }
     void draw(const float dt)
     {
-        // Draw world geometry
-        _world.draw(_cam, dt);
+        // Update the keyboard
+        auto &keyboard = _win.get_keyboard();
+        keyboard.update(dt);
 
-        // Draw things related to game state
-        _state.draw(_cam, dt);
+        // Get player physics body position
+        const min::vec3<float> &p = _world.character_position();
+
+        // Get the cursor coordinates
+        const auto c = _win.get_cursor();
+
+        // Must update state properties, camera before drawing world
+        _state.update(p, c, _win.get_width(), _win.get_height(), dt);
+
+        // Reset cursor position
+        update_cursor();
+
+        // Update the world state
+        _world.update(_state.get_camera(), dt);
+
+        // Draw world geometry
+        _world.draw(dt);
+
+        // Draw things related to player state
+        _state.draw(_state.get_camera(), dt);
 
         // Draw the text
         _text.draw();
@@ -194,44 +202,6 @@ class mglcraft
     void set_title(const std::string &title)
     {
         _win.set_title(title);
-    }
-    void update_camera(const double step)
-    {
-        // Get the cursor coordinates
-        const auto c = _win.get_cursor();
-
-        // Update the keyboard
-        auto &keyboard = _win.get_keyboard();
-        keyboard.update(step);
-
-        // Get the offset from screen center
-        const float sensitivity = 0.10;
-        float x = sensitivity * (c.first - (_win.get_width() / 2));
-        float y = sensitivity * (c.second - (_win.get_height() / 2));
-
-        // If the mouse coordinates moved at all
-        if (std::abs(x) > 1E-3 || std::abs(y) > 1E-3)
-        {
-            // Get the camera forward vector
-            const min::vec3<float> &forward = _cam.get_forward();
-
-            // Check if we have looked too far on the global y axis
-            const float dy = forward.dot(min::vec3<float>::up());
-            if (dy > 0.975 && y < 0.0)
-            {
-                y = 0.0;
-            }
-            else if (dy < -0.975 && y > 0.0)
-            {
-                y = 0.0;
-            }
-
-            // Adjust the camera by the offset from screen center
-            _cam.move_look_at(x, y);
-
-            // Move the cursor back
-            update_cursor();
-        }
     }
     void update_cursor()
     {
@@ -258,7 +228,7 @@ class mglcraft
             stream.str(std::string());
 
             // Update player direction debug text
-            const min::vec3<float> &f = _cam.get_forward();
+            const min::vec3<float> &f = _state.get_camera().get_forward();
             stream << "X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
             _text.update_text(stream.str(), 3);
 
@@ -294,9 +264,6 @@ void run()
 
             // Clear the background color
             game.clear_background();
-
-            // Update the camera movement
-            game.update_camera(frame_time);
 
             // Draw the model
             game.draw(frame_time);
