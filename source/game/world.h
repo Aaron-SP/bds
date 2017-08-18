@@ -86,8 +86,13 @@ class world
 
             // Animate the character with AI
             const min::vec3<float> &p = character_position();
-            const min::vec3<float> out = _path.step(_grid, p, dest);
-            const min::vec3<float> dxyz = (out - p).normalize();
+            const float distance = (dest - p).magnitude();
+
+            // Calculate the next step
+            bool failed = false;
+            std::pair<min::vec3<float>, min::vec3<float>> next = _path.step(_grid, p, dest, distance, failed);
+
+            const min::vec3<float> &dxyz = next.second;
 
             // Add force to body
             body.add_force(dxyz * 2E2 * body.get_mass());

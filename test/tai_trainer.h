@@ -48,7 +48,7 @@ bool test_ai_trainer()
     }
 
     // train the ai
-    for (size_t i = 0; i < 1000; i++)
+    for (size_t i = 0; i < 100; i++)
     {
         trainer.train(grid, start, dest);
     }

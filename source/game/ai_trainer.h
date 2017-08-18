@@ -34,51 +34,52 @@ class ai_trainer
     static constexpr unsigned _pool_size = 100;
     static constexpr unsigned _breed_stock = 13;
     static constexpr unsigned _mutation_rate = 5;
-    static constexpr unsigned _total_moves = 1000;
-    mml::nnet<float, 31, 3> _nets[_pool_size];
+    static constexpr unsigned _total_moves = 100;
+    mml::nnet<float, 32, 3> _nets[_pool_size];
     float _scores[_pool_size];
     mml::net_rng<float> _rng;
-    mml::nnet<float, 31, 3> _top_net;
+    mml::nnet<float, 32, 3> _top_net;
     float _top;
     float _average_fitness;
 
-    static float fitness_score(const cgrid &grid, mml::nnet<float, 31, 3> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
+    static float fitness_score(const cgrid &grid, mml::nnet<float, 32, 3> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
         min::vec3<float> current = start;
         size_t moves = 0;
         float score = 0;
         bool stop = false;
+        size_t total_fails = 0;
+        bool failed = false;
+        float distance = (dest - start).magnitude();
 
         // while not dead
         while (!stop)
         {
             // Get new location
-            const min::vec3<float> output = ai_path::move(grid, net, current, dest);
+            std::pair<min::vec3<float>, min::vec3<float>> next = ai_path::move(grid, net, current, dest, distance, failed);
+
+            // Calculate distance to destination
+            const min::vec3<float> &point = next.first;
+            const min::vec3<float> d = dest - point;
+            distance = d.magnitude();
 
             // Increment moves
             moves++;
 
-            const min::vec3<float> direction = (output - current).normalize();
-            const min::vec3<float> moved = current + direction;
+            // Increment fails
+            total_fails += static_cast<unsigned>(failed);
 
-            // Calculate distance to destination
-            const min::vec3<float> d = dest - moved;
-            const float distance = d.magnitude();
-
-            // Move the point
-            current = moved;
-
-            // If we haven't arrived yet and we crashed or we timed out our moves
-            const int8_t atlas = grid.grid_value(current);
-            if ((distance > 1.0 && atlas != -1) || moves > _total_moves)
+            // If we haven't arrived yet and we ran out of moves
+            // Or we failed too many times
+            if (total_fails > 5 || (distance > 1.0 && moves > _total_moves))
             {
-                score = (1000.0 / distance) + (2000.0 / moves);
+                score = (1000.0 / distance) + (2000.0 / moves) - (100.0 * total_fails);
                 stop = true;
             }
             // If we arrived
-            else if (std::abs(distance) <= 1.0)
+            else if (distance <= 1.0)
             {
-                score = 2000.0 + (2000.0 / moves);
+                score = 2000.0 + (2000.0 / moves) - (100.0 * total_fails);
                 stop = true;
             }
         }
@@ -88,8 +89,8 @@ class ai_trainer
     }
 
   public:
-    ai_trainer() : _rng(std::uniform_real_distribution<float>(-3.0, 3.0),
-                        std::uniform_real_distribution<float>(-3.0, 3.0),
+    ai_trainer() : _rng(std::uniform_real_distribution<float>(-0.5, 0.5),
+                        std::uniform_real_distribution<float>(-0.5, 0.5),
                         std::uniform_int_distribution<int>(0, _pool_size - 1)),
                    _average_fitness(0.0)
     {
@@ -97,10 +98,10 @@ class ai_trainer
         for (size_t i = 0; i < _pool_size; i++)
         {
             // Create a fresh net
-            mml::nnet<float, 31, 3> &net = _nets[i];
-            net.add_layer(11);
+            mml::nnet<float, 32, 3> &net = _nets[i];
+            net.add_layer(12);
             net.add_layer(10);
-            net.add_layer(9);
+            net.add_layer(8);
             net.finalize();
             net.randomize(_rng);
         }
@@ -111,11 +112,14 @@ class ai_trainer
         size_t next = 0;
         const std::vector<float> data = min::read_le_vector<float>(stream, next);
 
-        // Initialize all the with previous net
+        // Initialize top net
+        _top_net.deserialize(data);
+
+        // Initialize all the with previous top net
         for (size_t i = 0; i < _pool_size; i++)
         {
             // Load previous net and mutate it
-            mml::nnet<float, 31, 3> &net = _nets[i];
+            mml::nnet<float, 32, 3> &net = _nets[i];
 
             // Must definalize the net to deserialize it
             net.reset();
@@ -178,7 +182,7 @@ class ai_trainer
         {
             for (size_t j = i + 1; j < _breed_stock; j++)
             {
-                _nets[current] = mml::nnet<float, 31, 3>::breed(_nets[i], _nets[j]);
+                _nets[current] = mml::nnet<float, 32, 3>::breed(_nets[i], _nets[j]);
                 current++;
             }
         }
