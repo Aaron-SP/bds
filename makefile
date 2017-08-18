@@ -19,6 +19,11 @@ ifdef MGL_DESTDIR
 	MGL_PATH = $(MGL_DESTDIR)/mgl
 endif
 
+# Override if MGL_DESTDIR specified
+ifdef MML_DESTDIR
+	MML_PATH = $(MML_DESTDIR)/mml
+endif
+
 # Compile parameters
 CPP = -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math -static -static-libgcc -static-libstdc++
 NATIVE = $(CPP) -march=native

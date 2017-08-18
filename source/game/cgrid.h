@@ -470,6 +470,39 @@ class cgrid
     {
         return _chunks[index];
     }
+    std::vector<int8_t> get_neighbors(const min::vec3<float> &center) const
+    {
+        // Surrounding cells
+        std::vector<int8_t> out;
+        out.reserve(27);
+
+        // Get cubic function properties
+        const min::vec3<float> start = center - min::vec3<float>(1.0, 1.5, 1.0);
+        const min::vec3<int> offset(1, 1, 1);
+        const min::vec3<unsigned> length(3, 3, 3);
+
+        // Create cubic function, for each cell in cubic space
+        const auto f = [this, &out](const min::vec3<float> &p) {
+            // Calculate grid key index
+            bool is_valid = true;
+            const size_t key = grid_key(p, is_valid);
+            if (is_valid)
+            {
+                // Create box at this point
+                out.push_back(_grid[key]);
+            }
+            else
+            {
+                // This means an invalid boundary
+                out.push_back(-2);
+            }
+        };
+
+        // Run the function
+        cubic(start, offset, length, f);
+
+        return out;
+    }
     size_t get_recent_chunk() const
     {
         return _recent_chunk;
@@ -506,7 +539,7 @@ class cgrid
     {
         return _world;
     }
-    int grid_value(const min::vec3<float> &point) const
+    int8_t grid_value(const min::vec3<float> &point) const
     {
         // Lookup grid index from point
         bool is_valid = true;

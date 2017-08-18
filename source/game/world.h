@@ -549,7 +549,7 @@ class world
         const min::vec3<float> traced = _grid.ray_trace_after(r, 100);
 
         // Get grid atlas at point
-        const int atlas = _grid.grid_value(traced);
+        const int8_t atlas = _grid.grid_value(traced);
 
         // See if we hit a block
         if (atlas != -1)

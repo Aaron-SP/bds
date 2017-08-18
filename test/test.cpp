@@ -16,12 +16,14 @@ You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <iostream>
+#include <tai_trainer.h>
 
 int main()
 {
     try
     {
         bool out = true;
+        out = out && test_ai_trainer();
         if (out)
         {
             std::cout << "Game tests passed!" << std::endl;
