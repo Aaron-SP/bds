@@ -31,7 +31,7 @@ namespace game
 class ai_path
 {
   private:
-    static constexpr unsigned _step_size = 1.0;
+    static constexpr float _step_size = 0.5;
     mml::nnet<float, 32, 3> _net;
 
   public:
@@ -101,7 +101,7 @@ class ai_path
         if (atlas != -1)
         {
             failed = true;
-            return std::make_pair(next, min::vec3<float>(0, 0, 0));
+            return std::make_pair(start, min::vec3<float>(0, 0, 0));
         }
 
         // Else return new point

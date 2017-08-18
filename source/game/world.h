@@ -77,6 +77,7 @@ class world
     // Pathing
     game::ai_path _path;
     bool _ai_mode;
+    bool _fail_flag;
 
     inline void character_ai(const min::vec3<float> &dest)
     {
@@ -89,8 +90,7 @@ class world
             const float distance = (dest - p).magnitude();
 
             // Calculate the next step
-            bool failed = false;
-            std::pair<min::vec3<float>, min::vec3<float>> next = _path.step(_grid, p, dest, distance, failed);
+            const std::pair<min::vec3<float>, min::vec3<float>> next = _path.step(_grid, p, dest, distance, _fail_flag);
 
             const min::vec3<float> &dxyz = next.second;
 
@@ -314,7 +314,8 @@ class world
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _sky(_geom, grid_size),
-          _ai_mode(false)
+          _ai_mode(false),
+          _fail_flag(false)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)

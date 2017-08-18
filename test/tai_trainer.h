@@ -33,8 +33,8 @@ bool test_ai_trainer()
     game::ai_trainer trainer;
 
     // Create start and destination points
-    const min::vec3<float> start(0.0, 2.0, 0.0);
-    const min::vec3<float> dest(1.0, -60.0, 1.0);
+    const min::vec3<float> start(22.5, -63.0, 0.5);
+    const min::vec3<float> dest(0.0, 2.0, 0.0);
 
     // Create output stream for loading AI
     std::vector<uint8_t> input;
@@ -51,6 +51,7 @@ bool test_ai_trainer()
     for (size_t i = 0; i < 100; i++)
     {
         trainer.train(grid, start, dest);
+        std::cout << "iteration " << i << std::endl;
     }
 
     // Create output stream for saving bot

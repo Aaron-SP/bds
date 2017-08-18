@@ -56,11 +56,11 @@ class ai_trainer
         while (!stop)
         {
             // Get new location
-            std::pair<min::vec3<float>, min::vec3<float>> next = ai_path::move(grid, net, current, dest, distance, failed);
+            const std::pair<min::vec3<float>, min::vec3<float>> next = ai_path::move(grid, net, current, dest, distance, failed);
 
             // Calculate distance to destination
-            const min::vec3<float> &point = next.first;
-            const min::vec3<float> d = dest - point;
+            current = next.first;
+            const min::vec3<float> d = dest - current;
             distance = d.magnitude();
 
             // Increment moves
@@ -71,15 +71,15 @@ class ai_trainer
 
             // If we haven't arrived yet and we ran out of moves
             // Or we failed too many times
-            if (total_fails > 5 || (distance > 1.0 && moves > _total_moves))
+            if (total_fails > 0 || (distance > 1.0 && moves > _total_moves))
             {
-                score = (1000.0 / distance) + (2000.0 / moves) - (100.0 * total_fails);
+                score = (10000.0 / distance) + (200.0 * moves) - (100.0 * total_fails);
                 stop = true;
             }
             // If we arrived
             else if (distance <= 1.0)
             {
-                score = 2000.0 + (2000.0 / moves) - (100.0 * total_fails);
+                score = 20000.0 + (200.0 * moves) - (100.0 * total_fails);
                 stop = true;
             }
         }
@@ -89,7 +89,7 @@ class ai_trainer
     }
 
   public:
-    ai_trainer() : _rng(std::uniform_real_distribution<float>(-0.5, 0.5),
+    ai_trainer() : _rng(std::uniform_real_distribution<float>(-2.0, 2.0),
                         std::uniform_real_distribution<float>(-0.5, 0.5),
                         std::uniform_int_distribution<int>(0, _pool_size - 1)),
                    _average_fitness(0.0)
@@ -99,8 +99,8 @@ class ai_trainer
         {
             // Create a fresh net
             mml::nnet<float, 32, 3> &net = _nets[i];
+            net.add_layer(16);
             net.add_layer(12);
-            net.add_layer(10);
             net.add_layer(8);
             net.finalize();
             net.randomize(_rng);
