@@ -61,6 +61,7 @@ class controls
         // Add FPS(WADS) keys to watch
         keyboard.add(min::window::key_code::F1);
         keyboard.add(min::window::key_code::F2);
+        keyboard.add(min::window::key_code::KEYR);
         keyboard.add(min::window::key_code::KEYQ);
         keyboard.add(min::window::key_code::KEYW);
         keyboard.add(min::window::key_code::KEYS);
@@ -88,6 +89,9 @@ class controls
 
         // Register callback function Q
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::toggle_edit_mode, (void *)this);
+
+        // Register callback function R
+        keyboard.register_keydown(min::window::key_code::KEYR, controls::toggle_ai_mode, (void *)this);
 
         // Register callback function W
         keyboard.register_keydown(min::window::key_code::KEYW, controls::forward, (void *)this);
@@ -198,6 +202,17 @@ class controls
 
         // reset scale
         world->reset_scale();
+    }
+    static void toggle_ai_mode(void *ptr, double step)
+    {
+        // Cast to camera pointer type and move camera
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world pointer
+        game::world *const world = control->get_world();
+
+        // toggle edit mode
+        world->toggle_ai_mode();
     }
     static void forward(void *ptr, double step)
     {

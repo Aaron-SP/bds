@@ -20,6 +20,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <game/cgrid.h>
+#include <game/file.h>
 #include <min/vec3.h>
 #include <mml/nnet.h>
 #include <mml/vec.h>
@@ -33,7 +34,23 @@ class ai_path
     mml::nnet<float, 31, 3> _net;
 
   public:
-    ai_path() {}
+    ai_path()
+    {
+        // Create output stream for loading AI
+        std::vector<uint8_t> input;
+
+        // Load data into stream from AI file
+        game::load_file("bin/bot", input);
+        if (input.size() != 0)
+        {
+            // If we got data, deserialize it
+            this->deserialize(input);
+        }
+        else
+        {
+            throw std::runtime_error("ai_path: could not load AI from bin/bot file");
+        }
+    }
     void deserialize(std::vector<uint8_t> &stream)
     {
         // read data from stream
@@ -70,6 +87,10 @@ class ai_path
         net.set_input(in);
         const mml::vector<float, 3> out = net.calculate();
         return min::vec3<float>(out[0], out[1], out[2]);
+    }
+    min::vec3<float> step(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
+    {
+        return ai_path::move(grid, _net, start, dest);
     }
 };
 }

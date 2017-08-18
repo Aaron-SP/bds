@@ -20,6 +20,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cmath>
 #include <cstdint>
+#include <game/ai_path.h>
 #include <game/cgrid.h>
 #include <game/explode_particle.h>
 #include <game/sky.h>
@@ -73,6 +74,25 @@ class world
     // Skybox
     sky _sky;
 
+    // Pathing
+    game::ai_path _path;
+    bool _ai_mode;
+
+    inline void character_ai(const min::vec3<float> &dest)
+    {
+        if (_ai_mode)
+        {
+            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+            // Animate the character with AI
+            const min::vec3<float> &p = character_position();
+            const min::vec3<float> out = _path.step(_grid, p, dest);
+            const min::vec3<float> dxyz = (out - p).normalize();
+
+            // Add force to body
+            body.add_force(dxyz * 2E2 * body.get_mass());
+        }
+    }
     // character_load should only be called once!
     void character_load(const std::pair<min::vec3<float>, bool> &state)
     {
@@ -288,7 +308,8 @@ class world
           _grid(grid_size, chunk_size, view_chunk_size),
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity),
-          _sky(_geom, grid_size)
+          _sky(_geom, grid_size),
+          _ai_mode(false)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)
@@ -399,6 +420,9 @@ class world
     {
         // Get the player physics object
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Solve the character ai
+        character_ai(min::vec3<float>(0.0, 2.0, 0.0));
 
         // Get player position
         const min::vec3<float> &p = body.get_position();
@@ -542,6 +566,10 @@ class world
     void toggle_edit_mode()
     {
         _edit_mode = !_edit_mode;
+    }
+    void toggle_ai_mode()
+    {
+        _ai_mode = !_ai_mode;
     }
     void grappling(const min::ray<float, min::vec3> &r)
     {

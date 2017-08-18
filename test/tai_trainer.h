@@ -36,10 +36,10 @@ bool test_ai_trainer()
     const min::vec3<float> start(0.0, 2.0, 0.0);
     const min::vec3<float> dest(1.0, -60.0, 1.0);
 
-    // Create output stream for loading world
+    // Create output stream for loading AI
     std::vector<uint8_t> input;
 
-    // Load data into stream from file
+    // Load data into stream from AI file
     game::load_file("bin/bot", input);
     if (input.size() != 0)
     {

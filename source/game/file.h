@@ -19,6 +19,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #define __FILE_UTILS__
 
 #include <fstream>
+#include <iostream>
 #include <vector>
 
 namespace game
