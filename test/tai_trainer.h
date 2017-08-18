@@ -34,20 +34,31 @@ bool test_ai_trainer()
 
     // Create start and destination points
     const min::vec3<float> start(0.0, 2.0, 0.0);
-    const min::vec3<float> dest(13.0, -2.0, -36.0);
+    const min::vec3<float> dest(1.0, -60.0, 1.0);
+
+    // Create output stream for loading world
+    std::vector<uint8_t> input;
+
+    // Load data into stream from file
+    game::load_file("bin/bot", input);
+    if (input.size() != 0)
+    {
+        // load the data into the trainer of previous run
+        trainer.deserialize(input);
+    }
 
     // train the ai
-    for (size_t i = 0; i < 100000; i++)
+    for (size_t i = 0; i < 1000; i++)
     {
         trainer.train(grid, start, dest);
     }
 
     // Create output stream for saving bot
-    std::vector<uint8_t> stream;
-    trainer.serialize(stream);
+    std::vector<uint8_t> output;
+    trainer.serialize(output);
 
     // Write data to file
-    game::save_file("bin/bot", stream);
+    game::save_file("bin/bot", output);
 
     // return status
     return out;

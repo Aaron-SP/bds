@@ -15,11 +15,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __AI_PATH__
-#define __AI_PATH__
+#ifndef __GAI_TRAINER__
+#define __GAI_TRAINER__
 
 #include <algorithm>
+#include <game/ai_path.h>
 #include <game/cgrid.h>
+#include <min/vec3.h>
 #include <mml/nnet.h>
 #include <mml/vec.h>
 
@@ -32,14 +34,15 @@ class ai_trainer
     static constexpr unsigned _pool_size = 100;
     static constexpr unsigned _breed_stock = 13;
     static constexpr unsigned _mutation_rate = 5;
-    mml::nnet<float, 27, 3> _nets[_pool_size];
+    static constexpr unsigned _total_moves = 1000;
+    mml::nnet<float, 31, 3> _nets[_pool_size];
     float _scores[_pool_size];
     mml::net_rng<float> _rng;
-    mml::nnet<float, 27, 3> _top_net;
+    mml::nnet<float, 31, 3> _top_net;
     float _top;
     float _average_fitness;
 
-    static float fitness_score(const cgrid &grid, mml::nnet<float, 27, 3> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
+    static float fitness_score(const cgrid &grid, mml::nnet<float, 31, 3> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
         min::vec3<float> current = start;
         size_t moves = 0;
@@ -49,29 +52,12 @@ class ai_trainer
         // while not dead
         while (!stop)
         {
-            // Must be 27 in size
-            const std::vector<int8_t> neighbors = grid.get_neighbors(current);
-            if (neighbors.size() != 27)
-            {
-                throw std::runtime_error("ai_trainer: shit is broken");
-            }
-
-            // Create input vector
-            mml::vector<float, 27> in;
-            for (size_t i = 0; i < 27; i++)
-            {
-                in[i] = (float)neighbors[i];
-            }
-
-            // Set input and calculate output
-            net.set_input(in);
-            const mml::vector<float, 3> out = net.calculate();
+            // Get new location
+            const min::vec3<float> output = ai_path::move(grid, net, current, dest);
 
             // Increment moves
             moves++;
 
-            // Get new location
-            const min::vec3<float> output(out[0], out[1], out[2]);
             const min::vec3<float> direction = (output - current).normalize();
             const min::vec3<float> moved = current + direction;
 
@@ -84,7 +70,7 @@ class ai_trainer
 
             // If we haven't arrived yet and we crashed or we timed out our moves
             const int8_t atlas = grid.grid_value(current);
-            if ((distance > 1.0 && atlas != -1) || moves > 100)
+            if ((distance > 1.0 && atlas != -1) || moves > _total_moves)
             {
                 score = (1000.0 / distance) + (2000.0 / moves);
                 stop = true;
@@ -102,8 +88,8 @@ class ai_trainer
     }
 
   public:
-    ai_trainer() : _rng(std::uniform_real_distribution<float>(-0.5, 0.5),
-                        std::uniform_real_distribution<float>(-0.5, 0.5),
+    ai_trainer() : _rng(std::uniform_real_distribution<float>(-3.0, 3.0),
+                        std::uniform_real_distribution<float>(-3.0, 3.0),
                         std::uniform_int_distribution<int>(0, _pool_size - 1)),
                    _average_fitness(0.0)
     {
@@ -111,20 +97,41 @@ class ai_trainer
         for (size_t i = 0; i < _pool_size; i++)
         {
             // Create a fresh net
-            mml::nnet<float, 27, 3> &net = _nets[i];
-            net.add_layer(9);
+            mml::nnet<float, 31, 3> &net = _nets[i];
+            net.add_layer(11);
+            net.add_layer(10);
             net.add_layer(9);
             net.finalize();
             net.randomize(_rng);
         }
     }
+    void deserialize(std::vector<uint8_t> &stream)
+    {
+        // read data from stream
+        size_t next = 0;
+        const std::vector<float> data = min::read_le_vector<float>(stream, next);
+
+        // Initialize all the with previous net
+        for (size_t i = 0; i < _pool_size; i++)
+        {
+            // Load previous net and mutate it
+            mml::nnet<float, 31, 3> &net = _nets[i];
+
+            // Must definalize the net to deserialize it
+            net.reset();
+            net.deserialize(data);
+
+            // Mutate the net for added variation
+            net.mutate(_rng);
+        }
+    }
     void serialize(std::vector<uint8_t> &stream)
     {
         // Get the net float data
-        const std::vector<float> net = _top_net.serialize();
+        const std::vector<float> data = _top_net.serialize();
 
         // Write data into stream
-        min::write_le_vector<float>(stream, net);
+        min::write_le_vector<float>(stream, data);
     }
     void train(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
@@ -171,7 +178,7 @@ class ai_trainer
         {
             for (size_t j = i + 1; j < _breed_stock; j++)
             {
-                _nets[current] = mml::nnet<float, 27, 3>::breed(_nets[i], _nets[j]);
+                _nets[current] = mml::nnet<float, 31, 3>::breed(_nets[i], _nets[j]);
                 current++;
             }
         }
