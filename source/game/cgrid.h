@@ -400,9 +400,15 @@ class cgrid
           _chunks(_chunk_scale * _chunk_scale * _chunk_scale, min::mesh<float, uint32_t>("chunk")),
           _recent_chunk(0),
           _view_chunk_size(view_chunk_size),
-          _world(min::vec3<float>(grid_size, grid_size, grid_size) * -1.0, min::vec3<float>(grid_size, grid_size, grid_size)),
           _atlas_id(0)
     {
+        // Create world AABB with a little border for protection
+        const float max = static_cast<float>(grid_size) - 0.001;
+        const float min = (max * -1.0) + 0.001;
+        min::vec3<float> minv(min, min, min);
+        min::vec3<float> maxv(max, max, max);
+        _world = min::aabbox<float, min::vec3>(minv, maxv);
+
         // Add starting blocks to simulation
         world_load();
     }

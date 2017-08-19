@@ -17,6 +17,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <iostream>
 #include <tai_trainer.h>
+#include <tcgrid.h>
 
 int main()
 {
@@ -24,6 +25,7 @@ int main()
     {
         bool out = true;
         out = out && test_ai_trainer();
+        out = out && test_cgrid();
         if (out)
         {
             std::cout << "Game tests passed!" << std::endl;

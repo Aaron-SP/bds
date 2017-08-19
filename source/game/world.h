@@ -35,6 +35,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/uniform_buffer.h>
 #include <min/vertex_buffer.h>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace game
@@ -77,7 +78,6 @@ class world
     // Pathing
     game::ai_path _path;
     bool _ai_mode;
-    bool _fail_flag;
 
     inline void character_ai(const min::vec3<float> &dest)
     {
@@ -87,12 +87,10 @@ class world
 
             // Animate the character with AI
             const min::vec3<float> &p = character_position();
-            const float distance = (dest - p).magnitude();
 
             // Calculate the next step
-            const std::pair<min::vec3<float>, min::vec3<float>> next = _path.step(_grid, p, dest, distance, _fail_flag);
-
-            const min::vec3<float> &dxyz = next.second;
+            const std::tuple<min::vec3<float>, min::vec3<float>, bool> next = _path.step(_grid, p, dest);
+            const min::vec3<float> &dxyz = std::get<0>(next);
 
             // Add force to body
             body.add_force(dxyz * 2E2 * body.get_mass());
@@ -314,8 +312,7 @@ class world
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _sky(_geom, grid_size),
-          _ai_mode(false),
-          _fail_flag(false)
+          _ai_mode(false)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)

@@ -15,51 +15,42 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __TEST_AI_TRAINER__
-#define __TEST_AI_TRAINER__
+#ifndef __TEST_CGRID__
+#define __TEST_CGRID__
 
-#include <game/ai_trainer.h>
 #include <game/cgrid.h>
 #include <game/file.h>
 #include <stdexcept>
 #include <test.h>
 
-bool test_ai_trainer()
+bool test_cgrid()
 {
     bool out = true;
 
     // Load the graph mesh with 128 pixel tile size
     game::cgrid grid(64, 8, 7);
-    game::ai_trainer trainer;
 
-    // Create start and destination points
-    const min::vec3<float> start(52.0, -7.0, 0.0);
-    const min::vec3<float> dest(0.0, 2.0, 0.0);
+    // Test no segfault
+    const min::vec3<float> out_of_bounds(-64.001, -64.001, -64.001);
+    std::vector<int8_t> neighbors = grid.get_neighbors(out_of_bounds);
 
-    // Create output stream for loading AI
-    std::vector<uint8_t> input;
-
-    // Load data into stream from AI file
-    game::load_file("bin/bot", input);
-    if (input.size() != 0)
+    // Check 26 borders
+    const size_t size = neighbors.size();
+    for (size_t i = 0; i < size - 1; i++)
     {
-        // load the data into the trainer of previous run
-        trainer.deserialize(input);
+        out = out && compare(-2, neighbors[i]);
+        if (!out)
+        {
+            throw std::runtime_error("Failed cgrid get_neighbors out_of_bounds");
+        }
     }
 
-    // train the ai
-    for (size_t i = 0; i < 10000; i++)
+    // Check one empty
+    out = out && compare(-1, neighbors[size - 1]);
+    if (!out)
     {
-        trainer.train(grid, start, dest);
-        std::cout << "iteration " << i << std::endl;
+        throw std::runtime_error("Failed cgrid get_neighbors out_of_bounds");
     }
-
-    // Create output stream for saving bot
-    std::vector<uint8_t> output;
-    trainer.serialize(output);
-
-    // Write data to file
-    game::save_file("bin/bot", output);
 
     // return status
     return out;

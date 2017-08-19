@@ -32,7 +32,7 @@ class ai_path
 {
   private:
     static constexpr float _step_size = 0.5;
-    mml::nnet<float, 32, 3> _net;
+    mml::nnet<float, 33, 3> _net;
 
   public:
     ai_path()
@@ -62,7 +62,7 @@ class ai_path
         _net.reset();
         _net.deserialize(data);
     }
-    static std::pair<min::vec3<float>, min::vec3<float>> move(const cgrid &grid, mml::nnet<float, 32, 3> &net, const min::vec3<float> &start, const min::vec3<float> &dest, const float distance, bool &failed)
+    static std::tuple<min::vec3<float>, min::vec3<float>, bool> move(const cgrid &grid, mml::nnet<float, 33, 3> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
         // Must be 27 in size
         const std::vector<int8_t> neighbors = grid.get_neighbors(start);
@@ -72,45 +72,48 @@ class ai_path
         }
 
         // Create input vector
-        mml::vector<float, 32> in;
+        mml::vector<float, 33> in;
         for (size_t i = 0; i < 27; i++)
         {
             // 1 if empty, 0 if filled
             const int empty = static_cast<bool>(neighbors[i] == -1);
             in[i] = static_cast<float>(empty);
         }
-        in[27] = dest.x();
-        in[28] = dest.y();
-        in[29] = dest.z();
-        in[30] = distance;
-        in[31] = static_cast<float>(failed);
+        in[27] = start.x();
+        in[28] = start.y();
+        in[29] = start.z();
+        in[30] = dest.x();
+        in[31] = dest.y();
+        in[32] = dest.z();
 
         // Set input and calculate output
         net.set_input(in);
         const mml::vector<float, 3> out = net.calculate();
 
-        // Calculate direction to move
-        const min::vec3<float> output(out[0], out[1], out[2]);
-        const min::vec3<float> direction = (output - start).normalize();
+        // Calculate direction to move, normalize safe in case zero vector
+        const min::vec3<float> safe = min::vec3<float>::up();
+        const min::vec3<float> direction = min::vec3<float>(out[0], out[1], out[2]).normalize_safe(safe);
 
         // Move in that direction
         const min::vec3<float> next = direction * _step_size + start;
+
+        // See if it hit a wall
+        bool fail = false;
 
         // Check if we failed and return start position
         const int8_t atlas = grid.grid_value(next);
         if (atlas != -1)
         {
-            failed = true;
-            return std::make_pair(start, min::vec3<float>(0, 0, 0));
+            fail = true;
+            return std::make_tuple(start, min::vec3<float>(0, 0, 0), fail);
         }
 
         // Else return new point
-        failed = false;
-        return std::make_pair(next, direction);
+        return std::make_tuple(next, direction, fail);
     }
-    std::pair<min::vec3<float>, min::vec3<float>> step(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest, const float distance, bool &failed)
+    std::tuple<min::vec3<float>, min::vec3<float>, bool> step(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
-        return ai_path::move(grid, _net, start, dest, distance, failed);
+        return ai_path::move(grid, _net, start, dest);
     }
 };
 }
