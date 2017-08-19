@@ -322,17 +322,17 @@ class cgrid
 
         return min::vec3<float>(x, y, z);
     }
-    inline size_t grid_key(const min::vec3<float> &point, bool &valid) const
+    bool inside(const min::vec3<float> &p) const
     {
-        // This function can crash so we need protection
-        if (!_world.point_inside(point))
-        {
-            valid = false;
-        }
+        const min::vec3<float> &min = _world.get_min();
+        const min::vec3<float> &max = _world.get_max();
 
-        // Compute the grid index from point
-        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
-        return min::vec3<float>::grid_key(_world.get_min(), cell_extent, _grid_size, point);
+        // Add error term to prevent breaking out of the world space
+        const bool x_inside = (p.x() >= min.x() + 1E-6) && (p.x() <= max.x() - 1E-6);
+        const bool y_inside = (p.y() >= min.y() + 1E-6) && (p.y() <= max.y() - 1E-6);
+        const bool z_inside = (p.z() >= min.z() + 1E-6) && (p.z() <= max.z() - 1E-6);
+
+        return x_inside && y_inside && z_inside;
     }
     void world_load()
     {
@@ -403,8 +403,8 @@ class cgrid
           _atlas_id(0)
     {
         // Create world AABB with a little border for protection
-        const float max = static_cast<float>(grid_size) - 0.001;
-        const float min = (max * -1.0) + 0.001;
+        const float max = static_cast<float>(grid_size);
+        const float min = (max * -1.0);
         min::vec3<float> minv(min, min, min);
         min::vec3<float> maxv(max, max, max);
         _world = min::aabbox<float, min::vec3>(minv, maxv);
@@ -425,7 +425,7 @@ class cgrid
     inline size_t chunk_key(const min::vec3<float> &point, bool &valid) const
     {
         // This function can crash so we need protection
-        if (!_world.point_inside(point))
+        if (!this->inside(point))
         {
             valid = false;
         }
@@ -544,6 +544,18 @@ class cgrid
     const min::aabbox<float, min::vec3> &get_world()
     {
         return _world;
+    }
+    inline size_t grid_key(const min::vec3<float> &point, bool &valid) const
+    {
+        // This function can crash so we need protection
+        if (!this->inside(point))
+        {
+            valid = false;
+        }
+
+        // Compute the grid index from point
+        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
+        return min::vec3<float>::grid_key(_world.get_min(), cell_extent, _grid_size, point);
     }
     int8_t grid_value(const min::vec3<float> &point) const
     {

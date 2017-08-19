@@ -35,7 +35,7 @@ class ai_trainer
     static constexpr unsigned _pool_size = 100;
     static constexpr unsigned _breed_stock = 13;
     static constexpr unsigned _mutation_rate = 50;
-    static constexpr unsigned _total_moves = 100;
+    static constexpr unsigned _total_moves = 1000;
     mml::nnet<float, 33, 3> _nets[_pool_size];
     float _scores[_pool_size];
     mml::net_rng<float> _rng;
@@ -67,19 +67,19 @@ class ai_trainer
             // If we hit a wall
             if (std::get<2>(next))
             {
-                score = 10.0 / distance;
+                score = 2.0 * moves;
                 stop = true;
             }
             // If we haven't arrived yet and we ran out of moves
             else if (distance > 1.0 && moves > _total_moves)
             {
-                score = (50.0 / distance) + (2.0 * moves);
+                score = 3.0 * moves;
                 stop = true;
             }
             // If we arrived
             else if (distance <= 1.0)
             {
-                score = 100.0 + (3.0 * moves);
+                score = 4.0 * moves;
                 stop = true;
             }
         }

@@ -31,7 +31,7 @@ bool test_cgrid()
     game::cgrid grid(64, 8, 7);
 
     // Test no segfault
-    const min::vec3<float> out_of_bounds(-64.001, -64.001, -64.001);
+    const min::vec3<float> out_of_bounds(-64.00001, -64.00001, -64.00001);
     std::vector<int8_t> neighbors = grid.get_neighbors(out_of_bounds);
 
     // Check 26 borders
@@ -50,6 +50,39 @@ bool test_cgrid()
     if (!out)
     {
         throw std::runtime_error("Failed cgrid get_neighbors out_of_bounds");
+    }
+
+    // Check grid key for middle of grid
+    min::vec3<float> p(0.0, 0.0, 0.0);
+    bool valid = true;
+    size_t key = grid.grid_key(p, valid);
+    out = out && valid;
+    out = out && compare(1056832, key);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid grid_key 1");
+    }
+
+    // Check grid key for bottom left corner
+    p = min::vec3<float>(-63.99999, -63.99999, -63.99999);
+    valid = true;
+    key = grid.grid_key(p, valid);
+    out = out && valid;
+    out = out && compare(0, key);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid grid_key 2");
+    }
+
+    // Check grid key for bottom left corner
+    p = min::vec3<float>(-64.0, -64.0, -64.0);
+    valid = true;
+    key = grid.grid_key(p, valid);
+    out = out && !valid;
+    out = out && compare(0, key);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid grid_key 3");
     }
 
     // return status
