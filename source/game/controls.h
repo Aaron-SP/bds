@@ -203,10 +203,10 @@ class controls
         game::state *const state = control->get_state();
 
         // toggle edit mode
-        world->toggle_edit_mode();
+        const bool mode = world->toggle_edit_mode();
 
         // toggle fire mode if not in edit mode
-        state->set_fire_mode(!world->get_edit_mode());
+        state->set_fire_mode(!mode);
 
         // reset scale
         world->reset_scale();
@@ -218,9 +218,20 @@ class controls
 
         // Get the world pointer
         game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
 
         // toggle edit mode
-        world->toggle_ai_mode();
+        const bool mode = world->toggle_ai_mode();
+
+        // set the game mode caption
+        if (mode)
+        {
+            state->set_game_mode("MODE: AI PATH");
+        }
+        else
+        {
+            state->set_game_mode("MODE: PLAY");
+        }
     }
     static void toggle_train_mode(void *ptr, double step)
     {
@@ -229,9 +240,20 @@ class controls
 
         // Get the world pointer
         game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
 
         // toggle edit mode
-        world->toggle_train_mode();
+        const bool mode = world->toggle_train_mode();
+
+        // set the game mode caption
+        if (mode)
+        {
+            state->set_game_mode("MODE: AI TRAIN");
+        }
+        else
+        {
+            state->set_game_mode("MODE: PLAY");
+        }
     }
     static void set_train_destination(void *ptr, double step)
     {

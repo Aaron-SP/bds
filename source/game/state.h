@@ -35,6 +35,7 @@ class state
     float _x[_frame_average];
     float _y[_frame_average];
     unsigned _frame_count;
+    std::string _mode;
 
     void load_camera()
     {
@@ -82,7 +83,7 @@ class state
     }
 
   public:
-    state() : _fire_mode(true), _x{}, _y{}, _frame_count(_frame_update)
+    state() : _fire_mode(true), _x{}, _y{}, _frame_count(_frame_update), _mode("MODE: PLAY")
     {
         // Load camera
         load_camera();
@@ -124,6 +125,14 @@ class state
     void set_fire_mode(const bool mode)
     {
         _fire_mode = mode;
+    }
+    const std::string &get_game_mode() const
+    {
+        return _mode;
+    }
+    void set_game_mode(const std::string &mode)
+    {
+        _mode = mode;
     }
     void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h, const double step)
     {

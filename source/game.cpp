@@ -60,6 +60,9 @@ class mglcraft
 
         // Add character direction
         _text.add_text("X: Y: Z:", 10, 404);
+
+        // Game mode
+        _text.add_text("MODE: PLAY:", 10, 376);
     }
     std::pair<min::vec3<float>, bool> load_state()
     {
@@ -134,7 +137,7 @@ class mglcraft
   public:
     // Load window shaders and program
     mglcraft()
-        : _win("MGLCRAFT: FPS: ", 720, 480, 3, 3),
+        : _win("MGLCRAFT: LOADING", 720, 480, 3, 3),
           _text(28),
           _world(load_state(), 64, 8, 7),
           _controls(_win, _state.get_camera(), _state, _text, _world)
@@ -232,6 +235,10 @@ class mglcraft
             const min::vec3<float> &f = _state.get_camera().get_forward();
             stream << "X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
             _text.update_text(stream.str(), 3);
+
+            // Update the game mode text
+            const std::string &mode = _state.get_game_mode();
+            _text.update_text(mode, 4);
 
             // Upload changes
             _text.upload();

@@ -616,11 +616,12 @@ class world
         std::cout << _dest.y() << std::endl;
         std::cout << _dest.z() << std::endl;
     }
-    void toggle_edit_mode()
+    bool toggle_edit_mode()
     {
-        _edit_mode = !_edit_mode;
+        // Toggle flag and return result
+        return (_edit_mode = !_edit_mode);
     }
-    void toggle_ai_mode()
+    bool toggle_ai_mode()
     {
         // Load a new path when entering the mode
         if (!_ai_mode)
@@ -629,10 +630,10 @@ class world
             _path = game::ai_path();
         }
 
-        // Toggle the flag
-        _ai_mode = !_ai_mode;
+        // Toggle the flag and return result
+        return (_ai_mode = !_ai_mode);
     }
-    void toggle_train_mode()
+    bool toggle_train_mode()
     {
         // Toggle the mode
         _train_mode = !_train_mode;
@@ -663,6 +664,8 @@ class world
             // Set the skip frame flag signalling we just turned off training
             _train_skip_mode = true;
         }
+
+        return _train_mode;
     }
     void grappling(const min::ray<float, min::vec3> &r)
     {
