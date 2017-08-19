@@ -193,7 +193,7 @@ class controls
     static void toggle_text(void *ptr, double step)
     {
         // Cast to text pointer type and toggle draw
-        game::text *text = reinterpret_cast<game::text *>(ptr);
+        game::text *const text = reinterpret_cast<game::text *>(ptr);
 
         // Enable / Disable drawing text
         text->toggle_draw();
@@ -201,7 +201,7 @@ class controls
     static void toggle_pause(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Cast to state pointer for pausing
         game::state *const state = control->get_state();
@@ -229,7 +229,7 @@ class controls
     static void toggle_edit_mode(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the world and state pointers
         game::world *const world = control->get_world();
@@ -247,7 +247,7 @@ class controls
     static void toggle_ai_mode(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the world and state pointers
         game::world *const world = control->get_world();
@@ -269,7 +269,10 @@ class controls
     static void toggle_train_mode(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Cast to window pointer for setting window cursor
+        min::window *const win = control->get_window();
 
         // Get the world and state pointers
         game::world *const world = control->get_world();
@@ -278,6 +281,9 @@ class controls
         // Pause the game
         state->set_game_pause(true);
         state->pause_lock(true);
+
+        // Turn off cursor if paused
+        win->display_cursor(false);
 
         // Create background task
         const auto task = [world, state]() {
@@ -298,7 +304,7 @@ class controls
     static void set_train_destination(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointer
         game::world *const world = control->get_world();
@@ -309,7 +315,7 @@ class controls
     static void forward(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
@@ -320,7 +326,7 @@ class controls
     static void left(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
@@ -331,7 +337,7 @@ class controls
     static void right(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
@@ -342,7 +348,7 @@ class controls
     static void back(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and world pointers
         min::camera<float> *const camera = control->get_camera();
@@ -353,7 +359,7 @@ class controls
     static void jump(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointer
         game::world *const world = control->get_world();
@@ -434,7 +440,7 @@ class controls
     static void reset(void *ptr, double step)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointer
         game::world *const world = control->get_world();
@@ -445,7 +451,7 @@ class controls
     static void left_click(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera world, and state pointers
         min::camera<float> *const camera = control->get_camera();
@@ -483,7 +489,7 @@ class controls
     static void right_click(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera world, and state pointers
         min::camera<float> *const camera = control->get_camera();
@@ -509,11 +515,11 @@ class controls
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {
         // Cast to control pointer
-        controls *control = reinterpret_cast<controls *>(ptr);
+        controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and text pointer
-        min::camera<float> *camera = control->get_camera();
-        game::text *text = control->get_text();
+        min::camera<float> *const camera = control->get_camera();
+        game::text *const text = control->get_text();
 
         // Get camera frustum
         auto &f = camera->get_frustum();
