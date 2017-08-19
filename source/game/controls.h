@@ -26,6 +26,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/ray.h>
 #include <min/window.h>
 #include <stdexcept>
+#include <thread>
 
 namespace game
 {
@@ -61,6 +62,7 @@ class controls
         // Add FPS(WADS) keys to watch
         keyboard.add(min::window::key_code::F1);
         keyboard.add(min::window::key_code::F2);
+        keyboard.add(min::window::key_code::F3);
         keyboard.add(min::window::key_code::KEYQ);
         keyboard.add(min::window::key_code::KEYR);
         keyboard.add(min::window::key_code::KEYT);
@@ -88,6 +90,9 @@ class controls
 
         // Register callback function F2
         keyboard.register_keydown(min::window::key_code::F2, controls::toggle_text, (void *)_text);
+
+        // Register callback function F3
+        keyboard.register_keydown(min::window::key_code::F3, controls::toggle_pause, (void *)this);
 
         // Register callback function Q
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::toggle_edit_mode, (void *)this);
@@ -193,9 +198,37 @@ class controls
         // Enable / Disable drawing text
         text->toggle_draw();
     }
+    static void toggle_pause(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Cast to state pointer for pausing
+        game::state *const state = control->get_state();
+
+        // Cast to window pointer for setting window cursor
+        min::window *const win = control->get_window();
+
+        // Toggle the game pause
+        const bool mode = state->toggle_game_pause();
+
+        // set the game mode caption
+        if (mode)
+        {
+            // Turn on cursor
+            win->display_cursor(true);
+            state->set_game_mode("MODE: PAUSE");
+        }
+        else
+        {
+            // Turn off cursor
+            win->display_cursor(false);
+            state->set_game_mode("MODE: PLAY");
+        }
+    }
     static void toggle_edit_mode(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the world and state pointers
@@ -213,10 +246,10 @@ class controls
     }
     static void toggle_ai_mode(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world pointer
+        // Get the world and state pointers
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
 
@@ -235,29 +268,36 @@ class controls
     }
     static void toggle_train_mode(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world pointer
+        // Get the world and state pointers
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
 
-        // toggle edit mode
-        const bool mode = world->toggle_train_mode();
+        // Pause the game
+        state->set_game_pause(true);
+        state->pause_lock(true);
 
-        // set the game mode caption
-        if (mode)
-        {
-            state->set_game_mode("MODE: AI TRAIN");
-        }
-        else
-        {
-            state->set_game_mode("MODE: PLAY");
-        }
+        // Create background task
+        const auto task = [world, state]() {
+            // train AI for 100 iterations in background thread
+            world->train(100);
+
+            // Unpause the game
+            state->pause_lock(false);
+            state->set_game_pause(false);
+        };
+
+        // Launch the task in the background
+        std::thread t(task);
+
+        // Detach the thread
+        t.detach();
     }
     static void set_train_destination(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointer
@@ -268,7 +308,7 @@ class controls
     }
     static void forward(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and world pointers
@@ -279,7 +319,7 @@ class controls
     }
     static void left(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and world pointers
@@ -290,7 +330,7 @@ class controls
     }
     static void right(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and world pointers
@@ -301,7 +341,7 @@ class controls
     }
     static void back(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and world pointers
@@ -312,7 +352,7 @@ class controls
     }
     static void jump(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointer
@@ -393,7 +433,7 @@ class controls
     }
     static void reset(void *ptr, double step)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointer
@@ -404,10 +444,10 @@ class controls
     }
     static void left_click(void *ptr, const uint16_t x, const uint16_t y)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
-        // Get the camera and world pointers
+        // Get the camera world, and state pointers
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
@@ -442,10 +482,10 @@ class controls
     }
     static void right_click(void *ptr, const uint16_t x, const uint16_t y)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
-        // Get the camera and world pointers
+        // Get the camera world, and state pointers
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
@@ -468,7 +508,7 @@ class controls
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {
-        // Cast to camera pointer type and move camera
+        // Cast to control pointer
         controls *control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and text pointer

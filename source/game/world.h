@@ -78,13 +78,11 @@ class world
 
     // Pathing
     game::ai_path _path;
-    game::ai_trainer _trainer;
+    mutable game::ai_trainer _trainer;
     min::vec3<float> _dest;
     bool _ai_mode;
-    bool _train_mode;
-    bool _train_skip_mode;
 
-    inline void character_ai()
+    inline void ai_path()
     {
         if (_ai_mode)
         {
@@ -104,25 +102,19 @@ class world
             // body.add_force(dxyz * 2E2 * body.get_mass());
         }
     }
-    inline void ai_train()
+    inline void ai_train(const size_t iterations) const
     {
-        if (_train_mode)
+        // Get character body
+        const min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Return the character position
+        const min::vec3<float> &p = body.get_position();
+
+        // train the ai
+        for (size_t i = 0; i < iterations; i++)
         {
-            // Get character body
-            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-            // Set no force on this body while training
-            body.clear_no_force();
-
-            // Return the character position
-            const min::vec3<float> &p = body.get_position();
-
-            // train the ai
-            for (size_t i = 0; i < 5; i++)
-            {
-                _trainer.train(_grid, p, _dest);
-                std::cout << "iteration " << i << std::endl;
-            }
+            _trainer.train(_grid, p, _dest);
+            std::cout << "iteration " << i << std::endl;
         }
     }
     // character_load should only be called once!
@@ -341,9 +333,7 @@ class world
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _sky(_geom, grid_size),
-          _ai_mode(false),
-          _train_mode(false),
-          _train_skip_mode(false)
+          _ai_mode(false)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)
@@ -456,53 +446,41 @@ class world
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
         // Solve the AI path finding if toggled
-        character_ai();
+        ai_path();
 
-        // Train the AI if toggled
-        ai_train();
+        // Get player position
+        const min::vec3<float> &p = body.get_position();
 
-        if (!_train_mode)
+        // Detect if we crossed a chunk boundary
+        bool is_valid = true;
+        const size_t current_chunk = _grid.chunk_key(p, is_valid);
+        const size_t recent_chunk = _grid.get_recent_chunk();
+        if (is_valid && recent_chunk != current_chunk)
         {
-            if (!_train_skip_mode)
-            {
-                // Get player position
-                const min::vec3<float> &p = body.get_position();
+            // Update the recent chunk
+            _grid.update(current_chunk);
 
-                // Detect if we crossed a chunk boundary
-                bool is_valid = true;
-                const size_t current_chunk = _grid.chunk_key(p, is_valid);
-                const size_t recent_chunk = _grid.get_recent_chunk();
-                if (is_valid && recent_chunk != current_chunk)
-                {
-                    // Update the recent chunk
-                    _grid.update(current_chunk);
-
-                    // Generate a new geometry mesh
-                    generate_gb();
-                }
-
-                // Solve the physics simulation
-                for (int i = 0; i < 10; i++)
-                {
-                    const std::vector<min::aabbox<float, min::vec3>> col_blocks = _grid.create_collision_cells(snap(p));
-
-                    // Add friction force
-                    const min::vec3<float> &vel = body.get_linear_velocity();
-                    const min::vec3<float> xz(vel.x(), 0.0, vel.z());
-
-                    // Add friction force opposing lateral motion
-                    body.add_force(xz * body.get_mass() * -2.0);
-
-                    _simulation.solve_static(col_blocks, _char_id, dt / 10.0, 10.0);
-                }
-
-                // Update the particle buffer
-                _particles.update(dt);
-            }
-
-            // We should have stable time steps after this frame
-            _train_skip_mode = false;
+            // Generate a new geometry mesh
+            generate_gb();
         }
+
+        // Solve the physics simulation
+        for (int i = 0; i < 10; i++)
+        {
+            const std::vector<min::aabbox<float, min::vec3>> col_blocks = _grid.create_collision_cells(snap(p));
+
+            // Add friction force
+            const min::vec3<float> &vel = body.get_linear_velocity();
+            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
+
+            // Add friction force opposing lateral motion
+            body.add_force(xz * body.get_mass() * -2.0);
+
+            _simulation.solve_static(col_blocks, _char_id, dt / 10.0, 10.0);
+        }
+
+        // Update the particle buffer
+        _particles.update(dt);
 
         // update camera matrices
         update_uniform(cam);
@@ -616,6 +594,29 @@ class world
         std::cout << _dest.y() << std::endl;
         std::cout << _dest.z() << std::endl;
     }
+    void train(const size_t iterations) const
+    {
+        // Create output stream for loading AI
+        std::vector<uint8_t> input;
+
+        // Load data into stream from AI file
+        game::load_file("bin/bot", input);
+        if (input.size() != 0)
+        {
+            // load the data into the trainer of previous run
+            _trainer.deserialize(input);
+        }
+
+        // Train the AI
+        ai_train(iterations);
+
+        // Create output stream for saving bot
+        std::vector<uint8_t> output;
+        _trainer.serialize(output);
+
+        // Write data to file
+        game::save_file("bin/bot", output);
+    }
     bool toggle_edit_mode()
     {
         // Toggle flag and return result
@@ -623,49 +624,18 @@ class world
     }
     bool toggle_ai_mode()
     {
+        // Toggle the flag
+        _ai_mode = !_ai_mode;
+
         // Load a new path when entering the mode
-        if (!_ai_mode)
+        if (_ai_mode)
         {
             // Create a new path using new bot file
             _path = game::ai_path();
         }
 
-        // Toggle the flag and return result
-        return (_ai_mode = !_ai_mode);
-    }
-    bool toggle_train_mode()
-    {
-        // Toggle the mode
-        _train_mode = !_train_mode;
-
-        // If training is on
-        if (_train_mode)
-        {
-            // Create output stream for loading AI
-            std::vector<uint8_t> input;
-
-            // Load data into stream from AI file
-            game::load_file("bin/bot", input);
-            if (input.size() != 0)
-            {
-                // load the data into the trainer of previous run
-                _trainer.deserialize(input);
-            }
-        }
-        else
-        {
-            // Create output stream for saving bot
-            std::vector<uint8_t> output;
-            _trainer.serialize(output);
-
-            // Write data to file
-            game::save_file("bin/bot", output);
-
-            // Set the skip frame flag signalling we just turned off training
-            _train_skip_mode = true;
-        }
-
-        return _train_mode;
+        // Return the flag
+        return _ai_mode;
     }
     void grappling(const min::ray<float, min::vec3> &r)
     {

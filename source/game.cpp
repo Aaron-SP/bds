@@ -171,10 +171,6 @@ class mglcraft
     }
     void draw(const float dt)
     {
-        // Update the keyboard
-        auto &keyboard = _win.get_keyboard();
-        keyboard.update(dt);
-
         // Get player physics body position
         const min::vec3<float> &p = _world.character_position();
 
@@ -203,6 +199,10 @@ class mglcraft
     {
         return _win.get_shutdown();
     }
+    bool is_paused() const
+    {
+        return _state.get_game_pause();
+    }
     void set_title(const std::string &title)
     {
         _win.set_title(title);
@@ -215,6 +215,12 @@ class mglcraft
 
         // Center cursor in middle of window
         _win.set_cursor(w / 2, h / 2);
+    }
+    void update_keyboard(const float dt)
+    {
+        // Update the keyboard
+        auto &keyboard = _win.get_keyboard();
+        keyboard.update(dt);
     }
     void update_text()
     {
@@ -270,11 +276,19 @@ void run()
             // Start synchronizing the loop
             sync.start();
 
-            // Clear the background color
-            game.clear_background();
+            // Update the keyboard
+            game.update_keyboard(frame_time);
 
-            // Draw the model
-            game.draw(frame_time);
+            // Is the game paused?
+            const bool skip = game.is_paused();
+            if (!skip)
+            {
+                // Clear the background color
+                game.clear_background();
+
+                // Draw the model
+                game.draw(frame_time);
+            }
 
             // Update the window after draw command
             game.update_window();
