@@ -79,7 +79,7 @@ class world
     // Pathing
     game::ai_path _path;
     mutable game::ai_trainer _trainer;
-    min::vec3<float> _dest;
+    min::vec3<float> _p;
     bool _ai_mode;
 
     inline void ai_path()
@@ -92,14 +92,15 @@ class world
             // Animate the character with AI
             const min::vec3<float> &p = character_position();
 
+            // Distance from point
+            const float distance = (p - _p).magnitude();
+
             // Calculate the next step
-            const std::tuple<min::vec3<float>, min::vec3<float>, bool> next = _path.step(_grid, p, _dest);
-            const min::vec3<float> position = std::get<0>(next);
-            // const min::vec3<float> dxyz = std::get<1>(next);
+            const min::vec3<float> step = _path.solve(_grid, p, distance);
+            const min::vec3<float> next = step + p;
 
             // Add force to body
-            body.set_position(position);
-            // body.add_force(dxyz * 2E2 * body.get_mass());
+            body.set_position(next);
         }
     }
     inline void ai_train(const size_t iterations) const
@@ -113,7 +114,7 @@ class world
         // train the ai
         for (size_t i = 0; i < iterations; i++)
         {
-            _trainer.train(_grid, p, _dest);
+            _trainer.train(_grid, p);
             std::cout << "iteration " << i << std::endl;
         }
     }
@@ -587,12 +588,9 @@ class world
     {
         return _edit_mode;
     }
-    void set_train_destination()
+    void set_train_point()
     {
-        _dest = character_position();
-        std::cout << _dest.x() << std::endl;
-        std::cout << _dest.y() << std::endl;
-        std::cout << _dest.z() << std::endl;
+        _p = character_position();
     }
     void train(const size_t iterations) const
     {

@@ -32,7 +32,7 @@ class ai_path
 {
   private:
     static constexpr float _step_size = 0.5;
-    mml::nnet<float, 33, 3> _net;
+    mml::nnet<float, 28, 3> _net;
 
   public:
     ai_path()
@@ -47,10 +47,6 @@ class ai_path
             // If we got data, deserialize it
             this->deserialize(input);
         }
-        else
-        {
-            throw std::runtime_error("ai_path: could not load AI from bin/bot file");
-        }
     }
     void deserialize(std::vector<uint8_t> &stream)
     {
@@ -62,57 +58,35 @@ class ai_path
         _net.reset();
         _net.deserialize(data);
     }
-    static std::tuple<min::vec3<float>, min::vec3<float>, bool> move(const cgrid &grid, mml::nnet<float, 33, 3> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
+    static min::vec3<float> solve(const cgrid &grid, mml::nnet<float, 28, 3> &net, const min::vec3<float> &p, const float distance)
     {
         // Must be 27 in size
-        const std::vector<int8_t> neighbors = grid.get_neighbors(start);
+        const std::vector<int8_t> neighbors = grid.get_neighbors(p);
         if (neighbors.size() != 27)
         {
             throw std::runtime_error("ai_path: shit is broken");
         }
 
         // Create input vector
-        mml::vector<float, 33> in;
+        mml::vector<float, 28> in;
         for (size_t i = 0; i < 27; i++)
         {
             // 1 if empty, 0 if filled
             const int empty = static_cast<bool>(neighbors[i] == -1);
             in[i] = static_cast<float>(empty);
         }
-        in[27] = start.x();
-        in[28] = start.y();
-        in[29] = start.z();
-        in[30] = dest.x();
-        in[31] = dest.y();
-        in[32] = dest.z();
+        in[27] = distance;
 
         // Set input and calculate output
         net.set_input(in);
         const mml::vector<float, 3> out = net.calculate();
 
-        // Calculate direction to move, normalize safe in case zero vector
-        const min::vec3<float> direction(out[0], out[1], out[2]);
-
-        // Move in that direction
-        const min::vec3<float> next = direction * _step_size + start;
-
-        // See if it hit a wall
-        bool fail = false;
-
-        // Check if we failed and return start position
-        const int8_t atlas = grid.grid_value(next);
-        if (atlas != -1)
-        {
-            fail = true;
-            return std::make_tuple(start, min::vec3<float>(0, 0, 0), fail);
-        }
-
-        // Else return new point
-        return std::make_tuple(next, direction, fail);
+        // Calculate direction to move
+        return min::vec3<float>(out[0], out[1], out[2]) * _step_size;
     }
-    std::tuple<min::vec3<float>, min::vec3<float>, bool> step(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
+    min::vec3<float> solve(const cgrid &grid, const min::vec3<float> &p, const float distance)
     {
-        return ai_path::move(grid, _net, start, dest);
+        return ai_path::solve(grid, _net, p, distance);
     }
 };
 }

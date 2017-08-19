@@ -34,7 +34,6 @@ bool test_ai_trainer()
 
     // Create start and destination points
     const min::vec3<float> start(-10.0, 23.0, -28.0);
-    const min::vec3<float> dest(0.0, 2.0, 0.0);
 
     // Create output stream for loading AI
     std::vector<uint8_t> input;
@@ -48,9 +47,9 @@ bool test_ai_trainer()
     }
 
     // train the ai
-    for (size_t i = 0; i < 100; i++)
+    for (size_t i = 0; i < 10000; i++)
     {
-        trainer.train(grid, start, dest);
+        trainer.train(grid, start);
         std::cout << "iteration " << i << std::endl;
     }
 

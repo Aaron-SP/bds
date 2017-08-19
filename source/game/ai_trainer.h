@@ -35,56 +35,66 @@ class ai_trainer
     static constexpr unsigned _pool_size = 100;
     static constexpr unsigned _breed_stock = 13;
     static constexpr unsigned _mutation_rate = 50;
-    static constexpr unsigned _total_moves = 200;
-    mml::nnet<float, 33, 3> _nets[_pool_size];
+    static constexpr unsigned _total_moves = 20;
+    mml::nnet<float, 28, 3> _nets[_pool_size];
     float _scores[_pool_size];
     mml::net_rng<float> _rng;
-    mml::nnet<float, 33, 3> _top_net;
+    mml::nnet<float, 28, 3> _top_net;
     float _top;
     float _average_fitness;
 
-    static float fitness_score(const cgrid &grid, mml::nnet<float, 33, 3> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
+    static float fitness_score(const cgrid &grid, mml::nnet<float, 28, 3> &net, const min::vec3<float> &start)
     {
         min::vec3<float> current = start;
-        size_t moves = 1;
-        float score = 0;
         bool stop = false;
+        float score = 0.0;
+        size_t moves = 1;
+        float distance = 0;
 
         // while not dead
         while (!stop)
         {
+            // Failed flag
+            bool failed = false;
+
             // Get new location
-            const std::tuple<min::vec3<float>, min::vec3<float>, bool> next = ai_path::move(grid, net, current, start);
+            const min::vec3<float> step = ai_path::solve(grid, net, current, distance);
 
             // Calculate distance to destination
-            current = std::get<0>(next);
+            current += step;
             const min::vec3<float> d = current - start;
-            const float distance = d.magnitude();
+            distance = d.magnitude();
 
-            // Increment moves
-            moves++;
-
-            // If we hit a wall
-            if (std::get<2>(next))
+            // Check if we failed and return start position
+            const int8_t atlas = grid.grid_value(current);
+            if (atlas != -1)
             {
-                float det = 2 - distance;
-                if (std::abs(det) < 0.5)
-                {
-                    det++;
-                }
-                score = moves / det;
+                failed = true;
+            }
+
+            // Increment moves and break out if we used up all moves
+            moves++;
+            if (moves > _total_moves)
+            {
                 stop = true;
             }
-            // If we haven't arrived yet and we ran out of moves
-            else if (moves > _total_moves)
+
+            // Detect a zero move
+            if (distance > 0.0)
             {
-                float det = 2 - distance;
-                if (std::abs(det) < 0.5)
+                // Reward / discipline moves
+                if (failed)
                 {
-                    det++;
+                    score -= 1.0;
                 }
-                score = moves / det;
-                stop = true;
+                else
+                {
+                    score += 1.0;
+                }
+            }
+            else
+            {
+                score -= 1.0;
             }
         }
 
@@ -102,7 +112,7 @@ class ai_trainer
         for (size_t i = 0; i < _pool_size; i++)
         {
             // Create a fresh net
-            mml::nnet<float, 33, 3> &net = _nets[i];
+            mml::nnet<float, 28, 3> &net = _nets[i];
             net.add_layer(16);
             net.add_layer(16);
             net.finalize();
@@ -123,7 +133,7 @@ class ai_trainer
         for (size_t i = 0; i < _pool_size; i++)
         {
             // Load previous net and mutate it
-            mml::nnet<float, 33, 3> &net = _nets[i];
+            mml::nnet<float, 28, 3> &net = _nets[i];
 
             // Must definalize the net to deserialize it
             net.reset();
@@ -141,7 +151,7 @@ class ai_trainer
         // Write data into stream
         min::write_le_vector<float>(stream, data);
     }
-    void train(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
+    void train(const cgrid &grid, const min::vec3<float> &start)
     {
         // Assert that we do not overflow
         static_assert(((_breed_stock * _breed_stock + _breed_stock) / 2) <= _pool_size, "Invalid breed stock dimensions");
@@ -149,7 +159,7 @@ class ai_trainer
         // Calculate fitness scores
         for (size_t i = 0; i < _pool_size; i++)
         {
-            _scores[i] = fitness_score(grid, _nets[i], start, dest);
+            _scores[i] = fitness_score(grid, _nets[i], start);
         }
 
         // Create index vector to sort 0 to N
@@ -186,7 +196,7 @@ class ai_trainer
         {
             for (size_t j = i + 1; j < _breed_stock; j++)
             {
-                _nets[current] = mml::nnet<float, 33, 3>::breed(_nets[i], _nets[j]);
+                _nets[current] = mml::nnet<float, 28, 3>::breed(_nets[i], _nets[j]);
                 current++;
             }
         }

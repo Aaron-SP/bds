@@ -104,7 +104,7 @@ class controls
         keyboard.register_keydown(min::window::key_code::KEYT, controls::toggle_train_mode, (void *)this);
 
         // Register callback function Y
-        keyboard.register_keydown(min::window::key_code::KEYY, controls::set_train_destination, (void *)this);
+        keyboard.register_keydown(min::window::key_code::KEYY, controls::set_train_point, (void *)this);
 
         // Register callback function W
         keyboard.register_keydown(min::window::key_code::KEYW, controls::forward, (void *)this);
@@ -301,7 +301,7 @@ class controls
         // Detach the thread
         t.detach();
     }
-    static void set_train_destination(void *ptr, double step)
+    static void set_train_point(void *ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -310,7 +310,7 @@ class controls
         game::world *const world = control->get_world();
 
         // toggle edit mode
-        world->set_train_destination();
+        world->set_train_point();
     }
     static void forward(void *ptr, double step)
     {
