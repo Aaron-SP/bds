@@ -97,10 +97,9 @@ class world
 
             // Calculate the next step
             const min::vec3<float> step = _path.solve(_grid, p, distance);
-            const min::vec3<float> next = step + p;
 
             // Add force to body
-            body.set_position(next);
+            body.add_force(step * 2E2 * body.get_mass());
         }
     }
     inline void ai_train(const size_t iterations) const

@@ -40,6 +40,8 @@ class ai_path
         // Create output stream for loading AI
         std::vector<uint8_t> input;
 
+        std::cout << "Loading new AI path" << std::endl;
+
         // Load data into stream from AI file
         game::load_file("bin/bot", input);
         if (input.size() != 0)

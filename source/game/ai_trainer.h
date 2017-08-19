@@ -34,8 +34,8 @@ class ai_trainer
   private:
     static constexpr unsigned _pool_size = 100;
     static constexpr unsigned _breed_stock = 13;
-    static constexpr unsigned _mutation_rate = 50;
-    static constexpr unsigned _total_moves = 20;
+    static constexpr unsigned _mutation_rate = 5;
+    static constexpr unsigned _total_moves = 100;
     mml::nnet<float, 28, 3> _nets[_pool_size];
     float _scores[_pool_size];
     mml::net_rng<float> _rng;
@@ -103,9 +103,10 @@ class ai_trainer
     }
 
   public:
-    ai_trainer() : _rng(std::uniform_real_distribution<float>(-1E2, 1E2),
-                        std::uniform_real_distribution<float>(-1E2, 1E2),
+    ai_trainer() : _rng(std::uniform_real_distribution<float>(-0.5, 0.5),
+                        std::uniform_real_distribution<float>(-0.5, 0.5),
                         std::uniform_int_distribution<int>(0, _pool_size - 1)),
+                   _top(0.0),
                    _average_fitness(0.0)
     {
         // Initialize all the nets
@@ -155,6 +156,9 @@ class ai_trainer
     {
         // Assert that we do not overflow
         static_assert(((_breed_stock * _breed_stock + _breed_stock) / 2) <= _pool_size, "Invalid breed stock dimensions");
+
+        // Calculate the top fitness score
+        _top = fitness_score(grid, _top_net, start);
 
         // Calculate fitness scores
         for (size_t i = 0; i < _pool_size; i++)
