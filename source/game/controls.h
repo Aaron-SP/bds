@@ -61,8 +61,10 @@ class controls
         // Add FPS(WADS) keys to watch
         keyboard.add(min::window::key_code::F1);
         keyboard.add(min::window::key_code::F2);
-        keyboard.add(min::window::key_code::KEYR);
         keyboard.add(min::window::key_code::KEYQ);
+        keyboard.add(min::window::key_code::KEYR);
+        keyboard.add(min::window::key_code::KEYT);
+        keyboard.add(min::window::key_code::KEYY);
         keyboard.add(min::window::key_code::KEYW);
         keyboard.add(min::window::key_code::KEYS);
         keyboard.add(min::window::key_code::KEYA);
@@ -92,6 +94,12 @@ class controls
 
         // Register callback function R
         keyboard.register_keydown(min::window::key_code::KEYR, controls::toggle_ai_mode, (void *)this);
+
+        // Register callback function T
+        keyboard.register_keydown(min::window::key_code::KEYT, controls::toggle_train_mode, (void *)this);
+
+        // Register callback function Y
+        keyboard.register_keydown(min::window::key_code::KEYY, controls::set_train_destination, (void *)this);
 
         // Register callback function W
         keyboard.register_keydown(min::window::key_code::KEYW, controls::forward, (void *)this);
@@ -213,6 +221,28 @@ class controls
 
         // toggle edit mode
         world->toggle_ai_mode();
+    }
+    static void toggle_train_mode(void *ptr, double step)
+    {
+        // Cast to camera pointer type and move camera
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world pointer
+        game::world *const world = control->get_world();
+
+        // toggle edit mode
+        world->toggle_train_mode();
+    }
+    static void set_train_destination(void *ptr, double step)
+    {
+        // Cast to camera pointer type and move camera
+        controls *control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world pointer
+        game::world *const world = control->get_world();
+
+        // toggle edit mode
+        world->set_train_destination();
     }
     static void forward(void *ptr, double step)
     {

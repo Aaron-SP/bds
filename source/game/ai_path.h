@@ -91,8 +91,7 @@ class ai_path
         const mml::vector<float, 3> out = net.calculate();
 
         // Calculate direction to move, normalize safe in case zero vector
-        const min::vec3<float> safe = min::vec3<float>::up();
-        const min::vec3<float> direction = min::vec3<float>(out[0], out[1], out[2]).normalize_safe(safe);
+        const min::vec3<float> direction(out[0], out[1], out[2]);
 
         // Move in that direction
         const min::vec3<float> next = direction * _step_size + start;

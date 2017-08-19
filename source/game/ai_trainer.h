@@ -35,7 +35,7 @@ class ai_trainer
     static constexpr unsigned _pool_size = 100;
     static constexpr unsigned _breed_stock = 13;
     static constexpr unsigned _mutation_rate = 50;
-    static constexpr unsigned _total_moves = 1000;
+    static constexpr unsigned _total_moves = 200;
     mml::nnet<float, 33, 3> _nets[_pool_size];
     float _scores[_pool_size];
     mml::net_rng<float> _rng;
@@ -46,7 +46,7 @@ class ai_trainer
     static float fitness_score(const cgrid &grid, mml::nnet<float, 33, 3> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
         min::vec3<float> current = start;
-        size_t moves = 0;
+        size_t moves = 1;
         float score = 0;
         bool stop = false;
 
@@ -54,11 +54,11 @@ class ai_trainer
         while (!stop)
         {
             // Get new location
-            const std::tuple<min::vec3<float>, min::vec3<float>, bool> next = ai_path::move(grid, net, current, dest);
+            const std::tuple<min::vec3<float>, min::vec3<float>, bool> next = ai_path::move(grid, net, current, start);
 
             // Calculate distance to destination
             current = std::get<0>(next);
-            const min::vec3<float> d = dest - current;
+            const min::vec3<float> d = current - start;
             const float distance = d.magnitude();
 
             // Increment moves
@@ -67,19 +67,23 @@ class ai_trainer
             // If we hit a wall
             if (std::get<2>(next))
             {
-                score = 2.0 * moves;
+                float det = 2 - distance;
+                if (std::abs(det) < 0.5)
+                {
+                    det++;
+                }
+                score = moves / det;
                 stop = true;
             }
             // If we haven't arrived yet and we ran out of moves
-            else if (distance > 1.0 && moves > _total_moves)
+            else if (moves > _total_moves)
             {
-                score = 3.0 * moves;
-                stop = true;
-            }
-            // If we arrived
-            else if (distance <= 1.0)
-            {
-                score = 4.0 * moves;
+                float det = 2 - distance;
+                if (std::abs(det) < 0.5)
+                {
+                    det++;
+                }
+                score = moves / det;
                 stop = true;
             }
         }
@@ -89,8 +93,8 @@ class ai_trainer
     }
 
   public:
-    ai_trainer() : _rng(std::uniform_real_distribution<float>(-2.0, 2.0),
-                        std::uniform_real_distribution<float>(-2.0, 2.0),
+    ai_trainer() : _rng(std::uniform_real_distribution<float>(-1E2, 1E2),
+                        std::uniform_real_distribution<float>(-1E2, 1E2),
                         std::uniform_int_distribution<int>(0, _pool_size - 1)),
                    _average_fitness(0.0)
     {
@@ -112,6 +116,7 @@ class ai_trainer
         const std::vector<float> data = min::read_le_vector<float>(stream, next);
 
         // Initialize top net
+        _top_net.reset();
         _top_net.deserialize(data);
 
         // Initialize all the with previous top net
