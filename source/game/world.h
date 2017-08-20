@@ -79,7 +79,8 @@ class world
     // Pathing
     game::ai_path _path;
     mutable game::ai_trainer _trainer;
-    min::vec3<float> _p;
+    min::vec3<float> _start;
+    min::vec3<float> _dest;
     bool _ai_mode;
 
     inline void ai_path()
@@ -93,10 +94,19 @@ class world
             const min::vec3<float> &p = character_position();
 
             // Distance from point
-            const float distance = (p - _p).magnitude();
+            const float travel = (p - _start).magnitude();
+
+            // Direction and remaining distance
+            min::vec3<float> dir = _dest - p;
+            const float remain = dir.magnitude();
+            if (remain > 1.0)
+            {
+                const float denom = 1.0 / remain;
+                dir *= denom;
+            }
 
             // Calculate the next step
-            const min::vec3<float> step = _path.solve(_grid, p, distance);
+            const min::vec3<float> step = _path.solve(_grid, p, dir, travel, remain);
 
             // Add force to body
             const min::vec3<float> force(step.x(), step.y() * 2.0, step.z());
@@ -114,8 +124,14 @@ class world
         // train the ai
         for (size_t i = 0; i < iterations; i++)
         {
-            _trainer.train(_grid, p);
-            std::cout << "iteration " << i << std::endl;
+            for (size_t j = 0; j < iterations; j++)
+            {
+                _trainer.train(_grid, p, _dest);
+                std::cout << "iteration " << j << std::endl;
+            }
+
+            // Mutate the trainer
+            _trainer.mutate();
         }
     }
     // character_load should only be called once!
@@ -326,6 +342,7 @@ class world
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _sky(_geom, grid_size),
+          _dest(state.first),
           _ai_mode(false)
     {
         // Check if chunk_size is valid
@@ -582,7 +599,11 @@ class world
     }
     void set_train_point()
     {
-        _p = character_position();
+        _dest = character_position();
+        std::cout << "Setting new destination" << std::endl;
+        std::cout << "X: " << _dest.x() << std::endl;
+        std::cout << "Y: " << _dest.y() << std::endl;
+        std::cout << "Z: " << _dest.z() << std::endl;
     }
     void train(const size_t iterations) const
     {
@@ -622,6 +643,7 @@ class world
         {
             // Create a new path using new bot file
             _path = game::ai_path();
+            _start = character_position();
         }
 
         // Return the flag

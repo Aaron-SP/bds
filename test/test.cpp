@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <iostream>
-#include <tai_trainer.h>
+#include <tai_dome.h>
 #include <tcgrid.h>
 
 int main()

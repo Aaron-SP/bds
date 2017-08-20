@@ -32,7 +32,7 @@ class ai_path
 {
   private:
     static constexpr float _step_size = 0.5;
-    mml::nnet<float, 28, 3> _net;
+    mml::nnet<float, 32, 6> _net;
 
   public:
     ai_path()
@@ -60,7 +60,7 @@ class ai_path
         _net.reset();
         _net.deserialize(data);
     }
-    static min::vec3<float> solve(const cgrid &grid, mml::nnet<float, 28, 3> &net, const min::vec3<float> &p, const float distance)
+    static min::vec3<float> solve(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
     {
         // Must be 27 in size
         const std::vector<int8_t> neighbors = grid.get_neighbors(p);
@@ -70,25 +70,32 @@ class ai_path
         }
 
         // Create input vector
-        mml::vector<float, 28> in;
+        mml::vector<float, 32> in;
         for (size_t i = 0; i < 27; i++)
         {
             // 1 if empty, 0 if filled
             const int empty = static_cast<bool>(neighbors[i] == -1);
             in[i] = static_cast<float>(empty);
         }
-        in[27] = distance;
+        in[27] = dir.x();
+        in[28] = dir.y();
+        in[29] = dir.z();
+        in[30] = travel;
+        in[31] = remain;
 
         // Set input and calculate output
         net.set_input(in);
-        const mml::vector<float, 3> out = net.calculate();
+        const mml::vector<float, 6> out = net.calculate();
 
         // Calculate direction to move
-        return min::vec3<float>(out[0], out[1], out[2]) * _step_size;
+        const float x = out[0] - out[3];
+        const float y = out[1] - out[4];
+        const float z = out[2] - out[5];
+        return min::vec3<float>(x, y, z) * _step_size;
     }
-    min::vec3<float> solve(const cgrid &grid, const min::vec3<float> &p, const float distance)
+    min::vec3<float> solve(const cgrid &grid, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
     {
-        return ai_path::solve(grid, _net, p, distance);
+        return ai_path::solve(grid, _net, p, dir, travel, remain);
     }
 };
 }

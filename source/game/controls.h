@@ -287,7 +287,7 @@ class controls
 
         // Create background task
         const auto task = [world, state]() {
-            // train AI for 100 iterations in background thread
+            // train AI for 10 iterations in background thread
             world->train(10);
 
             // Unpause the game

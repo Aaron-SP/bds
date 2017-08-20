@@ -36,11 +36,11 @@ class ai_trainer
     static constexpr unsigned _pool_size = 100;
     static constexpr unsigned _breed_stock = 13;
     static constexpr unsigned _mutation_rate = 5;
-    static constexpr unsigned _total_moves = 200;
-    mml::nnet<float, 28, 3> _nets[_pool_size];
+    static constexpr unsigned _total_moves = 20;
+    mml::nnet<float, 32, 6> _nets[_pool_size];
     float _scores[_pool_size];
     mml::net_rng<float> _rng;
-    mml::nnet<float, 28, 3> _top_net;
+    mml::nnet<float, 32, 6> _top_net;
     float _top;
     float _average_fitness;
 
@@ -65,22 +65,22 @@ class ai_trainer
         return out;
     }
 
-    static float fitness_score(const cgrid &grid, mml::nnet<float, 28, 3> &net, const min::vec3<float> &start)
+    static float fitness_score(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
         min::vec3<float> current = start;
+        min::vec3<float> dir = (dest - start).normalize_safe(min::vec3<float>());
         float score = 0.0;
-        float travel = 0;
+        float travel = 0.0;
+        float remain = (dest - start).magnitude();
 
         // For N moves
         for (size_t i = 0; i < _total_moves; i++)
         {
             // Get new travel direction
-            const min::vec3<float> step = ai_path::solve(grid, net, current, travel);
+            const min::vec3<float> step = ai_path::solve(grid, net, current, dir, travel, remain);
 
             // Calculate distance to starting point
             const min::vec3<float> next = current + step;
-            const min::vec3<float> d = next - start;
-            travel = d.magnitude();
 
             // Check if we picked a bad direction and return start position
             const int8_t atlas = grid.grid_value(next);
@@ -93,91 +93,54 @@ class ai_trainer
             {
                 // Do not allow moving through walls
                 current = next;
+
+                // Calculate distance and direction
+                dir = dest - current;
+                remain = dir.magnitude();
+                if (remain > 1.0)
+                {
+                    const float denom = 1.0 / remain;
+                    dir *= denom;
+                }
+                travel = (current - start).magnitude();
             }
 
-            // Are we traveling somewhere?
-            if (travel > 0.0)
+            // Discourage zero moves
+            if (travel < 1.0)
             {
-                // Reward venture out
-                score += travel;
+                score--;
             }
-            else
-            {
-                // Punish zero moves
-                score -= 1.0;
-            }
+
+            // Reward venture out
+            // Are we getting closer to destination
+            score += travel / (remain * remain + 1.0);
 
             // Punish collisions with walls
-            score -= collisions(grid, current);
+            //score -= collisions(grid, current);
         }
 
         // return fitness score
         return score;
     }
 
-  public:
-    ai_trainer() : _rng(std::uniform_real_distribution<float>(-2.0, 2.0),
-                        std::uniform_real_distribution<float>(-0.5, 0.5),
-                        std::uniform_int_distribution<int>(0, _pool_size - 1)),
-                   _top(0.0),
-                   _average_fitness(0.0)
+    static float fitness_score_multi(const cgrid &grid, mml::nnet<float, 32, 6> &net, const std::vector<min::vec3<float>> &start, const min::vec3<float> &dest)
     {
-        // Initialize all the nets
-        for (size_t i = 0; i < _pool_size; i++)
+        float out = 0.0;
+
+        // Calculate average fitness for multiple inputs
+        for (const auto &s : start)
         {
-            // Create a fresh net
-            mml::nnet<float, 28, 3> &net = _nets[i];
-            net.add_layer(16);
-            net.add_layer(16);
-            net.finalize();
-            net.randomize(_rng);
+            out += fitness_score(grid, net, s, dest);
         }
+        out /= start.size();
+
+        return out;
     }
-    void deserialize(std::vector<uint8_t> &stream)
-    {
-        // read data from stream
-        size_t next = 0;
-        const std::vector<float> data = min::read_le_vector<float>(stream, next);
 
-        // Initialize top net
-        _top_net.reset();
-        _top_net.deserialize(data);
-
-        // Initialize all the with previous top net
-        for (size_t i = 0; i < _pool_size; i++)
-        {
-            // Load previous net and mutate it
-            mml::nnet<float, 28, 3> &net = _nets[i];
-
-            // Must definalize the net to deserialize it
-            net.reset();
-            net.deserialize(data);
-
-            // Mutate the net for added variation
-            net.mutate(_rng);
-        }
-    }
-    void serialize(std::vector<uint8_t> &stream)
-    {
-        // Get the net float data
-        const std::vector<float> data = _top_net.serialize();
-
-        // Write data into stream
-        min::write_le_vector<float>(stream, data);
-    }
-    void train(const cgrid &grid, const min::vec3<float> &start)
+    void evolve()
     {
         // Assert that we do not overflow
         static_assert(((_breed_stock * _breed_stock + _breed_stock) / 2) <= _pool_size, "Invalid breed stock dimensions");
-
-        // Calculate the top fitness score
-        _top = fitness_score(grid, _top_net, start);
-
-        // Calculate fitness scores
-        for (size_t i = 0; i < _pool_size; i++)
-        {
-            _scores[i] = fitness_score(grid, _nets[i], start);
-        }
 
         // Create index vector to sort 0 to N
         size_t index[_pool_size];
@@ -213,7 +176,7 @@ class ai_trainer
         {
             for (size_t j = i + 1; j < _breed_stock; j++)
             {
-                _nets[current] = mml::nnet<float, 28, 3>::breed(_nets[i], _nets[j]);
+                _nets[current] = mml::nnet<float, 32, 6>::breed(_nets[i], _nets[j]);
                 current++;
             }
         }
@@ -237,6 +200,100 @@ class ai_trainer
         // Print out stuff
         std::cout << "Average fitness is " << _average_fitness << std::endl;
         std::cout << "Best fitness is " << _top << std::endl;
+    }
+
+  public:
+    ai_trainer() : _rng(std::uniform_real_distribution<float>(-2.0, 2.0),
+                        std::uniform_real_distribution<float>(-0.5, 0.5),
+                        std::uniform_int_distribution<int>(0, _pool_size - 1)),
+                   _top(0.0),
+                   _average_fitness(0.0)
+    {
+        // Initialize all the nets
+        for (size_t i = 0; i < _pool_size; i++)
+        {
+            // Create a fresh net
+            mml::nnet<float, 32, 6> &net = _nets[i];
+            net.add_layer(32);
+            net.add_layer(16);
+            net.finalize();
+            net.randomize(_rng);
+        }
+    }
+    void deserialize(const std::vector<uint8_t> &stream)
+    {
+        // read data from stream
+        size_t next = 0;
+        const std::vector<float> data = min::read_le_vector<float>(stream, next);
+
+        // Initialize top net
+        _top_net.reset();
+        _top_net.deserialize(data);
+
+        // Initialize all the with previous top net
+        for (size_t i = 0; i < _pool_size; i++)
+        {
+            // Load previous net and mutate it
+            mml::nnet<float, 32, 6> &net = _nets[i];
+
+            // Must definalize the net to deserialize it
+            net.reset();
+            net.deserialize(data);
+
+            // Mutate the net for added variation
+            net.mutate(_rng);
+        }
+    }
+    void mutate()
+    {
+        // Initialize all the with previous top net
+        for (size_t i = 0; i < _pool_size; i++)
+        {
+            // Load previous net and mutate it
+            mml::nnet<float, 32, 6> &net = _nets[i];
+
+            // Use the top net to reseed
+            net = _top_net;
+
+            // Mutate the net for added variation
+            net.mutate(_rng);
+        }
+    }
+    void serialize(std::vector<uint8_t> &stream)
+    {
+        // Get the net float data
+        const std::vector<float> data = _top_net.serialize();
+
+        // Write data into stream
+        min::write_le_vector<float>(stream, data);
+    }
+    void train(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
+    {
+        // Calculate the top fitness score
+        _top = fitness_score(grid, _top_net, start, dest);
+
+        // Calculate fitness scores
+        for (size_t i = 0; i < _pool_size; i++)
+        {
+            _scores[i] = fitness_score(grid, _nets[i], start, dest);
+        }
+
+        // Evolve the pool
+        evolve();
+    }
+    void train(const cgrid &grid, const std::vector<min::vec3<float>> &start, const min::vec3<float> &dest)
+    {
+        // Calculate the top fitness score
+        _top = fitness_score_multi(grid, _top_net, start, dest);
+
+        // Calculate fitness scores
+        for (size_t i = 0; i < _pool_size; i++)
+        {
+            _scores[i] = fitness_score_multi(grid, _nets[i], start, dest);
+        }
+
+        // Evolve the pool
+        evolve();
     }
 };
 }

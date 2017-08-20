@@ -32,8 +32,23 @@ bool test_ai_trainer()
     game::cgrid grid(64, 8, 7);
     game::ai_trainer trainer;
 
-    // Create start and destination points
-    const min::vec3<float> start(-10.0, 23.0, -28.0);
+    // Create start points
+    std::vector<min::vec3<float>> start = {
+        min::vec3<float>(-4.5, 30.5, 4.5),
+        min::vec3<float>(-4.6, 31.5, 0.0),
+        min::vec3<float>(-2.223, 32.5, -4.667),
+        min::vec3<float>(2.0, 31.5, -4.5),
+        min::vec3<float>(-4.5, 30.5, 0.0),
+        min::vec3<float>(4.223, 32.5, 2.667),
+        min::vec3<float>(4.5, 31.5, -2.0),
+        min::vec3<float>(4.5, 30.5, 0.0),
+        min::vec3<float>(4.5, 31.5, -4.5),
+        min::vec3<float>(4.5, 31.5, 0.0),
+        min::vec3<float>(0.0, 32.5, 0.0),
+        min::vec3<float>(0.0, 31.5, 0.0)};
+
+    // Create destination point
+    const min::vec3<float> dest(0.5, 36.0, -0.5);
 
     // Create output stream for loading AI
     std::vector<uint8_t> input;
@@ -46,11 +61,25 @@ bool test_ai_trainer()
         trainer.deserialize(input);
     }
 
-    // train the ai
-    for (size_t i = 0; i < 10000; i++)
+    // train the ai in circular room
+    for (size_t i = 0; i < 100; i++)
     {
-        trainer.train(grid, start);
-        std::cout << "iteration " << i << std::endl;
+        std::cout << "iteration: " << i << std::endl;
+
+        // Solve
+        for (size_t j = 0; j < 5; j++)
+        {
+            trainer.train(grid, start, dest);
+        }
+
+        // Mutate all nets
+        trainer.mutate();
+
+        // Solve
+        for (size_t j = 0; j < 5; j++)
+        {
+            trainer.train(grid, start, dest);
+        }
     }
 
     // Create output stream for saving bot
