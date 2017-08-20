@@ -21,6 +21,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <game/ai_path.h>
 #include <game/cgrid.h>
+#include <min/intersect.h>
 #include <min/vec3.h>
 #include <mml/nnet.h>
 #include <mml/vec.h>
@@ -35,7 +36,7 @@ class ai_trainer
     static constexpr unsigned _pool_size = 100;
     static constexpr unsigned _breed_stock = 13;
     static constexpr unsigned _mutation_rate = 5;
-    static constexpr unsigned _total_moves = 100;
+    static constexpr unsigned _total_moves = 200;
     mml::nnet<float, 28, 3> _nets[_pool_size];
     float _scores[_pool_size];
     mml::net_rng<float> _rng;
@@ -43,59 +44,71 @@ class ai_trainer
     float _top;
     float _average_fitness;
 
+    static size_t collisions(const cgrid &grid, const min::vec3<float> &p)
+    {
+        size_t out = 0;
+
+        // Create player mesh at location
+        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
+        const min::aabbox<float, min::vec3> player(p - half_extent, p + half_extent);
+
+        // Create collision blocks
+        const std::vector<min::aabbox<float, min::vec3>> blocks = grid.create_collision_cells(cgrid::snap(p));
+        for (const auto &b : blocks)
+        {
+            if (min::intersect(player, b))
+            {
+                out++;
+            }
+        }
+
+        return out;
+    }
+
     static float fitness_score(const cgrid &grid, mml::nnet<float, 28, 3> &net, const min::vec3<float> &start)
     {
         min::vec3<float> current = start;
-        bool stop = false;
         float score = 0.0;
-        size_t moves = 1;
-        float distance = 0;
+        float travel = 0;
 
-        // while not dead
-        while (!stop)
+        // For N moves
+        for (size_t i = 0; i < _total_moves; i++)
         {
-            // Failed flag
-            bool failed = false;
+            // Get new travel direction
+            const min::vec3<float> step = ai_path::solve(grid, net, current, travel);
 
-            // Get new location
-            const min::vec3<float> step = ai_path::solve(grid, net, current, distance);
+            // Calculate distance to starting point
+            const min::vec3<float> next = current + step;
+            const min::vec3<float> d = next - start;
+            travel = d.magnitude();
 
-            // Calculate distance to destination
-            current += step;
-            const min::vec3<float> d = current - start;
-            distance = d.magnitude();
-
-            // Check if we failed and return start position
-            const int8_t atlas = grid.grid_value(current);
+            // Check if we picked a bad direction and return start position
+            const int8_t atlas = grid.grid_value(next);
             if (atlas != -1)
             {
-                failed = true;
-            }
-
-            // Increment moves and break out if we used up all moves
-            moves++;
-            if (moves > _total_moves)
-            {
-                stop = true;
-            }
-
-            // Detect a zero move
-            if (distance > 0.0)
-            {
-                // Reward / discipline moves
-                if (failed)
-                {
-                    score -= 1.0;
-                }
-                else
-                {
-                    score += 1.0;
-                }
+                // Punish collision
+                score -= 1.0;
             }
             else
             {
+                // Do not allow moving through walls
+                current = next;
+            }
+
+            // Are we traveling somewhere?
+            if (travel > 0.0)
+            {
+                // Reward venture out
+                score += travel;
+            }
+            else
+            {
+                // Punish zero moves
                 score -= 1.0;
             }
+
+            // Punish collisions with walls
+            score -= collisions(grid, current);
         }
 
         // return fitness score
@@ -103,7 +116,7 @@ class ai_trainer
     }
 
   public:
-    ai_trainer() : _rng(std::uniform_real_distribution<float>(-0.5, 0.5),
+    ai_trainer() : _rng(std::uniform_real_distribution<float>(-2.0, 2.0),
                         std::uniform_real_distribution<float>(-0.5, 0.5),
                         std::uniform_int_distribution<int>(0, _pool_size - 1)),
                    _top(0.0),

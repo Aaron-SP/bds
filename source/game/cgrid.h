@@ -417,6 +417,14 @@ class cgrid
         // Save the world state in file
         world_save();
     }
+    static inline min::vec3<float> snap(const min::vec3<float> &point)
+    {
+        const float x = point.x();
+        const float y = point.y();
+        const float z = point.z();
+
+        return min::vec3<float>(std::floor(x) + 0.5, std::floor(y) + 0.5, std::floor(z) + 0.5);
+    }
     min::mesh<float, uint32_t> atlas_box(const min::vec3<float> &p)
     {
         const min::aabbox<float, min::vec3> box = create_box(p);

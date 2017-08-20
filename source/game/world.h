@@ -99,7 +99,8 @@ class world
             const min::vec3<float> step = _path.solve(_grid, p, distance);
 
             // Add force to body
-            body.add_force(step * 2E2 * body.get_mass());
+            const min::vec3<float> force(step.x(), step.y() * 2.0, step.z());
+            body.add_force(force * 2E2 * body.get_mass());
         }
     }
     inline void ai_train(const size_t iterations) const
@@ -265,14 +266,6 @@ class world
         _preview.update();
         _geom.update();
     }
-    inline min::vec3<float> snap(const min::vec3<float> &point) const
-    {
-        const float x = point.x();
-        const float y = point.y();
-        const float z = point.z();
-
-        return min::vec3<float>(std::floor(x) + 0.5, std::floor(y) + 0.5, std::floor(z) + 0.5);
-    }
     inline void update_uniform(min::camera<float> &cam)
     {
         // Calculate new placemark point
@@ -362,7 +355,7 @@ class world
     void add_block(const min::vec3<float> &center)
     {
         // Add to grid
-        _grid.set_geometry(snap(center), _scale, _preview_offset, _grid.get_atlas());
+        _grid.set_geometry(cgrid::snap(center), _scale, _preview_offset, _grid.get_atlas());
 
         // generate new mesh
         generate_gb();
@@ -381,7 +374,7 @@ class world
     void remove_block(const min::vec3<float> &point, const min::vec3<float> &position)
     {
         // Try to remove geometry from the grid
-        const unsigned removed = _grid.set_geometry(snap(point), _scale, _preview_offset, -1);
+        const unsigned removed = _grid.set_geometry(cgrid::snap(point), _scale, _preview_offset, -1);
 
         // If we removed geometry, play particles
         if (removed > 0)
@@ -467,7 +460,7 @@ class world
         // Solve the physics simulation
         for (int i = 0; i < 10; i++)
         {
-            const std::vector<min::aabbox<float, min::vec3>> col_blocks = _grid.create_collision_cells(snap(p));
+            const std::vector<min::aabbox<float, min::vec3>> col_blocks = _grid.create_collision_cells(cgrid::snap(p));
 
             // Add friction force
             const min::vec3<float> &vel = body.get_linear_velocity();
