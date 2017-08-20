@@ -43,7 +43,7 @@ class ai_path
         std::cout << "Loading new AI path" << std::endl;
 
         // Load data into stream from AI file
-        game::load_file("bin/bot", input);
+        game::load_file("data/ai/bot", input);
         if (input.size() != 0)
         {
             // If we got data, deserialize it

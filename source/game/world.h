@@ -590,7 +590,7 @@ class world
         std::vector<uint8_t> input;
 
         // Load data into stream from AI file
-        game::load_file("bin/bot", input);
+        game::load_file("data/ai/bot", input);
         if (input.size() != 0)
         {
             // load the data into the trainer of previous run
@@ -605,7 +605,7 @@ class world
         _trainer.serialize(output);
 
         // Write data to file
-        game::save_file("bin/bot", output);
+        game::save_file("data/ai/bot", output);
     }
     bool toggle_edit_mode()
     {
