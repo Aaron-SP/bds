@@ -19,8 +19,10 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #define __GAI_TRAINER__
 
 #include <algorithm>
+#include <functional>
 #include <game/ai_path.h>
 #include <game/cgrid.h>
+#include <game/thread_pool.h>
 #include <min/intersect.h>
 #include <min/vec3.h>
 #include <mml/nnet.h>
@@ -113,10 +115,10 @@ class ai_trainer
 
             // Reward venture out
             // Are we getting closer to destination
-            score += travel / (remain * remain + 1.0);
+            score += travel / (remain + 1.0);
 
             // Punish collisions with walls
-            //score -= collisions(grid, current);
+            score -= collisions(grid, current);
         }
 
         // return fitness score
@@ -281,19 +283,49 @@ class ai_trainer
         // Evolve the pool
         evolve();
     }
-    void train(const cgrid &grid, const std::vector<min::vec3<float>> &start, const min::vec3<float> &dest)
+    void train(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
     {
-        // Calculate the top fitness score
-        _top = fitness_score_multi(grid, _top_net, start, dest);
-
-        // Calculate fitness scores
+        // Zero out all scores
         for (size_t i = 0; i < _pool_size; i++)
         {
-            _scores[i] = fitness_score_multi(grid, _nets[i], start, dest);
+            _scores[i] = 0.0;
         }
+        _top = 0.0;
 
-        // Evolve the pool
-        evolve();
+        const size_t destinations = dest.size();
+        if (dest.size() > 0)
+        {
+            // Calculate the top average fitness score
+            for (size_t j = 0; j < destinations; j++)
+            {
+                _top += fitness_score_multi(grid, _top_net, start, dest[j]);
+            }
+            _top /= destinations;
+
+            // Create a threadpool for doing work in parallel
+            thread_pool pool;
+
+            // Create working function
+            const auto work = [this, &grid, &start, &dest](const size_t i) {
+                // For all destinations, calculate average score
+                const size_t destinations = dest.size();
+                for (size_t j = 0; j < destinations; j++)
+                {
+                    this->_scores[i] += fitness_score_multi(grid, this->_nets[i], start, dest[j]);
+                }
+                this->_scores[i] /= destinations;
+            };
+
+            // Run the job in parallel
+            pool.run(work, 0, _pool_size);
+
+            // Evolve the pool
+            evolve();
+        }
+        else
+        {
+            throw std::runtime_error("ai_trainer: train_multi, need at least one destination point");
+        }
     }
 };
 }

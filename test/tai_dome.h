@@ -44,11 +44,16 @@ bool test_ai_trainer()
         min::vec3<float>(4.5, 30.5, 0.0),
         min::vec3<float>(4.5, 31.5, -4.5),
         min::vec3<float>(4.5, 31.5, 0.0),
-        min::vec3<float>(0.0, 32.5, 0.0),
-        min::vec3<float>(0.0, 31.5, 0.0)};
+        min::vec3<float>(0.0, 40.5, 0.0),
+        min::vec3<float>(0.0, 25.5, 0.0)};
 
     // Create destination point
-    const min::vec3<float> dest(0.5, 36.0, -0.5);
+    std::vector<min::vec3<float>> dest = {
+        min::vec3<float>(0.5, 36.0, -0.5),
+        min::vec3<float>(21.0, 23.0, 0.0),
+        min::vec3<float>(-21.0, 23.0, 0.0),
+        min::vec3<float>(0.0, 23.0, 21.0),
+        min::vec3<float>(0.0, 23.0, -21.0)};
 
     // Create output stream for loading AI
     std::vector<uint8_t> input;
@@ -62,7 +67,7 @@ bool test_ai_trainer()
     }
 
     // train the ai in circular room
-    for (size_t i = 0; i < 100; i++)
+    for (size_t i = 0; i < 10; i++)
     {
         std::cout << "iteration: " << i << std::endl;
 
