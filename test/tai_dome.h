@@ -66,15 +66,24 @@ bool test_ai_trainer()
         trainer.deserialize(input);
     }
 
-    // train the ai in circular room
-    for (size_t i = 0; i < 10; i++)
+    // train the ai
+    for (size_t i = 0; i < 2000; i++)
+    {
+        std::cout << "iteration: " << i << std::endl;
+
+        // Optimize net with back propagation
+        trainer.train_optimize(grid, start, dest);
+    }
+
+    // train the ai
+    for (size_t i = 0; i < 2; i++)
     {
         std::cout << "iteration: " << i << std::endl;
 
         // Solve
         for (size_t j = 0; j < 5; j++)
         {
-            trainer.train(grid, start, dest);
+            trainer.train_evolve(grid, start, dest);
         }
 
         // Mutate all nets
@@ -83,7 +92,7 @@ bool test_ai_trainer()
         // Solve
         for (size_t j = 0; j < 5; j++)
         {
-            trainer.train(grid, start, dest);
+            trainer.train_evolve(grid, start, dest);
         }
     }
 

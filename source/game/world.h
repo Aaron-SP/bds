@@ -91,7 +91,7 @@ class world
             min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
             // Animate the character with AI
-            const min::vec3<float> &p = character_position();
+            const min::vec3<float> &p = body.get_position();
 
             // Distance from point
             const float travel = (p - _start).magnitude();
@@ -106,7 +106,7 @@ class world
             }
 
             // Calculate the next step
-            const min::vec3<float> step = _path.solve(_grid, p, dir, travel, remain);
+            const min::vec3<float> step = _path.simulate(_grid, p, dir, travel, remain);
 
             // Add force to body
             const min::vec3<float> force(step.x(), step.y() * 2.0, step.z());
@@ -126,7 +126,7 @@ class world
         {
             for (size_t j = 0; j < iterations; j++)
             {
-                _trainer.train(_grid, p, _dest);
+                _trainer.train_evolve(_grid, p, _dest);
                 std::cout << "iteration " << j << std::endl;
             }
 
@@ -477,7 +477,7 @@ class world
         // Solve the physics simulation
         for (int i = 0; i < 10; i++)
         {
-            const std::vector<min::aabbox<float, min::vec3>> col_blocks = _grid.create_collision_cells(cgrid::snap(p));
+            const std::vector<min::aabbox<float, min::vec3>> col_blocks = _grid.create_collision_cells(p);
 
             // Add friction force
             const min::vec3<float> &vel = body.get_linear_velocity();

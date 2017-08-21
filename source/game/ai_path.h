@@ -60,7 +60,159 @@ class ai_path
         _net.reset();
         _net.deserialize(data);
     }
-    static min::vec3<float> solve(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
+    static mml::vector<float, 6> model(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
+    {
+        // Must be 27 in size
+        const std::vector<int8_t> neighbors = grid.get_neighbors(p);
+        if (neighbors.size() != 27)
+        {
+            throw std::runtime_error("ai_path: shit is broken");
+        }
+
+        // Calculate search direction with respect to gradient
+        min::vec3<float> step = dir;
+
+        // Create output
+        mml::vector<float, 6> output;
+        output[0] = 0.0;
+        output[1] = 0.0;
+        output[2] = 0.0;
+        output[3] = 0.0;
+        output[4] = 0.0;
+        output[5] = 0.0;
+
+        // Check x collisions
+        bool x_flag = true;
+        {
+            if (step.x() > 0.0)
+            {
+                output[0] = step.x();
+                x_flag = x_flag && (neighbors[21] == -1);
+                x_flag = x_flag && (neighbors[22] == -1);
+                x_flag = x_flag && (neighbors[23] == -1);
+            }
+            else
+            {
+                output[3] = step.x() * -1.0;
+                x_flag = x_flag && (neighbors[3] == -1);
+                x_flag = x_flag && (neighbors[4] == -1);
+                x_flag = x_flag && (neighbors[5] == -1);
+            }
+
+            // Zero out x
+            if (!x_flag)
+            {
+                output[0] = 0.0;
+                output[3] = 0.0;
+            }
+        }
+
+        // Check y collisions
+        bool y_flag = true;
+        {
+            if (step.y() > 0.0)
+            {
+                output[1] = step.y();
+                y_flag = y_flag && (neighbors[16] == -1);
+            }
+            else
+            {
+                output[4] = step.y() * -1.0;
+                y_flag = y_flag && (neighbors[10] == -1);
+            }
+
+            // Zero out y
+            if (!y_flag)
+            {
+                output[1] = 0.0;
+                output[4] = 0.0;
+            }
+        }
+
+        // Check z collisions
+        bool z_flag = true;
+        {
+            if (step.z() > 0.0)
+            {
+                output[2] = step.z();
+                z_flag = z_flag && (neighbors[5] == -1);
+                z_flag = z_flag && (neighbors[14] == -1);
+                z_flag = z_flag && (neighbors[23] == -1);
+            }
+            else
+            {
+                output[5] = step.z() * -1.0;
+                z_flag = z_flag && (neighbors[3] == -1);
+                z_flag = z_flag && (neighbors[12] == -1);
+                z_flag = z_flag && (neighbors[21] == -1);
+            }
+
+            // Zero out z
+            if (!z_flag)
+            {
+                output[2] = 0.0;
+                output[5] = 0.0;
+            }
+        }
+
+        // Choose the smallest of X or Z to move around corners
+        if (!x_flag && std::abs(step.x()) <= std::abs(step.z()))
+        {
+            if (step.x() > 0.0)
+            {
+                output[0] = step.x();
+            }
+            else
+            {
+                output[3] = step.x() * -1.0;
+            }
+        }
+        else if (!z_flag && std::abs(step.z()) <= std::abs(step.x()))
+        {
+            if (step.z() > 0.0)
+            {
+                output[2] = step.z();
+            }
+            else
+            {
+                output[5] = step.z() * -1.0;
+            }
+        }
+
+        // Hurdle obstacle
+        {
+            bool hurdle = false;
+            hurdle = hurdle || (neighbors[9] != -1 && neighbors[18] == -1);
+            hurdle = hurdle || (neighbors[10] != -1 && neighbors[19] == -1);
+            hurdle = hurdle || (neighbors[11] != -1 && neighbors[20] == -1);
+            hurdle = hurdle || (neighbors[12] != -1 && neighbors[21] == -1);
+            hurdle = hurdle || (neighbors[13] != -1 && neighbors[22] == -1);
+            hurdle = hurdle || (neighbors[14] != -1 && neighbors[23] == -1);
+            hurdle = hurdle || (neighbors[15] != -1 && neighbors[24] == -1);
+            hurdle = hurdle || (neighbors[16] != -1 && neighbors[25] == -1);
+
+            const bool moving_x = (output[0] > 0.1) || (output[3] > 0.1);
+            const bool moving_z = (output[2] > 0.1) || (output[5] > 0.1);
+            if (hurdle && !moving_x || !moving_z)
+            {
+                output[1] = 1.0;
+            }
+        }
+
+        // Override settings if reached goal
+        if (remain < 0.25)
+        {
+            output[0] = 0.0;
+            output[1] = 0.0;
+            output[2] = 0.0;
+            output[3] = 0.0;
+            output[4] = 0.0;
+            output[5] = 0.0;
+        }
+
+        return output;
+    }
+    static void load(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
     {
         // Must be 27 in size
         const std::vector<int8_t> neighbors = grid.get_neighbors(p);
@@ -85,13 +237,29 @@ class ai_path
 
         // Set input and calculate output
         net.set_input(in);
+    }
+    static min::vec3<float> unload(const mml::vector<float, 6> &output)
+    {
+        // Calculate direction to move
+        const float x = output[0] - output[3];
+        const float y = output[1] - output[4];
+        const float z = output[2] - output[5];
+        return min::vec3<float>(x, y, z) * _step_size;
+    }
+    static min::vec3<float> solve(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
+    {
+        // Load neural net
+        load(grid, net, p, dir, travel, remain);
+
+        // Calculate output
         const mml::vector<float, 6> out = net.calculate();
 
-        // Calculate direction to move
-        const float x = out[0] - out[3];
-        const float y = out[1] - out[4];
-        const float z = out[2] - out[5];
-        return min::vec3<float>(x, y, z) * _step_size;
+        // Unload output
+        return unload(out);
+    }
+    min::vec3<float> simulate(const cgrid &grid, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
+    {
+        return ai_path::unload(ai_path::model(grid, _net, p, dir, travel, remain));
     }
     min::vec3<float> solve(const cgrid &grid, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
     {

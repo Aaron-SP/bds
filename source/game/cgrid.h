@@ -425,6 +425,14 @@ class cgrid
 
         return min::vec3<float>(std::floor(x) + 0.5, std::floor(y) + 0.5, std::floor(z) + 0.5);
     }
+    static inline min::vec3<float> snap_player(const min::vec3<float> &position)
+    {
+        const float x = position.x();
+        const float y = position.y();
+        const float z = position.z();
+
+        return min::vec3<float>(std::floor(x) + 0.5, std::round(y), std::floor(z) + 0.5);
+    }
     min::mesh<float, uint32_t> atlas_box(const min::vec3<float> &p)
     {
         const min::aabbox<float, min::vec3> box = create_box(p);
@@ -449,7 +457,8 @@ class cgrid
         out.reserve(36);
 
         // Get cubic function properties
-        const min::vec3<float> start = center - min::vec3<float>(1.0, 1.5, 1.0);
+        // Use player snap to get correct y coordinate
+        const min::vec3<float> start = snap_player(center) - min::vec3<float>(1.0, 1.5, 1.0);
         const min::vec3<int> offset(1, 1, 1);
         const min::vec3<unsigned> length(3, 4, 3);
 
@@ -491,7 +500,8 @@ class cgrid
         out.reserve(27);
 
         // Get cubic function properties
-        const min::vec3<float> start = center - min::vec3<float>(1.0, 1.5, 1.0);
+        // Use player snap to get correct y coordinate
+        const min::vec3<float> start = snap_player(center) - min::vec3<float>(1.0, 1.5, 1.0);
         const min::vec3<int> offset(1, 1, 1);
         const min::vec3<unsigned> length(3, 3, 3);
 

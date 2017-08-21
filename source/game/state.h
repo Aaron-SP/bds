@@ -50,7 +50,7 @@ class state
     void update_state(const min::vec3<float> &p)
     {
         // Set camera start position and look position
-        _camera.set_position(p + min::vec3<float>(0.0, 1.0, 0.0));
+        _camera.set_position(p + min::vec3<float>(0.0, 0.5, 0.0));
 
         const min::vec3<float> &f = _camera.get_forward();
         const min::vec3<float> &fup = _camera.get_frustum().get_up();
@@ -118,7 +118,7 @@ class state
     void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
     {
         // Set camera start position and look position
-        _camera.set_position(p + min::vec3<float>(0.0, 1.0, 0.0));
+        _camera.set_position(p + min::vec3<float>(0.0, 0.5, 0.0));
         _camera.set_look_at(look);
 
         // Force camera to update internals

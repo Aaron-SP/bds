@@ -55,7 +55,7 @@ class ai_trainer
         const min::aabbox<float, min::vec3> player(p - half_extent, p + half_extent);
 
         // Create collision blocks
-        const std::vector<min::aabbox<float, min::vec3>> blocks = grid.create_collision_cells(cgrid::snap(p));
+        const std::vector<min::aabbox<float, min::vec3>> blocks = grid.create_collision_cells(p);
         for (const auto &b : blocks)
         {
             if (min::intersect(player, b))
@@ -66,7 +66,33 @@ class ai_trainer
 
         return out;
     }
+    static void optimize(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
+    {
+        const min::vec3<float> dir = (dest - start).normalize_safe(min::vec3<float>());
+        const float travel = 0.0;
+        const float remain = (dest - start).magnitude();
 
+        // Load net with input
+        ai_path::load(grid, net, start, dir, travel, remain);
+
+        // Get output from ai model
+        mml::vector<float, 6> output = ai_path::model(grid, net, start, dir, travel, remain);
+
+        // Do 10 iterations of back propagation
+        for (size_t i = 0; i < 10; i++)
+        {
+            net.calculate();
+            net.backprop(output);
+        }
+    }
+    static void optimize_multi(const cgrid &grid, mml::nnet<float, 32, 6> &net, const std::vector<min::vec3<float>> &start, const min::vec3<float> &dest)
+    {
+        // Optimize for all start positions
+        for (const auto &s : start)
+        {
+            optimize(grid, net, s, dest);
+        }
+    }
     static float fitness_score(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
         min::vec3<float> current = start;
@@ -124,7 +150,6 @@ class ai_trainer
         // return fitness score
         return score;
     }
-
     static float fitness_score_multi(const cgrid &grid, mml::nnet<float, 32, 6> &net, const std::vector<min::vec3<float>> &start, const min::vec3<float> &dest)
     {
         float out = 0.0;
@@ -138,7 +163,6 @@ class ai_trainer
 
         return out;
     }
-
     void evolve()
     {
         // Assert that we do not overflow
@@ -269,7 +293,41 @@ class ai_trainer
         // Write data into stream
         min::write_le_vector<float>(stream, data);
     }
-    void train(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
+    void train_optimize(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
+    {
+        // Solve back propagation model
+        for (size_t i = 0; i < _pool_size; i++)
+        {
+            optimize(grid, _nets[i], start, dest);
+        }
+    }
+    void train_optimize(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
+    {
+        const size_t destinations = dest.size();
+        if (destinations > 0)
+        {
+            // Create a threadpool for doing work in parallel
+            thread_pool pool;
+
+            // Create working function
+            const auto work = [this, &grid, &start, &dest](const size_t i) {
+                // For all destinations, calculate average score
+                const size_t destinations = dest.size();
+                for (size_t j = 0; j < destinations; j++)
+                {
+                    optimize_multi(grid, this->_nets[i], start, dest[j]);
+                }
+            };
+
+            // Run the job in parallel
+            pool.run(work, 0, _pool_size);
+        }
+        else
+        {
+            throw std::runtime_error("ai_trainer: optimize_multi, need at least one destination point");
+        }
+    }
+    void train_evolve(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
         // Calculate the top fitness score
         _top = fitness_score(grid, _top_net, start, dest);
@@ -283,7 +341,7 @@ class ai_trainer
         // Evolve the pool
         evolve();
     }
-    void train(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
+    void train_evolve(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
     {
         // Zero out all scores
         for (size_t i = 0; i < _pool_size; i++)
@@ -293,7 +351,7 @@ class ai_trainer
         _top = 0.0;
 
         const size_t destinations = dest.size();
-        if (dest.size() > 0)
+        if (destinations > 0)
         {
             // Calculate the top average fitness score
             for (size_t j = 0; j < destinations; j++)
