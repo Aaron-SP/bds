@@ -193,7 +193,7 @@ class ai_path
 
             const bool moving_x = (output[0] > 0.1) || (output[3] > 0.1);
             const bool moving_z = (output[2] > 0.1) || (output[5] > 0.1);
-            if (hurdle && !moving_x || !moving_z)
+            if (hurdle && (!moving_x || !moving_z))
             {
                 output[1] = 1.0;
             }
@@ -256,6 +256,10 @@ class ai_path
 
         // Unload output
         return unload(out);
+    }
+    static min::vec3<float> simulate(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
+    {
+        return ai_path::unload(ai_path::model(grid, net, p, dir, travel, remain));
     }
     min::vec3<float> simulate(const cgrid &grid, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
     {

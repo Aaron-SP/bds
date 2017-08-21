@@ -106,7 +106,7 @@ class world
             }
 
             // Calculate the next step
-            const min::vec3<float> step = _path.simulate(_grid, p, dir, travel, remain);
+            const min::vec3<float> step = _path.solve(_grid, p, dir, travel, remain);
 
             // Add force to body
             const min::vec3<float> force(step.x(), step.y() * 2.0, step.z());
@@ -121,12 +121,17 @@ class world
         // Return the character position
         const min::vec3<float> &p = body.get_position();
 
+        // Create input training vectors
+        std::vector<min::vec3<float>> start, dest;
+        start.push_back(p);
+        dest.push_back(_dest);
+
         // train the ai
         for (size_t i = 0; i < iterations; i++)
         {
             for (size_t j = 0; j < iterations; j++)
             {
-                _trainer.train_evolve(_grid, p, _dest);
+                _trainer.train_evolve(_grid, start, dest);
                 std::cout << "iteration " << j << std::endl;
             }
 

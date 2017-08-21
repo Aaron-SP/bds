@@ -66,8 +66,8 @@ bool test_ai_trainer()
         trainer.deserialize(input);
     }
 
-    // train the ai
-    for (size_t i = 0; i < 2000; i++)
+    // gradient based training
+    for (size_t i = 0; i < 200; i++)
     {
         std::cout << "iteration: " << i << std::endl;
 
@@ -75,8 +75,12 @@ bool test_ai_trainer()
         trainer.train_optimize(grid, start, dest);
     }
 
-    // train the ai
-    for (size_t i = 0; i < 2; i++)
+    // Calculate top fitness of best network
+    const float fitness = trainer.top_fitness(grid, start, dest);
+    std::cout << "Top fitness is " << fitness << std::endl;
+
+    // evolution based training
+    for (size_t i = 0; i < 4; i++)
     {
         std::cout << "iteration: " << i << std::endl;
 
@@ -95,6 +99,9 @@ bool test_ai_trainer()
             trainer.train_evolve(grid, start, dest);
         }
     }
+
+    // Calculate average and top fitness of all networks
+    trainer.fitness(grid, start, dest);
 
     // Create output stream for saving bot
     std::vector<uint8_t> output;
