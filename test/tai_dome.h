@@ -67,7 +67,7 @@ bool test_ai_trainer()
     }
 
     // gradient based training
-    for (size_t i = 0; i < 200; i++)
+    for (size_t i = 0; i < 50; i++)
     {
         std::cout << "iteration: " << i << std::endl;
 

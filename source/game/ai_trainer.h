@@ -207,7 +207,7 @@ class ai_trainer
             throw std::runtime_error("ai_trainer: train_multi, need at least one destination point");
         }
     }
-    static void optimize(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
+    static float optimize(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &start, const min::vec3<float> &dest)
     {
         min::vec3<float> current = start;
         min::vec3<float> dir = dest - start;
@@ -217,6 +217,7 @@ class ai_trainer
             dir *= (1.0 / remain);
         }
         float travel = 0.0;
+        float error = 0.0;
 
         // Do number of steps on path
         for (size_t i = 0; i < _total_moves; i++)
@@ -225,8 +226,8 @@ class ai_trainer
             ai_path::load(grid, net, current, dir, travel, remain);
 
             // Get output from ai model
-            mml::vector<float, 6> output = ai_path::model(grid, net, current, dir, travel, remain);
-            current += ai_path::unload(output);
+            mml::vector<float, 6> set_point = ai_path::model(grid, net, current, dir, travel, remain);
+            current += ai_path::unload(set_point);
 
             // Calculate distance and direction
             dir = dest - current;
@@ -237,21 +238,26 @@ class ai_trainer
             }
             travel = (current - start).magnitude();
 
-            // Do 10 iterations of back propagation per step
-            for (size_t j = 0; j < 10; j++)
-            {
-                net.calculate();
-                net.backprop(output);
-            }
+            // Do back propagation per step
+            mml::vector<float, 6> output = net.calculate();
+            net.backprop(set_point);
+
+            // accumulate the error
+            error += (output - set_point).square_magnitude();
         }
+
+        return error;
     }
-    static void optimize_multi(const cgrid &grid, mml::nnet<float, 32, 6> &net, const std::vector<min::vec3<float>> &start, const min::vec3<float> &dest)
+    static float optimize_multi(const cgrid &grid, mml::nnet<float, 32, 6> &net, const std::vector<min::vec3<float>> &start, const min::vec3<float> &dest)
     {
         // Optimize for all start positions
+        float error = 0.0;
         for (const auto &s : start)
         {
-            optimize(grid, net, s, dest);
+            error += optimize(grid, net, s, dest);
         }
+
+        return error;
     }
 
     void evolve()
@@ -371,7 +377,7 @@ class ai_trainer
     }
     void mutate()
     {
-        // Initialize all the with previous top net
+        // Initialize all the with previous top net and mutate
         for (size_t i = 0; i < _pool_size; i++)
         {
             // Load previous net and mutate it
@@ -386,7 +392,7 @@ class ai_trainer
     }
     void serialize(std::vector<uint8_t> &stream)
     {
-        // Get the net float data
+        // Get the top net float data
         const std::vector<float> data = _top_net.serialize();
 
         // Write data into stream
@@ -403,11 +409,14 @@ class ai_trainer
     void train_optimize(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
     {
         // For all destinations, calculate average score
+        float error = 0.0;
         const size_t destinations = dest.size();
         for (size_t i = 0; i < destinations; i++)
         {
-            optimize_multi(grid, this->_top_net, start, dest[i]);
+            error += optimize_multi(grid, this->_top_net, start, dest[i]);
         }
+
+        std::cout << "train_optimization error: " << error << std::endl;
     }
 };
 }
