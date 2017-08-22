@@ -66,50 +66,55 @@ bool test_ai_trainer()
         trainer.deserialize(input);
     }
 
-    // gradient based training
-    float e0 = 100.0;
-    float e1 = 100.0;
-    for (size_t i = 0; i < 2000; i++)
+    for (size_t k = 0; k < 100; k++)
     {
-        std::cout << "iteration: " << i << std::endl;
+        std::cout << "outer iteration: " << k << std::endl;
 
-        // Optimize net with back propagation
-        e0 = e1;
-        e1 = trainer.train_optimize(grid, start, dest);
-        std::cout << "train_optimization error: " << e1 << std::endl;
-        if (std::abs(e0 - e1) < 1E-4)
+        // gradient based training
+        float e0 = 100.0;
+        float e1 = 100.0;
+        for (size_t i = 0; i < 2000; i++)
         {
-            trainer.mutate_top();
+            std::cout << "gradient iteration: " << i << std::endl;
+
+            // Optimize net with back propagation
+            e0 = e1;
+            e1 = trainer.train_optimize(grid, start, dest);
+            std::cout << "train_optimization error: " << e1 << std::endl;
+            if (std::abs(e0 - e1) < 1E-4)
+            {
+                trainer.mutate_top();
+            }
         }
+
+        // Calculate top fitness of best network
+        const float fitness = trainer.top_fitness(grid, start, dest);
+        std::cout << "Top fitness is " << fitness << std::endl;
+
+        // evolution based training
+        for (size_t i = 0; i < 4; i++)
+        {
+            std::cout << "fitness iteration: " << i << std::endl;
+
+            // Solve
+            for (size_t j = 0; j < 5; j++)
+            {
+                trainer.train_evolve(grid, start, dest);
+            }
+
+            // Mutate all nets
+            trainer.mutate_pool();
+
+            // Solve
+            for (size_t j = 0; j < 5; j++)
+            {
+                trainer.train_evolve(grid, start, dest);
+            }
+        }
+
+        // Calculate average and top fitness of all networks
+        trainer.fitness(grid, start, dest);
     }
-
-    // Calculate top fitness of best network
-    const float fitness = trainer.top_fitness(grid, start, dest);
-    std::cout << "Top fitness is " << fitness << std::endl;
-
-    // evolution based training
-    for (size_t i = 0; i < 4; i++)
-    {
-        std::cout << "iteration: " << i << std::endl;
-
-        // Solve
-        for (size_t j = 0; j < 5; j++)
-        {
-            trainer.train_evolve(grid, start, dest);
-        }
-
-        // Mutate all nets
-        trainer.mutate_pool();
-
-        // Solve
-        for (size_t j = 0; j < 5; j++)
-        {
-            trainer.train_evolve(grid, start, dest);
-        }
-    }
-
-    // Calculate average and top fitness of all networks
-    trainer.fitness(grid, start, dest);
 
     // Create output stream for saving bot
     std::vector<uint8_t> output;

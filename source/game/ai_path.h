@@ -31,8 +31,10 @@ namespace game
 class ai_path
 {
   private:
+    static constexpr size_t IN = 4;
+    static constexpr size_t OUT = 6;
     static constexpr float _step_size = 0.5;
-    mml::nnet<float, 32, 6> _net;
+    mml::nnet<float, IN, OUT> _net;
 
   public:
     ai_path()
@@ -60,7 +62,7 @@ class ai_path
         _net.reset();
         _net.deserialize(data);
     }
-    static mml::vector<float, 6> model(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
+    static mml::vector<float, OUT> model(const cgrid &grid, mml::nnet<float, IN, OUT> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
     {
         // Must be 27 in size
         const std::vector<int8_t> neighbors = grid.get_neighbors(p);
@@ -73,7 +75,7 @@ class ai_path
         min::vec3<float> step = dir;
 
         // Create output
-        mml::vector<float, 6> output;
+        mml::vector<float, OUT> output;
         output[0] = 0.0;
         output[1] = 0.0;
         output[2] = 0.0;
@@ -212,7 +214,7 @@ class ai_path
 
         return output;
     }
-    static void load(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
+    static void load(const cgrid &grid, mml::nnet<float, IN, OUT> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
     {
         // Must be 27 in size
         const std::vector<int8_t> neighbors = grid.get_neighbors(p);
@@ -221,24 +223,30 @@ class ai_path
             throw std::runtime_error("ai_path: shit is broken");
         }
 
-        // Create input vector
-        mml::vector<float, 32> in;
+        // Create terrain input encoding
+        int terrain_encode = 0;
         for (size_t i = 0; i < 27; i++)
         {
-            // 1 if empty, 0 if filled
-            const int empty = static_cast<bool>(neighbors[i] == -1);
-            in[i] = static_cast<float>(empty);
+            terrain_encode |= (static_cast<int>(neighbors[i] == -1) << i);
         }
-        in[27] = dir.x();
-        in[28] = dir.y();
-        in[29] = dir.z();
-        in[30] = travel;
-        in[31] = remain;
+
+        // Create direction input encoding
+        int dir_encode = 0;
+        dir_encode |= static_cast<int>(dir.x() > 0.0) << 0;
+        dir_encode |= static_cast<int>(dir.y() > 0.0) << 1;
+        dir_encode |= static_cast<int>(dir.z() > 0.0) << 2;
+
+        // Set inputs
+        mml::vector<float, IN> in;
+        in[0] = static_cast<float>(terrain_encode);
+        in[1] = static_cast<float>(dir_encode);
+        in[2] = travel;
+        in[3] = remain;
 
         // Set input and calculate output
         net.set_input(in);
     }
-    static min::vec3<float> unload(const mml::vector<float, 6> &output)
+    static min::vec3<float> unload(const mml::vector<float, OUT> &output)
     {
         // Calculate direction to move
         const float x = output[0] - output[3];
@@ -246,18 +254,18 @@ class ai_path
         const float z = output[2] - output[5];
         return min::vec3<float>(x, y, z) * _step_size;
     }
-    static min::vec3<float> solve(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
+    static min::vec3<float> solve(const cgrid &grid, mml::nnet<float, IN, OUT> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
     {
         // Load neural net
         load(grid, net, p, dir, travel, remain);
 
         // Calculate output
-        const mml::vector<float, 6> out = net.calculate();
+        const mml::vector<float, OUT> out = net.calculate();
 
         // Unload output
         return unload(out);
     }
-    static min::vec3<float> simulate(const cgrid &grid, mml::nnet<float, 32, 6> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
+    static min::vec3<float> simulate(const cgrid &grid, mml::nnet<float, IN, OUT> &net, const min::vec3<float> &p, const min::vec3<float> &dir, const float travel, const float remain)
     {
         return ai_path::unload(ai_path::model(grid, net, p, dir, travel, remain));
     }
