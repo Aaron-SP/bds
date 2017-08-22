@@ -66,24 +66,21 @@ bool test_ai_trainer()
         trainer.deserialize(input);
     }
 
-    for (size_t k = 0; k < 100; k++)
+    for (size_t k = 0; k < 10; k++)
     {
         std::cout << "outer iteration: " << k << std::endl;
 
         // gradient based training
-        float e0 = 100.0;
-        float e1 = 100.0;
-        for (size_t i = 0; i < 2000; i++)
+        for (size_t i = 0; i < 10; i++)
         {
             std::cout << "gradient iteration: " << i << std::endl;
 
             // Optimize net with back propagation
-            e0 = e1;
-            e1 = trainer.train_optimize(grid, start, dest);
-            std::cout << "train_optimization error: " << e1 << std::endl;
-            if (std::abs(e0 - e1) < 1E-4)
+            const float error = trainer.train_optimize(grid, start, dest);
+            std::cout << "train_optimization error: " << error << std::endl;
+            if (error < 1E-3)
             {
-                trainer.mutate_top();
+                break;
             }
         }
 

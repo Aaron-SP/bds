@@ -99,14 +99,16 @@ class world
             // Direction and remaining distance
             min::vec3<float> dir = _dest - p;
             const float remain = dir.magnitude();
-            if (remain > 1.0)
+            if (remain > 1E-3)
             {
                 const float denom = 1.0 / remain;
                 dir *= denom;
             }
 
             // Calculate the next step
-            const min::vec3<float> step = _path.simulate(_grid, p, dir, travel, remain);
+            mml::nnet<float, 3, 3> net;
+            mml::vector<float, 3> set_point = ai_path::model(_grid, net, p, dir, travel, remain);
+            const min::vec3<float> step = _path.solve(_grid, set_point, p, dir, travel, remain);
 
             // Add force to body
             const min::vec3<float> force(step.x(), step.y() * 2.0, step.z());
