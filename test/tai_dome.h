@@ -67,12 +67,20 @@ bool test_ai_trainer()
     }
 
     // gradient based training
-    for (size_t i = 0; i < 50; i++)
+    float e0 = 100.0;
+    float e1 = 100.0;
+    for (size_t i = 0; i < 2000; i++)
     {
         std::cout << "iteration: " << i << std::endl;
 
         // Optimize net with back propagation
-        trainer.train_optimize(grid, start, dest);
+        e0 = e1;
+        e1 = trainer.train_optimize(grid, start, dest);
+        std::cout << "train_optimization error: " << e1 << std::endl;
+        if (std::abs(e0 - e1) < 1E-4)
+        {
+            trainer.mutate_top();
+        }
     }
 
     // Calculate top fitness of best network
@@ -91,7 +99,7 @@ bool test_ai_trainer()
         }
 
         // Mutate all nets
-        trainer.mutate();
+        trainer.mutate_pool();
 
         // Solve
         for (size_t j = 0; j < 5; j++)

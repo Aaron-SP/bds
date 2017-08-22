@@ -375,7 +375,7 @@ class ai_trainer
         // Return top fitness
         return _top;
     }
-    void mutate()
+    void mutate_pool()
     {
         // Initialize all the with previous top net and mutate
         for (size_t i = 0; i < _pool_size; i++)
@@ -390,6 +390,10 @@ class ai_trainer
             net.mutate(_rng);
         }
     }
+    void mutate_top()
+    {
+        _top_net.mutate(_rng);
+    }
     void serialize(std::vector<uint8_t> &stream)
     {
         // Get the top net float data
@@ -398,15 +402,18 @@ class ai_trainer
         // Write data into stream
         min::write_le_vector<float>(stream, data);
     }
-    void train_evolve(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
+    float train_evolve(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
     {
         // Fitness
         fitness_score_total(grid, start, dest);
 
         // Evolve the pool
         evolve();
+
+        // return average fitness
+        return _average_fitness;
     }
-    void train_optimize(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
+    float train_optimize(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
     {
         // For all destinations, calculate average score
         float error = 0.0;
@@ -416,7 +423,8 @@ class ai_trainer
             error += optimize_multi(grid, this->_top_net, start, dest[i]);
         }
 
-        std::cout << "train_optimization error: " << error << std::endl;
+        // return backprop error
+        return error;
     }
 };
 }
