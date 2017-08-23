@@ -527,6 +527,31 @@ class cgrid
 
         return out;
     }
+    std::vector<min::vec3<float>> get_cubic_rays(const min::vec3<float> &center) const
+    {
+        // Surrounding cells
+        std::vector<min::vec3<float>> out;
+        out.reserve(27);
+
+        // Get cubic function properties
+        // Use player snap to get correct y coordinate
+        const min::vec3<float> origin = snap_player(center);
+        const min::vec3<float> start = origin - min::vec3<float>(1.0, 1.5, 1.0);
+        const min::vec3<int> offset(1, 1, 1);
+        const min::vec3<unsigned> length(3, 3, 3);
+
+        // Create cubic function, for each cell in cubic space
+        const auto f = [this, &origin, &out](const min::vec3<float> &p) {
+            // Store rays
+            min::ray<float, min::vec3> r(origin, p);
+            out.push_back(this->ray_trace_after(r, 100));
+        };
+
+        // Run the function
+        cubic(start, offset, length, f);
+
+        return out;
+    }
     size_t get_recent_chunk() const
     {
         return _recent_chunk;
@@ -588,7 +613,7 @@ class cgrid
 
         return -1;
     }
-    min::vec3<float> ray_trace_after(const min::ray<float, min::vec3> &r, const size_t length)
+    min::vec3<float> ray_trace_after(const min::ray<float, min::vec3> &r, const size_t length) const
     {
         const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
 
@@ -619,7 +644,7 @@ class cgrid
         // return ray start point since it is not in the grid
         return r.get_origin();
     }
-    min::vec3<float> ray_trace_before(const min::ray<float, min::vec3> &r, const size_t length)
+    min::vec3<float> ray_trace_before(const min::ray<float, min::vec3> &r, const size_t length) const
     {
         const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
 

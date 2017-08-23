@@ -39,7 +39,7 @@ class path_data
     float _remain;
     float _travel;
 
-    void update_direction()
+    inline void update_direction()
     {
         // Update direction vector
         _direction = _destination - _position;
@@ -52,45 +52,59 @@ class path_data
             _direction *= inv_mag;
         }
     }
+    inline void update_travel()
+    {
+        _travel = (_position - _start).magnitude();
+    }
 
   public:
-    path_data(const min::vec3<float> &p, const min::vec3<float> &d)
-        : _destination(d), _position(p), _start(p),
+    path_data(const min::vec3<float> &s, const min::vec3<float> &d)
+        : _destination(d), _position(s), _start(s),
           _remain(0.0), _travel(0.0)
     {
         // Update direction
         update_direction();
     }
-    const min::vec3<float> &get_destination() const
+    path_data(const min::vec3<float> &s, const min::vec3<float> &p, const min::vec3<float> &d)
+        : _destination(d), _position(p), _start(s),
+          _remain(0.0), _travel(0.0)
+    {
+        // Update direction
+        update_direction();
+
+        // Update distance travelled
+        update_travel();
+    }
+    inline const min::vec3<float> &get_destination() const
     {
         return _destination;
     }
-    const min::vec3<float> &get_direction() const
+    inline const min::vec3<float> &get_direction() const
     {
         return _direction;
     }
-    const min::vec3<float> &get_position() const
+    inline const min::vec3<float> &get_position() const
     {
         return _position;
     }
-    const min::vec3<float> &get_start() const
+    inline const min::vec3<float> &get_start() const
     {
         return _start;
     }
-    float get_remain() const
+    inline float get_remain() const
     {
         return _remain;
     }
-    float get_travel() const
+    inline float get_travel() const
     {
         return _travel;
     }
-    min::vec3<float> step(const min::vec3<float> &dir, const float step_size) const
+    inline min::vec3<float> step(const min::vec3<float> &dir, const float step_size) const
     {
         // return new position
         return _position + (dir * step_size);
     }
-    void update(const min::vec3<float> &p)
+    inline void update(const min::vec3<float> &p)
     {
         // Update the position
         _position = p;
@@ -99,14 +113,14 @@ class path_data
         update_direction();
 
         // Update distance travelled
-        _travel = (_position - _start).magnitude();
+        update_travel();
     }
 };
 
 class ai_path
 {
   private:
-    static constexpr size_t IN = 7;
+    static constexpr size_t IN = 34;
     static constexpr size_t OUT = 3;
     static constexpr float _step_size = 0.5;
     static constexpr unsigned _total_moves = 20;
@@ -132,7 +146,7 @@ class ai_path
 
         return out;
     }
-    min::vec3<float> model(const cgrid &grid, const path_data &data)
+    min::vec3<float> model(const cgrid &grid, const path_data &data) const
     {
         // Must be 27 in size
         const std::vector<int8_t> neighbors = grid.get_neighbors(data.get_position());
@@ -265,15 +279,15 @@ class ai_path
         const min::vec3<float> &position = data.get_position();
 
         // Calculate input
-        const float mag = 1.0 / 128.0;
-        const min::vec3<float> d = dest * mag;
-        const min::vec3<float> s = position * mag;
-        in[0] = d.x();
-        in[1] = d.y();
-        in[2] = d.z();
-        in[3] = s.x();
-        in[4] = s.y();
-        in[5] = s.z();
+        const float scale = 1.0 / 128.0;
+        const min::vec3<float> ds = dest * scale;
+        const min::vec3<float> ps = position * scale;
+        in[0] = ds.x();
+        in[1] = ds.y();
+        in[2] = ds.z();
+        in[3] = ps.x();
+        in[4] = ps.y();
+        in[5] = ps.z();
 
         // Map data from [-1, 1] to [0, 1] range
         in[0] = 0.5 * (1.0 + in[0]);
@@ -282,6 +296,29 @@ class ai_path
         in[3] = 0.5 * (1.0 + in[3]);
         in[4] = 0.5 * (1.0 + in[4]);
         in[5] = 0.5 * (1.0 + in[5]);
+
+        // Must be 27 in size
+        std::vector<min::vec3<float>> eyes = grid.get_cubic_rays(position);
+        if (eyes.size() != 27)
+        {
+            throw std::runtime_error("ai_path: eyes incorrect size");
+        }
+
+        // Create terrain input encoding
+        for (size_t i = 0; i < 27; i++)
+        {
+            // Calculate distance to object
+            const float d = (eyes[i] - position).magnitude();
+            const float dist = (d < 1.0) ? 1.0 : d;
+
+            // Map data to [0, 1] range
+            in[6 + i] = 1.0 / dist;
+        }
+
+        // Set the impulse for distance from destination
+        const float m = (ds - ps).magnitude();
+        const float mag = (m < 1.0) ? 1.0 : m;
+        in[33] = 1.0 / mag;
 
         // Set input and calculate output
         _net.set_input(in);
@@ -310,13 +347,17 @@ class ai_path
     ai_path()
     {
         // Initialize top_net
-        _net.add_layer(3);
-        _net.add_layer(3);
+        _net.add_layer(18);
+        _net.add_layer(9);
         _net.finalize();
     }
     ai_path(const mml::nnet<float, IN, OUT> &net)
     {
         _net = net;
+    }
+    ai_path(const std::vector<uint8_t> &stream)
+    {
+        deserialize(stream);
     }
     static inline ai_path breed(const ai_path &p1, const ai_path &p2)
     {
@@ -390,12 +431,7 @@ class ai_path
         for (size_t i = 0; i < _total_moves; i++)
         {
             // Create deviation from path for training
-            const min::vec3<float> offset(rng.random(), rng.random(), rng.random());
-            const min::vec3<float> p = ((dest - start) * (i / 10000.0)) + offset;
-
-            // Update position
-            p_data.update(p);
-            const min::vec3<float> &dir = p_data.get_direction();
+            const min::vec3<float> dir = model(grid, p_data);
 
             // Load input to neural net
             load(grid, p_data);
@@ -416,6 +452,12 @@ class ai_path
 
             // set the error term
             error = (output - set_point).square_magnitude();
+
+            // Step in calculated direction
+            const min::vec3<float> p = p_data.step(dir, _step_size);
+
+            // Update position
+            p_data.update(p);
         }
 
         return error;
@@ -427,6 +469,14 @@ class ai_path
     inline std::vector<float> serialize() const
     {
         return _net.serialize();
+    }
+    min::vec3<float> simulate_path(const cgrid &grid, const path_data &data) const
+    {
+        return this->model(grid, data);
+    }
+    min::vec3<float> path(const cgrid &grid, const path_data &data)
+    {
+        return this->solve(grid, data);
     }
 };
 }

@@ -83,6 +83,19 @@ class world
     min::vec3<float> _dest;
     bool _ai_mode;
 
+    inline void ai_load_path(const std::vector<uint8_t> &input)
+    {
+        if (input.size() != 0)
+        {
+            // load the data into the ai path of previous train
+            _path = game::ai_path(input);
+        }
+        else
+        {
+            // Create a new empty path
+            _path = game::ai_path();
+        }
+    }
     inline void ai_path()
     {
         if (_ai_mode)
@@ -93,22 +106,11 @@ class world
             // Animate the character with AI
             const min::vec3<float> &p = body.get_position();
 
-            // Distance from point
-            const float travel = (p - _start).magnitude();
-
-            // Direction and remaining distance
-            min::vec3<float> dir = _dest - p;
-            const float remain = dir.magnitude();
-            if (remain > 1E-3)
-            {
-                const float denom = 1.0 / remain;
-                dir *= denom;
-            }
+            // Create path data
+            path_data data(_start, p, _dest);
 
             // Calculate the next step
-            mml::nnet<float, 3, 3> net;
-            mml::vector<float, 3> set_point = ai_path::model(_grid, net, p, dir, travel, remain);
-            const min::vec3<float> step = _path.solve(_grid, set_point, p, dir, travel, remain);
+            const min::vec3<float> step = _path.path(_grid, data);
 
             // Add force to body
             const min::vec3<float> force(step.x(), step.y() * 2.0, step.z());
@@ -606,7 +608,7 @@ class world
         std::cout << "Y: " << _dest.y() << std::endl;
         std::cout << "Z: " << _dest.z() << std::endl;
     }
-    void train(const size_t iterations) const
+    void train(const size_t iterations)
     {
         // Create output stream for loading AI
         std::vector<uint8_t> input;
@@ -626,6 +628,9 @@ class world
         std::vector<uint8_t> output;
         _trainer.serialize(output);
 
+        // If we are in AI mode, automatically load this path
+        ai_load_path(output);
+
         // Write data to file
         game::save_file("data/ai/bot", output);
     }
@@ -642,8 +647,16 @@ class world
         // Load a new path when entering the mode
         if (_ai_mode)
         {
-            // Create a new path using new bot file
-            _path = game::ai_path();
+            // Create output stream for loading AI
+            std::vector<uint8_t> input;
+
+            // Load data into stream from AI file
+            game::load_file("data/ai/bot", input);
+
+            // Load a new path from data
+            ai_load_path(input);
+
+            // Update the starting position
             _start = character_position();
         }
 
