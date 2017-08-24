@@ -20,7 +20,6 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cmath>
 #include <cstdint>
-#include <game/ai_path.h>
 #include <game/ai_trainer.h>
 #include <game/cgrid.h>
 #include <game/explode_particle.h>
@@ -77,26 +76,12 @@ class world
     sky _sky;
 
     // Pathing
-    game::ai_path _path;
     mutable game::ai_trainer _trainer;
     min::vec3<float> _start;
     min::vec3<float> _dest;
     bool _ai_mode;
 
-    inline void ai_load_path(const std::vector<uint8_t> &input)
-    {
-        if (input.size() != 0)
-        {
-            // load the data into the ai path of previous train
-            _path = game::ai_path(input);
-        }
-        else
-        {
-            // Create a new empty path
-            _path = game::ai_path();
-        }
-    }
-    inline void ai_path()
+    inline void ai_run_path()
     {
         if (_ai_mode)
         {
@@ -109,8 +94,10 @@ class world
             // Create path data
             path_data data(_start, p, _dest);
 
-            // Calculate the next step
-            const min::vec3<float> step = _path.path(_grid, data);
+            const ai_path &top_path = _trainer.get_top_path();
+
+            // Calculate the next step, THIS IS NOT NORMALIZED
+            const min::vec3<float> step = top_path.path(_grid, data);
 
             // Add force to body
             const min::vec3<float> force(step.x(), step.y() * 2.0, step.z());
@@ -133,8 +120,14 @@ class world
         // train the ai
         for (size_t i = 0; i < iterations; i++)
         {
+            // // Apply natural selection
+            // _trainer.train_evolve(_grid, start, dest);
+
+            // // Run gradient descent
+            // _trainer.train_optimize(_grid, start, dest);
+
+            // Apply natural selection
             _trainer.train_evolve(_grid, start, dest);
-            _trainer.train_optimize(_grid, start, dest);
         }
     }
     // character_load should only be called once!
@@ -371,6 +364,26 @@ class world
 
         // Load character
         character_load(state);
+
+        // Load the AI script
+        std::vector<uint8_t> input;
+
+        // Load data into stream from AI file
+        game::load_file("data/ai/bot", input);
+        if (input.size() != 0)
+        {
+            // load the data into the trainer of previous run
+            _trainer.deserialize(input);
+        }
+    }
+    ~world()
+    {
+        // Create output stream for saving bot
+        std::vector<uint8_t> output;
+        _trainer.serialize(output);
+
+        // Write AI data to file
+        game::save_file("data/ai/bot", output);
     }
     void add_block(const min::vec3<float> &center)
     {
@@ -453,13 +466,20 @@ class world
         // Return the character position
         return body.get_position();
     }
+    void character_warp(const min::vec3<float> &p)
+    {
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Warp character to new position
+        body.set_position(p);
+    }
     void update(min::camera<float> &cam, const float dt)
     {
         // Get the player physics object
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
         // Solve the AI path finding if toggled
-        ai_path();
+        ai_run_path();
 
         // Get player position
         const min::vec3<float> &p = body.get_position();
@@ -600,6 +620,14 @@ class world
     {
         return _edit_mode;
     }
+    void set_train_point(const min::vec3<float> &p)
+    {
+        // Set start point
+        _start = character_position();
+
+        // Set destination point
+        _dest = p;
+    }
     void set_train_point()
     {
         _dest = character_position();
@@ -610,29 +638,8 @@ class world
     }
     void train(const size_t iterations)
     {
-        // Create output stream for loading AI
-        std::vector<uint8_t> input;
-
-        // Load data into stream from AI file
-        game::load_file("data/ai/bot", input);
-        if (input.size() != 0)
-        {
-            // load the data into the trainer of previous run
-            _trainer.deserialize(input);
-        }
-
         // Train the AI
         ai_train(iterations);
-
-        // Create output stream for saving bot
-        std::vector<uint8_t> output;
-        _trainer.serialize(output);
-
-        // If we are in AI mode, automatically load this path
-        ai_load_path(output);
-
-        // Write data to file
-        game::save_file("data/ai/bot", output);
     }
     bool toggle_edit_mode()
     {
@@ -647,15 +654,6 @@ class world
         // Load a new path when entering the mode
         if (_ai_mode)
         {
-            // Create output stream for loading AI
-            std::vector<uint8_t> input;
-
-            // Load data into stream from AI file
-            game::load_file("data/ai/bot", input);
-
-            // Load a new path from data
-            ai_load_path(input);
-
             // Update the starting position
             _start = character_position();
         }

@@ -84,10 +84,6 @@ bool test_ai_trainer()
             }
         }
 
-        // Calculate top fitness of best network
-        const float fitness = trainer.top_fitness(grid, start, dest);
-        std::cout << "Top fitness is " << fitness << std::endl;
-
         // evolution based training
         for (size_t i = 0; i < 4; i++)
         {
@@ -109,8 +105,9 @@ bool test_ai_trainer()
             }
         }
 
-        // Calculate average and top fitness of all networks
-        trainer.fitness(grid, start, dest);
+        // Calculate top fitness of best network
+        const float fitness = trainer.top_fitness();
+        std::cout << "Top fitness is " << fitness << std::endl;
     }
 
     // Create output stream for saving bot

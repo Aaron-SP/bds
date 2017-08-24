@@ -34,8 +34,9 @@ namespace game
 class ai_trainer
 {
   private:
+    static constexpr unsigned _breed_stock = 10;
+    static constexpr unsigned _cull_number = 10;
     static constexpr unsigned _pool_size = 100;
-    static constexpr unsigned _breed_stock = 13;
     static constexpr unsigned _mutation_rate = 5;
     mml::net_rng<float> _rng;
     ai_path _paths[_pool_size];
@@ -70,7 +71,7 @@ class ai_trainer
         std::cout << "Average fitness is " << _average_fitness << std::endl;
         std::cout << "Best fitness is " << _top << std::endl;
     }
-    static float fitness_score_multi(const cgrid &grid, ai_path &path, const std::vector<min::vec3<float>> &start, const min::vec3<float> &dest)
+    static float fitness_score_multi(const cgrid &grid, const ai_path &path, const std::vector<min::vec3<float>> &start, const min::vec3<float> &dest)
     {
         float out = 0.0;
 
@@ -85,13 +86,6 @@ class ai_trainer
     }
     void fitness_score_total(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
     {
-        // Zero out all scores
-        for (size_t i = 0; i < _pool_size; i++)
-        {
-            _scores[i] = 0.0;
-        }
-        _top = 0.0;
-
         const size_t destinations = dest.size();
         if (destinations > 0)
         {
@@ -142,40 +136,44 @@ class ai_trainer
         // Assert that we do not overflow
         static_assert(((_breed_stock * _breed_stock + _breed_stock) / 2) <= _pool_size, "Invalid breed stock dimensions");
 
+        // Assert that we do not overflow
+        static_assert((_pool_size - _cull_number) > 0, "Invalid cull number dimensions");
+
         // Create index vector to sort 0 to N
         size_t index[_pool_size];
         average_fitness_score(index);
 
-        // Choose the top performers for breeding
-        for (size_t i = 0; i < _breed_stock; i++)
+        // Kill off the bottom performers for breeding
+        for (size_t i = _pool_size - 1; i >= _pool_size - _cull_number; i--)
         {
-            _paths[i] = _paths[index[i]];
+            // Reset the score, and start life a new man
+            // This will lead to higher mutation rates for low scores
+            _scores[index[i]] = 0.0;
+
+            // Randomize genes
+            _paths[index[i]].mutate(_rng);
         }
 
-        // Breed others (N^2 - N)/2 bred paths
+        // Breed (N^2 - N)/2 paths
         size_t current = _breed_stock;
         for (size_t i = 0; i < _breed_stock; i++)
         {
             for (size_t j = i + 1; j < _breed_stock; j++)
             {
-                _paths[current] = ai_path::breed(_paths[i], _paths[j]);
+                // Reset new borns score
+                _scores[index[current]] = 0.0;
+
+                // Breed genetics
+                _paths[index[current]] = ai_path::breed(_paths[index[i]], _paths[index[j]]);
                 current++;
             }
-        }
-
-        // remaining add new random genes to pool
-        const size_t remain = _pool_size - ((_breed_stock * _breed_stock + _breed_stock) / 2);
-        for (size_t i = 0; i < remain; i++)
-        {
-            _paths[current].randomize(_rng);
-            current++;
         }
 
         // Mutate random paths
         for (size_t i = 0; i < _mutation_rate; i++)
         {
             // Safe, range 0, _pool_size - 1
-            size_t index = (size_t)_rng.random_int();
+            const size_t index = (size_t)_rng.random_int();
             _paths[index].mutate(_rng);
         }
     }
@@ -198,6 +196,9 @@ class ai_trainer
             // Create a fresh path
             _paths[i].randomize(_rng);
         }
+
+        // Reset scores to 0
+        reset_scores();
     }
     void deserialize(const std::vector<uint8_t> &stream)
     {
@@ -214,35 +215,9 @@ class ai_trainer
             _paths[i].mutate(_rng);
         }
     }
-    float fitness(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
+    const ai_path &get_top_path() const
     {
-        // Calculate total fitness
-        fitness_score_total(grid, start, dest);
-
-        // Calculate average fitness
-        size_t index[_pool_size];
-        average_fitness_score(index);
-
-        // Return average pool fitness
-        return _average_fitness;
-    }
-    float top_fitness(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
-    {
-        _top = 0.0;
-
-        // For all destinations, calculate average score on top path
-        const size_t destinations = dest.size();
-        if (destinations > 0)
-        {
-            for (size_t i = 0; i < destinations; i++)
-            {
-                _top += fitness_score_multi(grid, _top_path, start, dest[i]);
-            }
-            _top /= destinations;
-        }
-
-        // Return top fitness
-        return _top;
+        return _top_path;
     }
     void mutate_pool()
     {
@@ -260,6 +235,15 @@ class ai_trainer
     {
         _top_path.mutate(_rng);
     }
+    void reset_scores()
+    {
+        // Zero out all scores
+        for (size_t i = 0; i < _pool_size; i++)
+        {
+            _scores[i] = 0.0;
+        }
+        _top = 0.0;
+    }
     void serialize(std::vector<uint8_t> &stream)
     {
         // Get the top path float data
@@ -267,6 +251,29 @@ class ai_trainer
 
         // Write data into stream
         min::write_le_vector<float>(stream, data);
+    }
+    float top_fitness() const
+    {
+        // Return top fitness
+        return _top;
+    }
+    float top_fitness(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest) const
+    {
+        float top = 0.0;
+
+        // For all destinations, calculate average score on top path
+        const size_t destinations = dest.size();
+        if (destinations > 0)
+        {
+            for (size_t i = 0; i < destinations; i++)
+            {
+                top += fitness_score_multi(grid, _top_path, start, dest[i]);
+            }
+            top /= destinations;
+        }
+
+        // Return top fitness
+        return top;
     }
     float train_evolve(const cgrid &grid, const std::vector<min::vec3<float>> &start, const std::vector<min::vec3<float>> &dest)
     {

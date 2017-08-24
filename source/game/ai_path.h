@@ -121,9 +121,9 @@ class ai_path
 {
   private:
     static constexpr size_t IN = 34;
-    static constexpr size_t OUT = 3;
-    static constexpr float _step_size = 0.5;
-    static constexpr unsigned _total_moves = 20;
+    static constexpr size_t OUT = 4;
+    static constexpr float _step_size = 1.0;
+    static constexpr unsigned _total_moves = 50;
     mml::nnet<float, IN, OUT> _net;
 
     static size_t collisions(const cgrid &grid, const min::vec3<float> &p)
@@ -242,14 +242,15 @@ class ai_path
         // Hurdle obstacle
         {
             bool hurdle = false;
-            hurdle = hurdle || (neighbors[9] != -1 && neighbors[18] == -1);
-            hurdle = hurdle || (neighbors[10] != -1 && neighbors[19] == -1);
-            hurdle = hurdle || (neighbors[11] != -1 && neighbors[20] == -1);
-            hurdle = hurdle || (neighbors[12] != -1 && neighbors[21] == -1);
-            hurdle = hurdle || (neighbors[13] != -1 && neighbors[22] == -1);
-            hurdle = hurdle || (neighbors[14] != -1 && neighbors[23] == -1);
-            hurdle = hurdle || (neighbors[15] != -1 && neighbors[24] == -1);
-            hurdle = hurdle || (neighbors[16] != -1 && neighbors[25] == -1);
+            hurdle = hurdle || (neighbors[3] != -1 && neighbors[6] == -1);
+            hurdle = hurdle || (neighbors[4] != -1 && neighbors[7] == -1);
+            hurdle = hurdle || (neighbors[5] != -1 && neighbors[8] == -1);
+            hurdle = hurdle || (neighbors[12] != -1 && neighbors[15] == -1);
+            hurdle = hurdle || (neighbors[13] != -1 && neighbors[16] == -1);
+            hurdle = hurdle || (neighbors[14] != -1 && neighbors[17] == -1);
+            hurdle = hurdle || (neighbors[21] != -1 && neighbors[24] == -1);
+            hurdle = hurdle || (neighbors[22] != -1 && neighbors[25] == -1);
+            hurdle = hurdle || (neighbors[23] != -1 && neighbors[26] == -1);
 
             const bool moving_x = (std::abs(dir.x()) > 0.1);
             const bool moving_z = (std::abs(dir.z()) > 0.1);
@@ -259,8 +260,23 @@ class ai_path
             }
         }
 
+        bool turbo = false;
+        turbo = turbo || (neighbors[3] != -1 && neighbors[6] == -1);
+        turbo = turbo || (neighbors[4] != -1 && neighbors[7] == -1);
+        turbo = turbo || (neighbors[5] != -1 && neighbors[8] == -1);
+        turbo = turbo || (neighbors[12] != -1 && neighbors[15] == -1);
+        turbo = turbo || (neighbors[13] != -1 && neighbors[16] == -1);
+        turbo = turbo || (neighbors[14] != -1 && neighbors[17] == -1);
+        turbo = turbo || (neighbors[21] != -1 && neighbors[24] == -1);
+        turbo = turbo || (neighbors[22] != -1 && neighbors[25] == -1);
+        turbo = turbo || (neighbors[23] != -1 && neighbors[26] == -1);
+
         // Normalize the output, default to zero
         change.normalize_safe(min::vec3<float>());
+        if (turbo)
+        {
+            change.y(change.y() + 1.0);
+        }
 
         // Override settings if reached goal
         if (data.get_remain() < 0.25)
@@ -271,7 +287,7 @@ class ai_path
         // return new direction
         return change;
     }
-    void load(const cgrid &grid, const path_data &data)
+    void load(const cgrid &grid, const path_data &data) const
     {
         // Set inputs
         mml::vector<float, IN> in;
@@ -309,7 +325,9 @@ class ai_path
         {
             // Calculate distance to object
             const float d = (eyes[i] - position).magnitude();
-            const float dist = (d < 1.0) ? 1.0 : d;
+
+            // This is a special case for out of grid, which is infinitely far away
+            const float dist = (d < 1.0) ? ((d < 0.001) ? 1E6 : 1.0) : d;
 
             // Map data to [0, 1] range
             in[6 + i] = 1.0 / dist;
@@ -320,24 +338,27 @@ class ai_path
         const float mag = (m < 1.0) ? 1.0 : m;
         in[33] = 1.0 / mag;
 
-        // Set input and calculate output
+        // Set input
         _net.set_input(in);
     }
-    min::vec3<float> unload(const mml::vector<float, OUT> &output)
+    min::vec3<float> unload(const mml::vector<float, OUT> &output) const
     {
-        // Calculate direction to move
+        // Unpack direction to move [-1, 1]
         const float x = (output[0] * 2.0) - 1.0;
         const float y = (output[1] * 2.0) - 1.0;
         const float z = (output[2] * 2.0) - 1.0;
-        return min::vec3<float>(x, y, z) * _step_size;
+
+        // Unpack step size [0, 2]
+        const float step = output[3] * 2.0;
+        return min::vec3<float>(x, y, z) * step;
     }
-    min::vec3<float> solve(const cgrid &grid, const path_data &data)
+    min::vec3<float> solve(const cgrid &grid, const path_data &data) const
     {
         // Load neural net
         load(grid, data);
 
         // Calculate output
-        const mml::vector<float, OUT> out = _net.calculate();
+        const mml::vector<float, OUT> out = _net.calculate_sigmoid();
 
         // Unload output
         return unload(out);
@@ -347,6 +368,7 @@ class ai_path
     ai_path()
     {
         // Initialize top_net
+        _net.add_layer(34);
         _net.add_layer(18);
         _net.add_layer(9);
         _net.finalize();
@@ -377,7 +399,7 @@ class ai_path
     {
         _net.mutate(rng);
     }
-    inline float fitness(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
+    inline float fitness(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest) const
     {
         path_data p_data(start, dest);
         float score = 0.0;
@@ -385,7 +407,7 @@ class ai_path
         // For N moves
         for (size_t i = 0; i < _total_moves; i++)
         {
-            // Get new travel direction
+            // Get new travel direction, THIS IS NOT NORMALIZED
             const min::vec3<float> dir = solve(grid, p_data);
 
             // Calculate distance to starting point
@@ -395,8 +417,8 @@ class ai_path
             const int8_t atlas = grid.grid_value(next);
             if (atlas != -1)
             {
-                // Punish collision
-                score -= 1.0;
+                // Punish running into a wall
+                score -= 1E-3;
             }
             else
             {
@@ -405,18 +427,31 @@ class ai_path
 
             // Discourage zero moves
             const float travel = p_data.get_travel();
-            if (travel < 1.0)
+            if (travel < 0.5)
             {
-                score--;
+                score -= 1E-3;
             }
+
+            // Assuming travel and remain ~100 on average
 
             // Reward venture out
             // Are we getting closer to destination
             const float remain = p_data.get_remain();
-            score += travel / (remain + 1.0);
+            score += 1E-5 * (travel * travel) / (remain * remain + (1.0 + i));
+
+            // Punish moving away from the goal
+            score -= 1E-7 * remain;
 
             // Punish collisions with walls
-            //score -= collisions(grid, current);
+            score -= 1E-5 * collisions(grid, p_data.get_position());
+
+            // If we got to the goal break out
+            if (remain < 1.0)
+            {
+                // Reward success here
+                score += 1E-2;
+                break;
+            }
         }
 
         // return fitness score
@@ -437,7 +472,7 @@ class ai_path
             load(grid, p_data);
 
             // Calculate the net
-            _net.calculate();
+            _net.calculate_sigmoid();
 
             mml::vector<float, OUT> set_point;
             set_point[0] = 0.5 * (1.0 + dir.x());
@@ -445,10 +480,10 @@ class ai_path
             set_point[2] = 0.5 * (1.0 + dir.z());
 
             // Train input to be output
-            _net.backprop(set_point);
+            _net.backprop_sigmoid(set_point);
 
             // Check that the train works
-            const mml::vector<float, 3> output = _net.calculate();
+            const mml::vector<float, OUT> output = _net.calculate_sigmoid();
 
             // set the error term
             error = (output - set_point).square_magnitude();
@@ -474,8 +509,9 @@ class ai_path
     {
         return this->model(grid, data);
     }
-    min::vec3<float> path(const cgrid &grid, const path_data &data)
+    min::vec3<float> path(const cgrid &grid, const path_data &data) const
     {
+        // THIS IS NOT NORMALIZED
         return this->solve(grid, data);
     }
 };

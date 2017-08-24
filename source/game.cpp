@@ -43,6 +43,10 @@ class mglcraft
     game::text _text;
     game::world _world;
     game::controls _controls;
+    std::vector<min::vec3<float>> _goals;
+    size_t _current_goal;
+    size_t _stuck_count;
+    min::vec3<float> _last;
 
     void load_text()
     {
@@ -140,7 +144,9 @@ class mglcraft
         : _win("MGLCRAFT: LOADING", 720, 480, 3, 3),
           _text(28),
           _world(load_state(), 64, 8, 7),
-          _controls(_win, _state.get_camera(), _state, _text, _world)
+          _controls(_win, _state.get_camera(), _state, _text, _world),
+          _current_goal(0),
+          _stuck_count(0)
     {
         // Set depth and cull settings
         min::settings::initialize();
@@ -156,6 +162,29 @@ class mglcraft
 
         // Update cursor position for tracking
         update_cursor();
+
+        // Set goals
+        _goals = {
+            min::vec3<float>(0.5, 36.0, -0.5),
+            min::vec3<float>(21.0, 23.0, 0.0),
+            min::vec3<float>(-21.0, 23.0, 0.0),
+            min::vec3<float>(0.0, 23.0, 21.0),
+            min::vec3<float>(0.0, 23.0, -21.0),
+            min::vec3<float>(-4.5, 30.5, 4.5),
+            min::vec3<float>(-4.6, 31.5, 0.0),
+            min::vec3<float>(-2.223, 32.5, -4.667),
+            min::vec3<float>(2.0, 31.5, -4.5),
+            min::vec3<float>(-4.5, 30.5, 0.0),
+            min::vec3<float>(4.223, 32.5, 2.667),
+            min::vec3<float>(4.5, 31.5, -2.0),
+            min::vec3<float>(4.5, 30.5, 0.0),
+            min::vec3<float>(4.5, 31.5, -4.5),
+            min::vec3<float>(4.5, 31.5, 0.0),
+            min::vec3<float>(0.0, 40.5, 0.0),
+            min::vec3<float>(0.0, 25.5, 0.0)};
+
+        // Set new goal
+        _world.set_train_point(_goals[0]);
     }
     ~mglcraft()
     {
@@ -175,13 +204,14 @@ class mglcraft
         const min::vec3<float> &p = _world.character_position();
 
         // Get the cursor coordinates
-        const auto c = _win.get_cursor();
+        const auto c = std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
+        //const auto c = _win.get_cursor();
 
         // Must update state properties, camera before drawing world
         _state.update(p, c, _win.get_width(), _win.get_height(), dt);
 
         // Reset cursor position
-        update_cursor();
+        //update_cursor();
 
         // Update the world state
         _world.update(_state.get_camera(), dt);
@@ -206,6 +236,41 @@ class mglcraft
     void set_title(const std::string &title)
     {
         _win.set_title(title);
+    }
+    void train_ai()
+    {
+        // Train the AI
+        _world.train(10);
+
+        // Get character position
+        const min::vec3<float> &p = _world.character_position();
+        const float distance = (_goals[_current_goal] - p).magnitude();
+        if (distance < 1.0)
+        {
+            // Increment goals
+            _current_goal++;
+
+            // Loop if reached the end of goal list
+            _current_goal %= _goals.size();
+
+            // Set next goal
+            _world.set_train_point(_goals[_current_goal]);
+        }
+
+        // Check if player is stuck
+        const float moved = (p - _last).magnitude();
+        if (moved < 0.1)
+        {
+            _stuck_count++;
+            if (_stuck_count == 5)
+            {
+                _stuck_count = 0;
+                _world.character_warp(min::vec3<float>(0.0, 2.0, 0.0));
+            }
+        }
+
+        // Update last position
+        _last = p;
     }
     void update_cursor()
     {
@@ -296,6 +361,9 @@ void run()
             // Calculate needed delay to hit target
             frame_time = sync.sync();
         }
+
+        // Train the AI every second
+        game.train_ai();
 
         // Update the debug text
         game.update_text();
