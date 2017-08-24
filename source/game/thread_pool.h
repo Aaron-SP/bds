@@ -50,7 +50,7 @@ class thread_pool
         }
 
         // Resize the thread pool
-        _threads.resize(_thread_count);
+        _threads.resize(_thread_count - 1);
     }
     void run(const std::function<void(const size_t)> &f, const size_t start, const size_t stop)
     {

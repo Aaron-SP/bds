@@ -18,19 +18,19 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __TEST_AI_TRAINER__
 #define __TEST_AI_TRAINER__
 
-#include <game/ai_trainer.h>
+#include <game/ai_opt.h>
 #include <game/cgrid.h>
 #include <game/file.h>
 #include <stdexcept>
 #include <test.h>
 
-bool test_ai_trainer()
+bool test_ai_opt()
 {
     bool out = true;
 
     // Load the graph mesh with 128 pixel tile size
     game::cgrid grid(64, 8, 7);
-    game::ai_trainer trainer;
+    game::ai_opt opt;
 
     // Create start points
     std::vector<min::vec3<float>> start = {
@@ -63,7 +63,7 @@ bool test_ai_trainer()
     if (input.size() != 0)
     {
         // load the data into the trainer of previous run
-        trainer.deserialize(input);
+        opt.deserialize(input);
     }
 
     for (size_t k = 0; k < 10; k++)
@@ -71,18 +71,18 @@ bool test_ai_trainer()
         std::cout << "outer iteration: " << k << std::endl;
 
         // gradient based training
-        for (size_t i = 0; i < 10; i++)
-        {
-            std::cout << "gradient iteration: " << i << std::endl;
+        // for (size_t i = 0; i < 10; i++)
+        // {
+        //     std::cout << "gradient iteration: " << i << std::endl;
 
-            // Optimize net with back propagation
-            const float error = trainer.train_optimize(grid, start, dest);
-            std::cout << "train_optimization error: " << error << std::endl;
-            if (error < 1E-3)
-            {
-                break;
-            }
-        }
+        //     // Optimize net with back propagation
+        //     const float error = opt.train_optimize(grid, start, dest);
+        //     std::cout << "train_optimization error: " << error << std::endl;
+        //     if (error < 1E-3)
+        //     {
+        //         break;
+        //     }
+        // }
 
         // evolution based training
         for (size_t i = 0; i < 4; i++)
@@ -92,27 +92,18 @@ bool test_ai_trainer()
             // Solve
             for (size_t j = 0; j < 5; j++)
             {
-                trainer.train_evolve(grid, start, dest);
-            }
-
-            // Mutate all nets
-            trainer.mutate_pool();
-
-            // Solve
-            for (size_t j = 0; j < 5; j++)
-            {
-                trainer.train_evolve(grid, start, dest);
+                opt.evolve_multi(grid, start, dest);
             }
         }
 
         // Calculate top fitness of best network
-        const float fitness = trainer.top_fitness();
+        const float fitness = opt.top_fitness();
         std::cout << "Top fitness is " << fitness << std::endl;
     }
 
     // Create output stream for saving bot
     std::vector<uint8_t> output;
-    trainer.serialize(output);
+    opt.serialize(output);
 
     // Write data to file
     game::save_file("data/ai/bot", output);

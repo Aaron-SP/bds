@@ -20,7 +20,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cmath>
 #include <cstdint>
-#include <game/ai_trainer.h>
+#include <game/ai_opt.h>
 #include <game/cgrid.h>
 #include <game/explode_particle.h>
 #include <game/sky.h>
@@ -76,7 +76,7 @@ class world
     sky _sky;
 
     // Pathing
-    mutable game::ai_trainer _trainer;
+    mutable game::ai_opt _ai_opt;
     min::vec3<float> _start;
     min::vec3<float> _dest;
     bool _ai_mode;
@@ -94,7 +94,7 @@ class world
             // Create path data
             path_data data(_start, p, _dest);
 
-            const ai_path &top_path = _trainer.get_top_path();
+            const ai_path &top_path = _ai_opt.get_top_path();
 
             // Calculate the next step, THIS IS NOT NORMALIZED
             const min::vec3<float> step = top_path.path(_grid, data);
@@ -112,22 +112,11 @@ class world
         // Return the character position
         const min::vec3<float> &p = body.get_position();
 
-        // Create input training vectors
-        std::vector<min::vec3<float>> start, dest;
-        start.push_back(p);
-        dest.push_back(_dest);
-
         // train the ai
         for (size_t i = 0; i < iterations; i++)
         {
-            // // Apply natural selection
-            // _trainer.train_evolve(_grid, start, dest);
-
-            // // Run gradient descent
-            // _trainer.train_optimize(_grid, start, dest);
-
             // Apply natural selection
-            _trainer.train_evolve(_grid, start, dest);
+            _ai_opt.evolve(_grid, p, _dest);
         }
     }
     // character_load should only be called once!
@@ -373,14 +362,14 @@ class world
         if (input.size() != 0)
         {
             // load the data into the trainer of previous run
-            _trainer.deserialize(input);
+            _ai_opt.deserialize(input);
         }
     }
     ~world()
     {
         // Create output stream for saving bot
         std::vector<uint8_t> output;
-        _trainer.serialize(output);
+        _ai_opt.serialize(output);
 
         // Write AI data to file
         game::save_file("data/ai/bot", output);

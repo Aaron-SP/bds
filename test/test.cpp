@@ -24,7 +24,7 @@ int main()
     try
     {
         bool out = true;
-        out = out && test_ai_trainer();
+        out = out && test_ai_opt();
         out = out && test_cgrid();
         if (out)
         {

@@ -15,7 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <game/ai_path.h> // problem with defines here
+#include <game/ai_trainer.h>
 #include <game/controls.h>
 #include <game/file.h>
 #include <game/state.h>
@@ -43,10 +43,7 @@ class mglcraft
     game::text _text;
     game::world _world;
     game::controls _controls;
-    std::vector<min::vec3<float>> _goals;
-    size_t _current_goal;
-    size_t _stuck_count;
-    min::vec3<float> _last;
+    game::ai_trainer _trainer;
 
     void load_text()
     {
@@ -145,8 +142,7 @@ class mglcraft
           _text(28),
           _world(load_state(), 64, 8, 7),
           _controls(_win, _state.get_camera(), _state, _text, _world),
-          _current_goal(0),
-          _stuck_count(0)
+          _trainer(_world)
     {
         // Set depth and cull settings
         min::settings::initialize();
@@ -158,33 +154,10 @@ class mglcraft
         _win.display_cursor(false);
 
         // Maximize window
-        _win.maximize();
+        //_win.maximize();
 
         // Update cursor position for tracking
         update_cursor();
-
-        // Set goals
-        _goals = {
-            min::vec3<float>(0.5, 36.0, -0.5),
-            min::vec3<float>(21.0, 23.0, 0.0),
-            min::vec3<float>(-21.0, 23.0, 0.0),
-            min::vec3<float>(0.0, 23.0, 21.0),
-            min::vec3<float>(0.0, 23.0, -21.0),
-            min::vec3<float>(-4.5, 30.5, 4.5),
-            min::vec3<float>(-4.6, 31.5, 0.0),
-            min::vec3<float>(-2.223, 32.5, -4.667),
-            min::vec3<float>(2.0, 31.5, -4.5),
-            min::vec3<float>(-4.5, 30.5, 0.0),
-            min::vec3<float>(4.223, 32.5, 2.667),
-            min::vec3<float>(4.5, 31.5, -2.0),
-            min::vec3<float>(4.5, 30.5, 0.0),
-            min::vec3<float>(4.5, 31.5, -4.5),
-            min::vec3<float>(4.5, 31.5, 0.0),
-            min::vec3<float>(0.0, 40.5, 0.0),
-            min::vec3<float>(0.0, 25.5, 0.0)};
-
-        // Set new goal
-        _world.set_train_point(_goals[0]);
     }
     ~mglcraft()
     {
@@ -239,38 +212,7 @@ class mglcraft
     }
     void train_ai()
     {
-        // Train the AI
-        _world.train(10);
-
-        // Get character position
-        const min::vec3<float> &p = _world.character_position();
-        const float distance = (_goals[_current_goal] - p).magnitude();
-        if (distance < 1.0)
-        {
-            // Increment goals
-            _current_goal++;
-
-            // Loop if reached the end of goal list
-            _current_goal %= _goals.size();
-
-            // Set next goal
-            _world.set_train_point(_goals[_current_goal]);
-        }
-
-        // Check if player is stuck
-        const float moved = (p - _last).magnitude();
-        if (moved < 0.1)
-        {
-            _stuck_count++;
-            if (_stuck_count == 5)
-            {
-                _stuck_count = 0;
-                _world.character_warp(min::vec3<float>(0.0, 2.0, 0.0));
-            }
-        }
-
-        // Update last position
-        _last = p;
+        _trainer.train(_world);
     }
     void update_cursor()
     {

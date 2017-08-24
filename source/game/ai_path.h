@@ -123,7 +123,6 @@ class ai_path
     static constexpr size_t IN = 34;
     static constexpr size_t OUT = 4;
     static constexpr float _step_size = 1.0;
-    static constexpr unsigned _total_moves = 50;
     mml::nnet<float, IN, OUT> _net;
 
     static size_t collisions(const cgrid &grid, const min::vec3<float> &p)
@@ -399,71 +398,69 @@ class ai_path
     {
         _net.mutate(rng);
     }
-    inline float fitness(const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest) const
+    inline float fitness_multi(const cgrid &grid, path_data &p_data, const size_t moves) const
     {
-        path_data p_data(start, dest);
         float score = 0.0;
 
         // For N moves
-        for (size_t i = 0; i < _total_moves; i++)
+        for (size_t i = 0; i < moves; i++)
         {
-            // Get new travel direction, THIS IS NOT NORMALIZED
-            const min::vec3<float> dir = solve(grid, p_data);
-
-            // Calculate distance to starting point
-            const min::vec3<float> next = p_data.step(dir, _step_size);
-
-            // Check if we picked a bad direction and return start position
-            const int8_t atlas = grid.grid_value(next);
-            if (atlas != -1)
-            {
-                // Punish running into a wall
-                score -= 1E-3;
-            }
-            else
-            {
-                p_data.update(next);
-            }
-
-            // Discourage zero moves
-            const float travel = p_data.get_travel();
-            if (travel < 0.5)
-            {
-                score -= 1E-3;
-            }
-
-            // Assuming travel and remain ~100 on average
-
-            // Reward venture out
-            // Are we getting closer to destination
-            const float remain = p_data.get_remain();
-            score += 1E-5 * (travel * travel) / (remain * remain + (1.0 + i));
-
-            // Punish moving away from the goal
-            score -= 1E-7 * remain;
-
-            // Punish collisions with walls
-            score -= 1E-5 * collisions(grid, p_data.get_position());
-
-            // If we got to the goal break out
-            if (remain < 1.0)
-            {
-                // Reward success here
-                score += 1E-2;
-                break;
-            }
+            score += fitness(grid, p_data);
         }
 
         // return fitness score
         return score;
     }
-    inline float optimize(mml::net_rng<float> &rng, const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest)
+    inline float fitness(const cgrid &grid, path_data &p_data) const
+    {
+        float score = 0.0;
+
+        // Get new travel direction, THIS IS NOT NORMALIZED
+        const min::vec3<float> dir = solve(grid, p_data);
+
+        // Calculate distance to starting point
+        const min::vec3<float> next = p_data.step(dir, _step_size);
+
+        // Check if we picked a bad direction and return start position
+        const int8_t atlas = grid.grid_value(next);
+        if (atlas != -1)
+        {
+            // Punish running into a wall
+            score -= 1.0;
+        }
+        else
+        {
+            p_data.update(next);
+
+            // Discourage zero moves
+            const float travel = p_data.get_travel();
+            if (travel < 0.20)
+            {
+                score -= 1.0;
+            }
+        }
+
+        // Pay the life tax, allows for 40 moves between successes
+        score -= 0.25;
+
+        // If we got to the goal break out
+        const float remain = p_data.get_remain();
+        if (remain < 1.0)
+        {
+            // Reward success here
+            score += 10.0;
+        }
+
+        // return fitness score
+        return score;
+    }
+    inline float optimize(mml::net_rng<float> &rng, const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest, const size_t iterations)
     {
         float error = 0.0;
         path_data p_data(start, dest);
 
         // Do number of steps on path
-        for (size_t i = 0; i < _total_moves; i++)
+        for (size_t i = 0; i < iterations; i++)
         {
             // Create deviation from path for training
             const min::vec3<float> dir = model(grid, p_data);
