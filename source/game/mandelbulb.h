@@ -19,7 +19,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #define __MANDELBULB__
 
 #include <functional>
-#include <game/thread_pool.h>
+#include <game/thread_map.h>
 #include <min/vec3.h>
 
 namespace game
@@ -112,7 +112,7 @@ class mandelbulb
     void generate(std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
     {
         // Create a threadpool for doing work in parallel
-        thread_pool pool;
+        thread_map map;
 
         // Create working function
         const auto work = [this, &grid, gsize, &f](const size_t i) {
@@ -121,7 +121,7 @@ class mandelbulb
         };
 
         // Run the job in parallel
-        pool.run(work, 0, grid.size());
+        map.run(work, 0, grid.size());
     }
 };
 }

@@ -20,9 +20,10 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cmath>
 #include <cstdint>
-#include <game/ai_opt.h>
+#include <game/ai_path.h>
 #include <game/cgrid.h>
 #include <game/explode_particle.h>
+#include <game/mob.h>
 #include <game/sky.h>
 #include <min/camera.h>
 #include <min/dds.h>
@@ -52,6 +53,9 @@ class world
     min::uniform_buffer<float> _geom;
     min::vertex_buffer<float, uint32_t, min::stream_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
     min::vertex_buffer<float, uint32_t, min::stream_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
+    std::vector<size_t> _view_chunks;
+    std::vector<min::aabbox<float, min::vec3>> _player_col_cells;
+    std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
 
@@ -59,7 +63,6 @@ class world
     min::vec3<unsigned> _scale;
     min::vec3<int> _cached_offset;
     min::vec3<int> _preview_offset;
-    bool _edit_mode;
 
     // Grid
     cgrid _grid;
@@ -76,49 +79,17 @@ class world
     sky _sky;
 
     // Pathing
-    mutable game::ai_opt _ai_opt;
-    min::vec3<float> _start;
+    ai_path _ai_path;
     min::vec3<float> _dest;
+
+    // Mob instances
+    mob_instance _mobs;
+    size_t _mob_start;
+
+    // Operating modes
     bool _ai_mode;
+    bool _edit_mode;
 
-    inline void ai_run_path()
-    {
-        if (_ai_mode)
-        {
-            // Get the character rigid body
-            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-            // Animate the character with AI
-            const min::vec3<float> &p = body.get_position();
-
-            // Create path data
-            path_data data(_start, p, _dest);
-
-            const ai_path &top_path = _ai_opt.get_top_path();
-
-            // Calculate the next step, THIS IS NOT NORMALIZED
-            const min::vec3<float> step = top_path.path(_grid, data);
-
-            // Add force to body
-            const min::vec3<float> force(step.x(), step.y() * 2.0, step.z());
-            body.add_force(force * 2E2 * body.get_mass());
-        }
-    }
-    inline void ai_train(const size_t iterations) const
-    {
-        // Get character body
-        const min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Return the character position
-        const min::vec3<float> &p = body.get_position();
-
-        // train the ai
-        for (size_t i = 0; i < iterations; i++)
-        {
-            // Apply natural selection
-            _ai_opt.evolve(_grid, p, _dest);
-        }
-    }
     // character_load should only be called once!
     void character_load(const std::pair<min::vec3<float>, bool> &state)
     {
@@ -126,7 +97,7 @@ class world
         const min::vec3<float> half_extent(0.45, 0.95, 0.45);
         const min::vec3<float> &position = state.first;
         const min::aabbox<float, min::vec3> box(position - half_extent, position + half_extent);
-        _char_id = _simulation.add_body(box, 10.0, 1);
+        _char_id = _simulation.add_body(box, 10.0);
 
         // Get the physics body for editing
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
@@ -176,10 +147,10 @@ class world
         _gb.clear();
 
         // Get surrounding chunks for drawing
-        const std::vector<size_t> keys = _grid.get_view_chunks();
+        _grid.get_view_chunks(_view_chunks);
 
         // Add all chunks to the geometry buffer
-        for (const auto &key : keys)
+        for (const auto &key : _view_chunks)
         {
             const auto &chunk = _grid.get_chunk(key);
             if (chunk.vertex.size() > 0)
@@ -322,13 +293,14 @@ class world
           _scale(1, 1, 1),
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
-          _edit_mode(false),
           _grid(grid_size, chunk_size, view_chunk_size),
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _sky(_geom, grid_size),
           _dest(state.first),
-          _ai_mode(false)
+          _mob_start(1),
+          _ai_mode(false),
+          _edit_mode(false)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)
@@ -362,19 +334,19 @@ class world
         if (input.size() != 0)
         {
             // load the data into the trainer of previous run
-            _ai_opt.deserialize(input);
+            _ai_path.deserialize(input);
         }
-    }
-    ~world()
-    {
-        // Create output stream for saving bot
-        std::vector<uint8_t> output;
-        _ai_opt.serialize(output);
 
-        // Write AI data to file
-        game::save_file("data/ai/bot", output);
+        // Reserve space for collision cells
+        _player_col_cells.reserve(36);
+
+        // Reserve space for collision cells
+        _mob_col_cells.reserve(27);
+
+        // Reserve space for view chunks
+        _view_chunks.reserve(view_chunk_size * view_chunk_size * view_chunk_size);
     }
-    void add_block(const min::vec3<float> &center)
+    inline void add_block(const min::vec3<float> &center)
     {
         // Add to grid
         _grid.set_geometry(cgrid::snap(center), _scale, _preview_offset, _grid.get_atlas());
@@ -382,7 +354,7 @@ class world
         // generate new mesh
         generate_gb();
     }
-    void add_block(const min::ray<float, min::vec3> &r)
+    inline void add_block(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
         const min::vec3<float> traced = _grid.ray_trace_before(r, 4);
@@ -393,7 +365,7 @@ class world
         // generate new mesh
         generate_gb();
     }
-    void remove_block(const min::vec3<float> &point, const min::vec3<float> &position)
+    inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &position)
     {
         // Try to remove geometry from the grid
         const unsigned removed = _grid.set_geometry(cgrid::snap(point), _scale, _preview_offset, -1);
@@ -409,7 +381,7 @@ class world
             _particles.load(point, direction, 5.0);
         }
     }
-    void remove_block(const min::ray<float, min::vec3> &r)
+    inline void remove_block(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
         const min::vec3<float> traced = _grid.ray_trace_after(r, 5);
@@ -427,7 +399,34 @@ class world
             _particles.load(traced, r.get_direction() * -1.0, 5.0);
         }
     }
-    void character_jump(const min::vec3<float> &vel)
+    inline size_t add_mob(const min::vec3<float> &p)
+    {
+        // Create a mob
+        const size_t mob_id = _mobs.add_mob(p);
+
+        // Add to physics simulation
+        const min::aabbox<float, min::vec3> box = _mobs.mob_box(mob_id);
+        const size_t mob_phys_id = _simulation.add_body(box, 10.0);
+
+        // Get the physics body for editing
+        min::body<float, min::vec3> &body = _simulation.get_body(mob_phys_id);
+
+        // Set this body to be unrotatable
+        body.set_no_rotate();
+
+        return mob_id;
+    }
+    inline void mob_avoid(const size_t mob_index)
+    {
+        min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
+
+        // Get the avoidance direction
+        const min::vec3<float> &avoid = _ai_path.get_path().avoid();
+
+        // Add force to body to get unstuck
+        body.set_position(body.get_position() + avoid * 5.0);
+    }
+    inline void character_jump(const min::vec3<float> &vel)
     {
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
@@ -438,7 +437,7 @@ class world
             body.add_force(vel * 4000.0 * body.get_mass());
         }
     }
-    void character_move(const min::vec3<float> &vel)
+    inline void character_move(const min::vec3<float> &vel)
     {
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
@@ -448,30 +447,119 @@ class world
         // Add force to body
         body.add_force(dxz * 1E2 * body.get_mass());
     }
-    const min::vec3<float> &character_position() const
+    inline const min::vec3<float> &character_position() const
     {
         const min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
         // Return the character position
         return body.get_position();
     }
-    void character_warp(const min::vec3<float> &p)
+    inline void mob_path(const ai_path &path, const path_data &data, const size_t mob_index)
+    {
+        // Get the character rigid body
+        min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
+
+        // Calculate the next step, THIS IS NOT NORMALIZED
+        const min::vec3<float> &step = path.step();
+
+        // Add velocity to the body
+        body.set_linear_velocity(step);
+    }
+    inline const min::vec3<float> &mob_position(const size_t mob_index) const
+    {
+        const min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
+
+        // Return the character position
+        return body.get_position();
+    }
+    inline void mob_warp(const min::vec3<float> &p, const size_t mob_index)
+    {
+        min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
+
+        // Warp character to new position
+        body.set_position(p);
+    }
+    inline void character_warp(const min::vec3<float> &p)
     {
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
         // Warp character to new position
         body.set_position(p);
     }
-    void update(min::camera<float> &cam, const float dt)
+    void update_world_physics(const float dt)
     {
+        // Solve the AI path finding if toggled
+        if (_ai_mode)
+        {
+            const size_t mob_size = _mobs.size();
+            for (size_t i = 0; i < mob_size; i++)
+            {
+                // Get mob position, mob index offset taken care of
+                const min::vec3<float> &mob_p = mob_position(i);
+
+                // Create path data
+                path_data data(mob_p, _dest);
+
+                // Calculate step
+                _ai_path.calculate(_grid, data);
+
+                // mob index offset taken care of
+                mob_path(_ai_path, data, i);
+            }
+        }
+
         // Get the player physics object
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
-        // Solve the AI path finding if toggled
-        ai_run_path();
-
         // Get player position
         const min::vec3<float> &p = body.get_position();
+
+        // Solve the physics simulation
+        for (int i = 0; i < 10; i++)
+        {
+            // Get all cells that could collide
+            _grid.create_player_collision_cells(_player_col_cells, p);
+
+            // Add friction force
+            const min::vec3<float> &vel = body.get_linear_velocity();
+            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
+
+            // Add friction force opposing lateral motion
+            body.add_force(xz * body.get_mass() * -2.0);
+
+            // Solve static collisions
+            _simulation.solve_static(_player_col_cells, _char_id, dt / 10.0, 10.0);
+
+            // Do mob collisions
+            const size_t mob_size = _mobs.size();
+            for (size_t i = 0; i < mob_size; i++)
+            {
+                // Get mob position, mob index offset taken care of
+                const min::vec3<float> &mob_p = mob_position(i);
+
+                // Get all cells that could collide
+                _grid.create_mob_collision_cells(_mob_col_cells, mob_p);
+
+                // Solve static collisions
+                _simulation.solve_static(_mob_col_cells, _mob_start + i, dt / 10.0, 10.0);
+            }
+        }
+
+        // Update mob positions
+        const size_t mob_size = _mobs.size();
+        for (size_t i = 0; i < mob_size; i++)
+        {
+            const min::body<float, min::vec3> &mob_body = _simulation.get_body(_mob_start + i);
+            _mobs.update_position(mob_body.get_position(), i);
+        }
+    }
+    void update(min::camera<float> &cam, const float dt)
+    {
+        // Update the physics and AI in world
+        update_world_physics(dt);
+
+        // Get player position
+        const min::vec3<float> &p = character_position();
 
         // Detect if we crossed a chunk boundary
         bool is_valid = true;
@@ -486,20 +574,8 @@ class world
             generate_gb();
         }
 
-        // Solve the physics simulation
-        for (int i = 0; i < 10; i++)
-        {
-            const std::vector<min::aabbox<float, min::vec3>> col_blocks = _grid.create_collision_cells(p);
-
-            // Add friction force
-            const min::vec3<float> &vel = body.get_linear_velocity();
-            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
-
-            // Add friction force opposing lateral motion
-            body.add_force(xz * body.get_mass() * -2.0);
-
-            _simulation.solve_static(col_blocks, _char_id, dt / 10.0, 10.0);
-        }
+        // Update the mobs
+        _mobs.update(cam);
 
         // Update the particle buffer
         _particles.update(dt);
@@ -534,17 +610,32 @@ class world
             draw_placemark();
         }
 
+        // Draw the mobs
+        _mobs.draw();
+
         // Draw the particles
         _particles.draw(_preview, dt);
     }
-    void reset_scale()
+    inline bool get_ai_mode()
+    {
+        return _ai_mode;
+    }
+    inline bool get_edit_mode()
+    {
+        return _edit_mode;
+    }
+    inline const cgrid &get_grid() const
+    {
+        return _grid;
+    }
+    inline void reset_scale()
     {
         _scale = min::vec3<unsigned>(1, 1, 1);
 
         // Regenerate the preview mesh
         generate_pb();
     }
-    void set_atlas_id(const int8_t id)
+    inline void set_atlas_id(const int8_t id)
     {
         _grid.set_atlas(id);
 
@@ -605,50 +696,20 @@ class world
             }
         }
     }
-    bool get_edit_mode()
+    inline void set_destination(const min::vec3<float> &dest)
     {
-        return _edit_mode;
-    }
-    void set_train_point(const min::vec3<float> &p)
-    {
-        // Set start point
-        _start = character_position();
-
         // Set destination point
-        _dest = p;
+        _dest = dest;
     }
-    void set_train_point()
+    inline bool toggle_ai_mode()
     {
-        _dest = character_position();
-        std::cout << "Setting new destination" << std::endl;
-        std::cout << "X: " << _dest.x() << std::endl;
-        std::cout << "Y: " << _dest.y() << std::endl;
-        std::cout << "Z: " << _dest.z() << std::endl;
+        // Toggle flag and return result
+        return (_ai_mode = !_ai_mode);
     }
-    void train(const size_t iterations)
-    {
-        // Train the AI
-        ai_train(iterations);
-    }
-    bool toggle_edit_mode()
+    inline bool toggle_edit_mode()
     {
         // Toggle flag and return result
         return (_edit_mode = !_edit_mode);
-    }
-    bool toggle_ai_mode()
-    {
-        // Toggle the flag
-        _ai_mode = !_ai_mode;
-
-        // Load a new path when entering the mode
-        if (_ai_mode)
-        {
-            // Update the starting position
-            _start = character_position();
-        }
-
-        // Return the flag
-        return _ai_mode;
     }
     void grappling(const min::ray<float, min::vec3> &r)
     {

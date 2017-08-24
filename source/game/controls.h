@@ -65,8 +65,6 @@ class controls
         keyboard.add(min::window::key_code::F3);
         keyboard.add(min::window::key_code::KEYQ);
         keyboard.add(min::window::key_code::KEYR);
-        keyboard.add(min::window::key_code::KEYT);
-        keyboard.add(min::window::key_code::KEYY);
         keyboard.add(min::window::key_code::KEYW);
         keyboard.add(min::window::key_code::KEYS);
         keyboard.add(min::window::key_code::KEYA);
@@ -99,12 +97,6 @@ class controls
 
         // Register callback function R
         keyboard.register_keydown(min::window::key_code::KEYR, controls::toggle_ai_mode, (void *)this);
-
-        // Register callback function T
-        keyboard.register_keydown(min::window::key_code::KEYT, controls::toggle_train_mode, (void *)this);
-
-        // Register callback function Y
-        keyboard.register_keydown(min::window::key_code::KEYY, controls::set_train_point, (void *)this);
 
         // Register callback function W
         keyboard.register_keydown(min::window::key_code::KEYW, controls::forward, (void *)this);
@@ -249,7 +241,7 @@ class controls
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world and state pointers
+        // Get the world, state, and window pointers
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
 
@@ -265,52 +257,6 @@ class controls
         {
             state->set_game_mode("MODE: PLAY");
         }
-    }
-    static void toggle_train_mode(void *ptr, double step)
-    {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Cast to window pointer for setting window cursor
-        min::window *const win = control->get_window();
-
-        // Get the world and state pointers
-        game::world *const world = control->get_world();
-        game::state *const state = control->get_state();
-
-        // Pause the game
-        state->set_game_pause(true);
-        state->pause_lock(true);
-
-        // Turn off cursor if paused
-        win->display_cursor(false);
-
-        // Create background task
-        const auto task = [world, state]() {
-            // train AI for 10 iterations in background thread
-            world->train(10);
-
-            // Unpause the game
-            state->pause_lock(false);
-            state->set_game_pause(false);
-        };
-
-        // Launch the task in the background
-        std::thread t(task);
-
-        // Detach the thread
-        t.detach();
-    }
-    static void set_train_point(void *ptr, double step)
-    {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the world pointer
-        game::world *const world = control->get_world();
-
-        // toggle edit mode
-        world->set_train_point();
     }
     static void forward(void *ptr, double step)
     {

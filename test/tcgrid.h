@@ -19,7 +19,6 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #define __TEST_CGRID__
 
 #include <game/cgrid.h>
-#include <game/file.h>
 #include <stdexcept>
 #include <test.h>
 
@@ -30,30 +29,26 @@ bool test_cgrid()
     // Load the graph mesh with 128 pixel tile size
     game::cgrid grid(64, 8, 7);
 
-    // Test no segfault
-    const min::vec3<float> out_of_bounds(-64.00001, -64.00001, -64.00001);
-    std::vector<int8_t> neighbors = grid.get_neighbors(out_of_bounds);
-
-    // Check 26 borders
-    const size_t size = neighbors.size();
-    for (size_t i = 0; i < size - 1; i++)
-    {
-        out = out && compare(-2, neighbors[i]);
-        if (!out)
-        {
-            throw std::runtime_error("Failed cgrid get_neighbors out_of_bounds");
-        }
-    }
-
-    // Check one empty
-    out = out && compare(-1, neighbors[size - 1]);
+    // Test crashing cgrid
+    min::vec3<float> p(63.999999, 63.999999, 63.999999);
+    int atlas_id = grid.grid_value(p);
+    out = out && compare(-2, atlas_id);
     if (!out)
     {
-        throw std::runtime_error("Failed cgrid get_neighbors out_of_bounds");
+        throw std::runtime_error("Failed cgrid grid_value 1");
+    }
+
+    // Test crashing cgrid
+    p = min::vec3<float>(63.9999962, -2.25057721, -18.796402);
+    atlas_id = grid.grid_value(p);
+    out = out && compare(-1, atlas_id);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid grid_value 2");
     }
 
     // Check grid key for middle of grid
-    min::vec3<float> p(0.0, 0.0, 0.0);
+    p = min::vec3<float>(0.0, 0.0, 0.0);
     bool valid = true;
     size_t key = grid.grid_key(p, valid);
     out = out && valid;
@@ -83,6 +78,73 @@ bool test_cgrid()
     if (!out)
     {
         throw std::runtime_error("Failed cgrid grid_key 3");
+    }
+
+    // Test cgrid search
+    min::vec3<float> start(0.5, 36.0, -0.5);
+    min::vec3<float> stop(4.5, 31.5, 0.0);
+    std::vector<min::vec3<float>> path;
+    grid.path(path, start, stop);
+    out = out && compare(10, path.size());
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid path size");
+    }
+
+    // Check last point
+    out = out && compare(4.5, path[5].x(), 1E-4);
+    out = out && compare(35.5, path[5].y(), 1E-4);
+    out = out && compare(-0.5, path[5].z(), 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid path 1");
+    }
+
+    // Check next to last point
+    out = out && compare(4.5, path[4].x(), 1E-4);
+    out = out && compare(36.5, path[4].y(), 1E-4);
+    out = out && compare(-0.5, path[4].z(), 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid path 2");
+    }
+
+    // Check first point
+    out = out && compare(0.5, path[0].x(), 1E-4);
+    out = out && compare(36.5, path[0].y(), 1E-4);
+    out = out && compare(-0.5, path[0].z(), 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid path 3");
+    }
+
+    // Test cgrid hard search
+    start = min::vec3<float>(0.5, 36.0, -0.5);
+    stop = min::vec3<float>(0.0, -24.0, 35.0);
+    grid.path(path, start, stop);
+    out = out && compare(20, path.size());
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid hard path size");
+    }
+
+    // Test farthest point on incomplete path
+    out = out && compare(0.5, path[19].x(), 1E-4);
+    out = out && compare(17.5, path[19].y(), 1E-4);
+    out = out && compare(-0.5, path[19].z(), 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid hard path 1");
+    }
+
+    // Test searching outside the world
+    start = min::vec3<float>(66.0, 66.0, 66.0);
+    stop = min::vec3<float>(65.0, 65.0, 65.0);
+    grid.path(path, start, stop);
+    out = out && compare(0, path.size());
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid path outside world");
     }
 
     // return status

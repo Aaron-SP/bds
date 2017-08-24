@@ -184,6 +184,9 @@ class character
         // Change program back to md5 shaders
         _prog.use();
 
+        // clear depth for drawing character over terrain
+        glClear(GL_DEPTH_BUFFER_BIT);
+
         // Draw md5 model
         _skbuffer.draw(GL_TRIANGLES, 0);
     }

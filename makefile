@@ -26,11 +26,13 @@ endif
 
 # Compile parameters
 CPP = -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math -static -static-libgcc -static-libstdc++
-NATIVE = $(CPP) -march=native
+NATIVE =  $(CPP) -march=native
 BUILD32 = $(CPP) -m32
 BUILD64 = $(CPP) -m64
-GAME = -DGLEW_STATIC $(MGL_PATH)/platform/min/glew.cpp source/game.cpp -o bin/game
-TEST = -DGLEW_STATIC $(MGL_PATH)/platform/min/glew.cpp test/test.cpp -o bin/tests
+EXTRA = -DGLEW_STATIC $(MGL_PATH)/platform/min/glew.cpp
+GAME =  $(EXTRA) source/game.cpp -o bin/game
+TEST =  $(EXTRA) test/test.cpp -o bin/tests
+TRAIN = $(EXTRA) source/train.cpp -o bin/train
 
 # Include directories
 LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_PATH)/platform -I$(MGL_PATH)/scene -I$(MGL_PATH)/renderer -Isource -I$(MML_PATH)/math $(FREETYPE2_INCLUDE)
@@ -38,20 +40,26 @@ TEST_SOURCES = -Itest
 
 # Default run target
 build: tests
-	g++ $(LIB_SOURCES) $(NATIVE) $(GAME) $(LINKER) 2> "gcc.txt"
+	g++ $(LIB_SOURCES) $(NATIVE)  $(GAME)  $(LINKER) 2> "game.txt"
+	g++ $(LIB_SOURCES) $(NATIVE)  $(TRAIN) $(LINKER) 2> "train.txt"
 build32: tests32
-	g++ $(LIB_SOURCES) $(BUILD32) $(GAME) $(LINKER) 2> "gcc.txt"
+	g++ $(LIB_SOURCES) $(BUILD32) $(GAME)  $(LINKER) 2> "game.txt"
+	g++ $(LIB_SOURCES) $(BUILD32) $(TRAIN) $(LINKER) 2> "train.txt"
 build64: tests64
-	g++ $(LIB_SOURCES) $(BUILD64) $(GAME) $(LINKER) 2> "gcc.txt"
+	g++ $(LIB_SOURCES) $(BUILD64) $(GAME)  $(LINKER) 2> "game.txt"
+	g++ $(LIB_SOURCES) $(BUILD64) $(TRAIN) $(LINKER) 2> "train.txt"
 tests:	
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(NATIVE) $(TEST) $(LINKER) 2> "gcc.txt"
+	g++ $(LIB_SOURCES) $(TEST_SOURCES)  $(NATIVE) $(TEST) $(LINKER) 2> "test.txt"
 tests32:	
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD32) $(TEST) $(LINKER) 2> "gcc.txt"
+	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD32) $(TEST) $(LINKER) 2> "test.txt"
 tests64:	
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD64) $(TEST) $(LINKER) 2> "gcc.txt"
+	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD64) $(TEST) $(LINKER) 2> "test.txt"
 
 # clean targets
 clean:
-	rm -f gcc.txt
+	rm -f game.txt
+	rm -f train.txt
+	rm -f test.txt
 	rm -f bin/game
 	rm -f bin/tests
+	rm -f bin/train

@@ -21,368 +21,132 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <algorithm>
 #include <game/cgrid.h>
 #include <game/file.h>
+#include <game/path.h>
 #include <min/intersect.h>
 #include <min/vec3.h>
-#include <mml/nnet.h>
+#include <mml/nneat.h>
 #include <mml/vec.h>
 
 namespace game
 {
 
-class path_data
-{
-  private:
-    min::vec3<float> _destination;
-    min::vec3<float> _direction;
-    min::vec3<float> _position;
-    min::vec3<float> _start;
-    float _remain;
-    float _travel;
-
-    inline void update_direction()
-    {
-        // Update direction vector
-        _direction = _destination - _position;
-
-        // Normalize direction if needed
-        _remain = _direction.magnitude();
-        if (_remain > 1E-4)
-        {
-            const float inv_mag = 1.0 / _remain;
-            _direction *= inv_mag;
-        }
-    }
-    inline void update_travel()
-    {
-        _travel = (_position - _start).magnitude();
-    }
-
-  public:
-    path_data(const min::vec3<float> &s, const min::vec3<float> &d)
-        : _destination(d), _position(s), _start(s),
-          _remain(0.0), _travel(0.0)
-    {
-        // Update direction
-        update_direction();
-    }
-    path_data(const min::vec3<float> &s, const min::vec3<float> &p, const min::vec3<float> &d)
-        : _destination(d), _position(p), _start(s),
-          _remain(0.0), _travel(0.0)
-    {
-        // Update direction
-        update_direction();
-
-        // Update distance travelled
-        update_travel();
-    }
-    inline const min::vec3<float> &get_destination() const
-    {
-        return _destination;
-    }
-    inline const min::vec3<float> &get_direction() const
-    {
-        return _direction;
-    }
-    inline const min::vec3<float> &get_position() const
-    {
-        return _position;
-    }
-    inline const min::vec3<float> &get_start() const
-    {
-        return _start;
-    }
-    inline float get_remain() const
-    {
-        return _remain;
-    }
-    inline float get_travel() const
-    {
-        return _travel;
-    }
-    inline min::vec3<float> step(const min::vec3<float> &dir, const float step_size) const
-    {
-        // return new position
-        return _position + (dir * step_size);
-    }
-    inline void update(const min::vec3<float> &p)
-    {
-        // Update the position
-        _position = p;
-
-        // Update the direction
-        update_direction();
-
-        // Update distance travelled
-        update_travel();
-    }
-};
-
 class ai_path
 {
   private:
-    static constexpr size_t IN = 34;
+    static constexpr size_t IN = 38;
     static constexpr size_t OUT = 4;
     static constexpr float _step_size = 1.0;
-    mml::nnet<float, IN, OUT> _net;
+    mml::mapper<float> _map;
+    mml::nneat<float, IN, OUT> _net;
+    mutable path _path;
+    mutable min::vec3<float> _step;
+    mutable std::pair<size_t, size_t> _collisions;
 
-    static size_t collisions(const cgrid &grid, const min::vec3<float> &p)
-    {
-        size_t out = 0;
-
-        // Create player mesh at location
-        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
-        const min::aabbox<float, min::vec3> player(p - half_extent, p + half_extent);
-
-        // Create collision blocks
-        const std::vector<min::aabbox<float, min::vec3>> blocks = grid.create_collision_cells(p);
-        for (const auto &b : blocks)
-        {
-            if (min::intersect(player, b))
-            {
-                out++;
-            }
-        }
-
-        return out;
-    }
-    min::vec3<float> model(const cgrid &grid, const path_data &data) const
-    {
-        // Must be 27 in size
-        const std::vector<int8_t> neighbors = grid.get_neighbors(data.get_position());
-        if (neighbors.size() != 27)
-        {
-            throw std::runtime_error("ai_path: shit is broken");
-        }
-
-        // Calculate search direction with respect to gradient
-        const min::vec3<float> &dir = data.get_direction();
-
-        // Create output
-        min::vec3<float> change;
-
-        // Check x collisions
-        bool x_flag = true;
-        {
-            change.x(dir.x());
-            if (dir.x() > 0.0)
-            {
-                x_flag = x_flag && (neighbors[21] == -1);
-                x_flag = x_flag && (neighbors[22] == -1);
-                x_flag = x_flag && (neighbors[23] == -1);
-            }
-            else
-            {
-                x_flag = x_flag && (neighbors[3] == -1);
-                x_flag = x_flag && (neighbors[4] == -1);
-                x_flag = x_flag && (neighbors[5] == -1);
-            }
-
-            // Zero out x
-            if (!x_flag)
-            {
-                change.x(0.0);
-            }
-        }
-
-        // Check y collisions
-        bool y_flag = true;
-        {
-            change.y(dir.y());
-            if (dir.y() > 0.0)
-            {
-                y_flag = y_flag && (neighbors[16] == -1);
-            }
-            else
-            {
-                y_flag = y_flag && (neighbors[10] == -1);
-            }
-
-            // Zero out y
-            if (!y_flag)
-            {
-                change.y(0.0);
-            }
-        }
-
-        // Check z collisions
-        bool z_flag = true;
-        {
-            change.z(dir.z());
-            if (dir.z() > 0.0)
-            {
-                z_flag = z_flag && (neighbors[5] == -1);
-                z_flag = z_flag && (neighbors[14] == -1);
-                z_flag = z_flag && (neighbors[23] == -1);
-            }
-            else
-            {
-                z_flag = z_flag && (neighbors[3] == -1);
-                z_flag = z_flag && (neighbors[12] == -1);
-                z_flag = z_flag && (neighbors[21] == -1);
-            }
-
-            // Zero out z
-            if (!z_flag)
-            {
-                change.z(0.0);
-            }
-        }
-
-        // Choose the smallest of X or Z to move around corners
-        if (!x_flag && std::abs(dir.x()) <= std::abs(dir.z()))
-        {
-            change.x(dir.x());
-        }
-        else if (!z_flag && std::abs(dir.z()) <= std::abs(dir.x()))
-        {
-            change.z(dir.z());
-        }
-
-        // Hurdle obstacle
-        {
-            bool hurdle = false;
-            hurdle = hurdle || (neighbors[3] != -1 && neighbors[6] == -1);
-            hurdle = hurdle || (neighbors[4] != -1 && neighbors[7] == -1);
-            hurdle = hurdle || (neighbors[5] != -1 && neighbors[8] == -1);
-            hurdle = hurdle || (neighbors[12] != -1 && neighbors[15] == -1);
-            hurdle = hurdle || (neighbors[13] != -1 && neighbors[16] == -1);
-            hurdle = hurdle || (neighbors[14] != -1 && neighbors[17] == -1);
-            hurdle = hurdle || (neighbors[21] != -1 && neighbors[24] == -1);
-            hurdle = hurdle || (neighbors[22] != -1 && neighbors[25] == -1);
-            hurdle = hurdle || (neighbors[23] != -1 && neighbors[26] == -1);
-
-            const bool moving_x = (std::abs(dir.x()) > 0.1);
-            const bool moving_z = (std::abs(dir.z()) > 0.1);
-            if (hurdle && (!moving_x || !moving_z))
-            {
-                change.y(1.0);
-            }
-        }
-
-        bool turbo = false;
-        turbo = turbo || (neighbors[3] != -1 && neighbors[6] == -1);
-        turbo = turbo || (neighbors[4] != -1 && neighbors[7] == -1);
-        turbo = turbo || (neighbors[5] != -1 && neighbors[8] == -1);
-        turbo = turbo || (neighbors[12] != -1 && neighbors[15] == -1);
-        turbo = turbo || (neighbors[13] != -1 && neighbors[16] == -1);
-        turbo = turbo || (neighbors[14] != -1 && neighbors[17] == -1);
-        turbo = turbo || (neighbors[21] != -1 && neighbors[24] == -1);
-        turbo = turbo || (neighbors[22] != -1 && neighbors[25] == -1);
-        turbo = turbo || (neighbors[23] != -1 && neighbors[26] == -1);
-
-        // Normalize the output, default to zero
-        change.normalize_safe(min::vec3<float>());
-        if (turbo)
-        {
-            change.y(change.y() + 1.0);
-        }
-
-        // Override settings if reached goal
-        if (data.get_remain() < 0.25)
-        {
-            change = min::vec3<float>();
-        }
-
-        // return new direction
-        return change;
-    }
     void load(const cgrid &grid, const path_data &data) const
     {
         // Set inputs
         mml::vector<float, IN> in;
+
+        // Update the path
+        _path.update(grid, data);
+
+        // Get path data input properties
+        const min::vec3<float> avoid = _path.avoid();
+        const min::vec3<float> dfs = _path.dfs(grid, data);
+        const min::vec3<float> ray = _path.ray_sorted(0);
         const min::vec3<float> &dest = data.get_destination();
         const min::vec3<float> &position = data.get_position();
 
-        // Calculate input
-        const float scale = 1.0 / 128.0;
-        const min::vec3<float> ds = dest * scale;
-        const min::vec3<float> ps = position * scale;
-        in[0] = ds.x();
-        in[1] = ds.y();
-        in[2] = ds.z();
-        in[3] = ps.x();
-        in[4] = ps.y();
-        in[5] = ps.z();
+        // Map DFS search data from [-1, 1] to [0, 1] range
+        in[0] = _map.map(dfs.x());
+        in[1] = _map.map(dfs.y());
+        in[2] = _map.map(dfs.z());
 
-        // Map data from [-1, 1] to [0, 1] range
-        in[0] = 0.5 * (1.0 + in[0]);
-        in[1] = 0.5 * (1.0 + in[1]);
-        in[2] = 0.5 * (1.0 + in[2]);
-        in[3] = 0.5 * (1.0 + in[3]);
-        in[4] = 0.5 * (1.0 + in[4]);
-        in[5] = 0.5 * (1.0 + in[5]);
+        // Map avoid data from [-1, 1] to [0, 1] range
+        in[3] = _map.map(avoid.x());
+        in[4] = _map.map(avoid.y());
+        in[5] = _map.map(avoid.z());
 
-        // Must be 27 in size
-        std::vector<min::vec3<float>> eyes = grid.get_cubic_rays(position);
-        if (eyes.size() != 27)
-        {
-            throw std::runtime_error("ai_path: eyes incorrect size");
-        }
+        // Map ray data from [-1, 1] to [0, 1] range
+        in[6] = _map.map(ray.x());
+        in[7] = _map.map(ray.y());
+        in[8] = _map.map(ray.z());
+
+        // Set the input for distance from destination [0, 1] range
+        const float m = (dest - position).magnitude();
+        in[9] = std::min(1.0 / m, 1.0);
+
+        // Set input for number of possible colliding cells to [0, 1] range
+        _collisions = grid.count_mob_collision_cells(position);
+        in[10] = static_cast<float>(_collisions.second) / 27.0;
+
+        // Get the 27 eye rays for inputting into sensor
+        const float *const eye_mag = _path.get_eye_mag();
 
         // Create terrain input encoding
         for (size_t i = 0; i < 27; i++)
         {
-            // Calculate distance to object
-            const float d = (eyes[i] - position).magnitude();
-
             // This is a special case for out of grid, which is infinitely far away
-            const float dist = (d < 1.0) ? ((d < 0.001) ? 1E6 : 1.0) : d;
+            const float d = (eye_mag[i] < 0.001) ? 1E6 : eye_mag[i];
 
             // Map data to [0, 1] range
-            in[6 + i] = 1.0 / dist;
+            in[11 + i] = std::min(1.0 / d, 1.0);
         }
-
-        // Set the impulse for distance from destination
-        const float m = (ds - ps).magnitude();
-        const float mag = (m < 1.0) ? 1.0 : m;
-        in[33] = 1.0 / mag;
 
         // Set input
         _net.set_input(in);
     }
     min::vec3<float> unload(const mml::vector<float, OUT> &output) const
     {
-        // Unpack direction to move [-1, 1]
-        const float x = (output[0] * 2.0) - 1.0;
-        const float y = (output[1] * 2.0) - 1.0;
-        const float z = (output[2] * 2.0) - 1.0;
-
-        // Unpack step size [0, 2]
+        // Unmap values
+        const float x = _map.unmap(output[0]);
+        const float y = _map.unmap(output[1]);
+        const float z = _map.unmap(output[2]);
         const float step = output[3] * 2.0;
+
+        // Calculate direction to move
         return min::vec3<float>(x, y, z) * step;
     }
-    min::vec3<float> solve(const cgrid &grid, const path_data &data) const
+
+  public:
+    ai_path() : _map(-1.0, 1.0)
+    {
+        // 1/13 topology, 1/101 add_node, 1/113 remove_node, 1/23 scramble; else add_conn
+        _net.set_topology_constants(101, 11, 5, 2);
+        _net.set_connection_limit(864);
+        _net.set_node_limit(74);
+    }
+    ai_path(const std::vector<uint8_t> &stream) : _map(-1.0, 1.0)
+    {
+        this->deserialize(stream);
+
+        // 1/13 topology, 1/101 add_node, 1/113 remove_node, 1/23 scramble; else add_conn
+        _net.set_topology_constants(101, 11, 5, 2);
+        _net.set_connection_limit(864);
+        _net.set_node_limit(74);
+    }
+    static inline ai_path breed(const ai_path &p1, const ai_path &p2)
+    {
+        // Create new path
+        ai_path out;
+        out._net = mml::nneat<float, IN, OUT>::breed(p1._net, p2._net);
+
+        // return path
+        return out;
+    }
+    inline min::vec3<float> &calculate(const cgrid &grid, const path_data &data) const
     {
         // Load neural net
         load(grid, data);
 
         // Calculate output
-        const mml::vector<float, OUT> out = _net.calculate_sigmoid();
+        const mml::vector<float, OUT> out = _net.calculate();
 
-        // Unload output
-        return unload(out);
-    }
+        // Unload output NOT NORMALIZED
+        _step = unload(out);
 
-  public:
-    ai_path()
-    {
-        // Initialize top_net
-        _net.add_layer(34);
-        _net.add_layer(18);
-        _net.add_layer(9);
-        _net.finalize();
-    }
-    ai_path(const mml::nnet<float, IN, OUT> &net)
-    {
-        _net = net;
-    }
-    ai_path(const std::vector<uint8_t> &stream)
-    {
-        deserialize(stream);
-    }
-    static inline ai_path breed(const ai_path &p1, const ai_path &p2)
-    {
-        return ai_path(mml::nnet<float, IN, OUT>::breed(p1._net, p2._net));
+        // return step
+        return _step;
     }
     inline void deserialize(const std::vector<uint8_t> &stream)
     {
@@ -390,126 +154,108 @@ class ai_path
         size_t next = 0;
         const std::vector<float> data = min::read_le_vector<float>(stream, next);
 
-        // Must definalize the net to deserialize it
-        _net.reset();
+        // Deserialize the net
         _net.deserialize(data);
     }
-    inline void mutate(mml::net_rng<float> &rng)
+    void debug() const
     {
-        _net.mutate(rng);
-    }
-    inline float fitness_multi(const cgrid &grid, path_data &p_data, const size_t moves) const
-    {
-        float score = 0.0;
+        // Print detailed net information
+        _net.debug_connections();
 
-        // For N moves
-        for (size_t i = 0; i < moves; i++)
-        {
-            score += fitness(grid, p_data);
-        }
-
-        // return fitness score
-        return score;
+        // Print basic stuff
+        std::cout << "Connection count: " << _net.get_connections() << std::endl;
+        std::cout << "Node size: " << _net.get_nodes() << std::endl;
     }
     inline float fitness(const cgrid &grid, path_data &p_data) const
     {
         float score = 0.0;
 
         // Get new travel direction, THIS IS NOT NORMALIZED
-        const min::vec3<float> dir = solve(grid, p_data);
+        const min::vec3<float> &step_dir = calculate(grid, p_data);
 
-        // Calculate distance to starting point
-        const min::vec3<float> next = p_data.step(dir, _step_size);
+        // Calculate distance to starting point, max step is sqrt(3*2*2)
+        const min::vec3<float> next = p_data.step(step_dir, _step_size);
 
         // Check if we picked a bad direction and return start position
         const int8_t atlas = grid.grid_value(next);
         if (atlas != -1)
         {
             // Punish running into a wall
-            score -= 1.0;
+            score -= 11.0;
         }
         else
         {
+            // Move to next point
             p_data.update(next);
 
-            // Discourage zero moves
-            const float travel = p_data.get_travel();
-            if (travel < 0.20)
+            // Punish zero moves, always greater than zero
+            const float travel_step = p_data.get_travel_step();
+            if (travel_step < 0.15)
             {
-                score -= 1.0;
+                score -= 0.5;
+            }
+            else
+            {
+                // Reward based on traveling distance along direction vector
+                const float angle_step = p_data.get_angle_step();
+
+                // Scale by (1.0 / sqrt(3*2*2)), reward lvl 3
+                score += angle_step * 0.2886;
             }
         }
 
-        // Pay the life tax, allows for 40 moves between successes
-        score -= 0.25;
-
-        // If we got to the goal break out
+        // Reward getting to goal
         const float remain = p_data.get_remain();
-        if (remain < 1.0)
+        if (remain >= 1.0)
         {
-            // Reward success here
-            score += 10.0;
+            // reward lvl 5
+            score += 100.0 / remain;
+        }
+        else
+        {
+            score += 100.0;
+        }
+
+        // Reward being in populated areas with no collisions
+        const size_t count = _collisions.first;
+        if (count == 0)
+        {
+            // Scale by 1 / 27, reward lvl 2
+            score += _collisions.second * 0.03703;
+        }
+        else
+        {
+            // Punish normalized to probability of collision
+            const float surround = _collisions.second + 1;
+            score -= count / surround;
         }
 
         // return fitness score
         return score;
     }
-    inline float optimize(mml::net_rng<float> &rng, const cgrid &grid, const min::vec3<float> &start, const min::vec3<float> &dest, const size_t iterations)
+    inline const path &get_path() const
     {
-        float error = 0.0;
-        path_data p_data(start, dest);
-
-        // Do number of steps on path
-        for (size_t i = 0; i < iterations; i++)
-        {
-            // Create deviation from path for training
-            const min::vec3<float> dir = model(grid, p_data);
-
-            // Load input to neural net
-            load(grid, p_data);
-
-            // Calculate the net
-            _net.calculate_sigmoid();
-
-            mml::vector<float, OUT> set_point;
-            set_point[0] = 0.5 * (1.0 + dir.x());
-            set_point[1] = 0.5 * (1.0 + dir.y());
-            set_point[2] = 0.5 * (1.0 + dir.z());
-
-            // Train input to be output
-            _net.backprop_sigmoid(set_point);
-
-            // Check that the train works
-            const mml::vector<float, OUT> output = _net.calculate_sigmoid();
-
-            // set the error term
-            error = (output - set_point).square_magnitude();
-
-            // Step in calculated direction
-            const min::vec3<float> p = p_data.step(dir, _step_size);
-
-            // Update position
-            p_data.update(p);
-        }
-
-        return error;
+        return _path;
+    }
+    inline void mutate(mml::net_rng<float> &rng)
+    {
+        _net.mutate(rng);
+    }
+    inline const min::vec3<float> &step() const
+    {
+        // THIS IS NOT NORMALIZED
+        return _step;
     }
     inline void randomize(mml::net_rng<float> &rng)
     {
         _net.randomize(rng);
     }
-    inline std::vector<float> serialize() const
+    inline void serialize(std::vector<uint8_t> &stream) const
     {
-        return _net.serialize();
-    }
-    min::vec3<float> simulate_path(const cgrid &grid, const path_data &data) const
-    {
-        return this->model(grid, data);
-    }
-    min::vec3<float> path(const cgrid &grid, const path_data &data) const
-    {
-        // THIS IS NOT NORMALIZED
-        return this->solve(grid, data);
+        const std::vector<float> data = _net.serialize();
+
+        // Write data into stream
+        min::write_le_vector<float>(stream, data);
     }
 };
 }

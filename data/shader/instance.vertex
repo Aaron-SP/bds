@@ -1,0 +1,40 @@
+#version 330 core
+
+layout (location = 0) in vec4 vertex;
+layout (location = 1) in vec2 uv;
+layout (location = 2) in vec3 normal;
+
+out vec3 out_normal;
+out vec2 out_uv;
+out vec4 out_vertex;
+flat out mat4 out_view;
+
+#define MAX_NUM_TOTAL_MATRIX 2050
+layout(std140) uniform matrix_block
+{
+    mat4 matrix[MAX_NUM_TOTAL_MATRIX];
+    int size;
+} matrix_buffer;
+
+void main(void)
+{
+    // Get the model matrix from the uniform buffer
+    mat4 pv = matrix_buffer.matrix[0];
+    mat4 view = matrix_buffer.matrix[1];
+    mat4 model = matrix_buffer.matrix[2 + gl_InstanceID];
+
+	// Calculate transformed position
+	gl_Position =  pv * model * vertex;
+
+    // Calculate the normal in world coordinates
+    out_normal = normalize(model * vec4(normal, 1)).xyz;
+
+	// Pass texture coordinates to fragment shader
+	out_uv = uv;
+
+    // Calculate the vertex in world coordinates
+    out_vertex = model * vertex;
+
+    // Pass the view matrix to the fragment shader
+    out_view = view;
+}

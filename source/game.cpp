@@ -15,9 +15,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <game/ai_trainer.h>
+#include <game/ai_path.h> // <--- this is bullshit
 #include <game/controls.h>
 #include <game/file.h>
+#include <game/goal_seek.h>
 #include <game/state.h>
 #include <game/text.h>
 #include <game/world.h>
@@ -43,7 +44,7 @@ class mglcraft
     game::text _text;
     game::world _world;
     game::controls _controls;
-    game::ai_trainer _trainer;
+    game::goal_seek _goal_seek;
 
     void load_text()
     {
@@ -64,6 +65,9 @@ class mglcraft
 
         // Game mode
         _text.add_text("MODE: PLAY:", 10, 376);
+
+        // Destination
+        _text.add_text("DEST:", 10, 348);
     }
     std::pair<min::vec3<float>, bool> load_state()
     {
@@ -134,6 +138,23 @@ class mglcraft
         // Write data to file
         game::save_file("bin/state", stream);
     }
+    std::pair<unsigned, unsigned> user_input()
+    {
+        if (_state.get_user_input())
+        {
+            // Get the cursor coordinates
+            const auto c = _win.get_cursor();
+
+            // Reset cursor position
+            update_cursor();
+
+            // return the mouse coordinates
+            return c;
+        }
+
+        // return no mouse movement
+        return std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
+    }
 
   public:
     // Load window shaders and program
@@ -142,7 +163,7 @@ class mglcraft
           _text(28),
           _world(load_state(), 64, 8, 7),
           _controls(_win, _state.get_camera(), _state, _text, _world),
-          _trainer(_world)
+          _goal_seek(_world)
     {
         // Set depth and cull settings
         min::settings::initialize();
@@ -154,10 +175,14 @@ class mglcraft
         _win.display_cursor(false);
 
         // Maximize window
-        //_win.maximize();
+        _win.maximize();
 
         // Update cursor position for tracking
         update_cursor();
+
+        // Test adding a mob
+        const min::vec3<float> p(-4.5, 30.5, 4.5);
+        _world.add_mob(p);
     }
     ~mglcraft()
     {
@@ -176,15 +201,11 @@ class mglcraft
         // Get player physics body position
         const min::vec3<float> &p = _world.character_position();
 
-        // Get the cursor coordinates
-        const auto c = std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
-        //const auto c = _win.get_cursor();
+        // get user input
+        const auto c = user_input();
 
         // Must update state properties, camera before drawing world
         _state.update(p, c, _win.get_width(), _win.get_height(), dt);
-
-        // Reset cursor position
-        //update_cursor();
 
         // Update the world state
         _world.update(_state.get_camera(), dt);
@@ -193,7 +214,7 @@ class mglcraft
         _world.draw(dt);
 
         // Draw things related to player state
-        _state.draw(_state.get_camera(), dt);
+        _state.draw(dt);
 
         // Draw the text
         _text.draw();
@@ -210,9 +231,14 @@ class mglcraft
     {
         _win.set_title(title);
     }
-    void train_ai()
+    void path_ai()
     {
-        _trainer.train(_world);
+        // If AI is in control
+        if (_world.get_ai_mode())
+        {
+            // Perform goal seek
+            _goal_seek.seek(_world, 0);
+        }
     }
     void update_cursor()
     {
@@ -237,7 +263,7 @@ class mglcraft
             // Update player position debug text
             const min::vec3<float> &p = _world.character_position();
             std::ostringstream stream;
-            stream << std::fixed << std::setprecision(4) << "X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
+            stream << "POS- " << std::fixed << std::setprecision(4) << "X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
             _text.update_text(stream.str(), 2);
 
             // Clear and reset the stream
@@ -246,12 +272,25 @@ class mglcraft
 
             // Update player direction debug text
             const min::vec3<float> &f = _state.get_camera().get_forward();
-            stream << "X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
+            stream << "DIR- X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
             _text.update_text(stream.str(), 3);
+
+            // Clear and reset the stream
+            stream.clear();
+            stream.str(std::string());
 
             // Update the game mode text
             const std::string &mode = _state.get_game_mode();
             _text.update_text(mode, 4);
+
+            // Update the destination text
+            const min::vec3<float> &goal = _goal_seek.get_goal();
+            stream << "DEST- X: " << goal.x() << ", Y: " << goal.y() << ", Z: " << goal.z();
+            _text.update_text(stream.str(), 5);
+
+            // Clear and reset the stream
+            stream.clear();
+            stream.str(std::string());
 
             // Upload changes
             _text.upload();
@@ -271,14 +310,14 @@ void run()
     mglcraft game;
 
     // Setup controller to run at 60 frames per second
-    const int frames = 60;
+    const size_t frames = 60;
     min::loop_sync sync(frames);
     double frame_time = 0.0;
 
     // User can close with Q or use window manager
     while (!game.is_closed())
     {
-        for (int i = 0; i < frames; i++)
+        for (size_t i = 0; i < frames; i++)
         {
             // Start synchronizing the loop
             sync.start();
@@ -305,7 +344,7 @@ void run()
         }
 
         // Train the AI every second
-        game.train_ai();
+        game.path_ai();
 
         // Update the debug text
         game.update_text();
