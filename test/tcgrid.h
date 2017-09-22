@@ -85,7 +85,7 @@ bool test_cgrid()
     min::vec3<float> stop(4.5, 31.5, 0.0);
     std::vector<min::vec3<float>> path;
     grid.path(path, start, stop);
-    out = out && compare(10, path.size());
+    out = out && compare(11, path.size());
     if (!out)
     {
         throw std::runtime_error("Failed cgrid path size");
@@ -122,7 +122,7 @@ bool test_cgrid()
     start = min::vec3<float>(0.5, 36.0, -0.5);
     stop = min::vec3<float>(0.0, -24.0, 35.0);
     grid.path(path, start, stop);
-    out = out && compare(20, path.size());
+    out = out && compare(21, path.size());
     if (!out)
     {
         throw std::runtime_error("Failed cgrid hard path size");

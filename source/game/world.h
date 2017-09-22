@@ -326,17 +326,6 @@ class world
         // Load character
         character_load(state);
 
-        // Load the AI script
-        std::vector<uint8_t> input;
-
-        // Load data into stream from AI file
-        game::load_file("data/ai/bot", input);
-        if (input.size() != 0)
-        {
-            // load the data into the trainer of previous run
-            _ai_path.deserialize(input);
-        }
-
         // Reserve space for collision cells
         _player_col_cells.reserve(36);
 
@@ -415,16 +404,6 @@ class world
         body.set_no_rotate();
 
         return mob_id;
-    }
-    inline void mob_avoid(const size_t mob_index)
-    {
-        min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
-
-        // Get the avoidance direction
-        const min::vec3<float> &avoid = _ai_path.get_path().avoid();
-
-        // Add force to body to get unstuck
-        body.set_position(body.get_position() + avoid * 5.0);
     }
     inline void character_jump(const min::vec3<float> &vel)
     {

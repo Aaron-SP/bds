@@ -32,10 +32,7 @@ class path_data
     min::vec3<float> _destination;
     min::vec3<float> _direction;
     min::vec3<float> _position;
-    float _angle;
     float _remain;
-    float _travel;
-    float _travel_step;
 
     inline void update_direction()
     {
@@ -53,15 +50,10 @@ class path_data
 
   public:
     path_data(const min::vec3<float> &s, const min::vec3<float> &d)
-        : _destination(d), _position(s),
-          _angle(0.0), _remain(0.0), _travel(0.0), _travel_step(0.0)
+        : _destination(d), _position(s), _remain(0.0)
     {
         // Update direction
         update_direction();
-    }
-    inline float get_angle_step() const
-    {
-        return _travel_step * _angle;
     }
     inline const min::vec3<float> &get_destination() const
     {
@@ -79,42 +71,16 @@ class path_data
     {
         return _remain;
     }
-    inline float get_travel_step() const
-    {
-        return _travel_step;
-    }
-    inline float get_travel() const
-    {
-        return _travel;
-    }
     inline min::vec3<float> step(const min::vec3<float> &dir, const float step_size)
     {
         // Calculate step
         const min::vec3<float> step = dir * step_size;
-
-        // Calculate the travel step
-        _travel_step = step.magnitude();
-
-        // Calculate angle with travel direction
-        // Normalize direction since step is NOT NORMALIZED
-        if (_travel_step > 1E-3)
-        {
-            const min::vec3<float> n = step * (1.0 / _travel_step);
-            _angle = _direction.dot(n);
-        }
-        else
-        {
-            _angle = 0;
-        }
 
         // return new position
         return _position + step;
     }
     inline void update(const min::vec3<float> &p)
     {
-        // Update distance travelled
-        _travel += _travel_step;
-
         // Update the position
         _position = p;
 
@@ -134,47 +100,17 @@ class path_data
 class path
 {
   private:
-    static constexpr size_t eye_size = 27;
     static constexpr float path_expire = 5.0;
-    std::vector<min::vec3<float>> _eye;
-    min::vec3<float> _eye_dir[eye_size];
-    float _eye_mag[eye_size];
-    float _eye_dot[eye_size];
-    size_t _eye_dot_index[eye_size];
     std::vector<min::vec3<float>> _path;
     size_t _path_index;
-    min::vec3<float> _avoid;
-
-    void calculate_eye_rays(const cgrid &grid, const path_data &data)
-    {
-        const min::vec3<float> &position = data.get_position();
-
-        // Must be eye_size in size
-        grid.get_cubic_rays(_eye, position);
-        if (_eye.size() != eye_size)
-        {
-            throw std::runtime_error("ai_path: eyes incorrect size");
-        }
-    }
 
   public:
-    path() : _eye_dir{}, _eye_mag{}, _eye_dot{}, _eye_dot_index{}, _path_index(0)
+    path() : _path_index(0)
     {
-        // Reserve space for eye vector
-        _eye.reserve(eye_size);
-
         // Reserve space for path
         _path.reserve(20);
     }
-    min::vec3<float> avoid() const
-    {
-        return _avoid;
-    }
-    const float *const get_eye_mag() const
-    {
-        return _eye_mag;
-    }
-    min::vec3<float> dfs(const cgrid &grid, const path_data &data)
+    const min::vec3<float> step(const cgrid &grid, const path_data &data)
     {
         // Get data points
         const min::vec3<float> &p = data.get_position();
@@ -189,7 +125,7 @@ class path
             // Check if we have arrived at this point
             const min::vec3<float> dp = point - p;
             const float mag = dp.magnitude();
-            if (mag <= 1.0)
+            if (mag <= 0.5)
             {
                 // Increment the index
                 _path_index++;
@@ -204,14 +140,13 @@ class path
             // Normalize direction?
             if (mag > 1E-3)
             {
-                // Return the direction to next point
+                // Normalize dfs direction and cache it
                 const float inv_mag = 1.0 / mag;
                 return dp * inv_mag;
             }
-            else
-            {
-                return dp;
-            }
+
+            // Return the direction to next point
+            return dp;
         }
 
         // Get a path between the two points
@@ -235,28 +170,10 @@ class path
     {
         return _path;
     }
-    min::vec3<float> ray_index(const size_t index) const
-    {
-        // return the best ray
-        return _eye_dir[index];
-    }
-    min::vec3<float> ray_sorted(const size_t index) const
-    {
-        // return the best ray
-        return _eye_dir[_eye_dot_index[index]];
-    }
     void update(const cgrid &grid, const path_data &data)
     {
         // Get data points
         const min::vec3<float> &p = data.get_position();
-        const min::vec3<float> &dir = data.get_direction();
-        const min::vec3<float> &dest = data.get_destination();
-
-        // Calculate a new set of eyes
-        calculate_eye_rays(grid, data);
-
-        // Reset avoidance vector
-        _avoid = min::vec3<float>();
 
         // If we have a path, test if it expired
         if (_path.size() > 0)
@@ -271,39 +188,6 @@ class path
                 _path.clear();
             }
         }
-
-        // Update eye sensor properties
-        const min::vec3<float> dv = dest - p;
-        for (size_t i = 0; i < eye_size; i++)
-        {
-            // Calculate ray vector
-            _eye_dir[i] = _eye[i] - p;
-
-            // Calculate avoidance
-            _avoid += _eye_dir[i];
-
-            // Calculate magnitude along ray
-            _eye_mag[i] = _eye_dir[i].magnitude();
-
-            // Calculate normalize direction
-            if (_eye_mag[i] > 1E-3)
-            {
-                const float inv_mag = 1.0 / _eye_mag[i];
-                _eye_dir[i] *= inv_mag;
-            }
-
-            // Dot product along direction, prevent going through a wall
-            _eye_dot[i] = std::min(_eye_dir[i].dot(dv), _eye_mag[i]);
-        }
-
-        // Normalize the avoid vector
-        _avoid.normalize_safe(dir);
-
-        // Sort the index array by largest dot product
-        std::iota(_eye_dot_index, _eye_dot_index + eye_size, 0);
-        std::sort(_eye_dot_index, _eye_dot_index + eye_size, [this](const size_t a, const size_t b) {
-            return this->_eye_dot[a] > this->_eye_dot[b];
-        });
     }
 };
 }

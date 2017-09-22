@@ -533,11 +533,15 @@ class cgrid
         // Check if we made it to the mother lands!
         if (key == stop_key)
         {
+            // Store end point of path
+            path.push_back(key);
             return true;
         }
         // If we have hit the max depth return
         else if (path.size() == 20)
         {
+            // Store end point of path
+            path.push_back(key);
             return true;
         }
 

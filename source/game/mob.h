@@ -115,7 +115,7 @@ class mob_instance
     mob_instance() : _vertex("data/shader/instance.vertex", GL_VERTEX_SHADER),
                      _fragment("data/shader/instance.fragment", GL_FRAGMENT_SHADER),
                      _prog(_vertex, _fragment),
-                     _ubuffer(1, 2050),
+                     _ubuffer(1, 10),
                      _light_color(1.0, 1.0, 1.0, 1.0),
                      _light_position(0.0, 100.0, 0.0, 1.0),
                      _light_power(0.5, 1.0, 0.75, 1.0)

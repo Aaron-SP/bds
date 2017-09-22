@@ -41,41 +41,14 @@ bool test_path()
     game::path path;
     path.update(grid, p_data);
 
-    // Test avoid
-    const min::vec3<float> avoid_dir = path.avoid();
-    out = out && compare(0.8756, avoid_dir.x(), 1E-4);
-    out = out && compare(-0.4667, avoid_dir.y(), 1E-4);
-    out = out && compare(0.1239, avoid_dir.z(), 1E-4);
+    // Test next point
+    const min::vec3<float> step_dir = path.step(grid, p_data);
+    out = out && compare(0.0, step_dir.x(), 1E-4);
+    out = out && compare(1.0, step_dir.y(), 1E-4);
+    out = out && compare(0.0, step_dir.z(), 1E-4);
     if (!out)
     {
-        throw std::runtime_error("Failed path avoid");
-    }
-
-    // Test DFS
-    const min::vec3<float> dfs_dir = path.dfs(grid, p_data);
-    out = out && compare(0.0, dfs_dir.x(), 1E-4);
-    out = out && compare(1.0, dfs_dir.y(), 1E-4);
-    out = out && compare(0.0, dfs_dir.z(), 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed path dfs");
-    }
-
-    // Test Ray max dot product
-    min::vec3<float> ray_dir = path.ray_sorted(0);
-    out = out && compare(0.0, ray_dir.x(), 1E-4);
-    out = out && compare(-1.0, ray_dir.y(), 1E-4);
-    out = out && compare(0.0, ray_dir.z(), 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed path ray");
-    }
-
-    // Test path data zero travel
-    out = out && compare(0.0, p_data.get_travel(), 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed path data get_travel");
+        throw std::runtime_error("Failed path step");
     }
 
     // Test path data remain
@@ -86,7 +59,7 @@ bool test_path()
     }
 
     // Test path data step
-    min::vec3<float> next = p_data.step(ray_dir * 3.0, 0.5);
+    min::vec3<float> next = p_data.step(min::vec3<float>(0.0, -1.0, 0.0) * 3.0, 0.5);
     out = out && compare(0.5, next.x(), 1E-4);
     out = out && compare(34.5, next.y(), 1E-4);
     out = out && compare(-0.5, next.z(), 1E-4);
@@ -121,68 +94,26 @@ bool test_path()
     // Update the path
     path.update(grid, p_data);
 
-    // Test Ray max dot product
-    ray_dir = path.ray_sorted(0);
-    out = out && compare(0.0, ray_dir.x(), 1E-4);
-    out = out && compare(1.0, ray_dir.y(), 1E-4);
-    out = out && compare(0.0, ray_dir.z(), 1E-4);
+    // Test step pathing to destination
+    p_data = game::path_data(min::vec3<float>(-4.5, 30.5, 4.5), min::vec3<float>(0.5, 36.0, -0.5));
+    path.step(grid, p_data);
+
+    // Test path size
+    const std::vector<min::vec3<float>> &p = path.get_path();
+    out = out && compare(21, p.size());
     if (!out)
     {
-        throw std::runtime_error("Failed path update");
+        throw std::runtime_error("Failed step path size");
     }
 
-    // Test step backwards
-    next = p_data.step(ray_dir * 3.0, 0.5);
-    out = out && compare(0.5, next.x(), 1E-4);
-    out = out && compare(36.0, next.y(), 1E-4);
-    out = out && compare(-0.5, next.z(), 1E-4);
+    // Test last point
+    const min::vec3<float> &last = p.back();
+    out = out && compare(0.5, last.x(), 1E-4);
+    out = out && compare(16.5, last.y(), 1E-4);
+    out = out && compare(-0.5, last.z(), 1E-4);
     if (!out)
     {
-        throw std::runtime_error("Failed path data step back");
-    }
-
-    // Update path data
-    p_data.update(next);
-
-    // Test travel step
-    const float t_step = p_data.get_travel_step();
-    out = out && compare(1.5, t_step, 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed path data travel step");
-    }
-
-    // Test angle step
-    const float angle = p_data.get_angle_step();
-    out = out && compare(1.5, angle, 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed path data angle step");
-    }
-
-    // Test ray unsorted direction
-    ray_dir = path.ray_index(10);
-    out = out && compare(0.0, ray_dir.x(), 1E-4);
-    out = out && compare(-1.0, ray_dir.y(), 1E-4);
-    out = out && compare(0.0, ray_dir.z(), 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed path update");
-    }
-
-    // Test eye magnitudes
-    const float *const eye_mag = path.get_eye_mag();
-    out = out && compare(98.0, eye_mag[10], 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed path eye down magnitude");
-    }
-
-    // Test up eye magnitudes
-    out = out && compare(29.0, eye_mag[16], 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed path eye up magnitude");
+        throw std::runtime_error("Failed step path");
     }
 
     // return status
