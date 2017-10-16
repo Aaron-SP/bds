@@ -120,7 +120,7 @@ bool test_cgrid()
 
     // Test cgrid hard search
     start = min::vec3<float>(0.5, 36.0, -0.5);
-    stop = min::vec3<float>(0.0, -24.0, 35.0);
+    stop = min::vec3<float>(0.0, 24.0, 22.0);
     grid.path(path, start, stop);
     out = out && compare(21, path.size());
     if (!out)
@@ -129,9 +129,9 @@ bool test_cgrid()
     }
 
     // Test farthest point on incomplete path
-    out = out && compare(0.5, path[19].x(), 1E-4);
-    out = out && compare(17.5, path[19].y(), 1E-4);
-    out = out && compare(-0.5, path[19].z(), 1E-4);
+    out = out && compare(0.5, path[20].x(), 1E-4);
+    out = out && compare(31.5, path[20].y(), 1E-4);
+    out = out && compare(10.5, path[20].z(), 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed cgrid hard path 1");

@@ -16,7 +16,6 @@ You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <iostream>
-#include <tai_path.h>
 #include <tcgrid.h>
 #include <tpath.h>
 #include <tthread_map.h>
@@ -27,7 +26,6 @@ int main()
     try
     {
         bool out = true;
-        out = out && test_ai_path();
         out = out && test_cgrid();
         out = out && test_path();
         out = out && test_thread_pool();

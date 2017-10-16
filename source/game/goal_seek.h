@@ -44,40 +44,11 @@ class goal_seek
     {
         // Set goals
         _goals = {
-            min::vec3<float>(0.5, 36.0, -0.5),
-            min::vec3<float>(4.5, 31.5, 0.0),
-            min::vec3<float>(-24.0, 32.0, 24.0),
-            min::vec3<float>(21.0, 23.0, 0.0),
-            min::vec3<float>(5.0, -27.0, -18.0),
-            min::vec3<float>(0.0, -35.0, 0.0),
-            min::vec3<float>(-60.0, 37.0, 0.0),
-            min::vec3<float>(0.0, 23.0, 21.0),
-            min::vec3<float>(0.0, -24.0, -35.0),
-            min::vec3<float>(-4.5, 30.5, 4.5),
-            min::vec3<float>(0.0, -24.0, 35.0),
-            min::vec3<float>(24.0, 32.0, -24.0),
-            min::vec3<float>(60.0, 37.0, 0.0),
-            min::vec3<float>(-5.0, -27.0, -18.0),
-            min::vec3<float>(4.5, 30.5, 0.0),
-            min::vec3<float>(-4.6, 31.5, 0.0),
-            min::vec3<float>(-2.223, 32.5, -4.667),
-            min::vec3<float>(0.0, 23.0, -21.0),
-            min::vec3<float>(-35.0, -24.0, 0.0),
-            min::vec3<float>(-24.0, 32.0, -24.0),
-            min::vec3<float>(0.0, 37.0, 60.0),
-            min::vec3<float>(2.0, 31.5, -4.5),
-            min::vec3<float>(-4.5, 30.5, 0.0),
-            min::vec3<float>(4.223, 32.5, 2.667),
-            min::vec3<float>(-5.0, -27.0, 18.0),
-            min::vec3<float>(35.0, -24.0, 0.0),
-            min::vec3<float>(4.5, 31.5, -2.0),
-            min::vec3<float>(24.0, 32.0, 24.0),
-            min::vec3<float>(-21.0, 23.0, 0.0),
-            min::vec3<float>(0.0, 37.0, -60.0),
-            min::vec3<float>(0.0, 40.5, 0.0),
-            min::vec3<float>(0.0, 25.5, 0.0),
-            min::vec3<float>(5.0, -27.0, 18.0),
-            min::vec3<float>(4.5, 31.5, -4.5)};
+            min::vec3<float>(0.0, 32.0, 0.0),
+            min::vec3<float>(0.0, 24.0, 22.0),
+            min::vec3<float>(0.0, 24.0, -22.0),
+            min::vec3<float>(22.0, 24.0, 0.0),
+            min::vec3<float>(-22.0, 24.0, 0.0)};
 
         // Randomly select starting target
         _current_goal = _int_dist(_rgen) % _goals.size();
