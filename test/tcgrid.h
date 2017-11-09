@@ -91,24 +91,6 @@ bool test_cgrid()
         throw std::runtime_error("Failed cgrid path size");
     }
 
-    // Check last point
-    out = out && compare(4.5, path[5].x(), 1E-4);
-    out = out && compare(35.5, path[5].y(), 1E-4);
-    out = out && compare(-0.5, path[5].z(), 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed cgrid path 1");
-    }
-
-    // Check next to last point
-    out = out && compare(4.5, path[4].x(), 1E-4);
-    out = out && compare(36.5, path[4].y(), 1E-4);
-    out = out && compare(-0.5, path[4].z(), 1E-4);
-    if (!out)
-    {
-        throw std::runtime_error("Failed cgrid path 2");
-    }
-
     // Check first point
     out = out && compare(0.5, path[0].x(), 1E-4);
     out = out && compare(36.5, path[0].y(), 1E-4);
@@ -118,20 +100,38 @@ bool test_cgrid()
         throw std::runtime_error("Failed cgrid path 3");
     }
 
+    // Check last point
+    out = out && compare(4.5, path[10].x(), 1E-4);
+    out = out && compare(31.5, path[10].y(), 1E-4);
+    out = out && compare(0.5, path[10].z(), 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid path 1");
+    }
+
+    // Check next to last point
+    out = out && compare(4.5, path[9].x(), 1E-4);
+    out = out && compare(31.5, path[9].y(), 1E-4);
+    out = out && compare(-0.5, path[9].z(), 1E-4);
+    if (!out)
+    {
+        throw std::runtime_error("Failed cgrid path 2");
+    }
+
     // Test cgrid hard search
     start = min::vec3<float>(0.5, 36.0, -0.5);
     stop = min::vec3<float>(0.0, 24.0, 22.0);
     grid.path(path, start, stop);
-    out = out && compare(21, path.size());
+    out = out && compare(36, path.size());
     if (!out)
     {
         throw std::runtime_error("Failed cgrid hard path size");
     }
 
-    // Test farthest point on incomplete path
-    out = out && compare(0.5, path[20].x(), 1E-4);
-    out = out && compare(31.5, path[20].y(), 1E-4);
-    out = out && compare(10.5, path[20].z(), 1E-4);
+    // Test farthest point on hard path
+    out = out && compare(0.5, path[35].x(), 1E-4);
+    out = out && compare(24.5, path[35].y(), 1E-4);
+    out = out && compare(22.5, path[35].z(), 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed cgrid hard path 1");

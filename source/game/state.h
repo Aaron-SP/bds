@@ -28,8 +28,6 @@ class state
 {
   private:
     static constexpr unsigned _frame_average = 4;
-    static constexpr unsigned _frame_update = 180;
-    static constexpr unsigned _anim_stop = 60;
     character _player;
     min::camera<float> _camera;
     min::quat<float> _q;
@@ -37,14 +35,12 @@ class state
     float _x[_frame_average];
     float _y[_frame_average];
     unsigned _frame_count;
-    min::sample<float, min::vec3> _look;
-    unsigned _anim_count;
     std::string _mode;
     bool _pause_mode;
     bool _pause_lock;
     bool _user_input;
 
-    void load_camera()
+    inline void load_camera()
     {
         // Set camera near and far plane, and set perspective
         auto &f = _camera.get_frustum();
@@ -83,30 +79,10 @@ class state
 
         return rotzx * roty;
     }
-    void update_state(const min::vec3<float> &p)
-    {
-        // Set camera start position and look position
-        _camera.set_position(p + min::vec3<float>(0.0, 0.5, 0.0));
-
-        // Do a slow update on update frame for correcting 'drift'
-        if (_frame_count == _frame_update)
-        {
-            // Reset frame count
-            _frame_count = 0;
-
-            // Update rotation quaternion
-            _q = update_rotation();
-        }
-
-        // Update the md5 model matrix
-        update_model_matrix();
-    }
 
   public:
     state()
-        : _fire_mode(true), _x{}, _y{},
-          _frame_count(_frame_update),
-          _anim_count(_anim_stop),
+        : _fire_mode(true), _x{}, _y{}, _frame_count{},
           _mode("MODE: PLAY"),
           _pause_mode(false), _pause_lock(false), _user_input(true)
     {
@@ -142,6 +118,9 @@ class state
 
         // Force camera to update internals
         _camera.force_update();
+
+        // Update rotation quaternion
+        _q = update_rotation();
     }
     bool get_fire_mode() const
     {
@@ -194,25 +173,19 @@ class state
         // Force paused
         return this->get_game_pause();
     }
-    void update_look(const min::vec3<float> &look)
-    {
-        // Get last look
-        const min::vec3<float> &last_look = _camera.get_look_at();
-
-        // Reset look interpolater
-        _look = min::sample<float, min::vec3>(last_look, look);
-
-        // Reset animation count
-        _anim_count = 0;
-    }
     void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h, const double step)
     {
-        // Update state properties
-        update_state(p);
+        // Set camera start position and look position
+        _camera.set_position(p + min::vec3<float>(0.0, 0.5, 0.0));
+
+        // Update the md5 model matrix
+        update_model_matrix();
 
         // Get the offset from screen center
-        const float sensitivity = 0.10;
-        const unsigned frame_index = (_frame_count % _frame_average);
+        const float sensitivity = 0.25;
+
+        // Increment frame count for updating and hash to current frame index
+        const unsigned frame_index = (_frame_count %= _frame_average)++;
         _x[frame_index] = sensitivity * (c.first - (w / 2));
         _y[frame_index] = sensitivity * (c.second - (h / 2));
 
@@ -229,26 +202,8 @@ class state
         x /= _frame_average;
         y /= _frame_average;
 
-        // Check if animating overrides mouse
-        if (_anim_count < _anim_stop)
-        {
-            // Calculate time step
-            const float t = 1.0 / _anim_stop;
-
-            // Calculate interpolated look vector
-            const min::vec3<float> look = _look.interpolate(t);
-
-            // Set camera look at
-            _camera.set_look_at(look);
-
-            // Calculate interpolate rot vector
-            _q = update_rotation();
-
-            // Increment count
-            _anim_count++;
-        }
         // If the mouse coordinates moved at all
-        else if (std::abs(x) > 1E-3 || std::abs(y) > 1E-3)
+        if (std::abs(x) > 1E-3 || std::abs(y) > 1E-3)
         {
             // Get the camera forward vector
             const min::vec3<float> &forward = _camera.get_forward();
@@ -266,10 +221,13 @@ class state
 
             // Adjust the camera by the offset from screen center
             _q = _camera.move_look_at(x, y) * _q;
-        }
 
-        // Increment frame count for updating
-        _frame_count++;
+            // Force camera to update internals
+            _camera.force_update();
+
+            // Interpolate between the two rotations to avoid jerking
+            _q = min::quat<float>::slerp(update_rotation(), _q, 0.8);
+        }
     }
 };
 }

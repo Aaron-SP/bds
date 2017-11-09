@@ -26,7 +26,6 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/mesh.h>
 #include <min/ray.h>
 #include <min/serial.h>
-#include <stack>
 
 namespace game
 {
@@ -334,6 +333,14 @@ class cgrid
 
         return min::vec3<float>(x, y, z);
     }
+    inline float grid_center_square_dist(const size_t index, const min::vec3<float> &point) const
+    {
+        // Calculate vector between points
+        const min::vec3<float> dv = grid_center(index) - point;
+
+        // Calculate the square distance to this point
+        return dv.dot(dv);
+    }
     inline bool inside(const min::vec3<float> &p) const
     {
         const min::vec3<float> &min = _world.get_min();
@@ -369,10 +376,10 @@ class cgrid
         std::vector<int8_t> visit(_grid.size(), -1);
 
         // Create a stack for storing nodes in DFS
-        std::stack<size_t> stack;
+        std::vector<size_t> stack;
 
         // Flood fill 6 way DFS search
-        std::vector<size_t> neighbors;
+        std::vector<std::pair<size_t, float>> neighbors;
         neighbors.reserve(6);
 
         // If we need to search
@@ -382,12 +389,12 @@ class cgrid
             const std::tuple<size_t, size_t, size_t> stop_comp = grid_key_unpack(stop_key);
 
             // Push the start_key on the stack
-            stack.push(start_key);
+            stack.push_back(start_key);
 
             // Iteratively Search for a path
             while (!stack.empty())
             {
-                const bool found = search_next(visit, path, stack, neighbors, stop_comp, stop_key);
+                const bool found = search_next(visit, path, stack, neighbors, stop_comp, stop_key, stop);
                 if (found)
                 {
                     break;
@@ -398,78 +405,8 @@ class cgrid
         // Return the path
         return path;
     }
-    size_t search_gradient(const std::tuple<size_t, size_t, size_t> &comp,
-                           const std::tuple<size_t, size_t, size_t> &stop_comp) const
-    {
-        // Unpack start_key to components
-        const size_t x = std::get<0>(comp);
-        const size_t y = std::get<1>(comp);
-        const size_t z = std::get<2>(comp);
-
-        // Unpack stop_key to components
-        const size_t x_stop = std::get<0>(stop_comp);
-        const size_t y_stop = std::get<1>(stop_comp);
-        const size_t z_stop = std::get<2>(stop_comp);
-
-        // sign function -1, 0, 1
-        const auto sgn = [](const int val) { return (int(0) < val) - (val < int(0)); };
-
-        // Calculate gradient
-        int dx = sgn(x_stop - x);
-        int dy = sgn(y_stop - y);
-        int dz = sgn(z_stop - z);
-
-        // Check against x grid dimensions
-        const size_t edge = _grid_size - 1;
-        if ((x == 0 && dx < 0) || (x == edge && dx > 0))
-        {
-            dx = 0;
-        }
-
-        // Check against y grid dimensions
-        if ((y == 0 && dy < 0) || (y == edge && dy > 0))
-        {
-            dy = 0;
-        }
-
-        // Check against z grid dimensions
-        if ((z == 0 && dz < 0) || (z == edge && dz > 0))
-        {
-            dz = 0;
-        }
-
-        const size_t adx = std::abs(dx);
-        const size_t ady = std::abs(dy);
-        const size_t adz = std::abs(dz);
-
-        // Prevent moving along diagonals, choose max dim to move along
-        if (adx >= ady && adx >= adz)
-        {
-            dy = 0;
-            dz = 0;
-        }
-        else if (ady >= adx && ady >= adz)
-        {
-            dx = 0;
-            dz = 0;
-        }
-        else
-        {
-            dx = 0;
-            dy = 0;
-        }
-
-        // Compute the next point along gradient
-        dx += x;
-        dy += y;
-        dz += z;
-
-        // Calculate gradient key
-        const std::tuple<size_t, size_t, size_t> grad = std::make_tuple(dx, dy, dz);
-        return min::vec3<float>::grid_key(grad, _grid_size);
-    }
-    void search_neighbors(std::vector<size_t> &neighbors, const std::tuple<size_t, size_t, size_t> &comp,
-                          const std::tuple<size_t, size_t, size_t> &stop_comp) const
+    void search_neighbors(std::vector<std::pair<size_t, float>> &neighbors, const std::tuple<size_t, size_t, size_t> &comp,
+                          const std::tuple<size_t, size_t, size_t> &stop_comp, const min::vec3<float> &stop) const
     {
         // Clear neighbors buffer
         neighbors.clear();
@@ -484,61 +421,59 @@ class cgrid
         if (x != 0)
         {
             const size_t nxk = min::vec3<float>::grid_key(std::make_tuple(x - 1, y, z), _grid_size);
-            neighbors.push_back(nxk);
+            neighbors.push_back({nxk, grid_center_square_dist(nxk, stop)});
         }
 
         // Check against upper x grid dimensions
         if (x != edge)
         {
             const size_t pxk = min::vec3<float>::grid_key(std::make_tuple(x + 1, y, z), _grid_size);
-            neighbors.push_back(pxk);
+            neighbors.push_back({pxk, grid_center_square_dist(pxk, stop)});
         }
 
         // Check against lower y grid dimensions
         if (y != 0)
         {
             const size_t nyk = min::vec3<float>::grid_key(std::make_tuple(x, y - 1, z), _grid_size);
-            neighbors.push_back(nyk);
+            neighbors.push_back({nyk, grid_center_square_dist(nyk, stop)});
         }
 
         // Check against upper y grid dimensions
         if (y != edge)
         {
             const size_t pyk = min::vec3<float>::grid_key(std::make_tuple(x, y + 1, z), _grid_size);
-            neighbors.push_back(pyk);
+            neighbors.push_back({pyk, grid_center_square_dist(pyk, stop)});
         }
 
         // Check against lower z grid dimensions
         if (z != 0)
         {
             const size_t nzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z - 1), _grid_size);
-            neighbors.push_back(nzk);
+            neighbors.push_back({nzk, grid_center_square_dist(nzk, stop)});
         }
 
         // Check against upper z grid dimensions
         if (z != edge)
         {
             const size_t pzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z + 1), _grid_size);
-            neighbors.push_back(pzk);
+            neighbors.push_back({pzk, grid_center_square_dist(pzk, stop)});
         }
+
+        // lambda function to create sorted array indices based on distance
+        std::sort(neighbors.begin(), neighbors.end(), [](const std::pair<size_t, float> &a, const std::pair<size_t, float> &b) {
+            return a.second > b.second;
+        });
     }
     bool search_next(
         std::vector<int8_t> &visit, std::vector<size_t> &path,
-        std::stack<size_t> &stack, std::vector<size_t> &neighbors,
-        const std::tuple<size_t, size_t, size_t> &stop_comp, const size_t stop_key) const
+        std::vector<size_t> &stack, std::vector<std::pair<size_t, float>> &neighbors,
+        const std::tuple<size_t, size_t, size_t> &stop_comp, const size_t stop_key, const min::vec3<float> &stop) const
     {
         // Get element on top of stack
-        const size_t key = stack.top();
+        const size_t key = stack.back();
 
         // Check if we made it to the mother lands!
         if (key == stop_key)
-        {
-            // Store end point of path
-            path.push_back(key);
-            return true;
-        }
-        // If we have hit the max depth return
-        else if (path.size() == 20)
         {
             // Store end point of path
             path.push_back(key);
@@ -551,11 +486,11 @@ class cgrid
             path.push_back(key);
         }
 
-        // If we already visited this node twice, we are unwinding
-        if (visit[key] == 1)
+        // If we already visited this node, we are unwinding
+        if (visit[key] == 0)
         {
             // pop stack
-            stack.pop();
+            stack.pop_back();
 
             // pop path
             path.pop_back();
@@ -564,32 +499,25 @@ class cgrid
             return false;
         }
 
-        // Search along the gradient until we hit a wall
-        const std::tuple<size_t, size_t, size_t> comp = grid_key_unpack(key);
-        const size_t gradient_key = search_gradient(comp, stop_comp);
-
         // If we haven't visited this cell yet, and the next cell isn't a wall or visited
-        if ((visit[key] == -1) && (visit[gradient_key] == -1) && (_grid[gradient_key] == -1))
+        if (visit[key] == -1)
         {
             // Visit this node
             visit[key] = 0;
 
-            // Push gradient onto the stack
-            stack.push(gradient_key);
-        }
-        else
-        {
-            // Visit this node
-            visit[key] = 1;
+            // Search along the gradient until we hit a wall
+            const std::tuple<size_t, size_t, size_t> comp = grid_key_unpack(key);
 
             // Search all neighboring cells
-            search_neighbors(neighbors, comp, stop_comp);
-            for (const size_t n : neighbors)
+            search_neighbors(neighbors, comp, stop_comp, stop);
+
+            for (const auto &n : neighbors)
             {
                 // If we haven't visited the neighbor cell, and it isn't a wall
-                if (visit[n] == -1 && _grid[n] == -1)
+                if (visit[n.first] == -1 && _grid[n.first] == -1)
                 {
-                    stack.push(n);
+                    // Calculate distance to destination
+                    stack.push_back(n.first);
                 }
             }
         }
@@ -775,49 +703,6 @@ class cgrid
         // Run the function
         cubic(start, offset, length, f);
     }
-    std::pair<size_t, size_t> count_mob_collision_cells(const min::vec3<float> &center) const
-    {
-        // Count cells
-        size_t count = 0;
-        size_t possible = 0;
-
-        // Mob dimensions
-        const min::aabbox<float, min::vec3> mob(center - 0.25, center + 0.25);
-
-        // Get cubic function properties
-        // Use mob snap to get correct y coordinate
-        const min::vec3<float> start = snap(center) - min::vec3<float>(1.0, 1.0, 1.0);
-        const min::vec3<int> offset(1, 1, 1);
-        const min::vec3<unsigned> length(3, 3, 3);
-
-        // Create cubic function, for each cell in cubic space
-        const auto f = [this, &mob, &count, &possible](const min::vec3<float> &p) {
-            // Calculate grid key index
-            bool is_valid = true;
-            const size_t key = grid_key(p, is_valid);
-
-            // Check if valid and if the cell is not empty
-            if (is_valid && _grid[key] != -1)
-            {
-                // Create box at this point
-                const min::aabbox<float, min::vec3> b = create_box(p);
-
-                // count possible collision
-                possible++;
-
-                // Test intersection
-                if (min::intersect(mob, b))
-                {
-                    count++;
-                }
-            }
-        };
-
-        // Run the function
-        cubic(start, offset, length, f);
-
-        return std::make_pair(count, possible);
-    }
     int8_t get_atlas() const
     {
         return _atlas_id;
@@ -829,27 +714,6 @@ class cgrid
     const min::mesh<float, uint32_t> &get_chunk(const size_t index) const
     {
         return _chunks[index];
-    }
-    void get_cubic_rays(std::vector<min::vec3<float>> &out, const min::vec3<float> &center) const
-    {
-        // Surrounding cells
-        out.clear();
-
-        // Get cubic function properties
-        const min::vec3<float> origin = snap(center);
-        const min::vec3<float> start = origin - min::vec3<float>(1.0, 1.0, 1.0);
-        const min::vec3<int> offset(1, 1, 1);
-        const min::vec3<unsigned> length(3, 3, 3);
-
-        // Create cubic function, for each cell in cubic space
-        const auto f = [this, &origin, &out](const min::vec3<float> &p) {
-            // Store rays
-            min::ray<float, min::vec3> r(origin, p);
-            out.push_back(this->ray_trace_after(r, 100));
-        };
-
-        // Run the function
-        cubic(start, offset, length, f);
     }
     size_t get_recent_chunk() const
     {

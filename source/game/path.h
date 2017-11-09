@@ -110,6 +110,10 @@ class path
         // Reserve space for path
         _path.reserve(20);
     }
+    void clear()
+    {
+        _path.clear();
+    }
     const min::vec3<float> step(const cgrid &grid, const path_data &data)
     {
         // Get data points
@@ -122,31 +126,40 @@ class path
             // Get the current point on this path
             const min::vec3<float> point = _path[_path_index];
 
-            // Check if we have arrived at this point
+            // Check if we need to generate a new path
             const min::vec3<float> dp = point - p;
             const float mag = dp.magnitude();
-            if (mag <= 0.5)
+            if (mag < path_expire)
             {
-                // Increment the index
-                _path_index++;
-
-                // If we have reached the destination
-                if (_path_index == _path.size())
+                // Check if we have arrived at the destination
+                if (mag <= 0.5)
                 {
-                    _path.clear();
+                    // Increment the index
+                    _path_index++;
+
+                    // If we have reached the destination
+                    if (_path_index == _path.size())
+                    {
+                        _path.clear();
+                    }
                 }
-            }
 
-            // Normalize direction?
-            if (mag > 1E-3)
+                // Normalize direction?
+                if (mag > 1E-3)
+                {
+                    // Normalize direction and cache it
+                    const float inv_mag = 1.0 / mag;
+                    return dp * inv_mag;
+                }
+
+                // Return the direction to next point
+                return dp;
+            }
+            else
             {
-                // Normalize dfs direction and cache it
-                const float inv_mag = 1.0 / mag;
-                return dp * inv_mag;
+                // Generate a new path
+                _path.clear();
             }
-
-            // Return the direction to next point
-            return dp;
         }
 
         // Get a path between the two points
@@ -169,25 +182,6 @@ class path
     const std::vector<min::vec3<float>> &get_path() const
     {
         return _path;
-    }
-    void update(const cgrid &grid, const path_data &data)
-    {
-        // Get data points
-        const min::vec3<float> &p = data.get_position();
-
-        // If we have a path, test if it expired
-        if (_path.size() > 0)
-        {
-            const min::vec3<float> &point = _path[_path_index];
-            const float mag = (point - p).magnitude();
-
-            // If nearest point in path is 10 units away, it expired
-            if (mag > path_expire)
-            {
-                // Empty the current path
-                _path.clear();
-            }
-        }
     }
 };
 }

@@ -37,6 +37,25 @@ class goal_seek
     std::uniform_int_distribution<int> _int_dist;
     std::mt19937 _rgen;
 
+    inline void seek_next(world &w)
+    {
+        // Increment score count
+        _score++;
+
+        // Randomly select next target
+        _current_goal = _int_dist(_rgen) % _goals.size();
+
+        // Set a random start position
+        _start = _int_dist(_rgen) % _goals.size();
+        while (_start == _current_goal)
+        {
+            _start = _int_dist(_rgen) % _goals.size();
+        }
+
+        // Set next goal
+        w.set_destination(get_goal());
+    }
+
   public:
     goal_seek(world &w)
         : _start(0), _current_goal(0), _score(0), _int_dist(0, 100),
@@ -75,24 +94,7 @@ class goal_seek
     {
         return _goals[_start];
     }
-    inline void seek_next(world &w)
-    {
-        // Increment score count
-        _score++;
 
-        // Randomly select next target
-        _current_goal = _int_dist(_rgen) % _goals.size();
-
-        // Set a random start position
-        _start = _int_dist(_rgen) % _goals.size();
-        while (_start == _current_goal)
-        {
-            _start = _int_dist(_rgen) % _goals.size();
-        }
-
-        // Set next goal
-        w.set_destination(get_goal());
-    }
     inline bool seek(world &w, const size_t mob_index)
     {
         // Get mob position

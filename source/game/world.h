@@ -282,6 +282,73 @@ class world
         _preview.set_matrix(min::mat4<float>(cam.get_position()), 3);
         _preview.update_matrix();
     }
+    void update_world_physics(const float dt)
+    {
+        // Solve the AI path finding if toggled
+        if (_ai_mode)
+        {
+            const size_t mob_size = _mobs.size();
+            for (size_t i = 0; i < mob_size; i++)
+            {
+                // Get mob position, mob index offset taken care of
+                const min::vec3<float> &mob_p = mob_position(i);
+
+                // Create path data
+                path_data data(mob_p, _dest);
+
+                // Calculate step
+                _ai_path.calculate(_grid, data);
+
+                // mob index offset taken care of
+                mob_path(_ai_path, data, i);
+            }
+        }
+
+        // Get the player physics object
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Get player position
+        const min::vec3<float> &p = body.get_position();
+
+        // Solve the physics simulation
+        for (int i = 0; i < 10; i++)
+        {
+            // Get all cells that could collide
+            _grid.create_player_collision_cells(_player_col_cells, p);
+
+            // Add friction force
+            const min::vec3<float> &vel = body.get_linear_velocity();
+            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
+
+            // Add friction force opposing lateral motion
+            body.add_force(xz * body.get_mass() * -2.0);
+
+            // Solve static collisions
+            _simulation.solve_static(_player_col_cells, _char_id, dt / 10.0, 10.0);
+
+            // Do mob collisions
+            const size_t mob_size = _mobs.size();
+            for (size_t i = 0; i < mob_size; i++)
+            {
+                // Get mob position, mob index offset taken care of
+                const min::vec3<float> &mob_p = mob_position(i);
+
+                // Get all cells that could collide
+                _grid.create_mob_collision_cells(_mob_col_cells, mob_p);
+
+                // Solve static collisions
+                _simulation.solve_static(_mob_col_cells, _mob_start + i, dt / 10.0, 10.0);
+            }
+        }
+
+        // Update mob positions
+        const size_t mob_size = _mobs.size();
+        for (size_t i = 0; i < mob_size; i++)
+        {
+            const min::body<float, min::vec3> &mob_body = _simulation.get_body(_mob_start + i);
+            _mobs.update_position(mob_body.get_position(), i);
+        }
+    }
 
   public:
     world(const std::pair<min::vec3<float>, bool> &state, const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
@@ -464,73 +531,6 @@ class world
 
         // Warp character to new position
         body.set_position(p);
-    }
-    void update_world_physics(const float dt)
-    {
-        // Solve the AI path finding if toggled
-        if (_ai_mode)
-        {
-            const size_t mob_size = _mobs.size();
-            for (size_t i = 0; i < mob_size; i++)
-            {
-                // Get mob position, mob index offset taken care of
-                const min::vec3<float> &mob_p = mob_position(i);
-
-                // Create path data
-                path_data data(mob_p, _dest);
-
-                // Calculate step
-                _ai_path.calculate(_grid, data);
-
-                // mob index offset taken care of
-                mob_path(_ai_path, data, i);
-            }
-        }
-
-        // Get the player physics object
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Get player position
-        const min::vec3<float> &p = body.get_position();
-
-        // Solve the physics simulation
-        for (int i = 0; i < 10; i++)
-        {
-            // Get all cells that could collide
-            _grid.create_player_collision_cells(_player_col_cells, p);
-
-            // Add friction force
-            const min::vec3<float> &vel = body.get_linear_velocity();
-            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
-
-            // Add friction force opposing lateral motion
-            body.add_force(xz * body.get_mass() * -2.0);
-
-            // Solve static collisions
-            _simulation.solve_static(_player_col_cells, _char_id, dt / 10.0, 10.0);
-
-            // Do mob collisions
-            const size_t mob_size = _mobs.size();
-            for (size_t i = 0; i < mob_size; i++)
-            {
-                // Get mob position, mob index offset taken care of
-                const min::vec3<float> &mob_p = mob_position(i);
-
-                // Get all cells that could collide
-                _grid.create_mob_collision_cells(_mob_col_cells, mob_p);
-
-                // Solve static collisions
-                _simulation.solve_static(_mob_col_cells, _mob_start + i, dt / 10.0, 10.0);
-            }
-        }
-
-        // Update mob positions
-        const size_t mob_size = _mobs.size();
-        for (size_t i = 0; i < mob_size; i++)
-        {
-            const min::body<float, min::vec3> &mob_body = _simulation.get_body(_mob_start + i);
-            _mobs.update_position(mob_body.get_position(), i);
-        }
     }
     void update(min::camera<float> &cam, const float dt)
     {

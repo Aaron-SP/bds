@@ -39,9 +39,8 @@ bool test_path()
 
     // Load a path
     game::path path;
-    path.update(grid, p_data);
 
-    // Test next point
+    // Test path next direction
     const min::vec3<float> step_dir = path.step(grid, p_data);
     out = out && compare(0.0, step_dir.x(), 1E-4);
     out = out && compare(1.0, step_dir.y(), 1E-4);
@@ -59,9 +58,9 @@ bool test_path()
     }
 
     // Test path data step
-    min::vec3<float> next = p_data.step(min::vec3<float>(0.0, -1.0, 0.0) * 3.0, 0.5);
+    min::vec3<float> next = p_data.step(min::vec3<float>(0.0, 1.0, 0.0) * 3.0, 0.5);
     out = out && compare(0.5, next.x(), 1E-4);
-    out = out && compare(34.5, next.y(), 1E-4);
+    out = out && compare(37.5, next.y(), 1E-4);
     out = out && compare(-0.5, next.z(), 1E-4);
     if (!out)
     {
@@ -71,36 +70,35 @@ bool test_path()
     // Update the path data
     p_data.update(next);
 
-    // Test path data remain ~-1.5 from previous
-    out = out && compare(68.4306, p_data.get_remain(), 1E-4);
+    // Test path data remain increases in path direction
+    out = out && compare(71.0123, p_data.get_remain(), 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed path data update");
     }
 
-    // Test path data direction
+    // Test path data direction to destination
     const min::vec3<float> dir = p_data.get_direction();
-    out = out && compare(-0.0073, dir.x(), 1E-4);
-    out = out && compare(-0.8548, dir.y(), 1E-4);
-    out = out && compare(0.5187, dir.z(), 1E-4);
+    out = out && compare(-0.0070, dir.x(), 1E-4);
+    out = out && compare(-0.8660, dir.y(), 1E-4);
+    out = out && compare(0.4999, dir.z(), 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed path data direction");
     }
 
-    // Test path update destination
-    p_data.update_destination(start);
-
-    // Update the path
-    path.update(grid, p_data);
-
-    // Test step pathing to destination
+    // Test new path direction
     p_data = game::path_data(min::vec3<float>(0.5, 36.0, -0.5), min::vec3<float>(0.0, 24.0, 22.0));
+
+    // Clear the current path
+    path.clear();
+
+    // Step once on new path
     path.step(grid, p_data);
 
     // Test path size
     const std::vector<min::vec3<float>> &p = path.get_path();
-    out = out && compare(21, p.size());
+    out = out && compare(36, p.size());
     if (!out)
     {
         throw std::runtime_error("Failed step path size");
@@ -109,8 +107,8 @@ bool test_path()
     // Test last point
     const min::vec3<float> &last = p.back();
     out = out && compare(0.5, last.x(), 1E-4);
-    out = out && compare(31.5, last.y(), 1E-4);
-    out = out && compare(10.5, last.z(), 1E-4);
+    out = out && compare(24.5, last.y(), 1E-4);
+    out = out && compare(22.5, last.z(), 1E-4);
     if (!out)
     {
         throw std::runtime_error("Failed step path");

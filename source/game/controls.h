@@ -118,7 +118,7 @@ class controls
         keyboard.set_per_frame(min::window::key_code::KEYS, true);
 
         // Register callback function SPACE
-        keyboard.register_keyup(min::window::key_code::SPACE, controls::jump, (void *)this);
+        keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)this);
 
         // Register callback function Z
         keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);

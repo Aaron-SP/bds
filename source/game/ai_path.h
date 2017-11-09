@@ -38,13 +38,10 @@ class ai_path
     ai_path() {}
     inline min::vec3<float> &calculate(const cgrid &grid, const path_data &data)
     {
-        // Update the path
-        _path.update(grid, data);
-
         // Get path properties
         const min::vec3<float> step = _path.step(grid, data);
 
-        // Calculate distance to starting point, max step is sqrt(3*2*2)
+        // Calculate step direction and length
         _step = step * _step_size;
 
         // return step
@@ -56,7 +53,6 @@ class ai_path
     }
     inline const min::vec3<float> &step() const
     {
-        // THIS IS NOT NORMALIZED
         return _step;
     }
 };
