@@ -30,7 +30,7 @@ class thread_map
   private:
     std::vector<std::thread> _threads;
     unsigned _thread_count;
-    static void work(const std::function<void(const size_t)> &f, const size_t begin, const size_t length)
+    static inline void work(const std::function<void(const size_t)> &f, const size_t begin, const size_t length)
     {
         const size_t end = begin + length;
         for (size_t i = begin; i < end; i++)

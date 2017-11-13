@@ -68,7 +68,7 @@ class character
     min::mat4<float> _model_matrix;
     min::aabbox<float, min::vec3> _box;
 
-    void load_model()
+    inline void load_model()
     {
         // Load animation
         _md5_model.load_animation("data/models/gun.md5anim");
@@ -89,7 +89,7 @@ class character
         // Load vertex buffer with data
         _skbuffer.upload();
     }
-    void load_textures()
+    inline void load_textures()
     {
         // Load textures
         const min::dds d = min::dds("data/texture/skin.dds");
@@ -101,7 +101,7 @@ class character
         // Load texture buffer
         _dds_id = _texture_buffer.add_dds_texture(d);
     }
-    void load_uniforms()
+    inline void load_uniforms()
     {
         // Load the uniform buffer with the program we will use
         _ubuffer.set_program(_prog);

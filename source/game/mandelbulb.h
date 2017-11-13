@@ -44,7 +44,7 @@ class mandelbulb
     {
         return x * x * x;
     }
-    int8_t do_mandelbulb(const min::vec3<float> &p, const size_t size)
+    inline int8_t do_mandelbulb(const min::vec3<float> &p, const size_t size)
     {
         // Copy point
         float x0, x1;

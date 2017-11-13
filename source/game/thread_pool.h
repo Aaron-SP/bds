@@ -60,7 +60,7 @@ class thread_pool
     std::atomic<bool> _die;
     bool _launch;
 
-    void work(const size_t index)
+    inline void work(const size_t index)
     {
         while (true)
         {

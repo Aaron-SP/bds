@@ -75,7 +75,7 @@ class cgrid
             p.x(p.x() + offset.x());
         }
     }
-    static min::mesh<float, uint32_t> create_box_mesh(const min::aabbox<float, min::vec3> &box, const int8_t atlas_id)
+    static inline min::mesh<float, uint32_t> create_box_mesh(const min::aabbox<float, min::vec3> &box, const int8_t atlas_id)
     {
         min::mesh<float, uint32_t> box_mesh = min::to_mesh<float, uint32_t>(box);
 
@@ -191,7 +191,7 @@ class cgrid
 
         return min::vec3<float>(x, y, z);
     }
-    void chunk_update(const size_t key)
+    inline void chunk_update(const size_t key)
     {
         // Clear this chunk
         _chunks[key].clear();
@@ -276,7 +276,7 @@ class cgrid
             return this->grid_center(i);
         });
     }
-    void get_surrounding_chunks(const size_t key)
+    inline void get_surrounding_chunks(const size_t key)
     {
         _surrounding_chunks.clear();
         _surrounding_chunks.push_back(key);
@@ -353,7 +353,88 @@ class cgrid
 
         return x_inside && y_inside && z_inside;
     }
-    std::vector<size_t> search(const min::vec3<float> &start, const min::vec3<float> &stop) const
+    inline bool ray_trace(const min::ray<float, min::vec3> &r, const size_t length, size_t &prev_key, size_t &key) const
+    {
+        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
+
+        // Calculate the ray trajectory for tracing in grid
+        auto grid_ray = min::vec3<float>::grid_ray(cell_extent, r.get_origin(), r.get_direction(), r.get_inverse());
+
+        // Calculate start point in grid index format
+        auto index = min::vec3<float>::grid_index(_world.get_min(), cell_extent, r.get_origin());
+
+        // Trace a ray from origin and stop at first populated cell
+        bool is_valid = true;
+        prev_key = key = grid_key(r.get_origin(), is_valid);
+        if (is_valid)
+        {
+            // bad flag signals that we have hit the last valid cell
+            bool bad_flag = false;
+            unsigned count = 0;
+            while (_grid[key] == -1 && !bad_flag && count < length)
+            {
+                // Update the previous key
+                prev_key = key;
+
+                // Increment the current key
+                key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);
+                count++;
+            }
+        }
+
+        return is_valid;
+    }
+    inline void ray_trace_assign(const min::ray<float, min::vec3> &r, const size_t length, std::vector<size_t> &keys)
+    {
+        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
+
+        // Calculate the ray trajectory for tracing in grid
+        auto grid_ray = min::vec3<float>::grid_ray(cell_extent, r.get_origin(), r.get_direction(), r.get_inverse());
+
+        // Calculate start point in grid index format
+        auto index = min::vec3<float>::grid_index(_world.get_min(), cell_extent, r.get_origin());
+
+        // Trace a ray from origin and stop at first populated cell
+        bool is_valid = true;
+        size_t key = grid_key(r.get_origin(), is_valid);
+        if (is_valid)
+        {
+            // bad flag signals that we have hit the last valid cell
+            bool bad_flag = false;
+            unsigned count = 0;
+
+            // Skip over first three cells
+            while (_grid[key] == -1 && !bad_flag && count < 3)
+            {
+                // Increment the current key
+                key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);
+                count++;
+            }
+
+            // Record chunks of remaining cells
+            while (_grid[key] == -1 && !bad_flag && count < length)
+            {
+                // Calculate the center position of this cell
+                const min::vec3<float> point = grid_center(key);
+
+                // Get the chunk_key of this position for updating
+                bool is_valid = true;
+                const size_t ckey = chunk_key(point, is_valid);
+                if (is_valid)
+                {
+                    keys.push_back(ckey);
+                }
+
+                // Update the grid value with current atlas
+                _grid[key] = _atlas_id;
+
+                // Increment the current key
+                key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);
+                count++;
+            }
+        }
+    }
+    inline std::vector<size_t> search(const min::vec3<float> &start, const min::vec3<float> &stop) const
     {
         // Create path from start to stop
         std::vector<size_t> path;
@@ -405,8 +486,8 @@ class cgrid
         // Return the path
         return path;
     }
-    void search_neighbors(std::vector<std::pair<size_t, float>> &neighbors, const std::tuple<size_t, size_t, size_t> &comp,
-                          const std::tuple<size_t, size_t, size_t> &stop_comp, const min::vec3<float> &stop) const
+    inline void search_neighbors(std::vector<std::pair<size_t, float>> &neighbors, const std::tuple<size_t, size_t, size_t> &comp,
+                                 const std::tuple<size_t, size_t, size_t> &stop_comp, const min::vec3<float> &stop) const
     {
         // Clear neighbors buffer
         neighbors.clear();
@@ -464,7 +545,7 @@ class cgrid
             return a.second > b.second;
         });
     }
-    bool search_next(
+    inline bool search_next(
         std::vector<int8_t> &visit, std::vector<size_t> &path,
         std::vector<size_t> &stack, std::vector<std::pair<size_t, float>> &neighbors,
         const std::tuple<size_t, size_t, size_t> &stop_comp, const size_t stop_key, const min::vec3<float> &stop) const
@@ -525,7 +606,7 @@ class cgrid
         // We failed to find a path :(
         return false;
     }
-    void world_load()
+    inline void world_load()
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
@@ -566,7 +647,7 @@ class cgrid
             chunk_update(i);
         }
     }
-    void world_save()
+    inline void world_save()
     {
         // Create output stream for saving world
         std::vector<uint8_t> stream;
@@ -627,7 +708,7 @@ class cgrid
 
         return min::vec3<float>(std::floor(x) + 0.5, std::round(y), std::floor(z) + 0.5);
     }
-    min::mesh<float, uint32_t> atlas_box(const min::vec3<float> &p)
+    inline min::mesh<float, uint32_t> atlas_box(const min::vec3<float> &p)
     {
         const min::aabbox<float, min::vec3> box = create_box(p);
         return create_box_mesh(box, _atlas_id);
@@ -703,19 +784,19 @@ class cgrid
         // Run the function
         cubic(start, offset, length, f);
     }
-    int8_t get_atlas() const
+    inline int8_t get_atlas() const
     {
         return _atlas_id;
     }
-    void set_atlas(const int8_t id)
+    inline void set_atlas(const int8_t id)
     {
         _atlas_id = id;
     }
-    const min::mesh<float, uint32_t> &get_chunk(const size_t index) const
+    inline const min::mesh<float, uint32_t> &get_chunk(const size_t index) const
     {
         return _chunks[index];
     }
-    size_t get_recent_chunk() const
+    inline size_t get_recent_chunk() const
     {
         return _recent_chunk;
     }
@@ -743,7 +824,7 @@ class cgrid
         // Run the function
         cubic(start, offset, length, f);
     }
-    const min::aabbox<float, min::vec3> &get_world()
+    inline const min::aabbox<float, min::vec3> &get_world()
     {
         return _world;
     }
@@ -763,79 +844,65 @@ class cgrid
         const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
         return min::vec3<float>::grid_key(_world.get_min(), cell_extent, _grid_size, p);
     }
-    int8_t grid_value(const min::vec3<float> &point) const
+    inline int8_t grid_value(const min::vec3<float> &point) const
     {
         // Lookup grid index from point
         bool is_valid = true;
-        const size_t next_key = grid_key(point, is_valid);
+        const size_t key = grid_key(point, is_valid);
         if (is_valid)
         {
             // Return the atlas id at grid cell
-            return _grid[next_key];
+            return _grid[key];
         }
 
         // Out of bounds
         return -2;
     }
-    min::vec3<float> ray_trace_after(const min::ray<float, min::vec3> &r, const size_t length) const
+    void ray_trace_atlas(const min::ray<float, min::vec3> &r, const size_t length)
     {
-        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
+        // Record all modified chunks and store them for updating
+        std::vector<size_t> keys;
+        keys.reserve(length);
 
-        // Calculate the ray trajectory for tracing in grid
-        auto grid_ray = min::vec3<float>::grid_ray(cell_extent, r.get_origin(), r.get_direction(), r.get_inverse());
+        // Set the geometry along this ray
+        ray_trace_assign(r, length, keys);
 
-        // Calculate start point in grid index format
-        auto index = min::vec3<float>::grid_index(_world.get_min(), cell_extent, r.get_origin());
+        // Sort chunk_keys and make the vector unique
+        std::sort(keys.begin(), keys.end());
+        const auto last = std::unique(keys.begin(), keys.end());
 
-        // Trace a ray from origin and stop at first populated cell
-        bool is_valid = true;
-        size_t next_key = grid_key(r.get_origin(), is_valid);
+        // Erase empty spaces in vector
+        keys.erase(last, keys.end());
+
+        // Update all modified chunks
+        for (const auto k : keys)
+        {
+            chunk_update(k);
+        }
+    }
+    min::vec3<float> ray_trace_last(const min::ray<float, min::vec3> &r, const size_t length) const
+    {
+        // Trace a ray and return the last key
+        size_t prev_key, key;
+        const bool is_valid = ray_trace(r, length, prev_key, key);
         if (is_valid)
         {
-            // bad flag signals that we have hit the last valid cell
-            bool bad_flag = false;
-            unsigned count = 0;
-            while (_grid[next_key] == -1 && !bad_flag && count < length)
-            {
-                next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);
-                count++;
-            }
-
             // return the snapped point
-            return grid_center(next_key);
+            return grid_center(key);
         }
 
         // return ray start point since it is not in the grid
         return r.get_origin();
     }
-    min::vec3<float> ray_trace_before(const min::ray<float, min::vec3> &r, const size_t length) const
+    min::vec3<float> ray_trace_prev(const min::ray<float, min::vec3> &r, const size_t length) const
     {
-        const min::vec3<float> cell_extent(1.0, 1.0, 1.0);
-
-        // Calculate the ray trajectory for tracing in grid
-        auto grid_ray = min::vec3<float>::grid_ray(cell_extent, r.get_origin(), r.get_direction(), r.get_inverse());
-
-        // Calculate start point in grid index format
-        auto index = min::vec3<float>::grid_index(_world.get_min(), cell_extent, r.get_origin());
-
-        // Trace a ray from origin and stop at before populated cell
-        bool is_valid = true;
-        size_t next_key = grid_key(r.get_origin(), is_valid);
+        // Trace a ray and return the last key
+        size_t prev_key, key;
+        const bool is_valid = ray_trace(r, length, prev_key, key);
         if (is_valid)
         {
-            // bad flag signals that we have hit the last valid cell
-            size_t before_key = next_key;
-            bool bad_flag = false;
-            unsigned count = 0;
-            while (_grid[next_key] == -1 && !bad_flag && count < length)
-            {
-                before_key = next_key;
-                next_key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);
-                count++;
-            }
-
             // return the snapped point
-            return grid_center(before_key);
+            return grid_center(prev_key);
         }
 
         // return ray start point since it is not in the grid
@@ -926,7 +993,7 @@ class cgrid
             chunk_update(k);
         }
 
-        // Return the number of removed blocks
+        // Return the number of modified blocks
         return out;
     }
     void update(const min::vec3<float> &p)

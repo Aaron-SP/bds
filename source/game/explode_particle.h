@@ -44,7 +44,7 @@ class explode_particle
     min::emitter_buffer<float, GL_FLOAT> _ebuffer;
     float _time;
 
-    void load_textures()
+    inline void load_textures()
     {
         // Load textures
         const min::dds b = min::dds("data/texture/stone.dds");

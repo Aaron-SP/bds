@@ -91,7 +91,7 @@ class world
     bool _edit_mode;
 
     // character_load should only be called once!
-    void character_load(const std::pair<min::vec3<float>, bool> &state)
+    inline void character_load(const std::pair<min::vec3<float>, bool> &state)
     {
         // Create a hitbox for character world collisions
         const min::vec3<float> half_extent(0.45, 0.95, 0.45);
@@ -141,7 +141,7 @@ class world
         _gb.draw_all(GL_TRIANGLES);
     }
     // Generate all geometry in grid and adds it to geometry buffer
-    void generate_gb()
+    inline void generate_gb()
     {
         // Reset the buffer
         _gb.clear();
@@ -166,7 +166,7 @@ class world
         _gb.upload();
     }
     // Generates the preview geometry and adds it to preview buffer
-    void generate_pb()
+    inline void generate_pb()
     {
         // Reset the buffer
         _pb.clear();
@@ -203,7 +203,7 @@ class world
         // Upload contents to the vertex buffer
         _pb.upload();
     }
-    void load_uniform()
+    inline void load_uniform()
     {
         // Load the uniform buffer with program we will use
         _preview.set_program(_terrain_program);
@@ -247,7 +247,7 @@ class world
         const min::ray<float, min::vec3> r(cam.get_position(), dest);
 
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> translate = _grid.ray_trace_before(r, 4);
+        const min::vec3<float> translate = _grid.ray_trace_prev(r, 4);
 
         // Update offset x-vector
         if (cam.get_forward().x() >= 0.0)
@@ -282,7 +282,7 @@ class world
         _preview.set_matrix(min::mat4<float>(cam.get_position()), 3);
         _preview.update_matrix();
     }
-    void update_world_physics(const float dt)
+    inline void update_world_physics(const float dt)
     {
         // Solve the AI path finding if toggled
         if (_ai_mode)
@@ -413,10 +413,18 @@ class world
     inline void add_block(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_before(r, 4);
+        const min::vec3<float> traced = _grid.ray_trace_prev(r, 4);
 
         // Add to grid
         _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
+
+        // generate new mesh
+        generate_gb();
+    }
+    inline void ray_block(const min::ray<float, min::vec3> &r)
+    {
+        // Shoot a ray of blocks
+        _grid.ray_trace_atlas(r, 100);
 
         // generate new mesh
         generate_gb();
@@ -440,7 +448,7 @@ class world
     inline void remove_block(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_after(r, 5);
+        const min::vec3<float> traced = _grid.ray_trace_last(r, 5);
 
         // Try to remove geometry from the grid
         const unsigned removed = _grid.set_geometry(traced, _scale, _preview_offset, -1);
@@ -500,6 +508,49 @@ class world
         // Return the character position
         return body.get_position();
     }
+    inline void character_warp(const min::vec3<float> &p)
+    {
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Warp character to new position
+        body.set_position(p);
+    }
+    void grappling(const min::ray<float, min::vec3> &r)
+    {
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        const min::vec3<float> traced = _grid.ray_trace_last(r, 100);
+
+        // Get grid atlas at point
+        const int8_t atlas = _grid.grid_value(traced);
+
+        // See if we hit a block
+        if (atlas != -1)
+        {
+            // Compute force along the way proportional to the distance
+            const min::vec3<float> d = (traced - r.get_origin());
+
+            // Get character body
+            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+            // Calculate distance of ray
+            const float mag = d.magnitude();
+
+            // If the distance is too short give boost
+            const float d_factor = (mag < 20.0) ? 1.0 : 0.5;
+
+            // If the pointing down weaken
+            const float y_factor = (r.get_direction().y() < -0.5) ? 0.25 : 1.0;
+
+            // Add force to body
+            body.add_force(d * 1E3 * d_factor * y_factor * body.get_mass());
+
+            // Reset the scale
+            reset_scale();
+
+            // Destroy block
+            remove_block(traced, r.get_origin());
+        }
+    }
     inline void mob_path(const ai_path &path, const path_data &data, const size_t mob_index)
     {
         // Get the character rigid body
@@ -521,13 +572,6 @@ class world
     inline void mob_warp(const min::vec3<float> &p, const size_t mob_index)
     {
         min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
-
-        // Warp character to new position
-        body.set_position(p);
-    }
-    inline void character_warp(const min::vec3<float> &p)
-    {
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
         // Warp character to new position
         body.set_position(p);
@@ -689,42 +733,6 @@ class world
     {
         // Toggle flag and return result
         return (_edit_mode = !_edit_mode);
-    }
-    void grappling(const min::ray<float, min::vec3> &r)
-    {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_after(r, 100);
-
-        // Get grid atlas at point
-        const int8_t atlas = _grid.grid_value(traced);
-
-        // See if we hit a block
-        if (atlas != -1)
-        {
-            // Compute force along the way proportional to the distance
-            const min::vec3<float> d = (traced - r.get_origin());
-
-            // Get character body
-            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-            // Calculate distance of ray
-            const float mag = d.magnitude();
-
-            // If the distance is too short give boost
-            const float d_factor = (mag < 20.0) ? 1.0 : 0.5;
-
-            // If the pointing down weaken
-            const float y_factor = (r.get_direction().y() < -0.5) ? 0.25 : 1.0;
-
-            // Add force to body
-            body.add_force(d * 1E3 * d_factor * y_factor * body.get_mass());
-
-            // Reset the scale
-            reset_scale();
-
-            // Destroy block
-            remove_block(traced, r.get_origin());
-        }
     }
 };
 }

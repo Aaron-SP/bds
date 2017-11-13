@@ -69,8 +69,7 @@ class mob_instance
         // return box
         return min::aabbox<float, min::vec3>(min, max);
     }
-
-    void load_model()
+    inline void load_model()
     {
         // load box model
         min::vec3<float> p;
@@ -87,7 +86,7 @@ class mob_instance
         // Load vertex buffer with data
         _buffer.upload();
     }
-    void load_textures()
+    inline void load_textures()
     {
         // Load textures
         const min::dds d = min::dds("data/texture/atlas.dds");
@@ -95,7 +94,7 @@ class mob_instance
         // Load texture buffer
         _dds_id = _texture_buffer.add_dds_texture(d);
     }
-    void load_uniforms()
+    inline void load_uniforms()
     {
         // Load the uniform buffer with the program we will use
         _ubuffer.set_program(_prog);

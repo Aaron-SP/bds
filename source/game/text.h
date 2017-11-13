@@ -40,7 +40,7 @@ class text
     std::vector<size_t> _indices;
     bool _draw;
 
-    void rescale_text(const float scale_x, const float scale_y)
+    inline void rescale_text(const float scale_x, const float scale_y)
     {
         // Get current screen size
         const std::pair<float, float> screen_size = _text_buffer.get_screen_size();
