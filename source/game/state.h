@@ -31,6 +31,7 @@ class state
     character _player;
     min::camera<float> _camera;
     min::quat<float> _q;
+    uint32_t _energy;
     bool _fire_mode;
     float _x[_frame_average];
     float _y[_frame_average];
@@ -82,19 +83,57 @@ class state
 
   public:
     state()
-        : _fire_mode(true), _x{}, _y{}, _frame_count{},
+        : _energy(0), _fire_mode(true),
+          _x{}, _y{}, _frame_count{},
           _mode("MODE: PLAY"),
           _pause_mode(false), _pause_lock(false), _user_input(true)
     {
         // Load camera
         load_camera();
     }
-    void animate_shoot_player()
+    inline void absorb(const int8_t atlas_id)
+    {
+        // Absorb this amount of energy
+        const uint16_t value = 0x1 << (atlas_id);
+        _energy += value;
+    }
+    inline void animate_shoot_player()
     {
         // Activate shoot animation
         _player.set_animation_count(1);
     }
-    void draw(const float dt)
+    inline bool can_consume(const int8_t atlas_id)
+    {
+        // Try to consume energy
+        const uint16_t value = 0x2 << (atlas_id);
+        if (_energy >= value)
+        {
+            return true;
+        }
+
+        // Not enough energy
+        return false;
+    }
+    inline void consume(const int8_t atlas_id)
+    {
+        // Consume energy
+        const uint16_t value = 0x2 << (atlas_id);
+        _energy -= value;
+    }
+    inline bool will_consume(const int8_t atlas_id)
+    {
+        // Try to consume energy
+        const uint16_t value = 0x2 << (atlas_id);
+        if (_energy >= value)
+        {
+            _energy -= value;
+            return true;
+        }
+
+        // Not enough energy
+        return false;
+    }
+    inline void draw(const float dt)
     {
         // Draw the character if fire mode activated
         if (_fire_mode)
@@ -102,15 +141,19 @@ class state
             _player.draw(_camera, dt);
         }
     }
-    min::camera<float> &get_camera()
+    inline min::camera<float> &get_camera()
     {
         return _camera;
     }
-    const min::camera<float> &get_camera() const
+    inline const min::camera<float> &get_camera() const
     {
         return _camera;
     }
-    void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
+    inline uint32_t get_energy() const
+    {
+        return _energy;
+    }
+    inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
     {
         // Set camera start position and look position
         _camera.set_position(p + min::vec3<float>(0.0, 0.5, 0.0));
@@ -122,31 +165,31 @@ class state
         // Update rotation quaternion
         _q = update_rotation();
     }
-    bool get_fire_mode() const
+    inline bool get_fire_mode() const
     {
         return _fire_mode;
     }
-    void set_fire_mode(const bool mode)
+    inline void set_fire_mode(const bool mode)
     {
         _fire_mode = mode;
     }
-    const std::string &get_game_mode() const
+    inline const std::string &get_game_mode() const
     {
         return _mode;
     }
-    void set_game_mode(const std::string &mode)
+    inline void set_game_mode(const std::string &mode)
     {
         _mode = mode;
     }
-    void pause_lock(const bool lock)
+    inline void pause_lock(const bool lock)
     {
         _pause_lock = lock;
     }
-    bool get_game_pause() const
+    inline bool get_game_pause() const
     {
         return _pause_mode || _pause_lock;
     }
-    void set_game_pause(const bool mode)
+    inline void set_game_pause(const bool mode)
     {
         // If not locked
         if (!_pause_lock)
@@ -154,15 +197,15 @@ class state
             _pause_mode = mode;
         }
     }
-    bool get_user_input() const
+    inline bool get_user_input() const
     {
         return _user_input;
     }
-    void set_user_input(const bool mode)
+    inline void set_user_input(const bool mode)
     {
         _user_input = mode;
     }
-    bool toggle_game_pause()
+    inline bool toggle_game_pause()
     {
         // If not locked
         if (!_pause_lock)

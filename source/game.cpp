@@ -68,6 +68,9 @@ class mglcraft
 
         // Destination
         _text.add_text("DEST:", 10, 348);
+
+        // Energy
+        _text.add_text("ENERGY:", 10, 320);
     }
     std::pair<min::vec3<float>, bool> load_state()
     {
@@ -291,6 +294,10 @@ class mglcraft
             // Clear and reset the stream
             stream.clear();
             stream.str(std::string());
+
+            // Update the energy text
+            stream << "ENERGY: " << _state.get_energy();
+            _text.update_text(stream.str(), 6);
 
             // Upload changes
             _text.upload();

@@ -117,8 +117,14 @@ class world
             // Set scale to 3x3x3
             _scale = min::vec3<unsigned>(3, 3, 3);
 
-            // Remove geometry around player
-            remove_block(min::vec3<float>(-1.0, -0.0, -1.0), position);
+            // Snap to grid
+            const min::vec3<float> snapped = cgrid::snap(position);
+
+            // Get direction for particle spray, assume default look direction
+            const min::vec3<float> direction = (position + min::vec3<float>(-1.0, 0.0, 0.0)).normalize();
+
+            // Remove geometry around player, requires position snapped to grid and calculated direction vector
+            remove_block(snapped, direction);
 
             // Reset scale to default value
             _scale = min::vec3<unsigned>(1, 1, 1);
@@ -238,6 +244,21 @@ class world
         _preview.update();
         _geom.update();
     }
+    inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &direction)
+    {
+        // Try to remove geometry from the grid
+        const unsigned removed = _grid.set_geometry(point, _scale, _preview_offset, -1);
+
+        // If we removed geometry, play particles
+        if (removed > 0)
+        {
+            // generate new mesh
+            generate_gb();
+
+            // Add particle effects
+            _particles.load(point, direction, 5.0);
+        }
+    }
     inline void update_uniform(min::camera<float> &cam)
     {
         // Calculate new placemark point
@@ -247,7 +268,7 @@ class world
         const min::ray<float, min::vec3> r(cam.get_position(), dest);
 
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> translate = _grid.ray_trace_prev(r, 4);
+        const min::vec3<float> translate = _grid.ray_trace_prev(r, 6);
 
         // Update offset x-vector
         if (cam.get_forward().x() >= 0.0)
@@ -402,18 +423,10 @@ class world
         // Reserve space for view chunks
         _view_chunks.reserve(view_chunk_size * view_chunk_size * view_chunk_size);
     }
-    inline void add_block(const min::vec3<float> &center)
-    {
-        // Add to grid
-        _grid.set_geometry(cgrid::snap(center), _scale, _preview_offset, _grid.get_atlas());
-
-        // generate new mesh
-        generate_gb();
-    }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_prev(r, 4);
+        const min::vec3<float> traced = _grid.ray_trace_prev(r, 6);
 
         // Add to grid
         _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
@@ -429,39 +442,24 @@ class world
         // generate new mesh
         generate_gb();
     }
-    inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &position)
-    {
-        // Try to remove geometry from the grid
-        const unsigned removed = _grid.set_geometry(cgrid::snap(point), _scale, _preview_offset, -1);
-
-        // If we removed geometry, play particles
-        if (removed > 0)
-        {
-            // generate new mesh
-            generate_gb();
-
-            // Add particle effects
-            const min::vec3<float> direction = (position - point).normalize();
-            _particles.load(point, direction, 5.0);
-        }
-    }
-    inline void remove_block(const min::ray<float, min::vec3> &r)
+    inline int8_t remove_block(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_last(r, 5);
+        const min::vec3<float> traced = _grid.ray_trace_last(r, 6);
 
-        // Try to remove geometry from the grid
-        const unsigned removed = _grid.set_geometry(traced, _scale, _preview_offset, -1);
-
-        // If we removed geometry, play particles
-        if (removed > 0)
+        // Get the atlas of target block, if hit a block remove it
+        const int8_t value = _grid.grid_value(traced);
+        if (value >= 0)
         {
-            // generate new mesh
-            generate_gb();
+            // Get direction for particle spray
+            const min::vec3<float> direction = r.get_direction() * -1.0;
 
-            // Add particle effects
-            _particles.load(traced, r.get_direction() * -1.0, 5.0);
+            // Remove the block
+            remove_block(traced, direction);
         }
+
+        // return the block atlas id
+        return value;
     }
     inline size_t add_mob(const min::vec3<float> &p)
     {
@@ -515,7 +513,7 @@ class world
         // Warp character to new position
         body.set_position(p);
     }
-    void grappling(const min::ray<float, min::vec3> &r)
+    int8_t grappling(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
         const min::vec3<float> traced = _grid.ray_trace_last(r, 100);
@@ -548,8 +546,10 @@ class world
             reset_scale();
 
             // Destroy block
-            remove_block(traced, r.get_origin());
+            remove_block(traced, r.get_direction());
         }
+
+        return atlas;
     }
     inline void mob_path(const ai_path &path, const path_data &data, const size_t mob_index)
     {
@@ -642,6 +642,10 @@ class world
     inline bool get_ai_mode()
     {
         return _ai_mode;
+    }
+    inline uint8_t get_atlas_id() const
+    {
+        return _grid.get_atlas();
     }
     inline bool get_edit_mode()
     {

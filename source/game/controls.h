@@ -129,14 +129,14 @@ class controls
         // Register callback function C
         keyboard.register_keydown(min::window::key_code::KEYC, controls::add_z, (void *)_world);
 
-        // Register callback function KEY1 for switching texture to 'grass'
-        keyboard.register_keydown(min::window::key_code::KEY1, controls::switch_grass, (void *)_world);
-
-        // Register callback function KEY2 for switching texture to 'stone'
-        keyboard.register_keydown(min::window::key_code::KEY2, controls::switch_stone, (void *)_world);
+        // Register callback function KEY1 for switching texture to 'stone'
+        keyboard.register_keydown(min::window::key_code::KEY1, controls::switch_stone, (void *)_world);
 
         // Register callback function KEY2 for switching texture to 'sand'
-        keyboard.register_keydown(min::window::key_code::KEY3, controls::switch_sand, (void *)_world);
+        keyboard.register_keydown(min::window::key_code::KEY2, controls::switch_sand, (void *)_world);
+
+        // Register callback function KEY2 for switching texture to 'lava'
+        keyboard.register_keydown(min::window::key_code::KEY3, controls::switch_lava, (void *)_world);
 
         // Register callback function KEY2 for switching texture to 'wood'
         keyboard.register_keydown(min::window::key_code::KEY4, controls::switch_wood, (void *)_world);
@@ -144,8 +144,8 @@ class controls
         // Register callback function KEY1 for switching texture to 'dirt'
         keyboard.register_keydown(min::window::key_code::KEY5, controls::switch_dirt, (void *)_world);
 
-        // Register callback function KEY2 for switching texture to 'lava'
-        keyboard.register_keydown(min::window::key_code::KEY6, controls::switch_lava, (void *)_world);
+        // Register callback function KEY2 for switching texture to 'grass'
+        keyboard.register_keydown(min::window::key_code::KEY6, controls::switch_grass, (void *)_world);
 
         // Register callback function KEY2 for switching texture to 'water'
         keyboard.register_keydown(min::window::key_code::KEY7, controls::switch_water, (void *)_world);
@@ -311,12 +311,6 @@ class controls
         game::world *const world = control->get_world();
         world->character_jump(min::vec3<float>(0.0, 1.0, 0.0));
     }
-    static void switch_grass(void *ptr, double step)
-    {
-        // Cast to world pointer type and set atlas id to 'grass'
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
-        world->set_atlas_id(5);
-    }
     static void switch_stone(void *ptr, double step)
     {
         // Cast to world pointer type and set atlas id to 'stone'
@@ -328,6 +322,12 @@ class controls
         // Cast to world pointer type and set atlas id to 'sand'
         game::world *const world = reinterpret_cast<game::world *>(ptr);
         world->set_atlas_id(1);
+    }
+    static void switch_lava(void *ptr, double step)
+    {
+        // Cast to world pointer type and set atlas id to 'lava'
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world->set_atlas_id(2);
     }
     static void switch_wood(void *ptr, double step)
     {
@@ -341,11 +341,11 @@ class controls
         game::world *const world = reinterpret_cast<game::world *>(ptr);
         world->set_atlas_id(4);
     }
-    static void switch_lava(void *ptr, double step)
+    static void switch_grass(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to 'lava'
+        // Cast to world pointer type and set atlas id to 'grass'
         game::world *const world = reinterpret_cast<game::world *>(ptr);
-        world->set_atlas_id(2);
+        world->set_atlas_id(5);
     }
     static void switch_water(void *ptr, double step)
     {
@@ -408,14 +408,22 @@ class controls
         const bool mode = world->get_edit_mode();
         if (mode)
         {
-            // Calculate new point to add
-            const min::vec3<float> point = camera->project_point(3.0);
+            // Get the selected atlas
+            const int8_t atlas = world->get_atlas_id();
 
-            // Create a ray from camera to destination
-            const min::ray<float, min::vec3> r(camera->get_position(), point);
+            // Try to consume energy to create this resource
+            const bool consumed = state->will_consume(atlas);
+            if (consumed)
+            {
+                // Calculate new point to add
+                const min::vec3<float> point = camera->project_point(3.0);
 
-            // Add block to world
-            world->add_block(r);
+                // Create a ray from camera to destination
+                const min::ray<float, min::vec3> r(camera->get_position(), point);
+
+                // Add block to world
+                world->add_block(r);
+            }
         }
         else
         {
@@ -425,11 +433,18 @@ class controls
             // Create a ray from camera to destination
             const min::ray<float, min::vec3> r(camera->get_position(), point);
 
-            // Remove block from world
-            world->remove_block(r);
+            // Remove block from world, get the removed atlas
+            const int8_t atlas = world->remove_block(r);
 
-            // Activate shoot animation
-            state->animate_shoot_player();
+            // If we hit an actual block
+            if (atlas >= 0)
+            {
+                // Absorb energy to create this resource
+                state->absorb(atlas);
+
+                // Activate shoot animation
+                state->animate_shoot_player();
+            }
         }
     }
     static void right_click(void *ptr, const uint16_t x, const uint16_t y)
@@ -445,17 +460,27 @@ class controls
         // Only allow grappling if in fire mode
         if (state->get_fire_mode())
         {
-            // Calculate new point to add
-            const min::vec3<float> point = camera->project_point(3.0);
+            // Try to consume energy to power this resource
+            const bool consumed = state->can_consume(7);
+            if (consumed)
+            {
+                // Calculate new point to add
+                const min::vec3<float> point = camera->project_point(3.0);
 
-            // Create a ray from camera to destination
-            const min::ray<float, min::vec3> r(camera->get_position(), point);
+                // Create a ray from camera to destination
+                const min::ray<float, min::vec3> r(camera->get_position(), point);
 
-            // Fire grappling hook
-            world->grappling(r);
+                // Fire grappling hook
+                const int8_t atlas = world->grappling(r);
+                if (atlas >= 0)
+                {
+                    // Consume energy
+                    state->consume(7);
 
-            // Activate shoot animation
-            state->animate_shoot_player();
+                    // Activate shoot animation
+                    state->animate_shoot_player();
+                }
+            }
         }
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)

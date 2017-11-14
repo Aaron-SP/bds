@@ -6,11 +6,9 @@ FREETYPE2_INCLUDE = $(shell freetype-config --cflags)
 # Linker parameters
 ifeq ($(OS),Windows_NT)
 	MGL_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mgl
-	MML_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mml
 	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll
 else
 	MGL_PATH = /usr/include/mgl
-	MML_PATH = /usr/include/mml
 	LINKER = -lX11 -lGL -lfreetype -pthread
 endif
 
@@ -19,13 +17,8 @@ ifdef MGL_DESTDIR
 	MGL_PATH = $(MGL_DESTDIR)/mgl
 endif
 
-# Override if MGL_DESTDIR specified
-ifdef MML_DESTDIR
-	MML_PATH = $(MML_DESTDIR)/mml
-endif
-
 # Compile parameters
-CPP = -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math -static -static-libgcc -static-libstdc++
+CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math -static -static-libgcc -static-libstdc++
 NATIVE =  $(CPP) -march=native
 BUILD32 = $(CPP) -m32
 BUILD64 = $(CPP) -m64
@@ -34,7 +27,7 @@ GAME =  $(EXTRA) source/game.cpp -o bin/game
 TEST =  $(EXTRA) test/test.cpp -o bin/tests
 
 # Include directories
-LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_PATH)/platform -I$(MGL_PATH)/scene -I$(MGL_PATH)/renderer -Isource -I$(MML_PATH)/math $(FREETYPE2_INCLUDE)
+LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_PATH)/platform -I$(MGL_PATH)/scene -I$(MGL_PATH)/renderer -Isource $(FREETYPE2_INCLUDE)
 TEST_SOURCES = -Itest
 
 # Default run target
