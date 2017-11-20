@@ -263,13 +263,13 @@ class state
             }
 
             // Adjust the camera by the offset from screen center
-            _q = _camera.move_look_at(x, y) * _q;
+            _camera.move_look_at(x, y);
 
             // Force camera to update internals
             _camera.force_update();
 
             // Interpolate between the two rotations to avoid jerking
-            _q = min::quat<float>::slerp(update_rotation(), _q, 0.8);
+            _q = update_rotation();
         }
     }
 };
