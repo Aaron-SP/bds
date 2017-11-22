@@ -1,7 +1,7 @@
 # MGLCRAFT
-Repository for the Minimal Graphics Library Crafting Simulator
+## Repository for the Minimal Graphics Library Crafting Simulator
 
-The GNU makefile contains various build targets.
+### The GNU makefile contains various build targets.
 
 'make' - builds game and tests targeting 'native'
 
@@ -27,12 +27,10 @@ Additional dependencies that are required and not distributed in this package in
 
     'X11' - for linux only
 
-
-LD_LIBRARY_PATH will override the GNU makefile with the path looking for MGL installed on the system.
+The $(MGL_DESTDIR) bash variable will override the GNU makefile with the path looking for MGL installed on the system.
 The default path is 'C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include' for CYGWIN x86 or '/usr/include' for Linux systems.
 
-
-For compiling on CYGWIN:
+### For compiling on CYGWIN:
 
 1.) Add a symbolic link to the mingw g++ executable (example for x86):
 
@@ -40,8 +38,7 @@ For compiling on CYGWIN:
     
 2.) Add the following paths to your ENVIRONMENT.
 
-
-PATHS FOR CYGWIN x86:
+#### PATHS FOR CYGWIN x86:
 
     C:\cygwin\lib\gcc\i686-w64-mingw32\5.4.0\include;
 
@@ -49,8 +46,7 @@ PATHS FOR CYGWIN x86:
 
     C:\cygwin\usr\i686-w64-mingw32\sys-root\mingw\bin;
 
-
-PATHS FOR CYGWIN x86-64:
+#### PATHS FOR CYGWIN x86-64:
 
     C:\cygwin\lib\gcc\x86_64-w64-mingw32\5.4.0\include;
 
@@ -58,13 +54,14 @@ PATHS FOR CYGWIN x86-64:
 
     C:\cygwin\usr\x86_64-w64-mingw32\sys-root\mingw\bin;
 
-PLAYER INSTRUCTIONS:
+### PLAYER USAGE INSTRUCTIONS:
+![Alt text](pictures/spawn.png)
 
 1.) Keys [WASD] to move
 
-2.) Enter/Exit block edit mode
+2.) Keys [Q] Enter/Exit block edit mode
 
-3.) Keys [ZXC] to scale unit block
+3.) Keys [ZXC] to scale unit block [E] to reset scale
 
 4.) Keys [1-8] to switch textures (edit mode)
 
@@ -75,3 +72,7 @@ PLAYER INSTRUCTIONS:
 7.) Key [F1] to quit
 
 8.) Key [F2] to toggle debug text
+
+9.) Key [F3] to pause the game
+
+

@@ -15,7 +15,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <game/ai_path.h> // <--- this is bullshit
 #include <game/controls.h>
 #include <game/file.h>
 #include <game/goal_seek.h>

@@ -60,7 +60,7 @@ class state
         const min::mat4<float> model(offset, _q);
         _player.set_model_matrix(model);
     }
-    inline min::quat<float> update_rotation() const
+    inline min::quat<float> update_model_rotation() const
     {
         const min::vec3<float> &f = _camera.get_forward();
         const min::vec3<float> &fup = _camera.get_frustum().get_up();
@@ -78,6 +78,7 @@ class state
         // Transform the model rotation around shortest arc or RIGHT axis
         const min::quat<float> rotzx(y, fup, fr);
 
+        // Return the transformed model rotation
         return rotzx * roty;
     }
 
@@ -163,7 +164,7 @@ class state
         _camera.force_update();
 
         // Update rotation quaternion
-        _q = update_rotation();
+        _q = update_model_rotation();
     }
     inline bool get_fire_mode() const
     {
@@ -269,7 +270,7 @@ class state
             _camera.force_update();
 
             // Interpolate between the two rotations to avoid jerking
-            _q = update_rotation();
+            _q = update_model_rotation();
         }
     }
 };
