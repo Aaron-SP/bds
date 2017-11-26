@@ -48,5 +48,4 @@ tests64:
 clean:
 	rm -f game.txt
 	rm -f test.txt
-	rm -f bin/game
-	rm -f bin/tests
+	rm -f bin/*

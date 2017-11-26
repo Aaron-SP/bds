@@ -57,25 +57,29 @@ class mob_instance
     min::vec4<float> _light_power;
     size_t _light_id;
 
-    // Bounding box for model
+    // Bounding box for mob model
+    min::aabbox<float, min::vec3> _box;
+
+    // Positions of each mob
     std::vector<min::vec3<float>> _position;
 
-    inline static min::aabbox<float, min::vec3> create_box(const min::vec3<float> &p)
-    {
-        // create min and max edge of box
-        const min::vec3<float> min = p - 0.25;
-        const min::vec3<float> max = p + 0.25;
-
-        // return box
-        return min::aabbox<float, min::vec3>(min, max);
-    }
     inline void load_model()
     {
-        // load box model
-        min::vec3<float> p;
-        min::aabbox<float, min::vec3> box = create_box(p);
-        min::mesh<float, uint16_t> box_mesh = min::to_mesh<float, uint16_t>(box);
-        box_mesh.calculate_normals();
+        // Since we are using a BMESH, assert floating point compatibility
+        static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 float required");
+        static_assert(sizeof(float) == 4, "32 bit IEEE 754 float required");
+
+        // Create empty companion box mesh
+        min::mesh<float, uint16_t> box_mesh("companion");
+
+        // Load cube data from binary mesh file
+        box_mesh.from_file("data/models/art_cube.bmesh");
+
+        // Create bounding box from mesh data
+        min::aabbox<float, min::vec4> box(box_mesh.vertex);
+
+        // Convert from vec4 to vec3
+        _box = min::aabbox<float, min::vec3>(box.get_min(), box.get_max());
 
         // Bind VAO
         _buffer.bind();
@@ -89,7 +93,7 @@ class mob_instance
     inline void load_textures()
     {
         // Load textures
-        const min::dds d = min::dds("data/texture/atlas.dds");
+        const min::dds d = min::dds("data/texture/art_cube.dds");
 
         // Load texture buffer
         _dds_id = _texture_buffer.add_dds_texture(d);
@@ -143,8 +147,17 @@ class mob_instance
     }
     min::aabbox<float, min::vec3> mob_box(const size_t index) const
     {
+        // Get mob position
         const min::vec3<float> &p = _position[index];
-        return create_box(p);
+
+        // Create box for this mob
+        min::aabbox<float, min::vec3> box(_box);
+
+        // Move box to mob position
+        box.set_position(p);
+
+        // Return this box for collisions
+        return box;
     }
     void draw()
     {

@@ -20,6 +20,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <game/cgrid.h>
+#include <min/cubic.h>
 #include <min/vec3.h>
 #include <numeric>
 
@@ -100,15 +101,138 @@ class path_data
 class path
 {
   private:
-    static constexpr float path_expire = 5.0;
+    static constexpr float _path_square_expire = 25.0;
+    static constexpr float _path_square_arrive = 0.25;
     std::vector<min::vec3<float>> _path;
+    min::bezier_deriv<float, min::vec3> _curve;
+    min::vec3<float> _target;
+    min::vec3<float> _last;
+    bool _bezier_interp;
+    float _curve_dist;
+    float _curve_interp;
     size_t _path_index;
 
+    inline void accumulate(const min::vec3<float> &p)
+    {
+        // Calculate the distance from the start point
+        const min::vec3<float> accum_vec = p - _last;
+        const float accum_dist = accum_vec.dot(accum_vec);
+
+        // Increment the interpolation distance constant
+        _curve_interp += std::sqrt(accum_dist / _curve_dist);
+
+        // Reset last point
+        _last = p;
+    }
+
+    inline min::vec3<float> calculate_direction(const path_data &data) const
+    {
+        // Current position
+        const min::vec3<float> &p = data.get_position();
+
+        // Bezier interpolation instead of linear?
+        min::vec3<float> target;
+        if (_bezier_interp)
+        {
+            // Add bezier interpolation here
+            target = _curve.interpolate(_curve_interp);
+        }
+        else
+        {
+            target = (_path[_path_index] - p);
+        }
+
+        // Normalize direction vector and provide a fallback
+        return target.normalize_safe(data.get_direction());
+    }
+    inline void expire_path(const path_data &data)
+    {
+        // Current position
+        const min::vec3<float> &p = data.get_position();
+
+        // Calculate the expire distance
+        const min::vec3<float> expire_vec = _target - p;
+        const float expire = expire_vec.dot(expire_vec);
+
+        // Reset path?
+        if (expire < _path_square_expire)
+        {
+            // Travel down the path
+            if (expire < _path_square_arrive)
+            {
+                // Increment current position in path
+                if (_bezier_interp)
+                {
+                    // We test for overflow be enabling bezier interpolation
+                    _path_index += 3;
+                }
+                else
+                {
+                    _path_index++;
+                }
+
+                // Check if we have arrived at the destination
+                const size_t size = _path.size();
+                if (_path_index == size)
+                {
+                    // If we have reached the destination
+                    _path.clear();
+                }
+                else if ((size - _path_index) >= 3)
+                {
+                    // Use bezier interpolation
+                    set_bezier_interpolation(p);
+                }
+                else
+                {
+                    // Use bezier interpolation
+                    set_linear_interpolation();
+                }
+            }
+        }
+        else
+        {
+            // Generate a new path
+            _path.clear();
+        }
+    }
+    inline void set_bezier_interpolation(const min::vec3<float> &begin)
+    {
+        // Flag we are using bezier curve
+        _bezier_interp = true;
+
+        // Calculate bezier curve indices
+        const size_t i1 = _path_index;
+        const size_t i2 = i1 + 1;
+        const size_t i3 = i2 + 1;
+
+        // Calculate new bezier curve
+        _curve = min::bezier_deriv<float, min::vec3>(begin, _path[i1], _path[i2], _path[i3]);
+
+        // Calculate distance between start and end point on curve
+        const min::vec3<float> curve_vec = _curve.end() - _curve.begin();
+        _curve_dist = curve_vec.dot(curve_vec);
+
+        // Reset the curve interpolation constant
+        _curve_interp = 0.0;
+
+        // Reset the target position
+        _target = _curve.end();
+    }
+    inline void set_linear_interpolation()
+    {
+        // Flag we are not using bezier curve
+        _bezier_interp = false;
+
+        // Reset the target position
+        _target = _path[_path_index];
+    }
+
   public:
-    path() : _path_index(0)
+    path() : _bezier_interp(false), _curve_dist(0.0), _curve_interp(0.0), _path_index(0)
     {
         // Reserve space for path
-        _path.reserve(20);
+        _path.reserve(100);
     }
     void clear()
     {
@@ -120,63 +244,45 @@ class path
         const min::vec3<float> &p = data.get_position();
         const min::vec3<float> &dest = data.get_destination();
 
-        // If we already computed a path
-        if (_path.size() > 0)
+        // If we need to compute a path
+        if (_path.size() == 0)
         {
-            // Get the current point on this path
-            const min::vec3<float> point = _path[_path_index];
+            // Update path vector
+            grid.path(_path, p, dest);
 
-            // Check if we need to generate a new path
-            const min::vec3<float> dp = point - p;
-            const float mag = dp.magnitude();
-            if (mag < path_expire)
+            // Reset path index
+            _path_index = 0;
+
+            // Reset last point
+            _last = p;
+
+            // Reset the bezier curve if have enough points
+            if (_path.size() >= 3)
             {
-                // Check if we have arrived at the destination
-                if (mag <= 0.5)
-                {
-                    // Increment the index
-                    _path_index++;
-
-                    // If we have reached the destination
-                    if (_path_index == _path.size())
-                    {
-                        _path.clear();
-                    }
-                }
-
-                // Normalize direction?
-                if (mag > 1E-3)
-                {
-                    // Normalize direction and cache it
-                    const float inv_mag = 1.0 / mag;
-                    return dp * inv_mag;
-                }
-
-                // Return the direction to next point
-                return dp;
+                set_bezier_interpolation(p);
             }
             else
             {
-                // Generate a new path
-                _path.clear();
+                set_linear_interpolation();
             }
         }
 
-        // Get a path between the two points
-        grid.path(_path, p, dest);
-
-        // If we found a path
+        // If we got a path use it
         if (_path.size() > 0)
         {
-            // Reset the path index, in reverse
-            _path_index = 0;
+            // Accumulate interpolation
+            accumulate(p);
 
-            // Return the direction to next point, defaulting to data direction
-            min::vec3<float> dp = _path[_path_index] - p;
-            return dp.normalize_safe(data.get_direction());
+            // Calculate direction
+            const min::vec3<float> out = calculate_direction(data);
+
+            // Check if path has expired
+            expire_path(data);
+
+            return out;
         }
 
-        // Couldn't find a path so return default
+        // Failure fallback
         return data.get_direction();
     }
     const std::vector<min::vec3<float>> &get_path() const

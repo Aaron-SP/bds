@@ -556,8 +556,8 @@ class world
         // Get the character rigid body
         min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
 
-        // Calculate the next step, THIS IS NOT NORMALIZED
-        const min::vec3<float> &step = path.step();
+        // Calculate the next step
+        const min::vec3<float> &step = path.step() * 5.0;
 
         // Add velocity to the body
         body.set_linear_velocity(step);
