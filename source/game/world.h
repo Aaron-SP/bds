@@ -331,8 +331,16 @@ class world
         // Get player position
         const min::vec3<float> &p = body.get_position();
 
+        // Calculate the timestep independent from frame rate, goal = 0.0016667
+        const unsigned steps = std::ceil(dt / 0.0016667);
+        const float time_step = dt / steps;
+
+        // Damping coefficient 10@10 | 3.5@30
+        const float damping = 13.25 - 0.325 * steps;
+        const float friction = -20.0 / steps;
+
         // Solve the physics simulation
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < steps; i++)
         {
             // Get all cells that could collide
             _grid.create_player_collision_cells(_player_col_cells, p);
@@ -342,10 +350,10 @@ class world
             const min::vec3<float> xz(vel.x(), 0.0, vel.z());
 
             // Add friction force opposing lateral motion
-            body.add_force(xz * body.get_mass() * -2.0);
+            body.add_force(xz * body.get_mass() * friction);
 
             // Solve static collisions
-            _simulation.solve_static(_player_col_cells, _char_id, dt / 10.0, 10.0);
+            _simulation.solve_static(_player_col_cells, _char_id, time_step, damping);
 
             // Do mob collisions
             const size_t mob_size = _mobs.size();
@@ -358,7 +366,7 @@ class world
                 _grid.create_mob_collision_cells(_mob_col_cells, mob_p);
 
                 // Solve static collisions
-                _simulation.solve_static(_mob_col_cells, _mob_start + i, dt / 10.0, 10.0);
+                _simulation.solve_static(_mob_col_cells, _mob_start + i, time_step, damping);
             }
         }
 
