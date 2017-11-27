@@ -7,9 +7,11 @@ FREETYPE2_INCLUDE = $(shell freetype-config --cflags)
 ifeq ($(OS),Windows_NT)
 	MGL_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mgl
 	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll
+	STATIC = -static-libgcc -static-libstdc++
 else
 	MGL_PATH = /usr/include/mgl
 	LINKER = -lX11 -lGL -lfreetype -pthread
+	STATIC = -static-libgcc -static-libstdc++
 endif
 
 # Override if MGL_DESTDIR specified
@@ -18,7 +20,7 @@ ifdef MGL_DESTDIR
 endif
 
 # Compile parameters
-CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math -static -static-libgcc -static-libstdc++
+CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math $(STATIC)
 NATIVE =  $(CPP) -march=native
 BUILD32 = $(CPP) -m32
 BUILD64 = $(CPP) -m64

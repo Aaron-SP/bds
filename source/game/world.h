@@ -556,8 +556,14 @@ class world
         // Get the character rigid body
         min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
 
+        // Get remaining distance
+        const float remain = data.get_remain();
+
+        // Calculate speed slowing down as approaching goal
+        const float speed = 2.75 * ((remain - 3.0) / (remain + 3.0) + 1.1);
+
         // Calculate the next step
-        const min::vec3<float> &step = path.step() * 5.0;
+        const min::vec3<float> &step = path.step() * speed;
 
         // Add velocity to the body
         body.set_linear_velocity(step);
