@@ -25,12 +25,12 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/explode_particle.h>
 #include <game/mob.h>
 #include <game/sky.h>
+#include <game/terrain_vertex.h>
 #include <min/camera.h>
 #include <min/dds.h>
 #include <min/physics.h>
 #include <min/program.h>
 #include <min/shader.h>
-#include <min/stream_vertex.h>
 #include <min/texture_buffer.h>
 #include <min/tree.h>
 #include <min/uniform_buffer.h>
@@ -47,12 +47,13 @@ class world
   private:
     // Opengl stuff
     min::shader _tv;
+    min::shader _tg;
     min::shader _tf;
     min::program _terrain_program;
     min::uniform_buffer<float> _preview;
     min::uniform_buffer<float> _geom;
-    min::vertex_buffer<float, uint32_t, min::stream_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
-    min::vertex_buffer<float, uint32_t, min::stream_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
+    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
+    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     std::vector<size_t> _view_chunks;
     std::vector<min::aabbox<float, min::vec3>> _player_col_cells;
     std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
@@ -136,7 +137,7 @@ class world
         _pb.bind();
 
         // Draw placemarker
-        _pb.draw_all(GL_TRIANGLES);
+        _pb.draw_all(GL_POINTS);
     }
     inline void draw_terrain() const
     {
@@ -144,7 +145,7 @@ class world
         _gb.bind();
 
         // Draw graph-mesh
-        _gb.draw_all(GL_TRIANGLES);
+        _gb.draw_all(GL_POINTS);
     }
     // Generate all geometry in grid and adds it to geometry buffer
     inline void generate_gb()
@@ -340,7 +341,7 @@ class world
         const float friction = -20.0 / steps;
 
         // Solve the physics simulation
-        for (int i = 0; i < steps; i++)
+        for (size_t i = 0; i < steps; i++)
         {
             // Get all cells that could collide
             _grid.create_player_collision_cells(_player_col_cells, p);
@@ -382,8 +383,9 @@ class world
   public:
     world(const std::pair<min::vec3<float>, bool> &state, const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
         : _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
+          _tg("data/shader/terrain.geometry", GL_GEOMETRY_SHADER),
           _tf("data/shader/terrain.fragment", GL_FRAGMENT_SHADER),
-          _terrain_program(_tv, _tf),
+          _terrain_program({_tv.id(), _tg.id(), _tf.id()}),
           _preview(1, 4),
           _geom(1, 4),
           _scale(1, 1, 1),

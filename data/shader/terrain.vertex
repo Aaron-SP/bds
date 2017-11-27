@@ -1,8 +1,6 @@
 #version 330 core
 
 layout (location = 0) in vec4 vertex;
-layout (location = 1) in vec2 uv;
-layout (location = 2) in vec3 normal;
 
 #define MAX_NUM_TOTAL_LIGHTS 1
 struct light
@@ -25,55 +23,27 @@ layout(std140) uniform matrix_block
     int size;
 } matrix_buffer;
 
-out vec2 out_uv;
-out vec4 out_color;
+flat out int out_id;
 
 void main(void)
 {
-    // Get the model matrix from the uniform buffer
-    mat4 pv = matrix_buffer.matrix[0];
-    mat4 view = matrix_buffer.matrix[1];
+    // Set the vertex for modifying w component
+    vec4 out_vertex = vertex;
 
-    vec4 trans_vertex;
+    // Get the uv id
+    out_id = int(vertex.w);
 
-	// Calculate transformed position
-    if(light_buffer.lights[0].power.a > 0.51)
+    // Set vertex w back to 1.0
+    out_vertex.w = 1.0;
+
+	// Calculate transformed position for placemark mode
+    if(light_buffer.lights[0].power.a <= 0.51)
     {
-        // Terrain
-        trans_vertex = vertex;
-    }
-    else
-    {
-        // Placemark
+        // Placemark mode enabled
         mat4 model = matrix_buffer.matrix[2];
-        trans_vertex = model * vertex;
+        out_vertex = model * out_vertex;
     }
 
-    gl_Position =  pv * trans_vertex;
-
-    // Initialize reference color
-    vec4 color = vec4(0, 0, 0, 1.0);
-
-    // For all lights in the scene
-    for(int i = 0; i < light_buffer.size; i++)
-    {
-        // Calculate the light direction in world space
-        vec4 light_direction = normalize(light_buffer.lights[i].position - trans_vertex);
-
-        // Calculate the diffuse lighting in world space
-        float cos_theta = clamp(dot(normal, light_direction.xyz), 0, 1);
-
-        // Calculate ambient, diffuse and specular
-        float ambient = light_buffer.lights[i].power.x;
-        float diffuse = light_buffer.lights[i].power.y * cos_theta;
-
-        // Calculate the output color
-        color += light_buffer.lights[i].color * (ambient + diffuse);
-    }
-
-	// Pass texture coordinates to fragment shader
-	out_uv = uv;
-
-    // Pass the color to the fragment shader
-    out_color = vec4(color.rgb, light_buffer.lights[0].power.a);
+    // Pass vertex to geometry shader
+    gl_Position = out_vertex;
 }

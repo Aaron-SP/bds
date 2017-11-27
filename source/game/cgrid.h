@@ -75,188 +75,6 @@ class cgrid
             p.x(p.x() + offset.x());
         }
     }
-    static inline void append_box(const min::aabbox<float, min::vec3> &b, min::mesh<float, uint32_t> &m, const int8_t atlas_id)
-    {
-        // Get box dimensions
-        const min::vec3<float> &min = b.get_min();
-        const min::vec3<float> &max = b.get_max();
-        const size_t index_offset = m.vertex.size();
-
-        // Append vertices
-        m.vertex.insert(m.vertex.end(),
-                        std::initializer_list<min::vec4<float>>{
-                            min::vec4<float>(min.x(), min.y(), min.z(), 1.0),
-                            min::vec4<float>(max.x(), min.y(), max.z(), 1.0),
-                            min::vec4<float>(min.x(), min.y(), max.z(), 1.0),
-                            min::vec4<float>(max.x(), max.y(), max.z(), 1.0),
-                            min::vec4<float>(min.x(), max.y(), min.z(), 1.0),
-                            min::vec4<float>(min.x(), max.y(), max.z(), 1.0),
-                            min::vec4<float>(min.x(), max.y(), max.z(), 1.0),
-                            min::vec4<float>(min.x(), min.y(), min.z(), 1.0),
-                            min::vec4<float>(min.x(), min.y(), max.z(), 1.0),
-                            min::vec4<float>(min.x(), max.y(), min.z(), 1.0),
-                            min::vec4<float>(max.x(), min.y(), min.z(), 1.0),
-                            min::vec4<float>(min.x(), min.y(), min.z(), 1.0),
-                            min::vec4<float>(max.x(), min.y(), min.z(), 1.0),
-                            min::vec4<float>(max.x(), max.y(), max.z(), 1.0),
-                            min::vec4<float>(max.x(), min.y(), max.z(), 1.0),
-                            min::vec4<float>(min.x(), min.y(), max.z(), 1.0),
-                            min::vec4<float>(max.x(), max.y(), max.z(), 1.0),
-                            min::vec4<float>(min.x(), max.y(), max.z(), 1.0),
-                            min::vec4<float>(max.x(), min.y(), min.z(), 1.0),
-                            min::vec4<float>(max.x(), max.y(), min.z(), 1.0),
-                            min::vec4<float>(min.x(), max.y(), min.z(), 1.0),
-                            min::vec4<float>(max.x(), max.y(), min.z(), 1.0),
-                            min::vec4<float>(max.x(), max.y(), min.z(), 1.0),
-                            min::vec4<float>(max.x(), min.y(), max.z(), 1.0)});
-
-        //Create UV's for the box
-        std::array<min::vec2<float>, 24> uvs{
-            min::vec2<float>(1, 0),
-            min::vec2<float>(0, 1),
-            min::vec2<float>(0, 0),
-            min::vec2<float>(1, 0),
-            min::vec2<float>(0, 1),
-            min::vec2<float>(0, 0),
-            min::vec2<float>(1, 0),
-            min::vec2<float>(0, 1),
-            min::vec2<float>(0, 0),
-            min::vec2<float>(1, 0),
-            min::vec2<float>(0, 1),
-            min::vec2<float>(0, 0),
-            min::vec2<float>(0, 0),
-            min::vec2<float>(1, 1),
-            min::vec2<float>(0, 1),
-            min::vec2<float>(1, 0),
-            min::vec2<float>(0, 1),
-            min::vec2<float>(0, 0),
-            min::vec2<float>(1, 1),
-            min::vec2<float>(1, 1),
-            min::vec2<float>(1, 1),
-            min::vec2<float>(1, 1),
-            min::vec2<float>(1, 0),
-            min::vec2<float>(1, 1)};
-
-        // grass
-        if (atlas_id == 5)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv.x(uv.x() + 0.001);
-                uv.y(uv.y() + 0.751);
-            }
-        }
-        // stone
-        else if (atlas_id == 0)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv.x(uv.x() + 0.251);
-                uv.y(uv.y() + 0.751);
-            }
-        }
-        // sand
-        else if (atlas_id == 1)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv.x(uv.x() + 0.501);
-                uv.y(uv.y() + 0.751);
-            }
-        }
-        // wood
-        else if (atlas_id == 3)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv += 0.751;
-            }
-        }
-        // dirt
-        else if (atlas_id == 4)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv.x(uv.x() + 0.001);
-                uv.y(uv.y() + 0.501);
-            }
-        }
-        // lava
-        else if (atlas_id == 2)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv.x(uv.x() + 0.251);
-                uv.y(uv.y() + 0.501);
-            }
-        }
-        // water
-        else if (atlas_id == 6)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv += 0.501;
-            }
-        }
-        // sulphur
-        else if (atlas_id == 7)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv.x(uv.x() + 0.751);
-                uv.y(uv.y() + 0.501);
-            }
-        }
-
-        // Append uv coordinates
-        m.uv.insert(m.uv.end(), uvs.begin(), uvs.end());
-
-        // Create indices
-        std::array<uint32_t, 36> indices{
-            0, 1, 2,
-            3, 4, 5,
-            6, 7, 8,
-            9, 10, 11,
-            12, 13, 14,
-            15, 16, 17,
-            0, 18, 1,
-            3, 19, 4,
-            6, 20, 7,
-            9, 21, 10,
-            12, 22, 13,
-            15, 23, 16};
-
-        // Offset the uv for each box in the mesh
-        for (auto &i : indices)
-        {
-            i += index_offset;
-        }
-
-        // Append indices
-        m.index.insert(m.index.end(), indices.begin(), indices.end());
-    }
-    static inline min::mesh<float, uint32_t> create_box_mesh(const min::aabbox<float, min::vec3> &box, const int8_t atlas_id)
-    {
-        // Create a mesh to hold data
-        min::mesh<float, uint32_t> box_mesh("box");
-
-        // Append box vertices and information
-        append_box(box, box_mesh, atlas_id);
-
-        // Calculate normals and tangents
-        min::finalize_mesh<float, uint32_t>(box_mesh);
-
-        // Return the box
-        return box_mesh;
-    }
     static inline min::aabbox<float, min::vec3> create_box(const min::vec3<float> &center)
     {
         // Create box at center
@@ -317,11 +135,18 @@ class cgrid
                     const auto t = min::vec3<float>::grid_index(_world.get_min(), cell_extent, p);
                     if (std::get<0>(t) % edge == 0 || std::get<1>(t) % edge == 0 || std::get<2>(t) % edge == 0)
                     {
-                        // Create a box
-                        const min::aabbox<float, min::vec3> box = create_box(p);
+                        // Push back block, store atlas in w component see vertex/geometry shader
+                        _chunks[key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
 
-                        // Add box to chunk
-                        append_box(box, _chunks[key], atlas);
+                        // Push back block index
+                        if (_chunks[key].index.size() > 0)
+                        {
+                            _chunks[key].index.push_back(_chunks[key].index.back() + 1);
+                        }
+                        else
+                        {
+                            _chunks[key].index.push_back(0);
+                        }
                     }
                     else
                     {
@@ -347,11 +172,18 @@ class cgrid
                             const bool skip = bx1 && bx2 && by1 && by2 && bz1 && bz2;
                             if (!skip)
                             {
-                                // Create a box
-                                const min::aabbox<float, min::vec3> box = create_box(p);
+                                // Push back block, store atlas in w component see vertex/geometry shader
+                                _chunks[key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
 
-                                // Add box to chunk
-                                append_box(box, _chunks[key], atlas);
+                                // Push back block index
+                                if (_chunks[key].index.size() > 0)
+                                {
+                                    _chunks[key].index.push_back(_chunks[key].index.back() + 1);
+                                }
+                                else
+                                {
+                                    _chunks[key].index.push_back(0);
+                                }
                             }
                         }
                     }
@@ -361,12 +193,6 @@ class cgrid
 
         // Run the function
         cubic(start, offset, length, f);
-
-        // Finalize the mesh by calculating normals and tangents, if it contains boxes
-        if (_chunks[key].vertex.size() > 0)
-        {
-            min::finalize_mesh<float, uint32_t>(_chunks[key]);
-        }
     }
     inline void generate_world()
     {
@@ -809,8 +635,16 @@ class cgrid
     }
     inline min::mesh<float, uint32_t> atlas_box(const min::vec3<float> &p)
     {
-        const min::aabbox<float, min::vec3> box = create_box(p);
-        return create_box_mesh(box, _atlas_id);
+        // Create a mesh to hold data
+        min::mesh<float, uint32_t> terr_mesh("box");
+        const float atlas = static_cast<float>(_atlas_id);
+
+        // Add data to mesh
+        terr_mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), atlas));
+        terr_mesh.index.push_back(0);
+
+        // return the terrain mesh
+        return terr_mesh;
     }
     inline size_t chunk_key(const min::vec3<float> &point, bool &valid) const
     {
