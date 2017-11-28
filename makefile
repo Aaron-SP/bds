@@ -19,8 +19,13 @@ ifdef MGL_DESTDIR
 	MGL_PATH = $(MGL_DESTDIR)/mgl
 endif
 
+# Enable GS rendering
+ifdef MGL_GS_RENDER
+	MGL_GS_RENDER = -DUSE_GS_RENDER
+endif
+
 # Compile parameters
-CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math $(STATIC)
+CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math $(STATIC) $(MGL_GS_RENDER)
 NATIVE =  $(CPP) -march=native
 BUILD32 = $(CPP) -m32
 BUILD64 = $(CPP) -m64

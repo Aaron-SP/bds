@@ -44,6 +44,8 @@ class mglcraft
     game::world _world;
     game::controls _controls;
     game::goal_seek _goal_seek;
+    double _fps;
+    double _idle;
 
     void load_text()
     {
@@ -70,6 +72,12 @@ class mglcraft
 
         // Energy
         _text.add_text("ENERGY:", 10, 320);
+
+        // FPS
+        _text.add_text("FPS:", 10, 292);
+
+        // IDLE
+        _text.add_text("IDLE:", 10, 264);
     }
     std::pair<min::vec3<float>, bool> load_state()
     {
@@ -161,11 +169,11 @@ class mglcraft
   public:
     // Load window shaders and program
     mglcraft()
-        : _win("MGLCRAFT: LOADING", 720, 480, 3, 3),
+        : _win("MGLCRAFT", 720, 480, 3, 3),
           _text(28),
           _world(load_state(), 64, 8, 7),
           _controls(_win, _state.get_camera(), _state, _text, _world),
-          _goal_seek(_world)
+          _goal_seek(_world), _fps(0.0), _idle(0.0)
     {
         // Set depth and cull settings
         min::settings::initialize();
@@ -257,6 +265,11 @@ class mglcraft
         auto &keyboard = _win.get_keyboard();
         keyboard.update(dt);
     }
+    void update_sync(const double fps, const double idle)
+    {
+        _fps = fps;
+        _idle = idle;
+    }
     void update_text()
     {
         // If drawing text mode is on, update text
@@ -297,6 +310,22 @@ class mglcraft
             // Update the energy text
             stream << "ENERGY: " << _state.get_energy();
             _text.update_text(stream.str(), 6);
+
+            // Clear and reset the stream
+            stream.clear();
+            stream.str(std::string());
+
+            // Update FPS and IDLE
+            stream << "FPS: " << _fps;
+            _text.update_text(stream.str(), 7);
+
+            // Clear and reset the stream
+            stream.clear();
+            stream.str(std::string());
+
+            // Update FPS and IDLE
+            stream << "IDLE: " << _idle;
+            _text.update_text(stream.str(), 8);
 
             // Upload changes
             _text.upload();
@@ -352,14 +381,17 @@ void run()
         // Train the AI every second
         game.path_ai();
 
-        // Update the debug text
-        game.update_text();
-
         // Calculate the number of 'average' frames per second
         const double fps = sync.get_fps();
 
-        // Update the window title with FPS count of last frame
-        game.set_title("MGLCRAFT: FPS: " + std::to_string(fps));
+        // Calculate the percentage of frame spent idle
+        const double idle = sync.idle();
+
+        // Update fps and idle text
+        game.update_sync(fps, idle);
+
+        // Update the debug text
+        game.update_text();
     }
 }
 

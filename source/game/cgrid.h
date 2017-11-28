@@ -21,7 +21,6 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/file.h>
 #include <game/mandelbulb.h>
 #include <min/aabbox.h>
-#include <min/convert.h>
 #include <min/intersect.h>
 #include <min/mesh.h>
 #include <min/ray.h>
