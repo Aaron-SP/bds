@@ -138,16 +138,6 @@ class cgrid
                     {
                         // Push back block, store atlas in w component see vertex/geometry shader
                         _chunks[key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
-
-                        // Push back block index
-                        if (_chunks[key].index.size() > 0)
-                        {
-                            _chunks[key].index.push_back(_chunks[key].index.back() + 1);
-                        }
-                        else
-                        {
-                            _chunks[key].index.push_back(0);
-                        }
                     }
                     else
                     {
@@ -175,16 +165,6 @@ class cgrid
                             {
                                 // Push back block, store atlas in w component see vertex/geometry shader
                                 _chunks[key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
-
-                                // Push back block index
-                                if (_chunks[key].index.size() > 0)
-                                {
-                                    _chunks[key].index.push_back(_chunks[key].index.back() + 1);
-                                }
-                                else
-                                {
-                                    _chunks[key].index.push_back(0);
-                                }
                             }
                         }
                     }
@@ -649,15 +629,12 @@ class cgrid
 
         // Store start point => (0,0,0)
         min::vec3<float> start;
-
         const float atlas = static_cast<float>(_atlas_id);
-        uint32_t index = 0;
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &mesh, &index, &atlas](const min::vec3<float> &p) {
+        const auto f = [this, &mesh, &atlas](const min::vec3<float> &p) {
             // Add data to mesh for each cell
             mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), atlas));
-            mesh.index.push_back(index++);
         };
 
         // Run the function
@@ -742,7 +719,7 @@ class cgrid
     {
         _atlas_id = id;
     }
-    inline const min::mesh<float, uint32_t> &get_chunk(const size_t index) const
+    inline min::mesh<float, uint32_t> &get_chunk(const size_t index)
     {
         return _chunks[index];
     }

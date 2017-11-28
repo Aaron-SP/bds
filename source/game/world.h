@@ -25,16 +25,11 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/explode_particle.h>
 #include <game/mob.h>
 #include <game/sky.h>
-#include <game/terrain_vertex.h>
+#include <game/terrain.h>
 #include <min/camera.h>
-#include <min/dds.h>
 #include <min/physics.h>
-#include <min/program.h>
-#include <min/shader.h>
-#include <min/texture_buffer.h>
 #include <min/tree.h>
 #include <min/uniform_buffer.h>
-#include <min/vertex_buffer.h>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -47,20 +42,13 @@ class world
   private:
     static constexpr size_t _pre_max_scale = 5;
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
-    // Opengl stuff
-    min::shader _tv;
-    min::shader _tg;
-    min::shader _tf;
-    min::program _terrain_program;
+
+    game::terrain _terrain;
     min::uniform_buffer<float> _preview;
     min::uniform_buffer<float> _geom;
-    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
-    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     std::vector<size_t> _view_chunks;
     std::vector<min::aabbox<float, min::vec3>> _player_col_cells;
     std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
-    min::texture_buffer _tbuffer;
-    GLuint _dds_id;
 
     // User stuff
     min::mesh<float, uint32_t> _terr_mesh;
@@ -113,7 +101,7 @@ class world
         _grid.update_chunk(position);
 
         // Generate a new geometry mesh
-        generate_gb();
+        generate_terrain();
 
         // If this the first time we load
         if (!state.second)
@@ -134,74 +122,37 @@ class world
             _scale = min::vec3<unsigned>(1, 1, 1);
         }
     }
-    inline void draw_placemark() const
-    {
-        // Bind VAO
-        _pb.bind();
-
-        // Draw placemarker
-        _pb.draw_all(GL_POINTS);
-    }
-    inline void draw_terrain() const
-    {
-        // Bind VAO
-        _gb.bind();
-
-        // Draw graph-mesh
-        _gb.draw_all(GL_POINTS);
-    }
     // Generate all geometry in grid and adds it to geometry buffer
-    inline void generate_gb()
+    inline void generate_terrain()
     {
-        // Reset the buffer
-        _gb.clear();
-
         // Get surrounding chunks for drawing
         _grid.get_view_chunks(_view_chunks);
 
-        // Add all chunks to the geometry buffer
-        for (const auto &key : _view_chunks)
-        {
-            // Only add if contains cells
-            const auto &chunk = _grid.get_chunk(key);
-            if (chunk.vertex.size() > 0)
-            {
-                _gb.add_mesh(chunk);
-            }
-        }
-
-        // Bind the gb VAO
-        _gb.bind();
+        // Lambda that returns a mesh
+        const auto f = [this](const size_t key) -> min::mesh<float, uint32_t> & {
+            return _grid.get_chunk(key);
+        };
 
         // Upload contents to the vertex buffer
-        _gb.upload();
+        _terrain.upload_geometry(_view_chunks, f);
     }
     // Generates the preview geometry and adds it to preview buffer
-    inline void generate_pb()
+    inline void generate_preview()
     {
-        // Reset the buffer
-        _pb.clear();
-
         // Lock in the preview offset
         _preview_offset = _cached_offset;
 
         // Load data into mesh
         _grid.atlas_preview(_terr_mesh, _preview_offset, _scale);
 
-        // Add mesh to the buffer
-        _pb.add_mesh(_terr_mesh);
-
-        //Bind the pb VAO
-        _pb.bind();
-
-        // Upload contents to the vertex buffer
-        _pb.upload();
+        // Upload preview geometry
+        _terrain.upload_preview(_terr_mesh);
     }
     inline void load_uniform()
     {
         // Load the uniform buffer with program we will use
-        _preview.set_program(_terrain_program);
-        _geom.set_program(_terrain_program);
+        _preview.set_program(_terrain.get_program());
+        _geom.set_program(_terrain.get_program());
 
         // Let the particle system use this uniform buffer
         _particles.set_uniforms(_preview);
@@ -241,7 +192,7 @@ class world
         if (removed > 0)
         {
             // generate new mesh
-            generate_gb();
+            generate_terrain();
 
             // Add particle effects
             _particles.load(point, direction, 5.0);
@@ -369,11 +320,7 @@ class world
 
   public:
     world(const std::pair<min::vec3<float>, bool> &state, const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
-        : _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
-          _tg("data/shader/terrain.geometry", GL_GEOMETRY_SHADER),
-          _tf("data/shader/terrain.fragment", GL_FRAGMENT_SHADER),
-          _terrain_program({_tv.id(), _tg.id(), _tf.id()}),
-          _preview(1, 4),
+        : _preview(1, 4),
           _geom(1, 4),
           _terr_mesh("atlas"),
           _scale(1, 1, 1),
@@ -394,12 +341,6 @@ class world
             throw std::runtime_error("world: chunk_size must be integer multiple of grid_size");
         }
 
-        // Load texture
-        min::dds tex("data/texture/atlas.dds");
-
-        // Load texture buffer
-        _dds_id = _tbuffer.add_dds_texture(tex);
-
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);
 
@@ -411,7 +352,7 @@ class world
         _terr_mesh.index.reserve(_pre_max_vol);
 
         // Generate the preview buffer
-        generate_pb();
+        generate_preview();
 
         // Load character
         character_load(state);
@@ -434,7 +375,7 @@ class world
         _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
 
         // generate new mesh
-        generate_gb();
+        generate_terrain();
     }
     inline void ray_block(const min::ray<float, min::vec3> &r)
     {
@@ -442,7 +383,7 @@ class world
         _grid.ray_trace_atlas(r, 100);
 
         // generate new mesh
-        generate_gb();
+        generate_terrain();
     }
     inline int8_t remove_block(const min::ray<float, min::vec3> &r)
     {
@@ -602,7 +543,7 @@ class world
             _grid.update_chunk(current_chunk);
 
             // Generate a new geometry mesh
-            generate_gb();
+            generate_terrain();
         }
 
         // Update the mobs
@@ -622,14 +563,11 @@ class world
         // Draw the sky, uses geometry uniform buffer
         _sky.draw();
 
-        // Bind the terrain texture for drawing
-        _tbuffer.bind(_dds_id, 0);
-
-        // Use the terrain program for drawing
-        _terrain_program.use();
+        // Binds textures and uses program
+        _terrain.bind();
 
         // Draw the world geometry
-        draw_terrain();
+        _terrain.draw_terrain();
 
         // Only draw if toggled
         if (_edit_mode)
@@ -638,7 +576,7 @@ class world
             _preview.bind();
 
             // Draw the placemark
-            draw_placemark();
+            _terrain.draw_placemark();
         }
 
         // Draw the mobs
@@ -668,14 +606,14 @@ class world
         _scale = min::vec3<unsigned>(1, 1, 1);
 
         // Regenerate the preview mesh
-        generate_pb();
+        generate_preview();
     }
     inline void set_atlas_id(const int8_t id)
     {
         _grid.set_atlas(id);
 
         // Regenerate the preview mesh
-        generate_pb();
+        generate_preview();
     }
     void set_scale_x(unsigned dx)
     {
@@ -684,14 +622,14 @@ class world
             if (_cached_offset.x() != _preview_offset.x())
             {
                 // Regenerate the preview mesh
-                generate_pb();
+                generate_preview();
             }
             else if (_scale.x() < _pre_max_scale)
             {
                 _scale.x(_scale.x() + dx);
 
                 // Regenerate the preview mesh
-                generate_pb();
+                generate_preview();
             }
         }
     }
@@ -702,14 +640,14 @@ class world
             if (_cached_offset.y() != _preview_offset.y())
             {
                 // Regenerate the preview mesh
-                generate_pb();
+                generate_preview();
             }
             else if (_scale.y() < _pre_max_scale)
             {
                 _scale.y(_scale.y() + dy);
 
                 // Regenerate the preview mesh
-                generate_pb();
+                generate_preview();
             }
         }
     }
@@ -720,14 +658,14 @@ class world
             if (_cached_offset.z() != _preview_offset.z())
             {
                 // Regenerate the preview mesh
-                generate_pb();
+                generate_preview();
             }
             else if (_scale.z() < _pre_max_scale)
             {
                 _scale.z(_scale.z() + dz);
 
                 // Regenerate the preview mesh
-                generate_pb();
+                generate_preview();
             }
         }
     }

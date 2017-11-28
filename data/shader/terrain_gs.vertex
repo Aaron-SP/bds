@@ -1,0 +1,49 @@
+#version 330 core
+
+layout (location = 0) in vec4 vertex;
+
+#define MAX_NUM_TOTAL_LIGHTS 1
+struct light
+{
+    vec4 color;
+    vec4 position;
+    vec4 power;
+};
+
+layout(std140) uniform light_block
+{
+    light lights[MAX_NUM_TOTAL_LIGHTS];
+    int size;
+} light_buffer;
+
+#define MAX_NUM_TOTAL_MATRIX 4
+layout(std140) uniform matrix_block
+{
+    mat4 matrix[MAX_NUM_TOTAL_MATRIX];
+    int size;
+} matrix_buffer;
+
+flat out int out_id;
+
+void main(void)
+{
+    // Set the vertex for modifying w component
+    vec4 out_vertex = vertex;
+
+    // Get the uv id
+    out_id = int(vertex.w);
+
+    // Set vertex w back to 1.0
+    out_vertex.w = 1.0;
+
+	// Calculate transformed position for placemark mode
+    if(light_buffer.lights[0].power.a <= 0.51)
+    {
+        // Placemark mode enabled
+        mat4 model = matrix_buffer.matrix[2];
+        out_vertex = model * out_vertex;
+    }
+
+    // Pass vertex to geometry shader
+    gl_Position = out_vertex;
+}
