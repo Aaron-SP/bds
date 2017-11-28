@@ -45,6 +45,8 @@ namespace game
 class world
 {
   private:
+    static constexpr size_t _pre_max_scale = 5;
+    static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
     // Opengl stuff
     min::shader _tv;
     min::shader _tg;
@@ -61,6 +63,7 @@ class world
     GLuint _dds_id;
 
     // User stuff
+    min::mesh<float, uint32_t> _terr_mesh;
     min::vec3<unsigned> _scale;
     min::vec3<int> _cached_offset;
     min::vec3<int> _preview_offset;
@@ -181,28 +184,11 @@ class world
         // Lock in the preview offset
         _preview_offset = _cached_offset;
 
-        // Store start point => (0,0,0)
-        min::vec3<float> p;
+        // Load data into mesh
+        _grid.atlas_preview(_terr_mesh, _preview_offset, _scale);
 
-        // x axis
-        for (size_t i = 0; i < _scale.x(); i++)
-        {
-            // y axis
-            p.y(0.0);
-            for (size_t j = 0; j < _scale.y(); j++)
-            {
-                // z axis
-                p.z(0.0);
-                for (size_t k = 0; k < _scale.z(); k++)
-                {
-                    const min::mesh<float, uint32_t> box_mesh = _grid.atlas_box(p);
-                    _pb.add_mesh(box_mesh);
-                    p.z(p.z() + _preview_offset.z());
-                }
-                p.y(p.y() + 1.0);
-            }
-            p.x(p.x() + _preview_offset.x());
-        }
+        // Add mesh to the buffer
+        _pb.add_mesh(_terr_mesh);
 
         //Bind the pb VAO
         _pb.bind();
@@ -388,6 +374,7 @@ class world
           _terrain_program({_tv.id(), _tg.id(), _tf.id()}),
           _preview(1, 4),
           _geom(1, 4),
+          _terr_mesh("atlas"),
           _scale(1, 1, 1),
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
@@ -417,6 +404,10 @@ class world
 
         // Load uniform buffers
         load_uniform();
+
+        // Reserve space in the preview mesh
+        _terr_mesh.vertex.reserve(_pre_max_vol);
+        _terr_mesh.index.reserve(_pre_max_vol);
 
         // Generate the preview buffer
         generate_pb();
@@ -694,7 +685,7 @@ class world
                 // Regenerate the preview mesh
                 generate_pb();
             }
-            else if (_scale.x() < 5)
+            else if (_scale.x() < _pre_max_scale)
             {
                 _scale.x(_scale.x() + dx);
 
@@ -712,7 +703,7 @@ class world
                 // Regenerate the preview mesh
                 generate_pb();
             }
-            else if (_scale.y() < 5)
+            else if (_scale.y() < _pre_max_scale)
             {
                 _scale.y(_scale.y() + dy);
 
@@ -730,7 +721,7 @@ class world
                 // Regenerate the preview mesh
                 generate_pb();
             }
-            else if (_scale.z() < 5)
+            else if (_scale.z() < _pre_max_scale)
             {
                 _scale.z(_scale.z() + dz);
 

@@ -35,6 +35,7 @@ class cgrid
   private:
     size_t _grid_size;
     std::vector<int8_t> _grid;
+    size_t _chunk_cells;
     size_t _chunk_size;
     size_t _chunk_scale;
     std::vector<min::mesh<float, uint32_t>> _chunks;
@@ -193,6 +194,11 @@ class cgrid
 
         // Run the function
         cubic(start, offset, length, f);
+    }
+    inline void chunk_warm(const size_t key)
+    {
+        _chunks[key].vertex.reserve(_chunk_cells);
+        _chunks[key].index.reserve(_chunk_cells);
     }
     inline void generate_world()
     {
@@ -544,31 +550,32 @@ class cgrid
         {
             // Load grid with file
             size_t next = 0;
-            _grid = min::read_le_vector<int8_t>(stream, next);
+            const std::vector<int8_t> grid = min::read_le_vector<int8_t>(stream, next);
 
             // Check that grid load correctly
             const size_t cubic_size = _grid_size * _grid_size * _grid_size;
             if (_grid.size() == cubic_size)
             {
-                // Update all chunks
-                const size_t chunks = _chunks.size();
-                for (size_t i = 0; i < chunks; i++)
-                {
-                    chunk_update(i);
-                }
-
-                // return before generating world
-                return;
+                // Copy grid from file
+                _grid = grid;
+            }
+            else
+            {
+                // Grid is wrong dimensions so regenerate world
+                generate_world();
             }
         }
+        else
+        {
+            // Else generate world
+            generate_world();
+        }
 
-        // Else generate world
-        generate_world();
-
-        // Update all chunks
+        // Reserve and update all chunks
         const size_t chunks = _chunks.size();
         for (size_t i = 0; i < chunks; i++)
         {
+            chunk_warm(i);
             chunk_update(i);
         }
     }
@@ -592,6 +599,7 @@ class cgrid
     cgrid(const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
         : _grid_size(2.0 * grid_size),
           _grid(_grid_size * _grid_size * _grid_size, -1),
+          _chunk_cells(chunk_size * chunk_size * chunk_size),
           _chunk_size(chunk_size),
           _chunk_scale(_grid_size / _chunk_size),
           _chunks(_chunk_scale * _chunk_scale * _chunk_scale, min::mesh<float, uint32_t>("chunk")),
@@ -633,18 +641,27 @@ class cgrid
 
         return min::vec3<float>(std::floor(x) + 0.5, std::round(y), std::floor(z) + 0.5);
     }
-    inline min::mesh<float, uint32_t> atlas_box(const min::vec3<float> &p)
+    inline void atlas_preview(min::mesh<float, uint32_t> &mesh, const min::vec3<int> &offset, const min::vec3<unsigned> &length)
     {
-        // Create a mesh to hold data
-        min::mesh<float, uint32_t> terr_mesh("box");
+        // Clear mesh contents
+        mesh.vertex.clear();
+        mesh.index.clear();
+
+        // Store start point => (0,0,0)
+        min::vec3<float> start;
+
         const float atlas = static_cast<float>(_atlas_id);
+        uint32_t index = 0;
 
-        // Add data to mesh
-        terr_mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), atlas));
-        terr_mesh.index.push_back(0);
+        // Create cubic function, for each cell in cubic space
+        const auto f = [this, &mesh, &index, &atlas](const min::vec3<float> &p) {
+            // Add data to mesh for each cell
+            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), atlas));
+            mesh.index.push_back(index++);
+        };
 
-        // return the terrain mesh
-        return terr_mesh;
+        // Run the function
+        cubic(start, offset, length, f);
     }
     inline size_t chunk_key(const min::vec3<float> &point, bool &valid) const
     {
