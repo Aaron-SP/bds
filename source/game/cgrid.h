@@ -946,7 +946,7 @@ class cgrid
         // Return the number of modified blocks
         return out;
     }
-    void update(const min::vec3<float> &p)
+    void update_chunk(const min::vec3<float> &p)
     {
         bool is_valid = true;
         const size_t ckey = chunk_key(p, is_valid);
@@ -955,7 +955,7 @@ class cgrid
             _recent_chunk = ckey;
         }
     }
-    void update(const size_t current_chunk)
+    void update_chunk(const size_t current_chunk)
     {
         _recent_chunk = current_chunk;
     }

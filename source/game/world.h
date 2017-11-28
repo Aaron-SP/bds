@@ -110,7 +110,7 @@ class world
         body.set_no_rotate();
 
         // Update recent chunk
-        _grid.update(position);
+        _grid.update_chunk(position);
 
         // Generate a new geometry mesh
         generate_gb();
@@ -162,6 +162,7 @@ class world
         // Add all chunks to the geometry buffer
         for (const auto &key : _view_chunks)
         {
+            // Only add if contains cells
             const auto &chunk = _grid.get_chunk(key);
             if (chunk.vertex.size() > 0)
             {
@@ -598,7 +599,7 @@ class world
         if (is_valid && recent_chunk != current_chunk)
         {
             // Update the recent chunk
-            _grid.update(current_chunk);
+            _grid.update_chunk(current_chunk);
 
             // Generate a new geometry mesh
             generate_gb();
@@ -618,7 +619,7 @@ class world
         // Activate the uniform buffer
         _geom.bind();
 
-        // Draw the sky
+        // Draw the sky, uses geometry uniform buffer
         _sky.draw();
 
         // Bind the terrain texture for drawing
@@ -643,7 +644,7 @@ class world
         // Draw the mobs
         _mobs.draw();
 
-        // Draw the particles
+        // Draw the particles, uses preview uniform buffer
         _particles.draw(_preview, dt);
     }
     inline bool get_ai_mode()
