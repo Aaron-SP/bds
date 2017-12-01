@@ -18,6 +18,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __GAME_STATE__
 #define __GAME_STATE__
 
+#include <chrono>
 #include <game/character.h>
 #include <min/sample.h>
 
@@ -36,6 +37,7 @@ class state
     float _x[_frame_average];
     float _y[_frame_average];
     unsigned _frame_count;
+    std::chrono::high_resolution_clock::time_point _charge_start;
     std::string _mode;
     bool _pause_mode;
     bool _pause_lock;
@@ -98,9 +100,24 @@ class state
         const uint16_t value = 0x1 << (atlas_id);
         _energy += value;
     }
-    inline void animate_shoot_player()
+    inline player_abort_animation()
     {
-        // Activate shoot animation
+        _player.abort_animation();
+    }
+    inline void player_animate_charge()
+    {
+        // Activate the shoot animation
+        _player.set_animation_charge();
+
+        // Activate 999 loop of full animation
+        _player.set_animation_count(86400);
+    }
+    inline void player_animate_shoot()
+    {
+        // Activate the shoot animation
+        _player.set_animation_shoot();
+
+        // Activate 1 loop of full animation
         _player.set_animation_count(1);
     }
     inline bool can_consume(const int8_t atlas_id)
@@ -166,29 +183,45 @@ class state
         // Update rotation quaternion
         _q = update_model_rotation();
     }
+    inline double get_charge_time() const
+    {
+        // Get the current time
+        const std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+
+        // return time since last sync
+        return std::chrono::duration<double, std::milli>(now - _charge_start).count();
+    }
     inline bool get_fire_mode() const
     {
         return _fire_mode;
-    }
-    inline void set_fire_mode(const bool mode)
-    {
-        _fire_mode = mode;
     }
     inline const std::string &get_game_mode() const
     {
         return _mode;
     }
-    inline void set_game_mode(const std::string &mode)
+    inline bool get_game_pause() const
     {
-        _mode = mode;
+        return _pause_mode || _pause_lock;
+    }
+    inline bool get_user_input() const
+    {
+        return _user_input;
     }
     inline void pause_lock(const bool lock)
     {
         _pause_lock = lock;
     }
-    inline bool get_game_pause() const
+    inline void set_charge_time()
     {
-        return _pause_mode || _pause_lock;
+        _charge_start = std::chrono::high_resolution_clock::now();
+    }
+    inline void set_fire_mode(const bool mode)
+    {
+        _fire_mode = mode;
+    }
+    inline void set_game_mode(const std::string &mode)
+    {
+        _mode = mode;
     }
     inline void set_game_pause(const bool mode)
     {
@@ -197,10 +230,6 @@ class state
         {
             _pause_mode = mode;
         }
-    }
-    inline bool get_user_input() const
-    {
-        return _user_input;
     }
     inline void set_user_input(const bool mode)
     {

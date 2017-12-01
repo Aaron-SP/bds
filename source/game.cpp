@@ -217,6 +217,13 @@ class mglcraft
         // Must update state properties, camera before drawing world
         _state.update(p, c, _win.get_width(), _win.get_height(), dt);
 
+        // If AI is in control
+        if (_world.get_ai_mode())
+        {
+            // Perform goal seek
+            _goal_seek.seek(_world, 0);
+        }
+
         // Update the world state
         _world.update(_state.get_camera(), dt);
 
@@ -240,15 +247,6 @@ class mglcraft
     void set_title(const std::string &title)
     {
         _win.set_title(title);
-    }
-    void path_ai()
-    {
-        // If AI is in control
-        if (_world.get_ai_mode())
-        {
-            // Perform goal seek
-            _goal_seek.seek(_world, 0);
-        }
     }
     void update_cursor()
     {
@@ -377,9 +375,6 @@ void run()
             // Calculate needed delay to hit target
             frame_time = sync.sync();
         }
-
-        // Train the AI every second
-        game.path_ai();
 
         // Calculate the number of 'average' frames per second
         const double fps = sync.get_fps();

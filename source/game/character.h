@@ -43,6 +43,7 @@ class character
 
     // md5 model
     min::md5_model<float, uint32_t, min::vec4, min::aabbox> _md5_model;
+    std::vector<size_t> _bone_id;
 
     // Buffers for model data and textures
     min::vertex_buffer<float, uint32_t, min::skeletal_vertex, GL_FLOAT, GL_UNSIGNED_INT> _skbuffer;
@@ -55,30 +56,29 @@ class character
     size_t _view_id;
     size_t _model_id;
 
-    // Light properties for rendering model
+    // Light and model matrices
+    min::mat4<float> _model_matrix;
     min::vec4<float> _light_color;
     min::vec4<float> _light_position;
     min::vec4<float> _light_power;
     size_t _light_id;
 
-    // For animating md5 model bones
-    std::vector<size_t> _bone_id;
-
-    // Bounding box for model
-    min::mat4<float> _model_matrix;
-    min::aabbox<float, min::vec3> _box;
+    // Animation indices
+    bool _need_bone_reset;
+    size_t _charge_index;
+    size_t _shoot_index;
 
     inline void load_model()
     {
         // Load animation
-        _md5_model.load_animation("data/models/gun.md5anim");
+        _charge_index = _md5_model.load_animation("data/models/gun_charge.md5anim");
+
+        // Load shoot animation
+        _shoot_index = _md5_model.load_animation("data/models/gun_shoot.md5anim");
 
         // Setup the md5 mesh
         min::mesh<float, uint32_t> &md5 = _md5_model.get_meshes()[0];
         md5.calculate_normals();
-
-        // Get bounding box of first frame of animation
-        _box = _md5_model.get_current_animation().get_bounds()[0];
 
         // Bind VAO
         _skbuffer.bind();
@@ -94,10 +94,6 @@ class character
         // Load textures
         const min::dds d = min::dds("data/texture/skin.dds");
 
-        // Set the texture channel for this program, we need to do this here because we render textures on channel '0'
-        // _prog will be in use by the end of this call
-        _texture_buffer.set_texture_uniform(_prog, "in_texture", 1);
-
         // Load texture buffer
         _dds_id = _texture_buffer.add_dds_texture(d);
     }
@@ -109,14 +105,13 @@ class character
         // Load light into uniform buffer
         _light_id = _ubuffer.add_light(min::light<float>(_light_color, _light_position, _light_power));
 
-        // Load projection and view matrix into uniform buffer
+        // Load projection, view, and model matrix into uniform buffer
         _proj_view_id = _ubuffer.add_matrix(min::mat4<float>());
         _view_id = _ubuffer.add_matrix(min::mat4<float>());
-
-        // Get model ID for later use
         _model_id = _ubuffer.add_matrix(_model_matrix);
 
         // Add bones matrices to uniform buffer
+        _bone_id.reserve(_md5_model.get_bones().size());
         for (const auto &bone : _md5_model.get_bones())
         {
             size_t bone_id = _ubuffer.add_matrix(bone);
@@ -125,6 +120,47 @@ class character
 
         // Update the matrix and light buffer
         _ubuffer.update();
+    }
+    inline void update_bones()
+    {
+        // Update model bones matrices
+        const auto &bones = _md5_model.get_bones();
+        const size_t size = bones.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            _ubuffer.set_matrix(bones[i], _bone_id[i]);
+        }
+    }
+    inline void update_model(min::camera<float> &cam, const double dt)
+    {
+        // Update matrix uniforms
+        _ubuffer.set_matrix(cam.get_pv_matrix(), _proj_view_id);
+        _ubuffer.set_matrix(cam.get_v_matrix(), _view_id);
+        _ubuffer.set_matrix(_model_matrix, _model_id);
+
+        // Only update bones if model is animating them
+        if (_md5_model.is_animating())
+        {
+            // Update the md5 animation
+            _md5_model.step(dt);
+
+            // Update bone uniform
+            update_bones();
+        }
+        else if (_need_bone_reset)
+        {
+            // Flag off need reset
+            _need_bone_reset = false;
+
+            // Reset bones to identity
+            _md5_model.reset_bones();
+
+            // Update bone uniform
+            update_bones();
+        }
+
+        // Update the matrix buffer
+        _ubuffer.update_matrix();
     }
 
   public:
@@ -135,7 +171,8 @@ class character
                   _ubuffer(1, 100),
                   _light_color(1.0, 1.0, 1.0, 1.0),
                   _light_position(0.0, 100.0, 0.0, 1.0),
-                  _light_power(0.5, 1.0, 0.75, 1.0)
+                  _light_power(0.5, 1.0, 0.75, 1.0),
+                  _need_bone_reset(false)
 
     {
         // Load md5 model
@@ -147,39 +184,24 @@ class character
         // Load the md5 uniforms
         load_uniforms();
     }
-    void draw(min::camera<float> &cam, const double time_step)
+    void abort_animation()
     {
-        // Update matrix uniforms
-        _ubuffer.set_matrix(cam.get_pv_matrix(), _proj_view_id);
-        _ubuffer.set_matrix(cam.get_v_matrix(), _view_id);
-        _ubuffer.set_matrix(_model_matrix, _model_id);
-
-        // Only update bones if model is animating them
-        if (_md5_model.is_animating())
-        {
-            // Update the md5 animation
-            _md5_model.step(time_step);
-
-            // update model bones matrices
-            const auto &bones = _md5_model.get_bones();
-            const size_t size = bones.size();
-            for (size_t i = 0; i < size; i++)
-            {
-                _ubuffer.set_matrix(bones[i], _bone_id[i]);
-            }
-        }
+        // Set number of animation loops to zero, stops animating
+        _md5_model.get_current_animation().set_loop_count(0);
+    }
+    void draw(min::camera<float> &cam, const double dt)
+    {
+        // Update the model
+        update_model(cam, dt);
 
         // Bind this uniform buffer for use
         _ubuffer.bind();
-
-        // Update the matrix and light buffer
-        _ubuffer.update_matrix();
 
         // Bind VAO
         _skbuffer.bind();
 
         // Bind this texture for drawing on channel '0'
-        _texture_buffer.bind(_dds_id, 1);
+        _texture_buffer.bind(_dds_id, 0);
 
         // Change program back to md5 shaders
         _prog.use();
@@ -190,18 +212,30 @@ class character
         // Draw md5 model
         _skbuffer.draw(GL_TRIANGLES, 0);
     }
-    const min::aabbox<float, min::vec3> &get_box() const
+    void set_animation_charge()
     {
-        return _box;
-    }
-    void set_model_matrix(const min::mat4<float> &m)
-    {
-        _model_matrix = m;
+        // Flag to reset bones after animation
+        _need_bone_reset = true;
+
+        // Set charge animation
+        _md5_model.set_current_animation(_charge_index);
     }
     void set_animation_count(const unsigned count)
     {
         _md5_model.get_current_animation().set_loop_count(count);
         _md5_model.get_current_animation().set_time(0);
+    }
+    void set_animation_shoot()
+    {
+        // Flag to reset bones after animation
+        _need_bone_reset = true;
+
+        // Set shoot animation
+        _md5_model.set_current_animation(_shoot_index);
+    }
+    void set_model_matrix(const min::mat4<float> &m)
+    {
+        _model_matrix = m;
     }
 };
 }

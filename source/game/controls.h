@@ -55,8 +55,11 @@ class controls
 
         // Register click callback function for placing path
         _window->register_data((void *)this);
-        _window->register_lclick(controls::left_click);
-        _window->register_rclick(controls::right_click);
+
+        // Register left click events
+        _window->register_lclick_down(controls::left_click_down);
+        _window->register_lclick_up(controls::left_click_up);
+        _window->register_rclick_up(controls::right_click_up);
         _window->register_update(controls::on_resize);
 
         // Add FPS(WADS) keys to watch
@@ -394,12 +397,28 @@ class controls
         // Reset scale
         world->reset_scale();
     }
-    static void left_click(void *ptr, const uint16_t x, const uint16_t y)
+    static void left_click_down(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the camera world, and state pointers
+        // If we are in fire mode we can charge the weapon
+        game::state *const state = control->get_state();
+        if (state->get_fire_mode())
+        {
+            // Record the start charge time
+            state->set_charge_time();
+
+            // Activate charge animation
+            state->player_animate_charge();
+        }
+    }
+    static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the camera, world, and state pointers
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
@@ -427,27 +446,35 @@ class controls
         }
         else
         {
-            // Calculate point to remove from
-            const min::vec3<float> point = camera->project_point(3.0);
+            // Abort the charge animation
+            state->player_abort_animation();
 
-            // Create a ray from camera to destination
-            const min::ray<float, min::vec3> r(camera->get_position(), point);
+            // Get the total charge time in ms
+            const double dt = state->get_charge_time();
 
-            // Remove block from world, get the removed atlas
-            const int8_t atlas = world->remove_block(r);
-
-            // If we hit an actual block
-            if (atlas >= 0)
+            // If we have enough charge to remove block
+            if (dt > 1000.0)
             {
-                // Absorb energy to create this resource
-                state->absorb(atlas);
+                // Calculate point to remove from
+                const min::vec3<float> point = camera->project_point(3.0);
 
-                // Activate shoot animation
-                state->animate_shoot_player();
+                // Create a ray from camera to destination
+                const min::ray<float, min::vec3> r(camera->get_position(), point);
+
+                // Remove block from world, get the removed atlas
+                const int8_t atlas = world->remove_block(r);
+                if (atlas >= 0.0)
+                {
+                    // Absorb energy to create this resource
+                    state->absorb(atlas);
+
+                    // Activate shoot animation
+                    state->player_animate_shoot();
+                }
             }
         }
     }
-    static void right_click(void *ptr, const uint16_t x, const uint16_t y)
+    static void right_click_up(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -478,7 +505,7 @@ class controls
                     state->consume(7);
 
                     // Activate shoot animation
-                    state->animate_shoot_player();
+                    state->player_animate_shoot();
                 }
             }
         }
