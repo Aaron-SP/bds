@@ -205,6 +205,9 @@ class character
 
         // Set charge animation
         _md5_model.set_current_animation(_charge_index);
+
+        // Activate 999 loop of full animation
+        set_animation_count(86400);
     }
     void set_animation_count(const unsigned count)
     {
@@ -218,13 +221,15 @@ class character
 
         // Set shoot animation
         _md5_model.set_current_animation(_shoot_index);
+
+        // Activate 1 loop of full animation
+        set_animation_count(1);
     }
-    void set_model_matrix(const min::mat4<float> &m)
+    inline void update(min::camera<float> &cam, const min::mat4<float> &model, const double dt)
     {
-        _model_matrix = m;
-    }
-    inline void update(min::camera<float> &cam, const double dt)
-    {
+        // Update the model matrix
+        _model_matrix = model;
+
         // Update matrix uniforms
         _ubuffer.set_matrix(cam.get_pv_matrix(), _proj_view_id);
         _ubuffer.set_matrix(cam.get_v_matrix(), _view_id);

@@ -36,16 +36,18 @@ class controls
   private:
     min::window *_window;
     min::camera<float> *_camera;
+    game::character *_character;
     game::state *_state;
     game::text *_text;
     game::world *_world;
 
   public:
-    controls(min::window &window, min::camera<float> &camera, game::state &state, game::text &text, game::world &world)
-        : _window(&window), _camera(&camera), _state(&state), _text(&text), _world(&world)
+    controls(min::window &window, min::camera<float> &camera, game::character &ch, game::state &state, game::text &text, game::world &world)
+        : _window(&window), _camera(&camera), _character(&ch),
+          _state(&state), _text(&text), _world(&world)
     {
         // Check that pointers are valid
-        if (!_window || !_camera || !_state || !_text || !_world)
+        if (!_window || !_character || !_camera || !_state || !_text || !_world)
         {
             throw std::runtime_error("control: Invalid control pointers");
         }
@@ -159,6 +161,10 @@ class controls
     min::camera<float> *get_camera()
     {
         return _camera;
+    }
+    game::character *get_character()
+    {
+        return _character;
     }
     game::state *get_state()
     {
@@ -404,13 +410,14 @@ class controls
 
         // If we are in fire mode we can charge the weapon
         game::state *const state = control->get_state();
+        game::character *const character = control->get_character();
         if (state->get_fire_mode())
         {
             // Record the start charge time
             state->set_charge_time();
 
             // Activate charge animation
-            state->player_animate_charge();
+            character->set_animation_charge();
         }
     }
     static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
@@ -422,6 +429,7 @@ class controls
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
+        game::character *const character = control->get_character();
 
         // Check if we are in edit mode
         const bool mode = world->get_edit_mode();
@@ -447,7 +455,7 @@ class controls
         else
         {
             // Abort the charge animation
-            state->player_abort_animation();
+            character->abort_animation();
 
             // Get the total charge time in ms
             const double dt = state->get_charge_time();
@@ -469,7 +477,7 @@ class controls
                     state->absorb(atlas);
 
                     // Activate shoot animation
-                    state->player_animate_shoot();
+                    character->set_animation_shoot();
                 }
             }
         }
@@ -483,6 +491,7 @@ class controls
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
+        game::character *const character = control->get_character();
 
         // Only allow grappling if in fire mode
         if (state->get_fire_mode())
@@ -505,7 +514,7 @@ class controls
                     state->consume(7);
 
                     // Activate shoot animation
-                    state->player_animate_shoot();
+                    character->set_animation_shoot();
                 }
             }
         }

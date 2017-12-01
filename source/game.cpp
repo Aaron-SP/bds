@@ -42,6 +42,7 @@ class mglcraft
     // Game specific classes
     game::text _text;
     game::particle _particles;
+    game::character _character;
     game::state _state;
     game::world _world;
     game::controls _controls;
@@ -174,9 +175,9 @@ class mglcraft
         : _win("MGLCRAFT", 720, 480, 3, 3),
           _text(28),
           _particles(),
-          _state(&_particles),
+          _character(&_particles),
           _world(load_state(), &_particles, 64, 8, 7),
-          _controls(_win, _state.get_camera(), _state, _text, _world),
+          _controls(_win, _state.get_camera(), _character, _state, _text, _world),
           _goal_seek(_world), _fps(0.0), _idle(0.0)
     {
         // Set depth and cull settings
@@ -221,6 +222,10 @@ class mglcraft
         // Must update state properties, camera before drawing world
         _state.update(p, c, _win.get_width(), _win.get_height(), dt);
 
+        // Update the character
+        min::camera<float> &camera = _state.get_camera();
+        _character.update(camera, _state.get_model_matrix(), dt);
+
         // If AI is in control
         if (_world.get_ai_mode())
         {
@@ -229,16 +234,19 @@ class mglcraft
         }
 
         // Update the particle system
-        _particles.update(_state.get_camera(), dt);
+        _particles.update(camera, dt);
 
         // Update the world state
-        _world.update(_state.get_camera(), dt);
+        _world.update(camera, dt);
 
         // Draw world geometry
         _world.draw();
 
-        // Draw things related to player state
-        _state.draw();
+        // Draw the character if fire mode activated
+        if (_state.get_fire_mode())
+        {
+            _character.draw();
+        }
 
         // Draw the text
         _text.draw();

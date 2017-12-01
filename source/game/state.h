@@ -29,9 +29,9 @@ class state
 {
   private:
     static constexpr unsigned _frame_average = 4;
-    character _player;
     min::camera<float> _camera;
     min::quat<float> _q;
+    min::mat4<float> _model;
     uint32_t _energy;
     bool _fire_mode;
     float _x[_frame_average];
@@ -59,8 +59,7 @@ class state
 
         // Update the md5 model matrix
         const min::vec3<float> offset = _camera.get_position() + (f - fup + fr) * 0.5;
-        const min::mat4<float> model(offset, _q);
-        _player.set_model_matrix(model);
+        _model = min::mat4<float>(offset, _q);
     }
     inline min::quat<float> update_model_rotation() const
     {
@@ -85,9 +84,8 @@ class state
     }
 
   public:
-    state(particle *const particles)
-        : _player(particles),
-          _energy(0), _fire_mode(true),
+    state()
+        : _energy(0), _fire_mode(true),
           _x{}, _y{}, _frame_count{},
           _mode("MODE: PLAY"),
           _pause_mode(false), _pause_lock(false), _user_input(true)
@@ -100,26 +98,6 @@ class state
         // Absorb this amount of energy
         const uint16_t value = 0x1 << (atlas_id);
         _energy += value;
-    }
-    inline void player_abort_animation()
-    {
-        _player.abort_animation();
-    }
-    inline void player_animate_charge()
-    {
-        // Activate the shoot animation
-        _player.set_animation_charge();
-
-        // Activate 999 loop of full animation
-        _player.set_animation_count(86400);
-    }
-    inline void player_animate_shoot()
-    {
-        // Activate the shoot animation
-        _player.set_animation_shoot();
-
-        // Activate 1 loop of full animation
-        _player.set_animation_count(1);
     }
     inline bool can_consume(const int8_t atlas_id)
     {
@@ -152,37 +130,9 @@ class state
         // Not enough energy
         return false;
     }
-    inline void draw()
-    {
-        // Draw the character if fire mode activated
-        if (_fire_mode)
-        {
-            _player.draw();
-        }
-    }
     inline min::camera<float> &get_camera()
     {
         return _camera;
-    }
-    inline const min::camera<float> &get_camera() const
-    {
-        return _camera;
-    }
-    inline uint32_t get_energy() const
-    {
-        return _energy;
-    }
-    inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
-    {
-        // Set camera start position and look position
-        _camera.set_position(p + min::vec3<float>(0.0, 0.5, 0.0));
-        _camera.set_look_at(look);
-
-        // Force camera to update internals
-        _camera.force_update();
-
-        // Update rotation quaternion
-        _q = update_model_rotation();
     }
     inline double get_charge_time() const
     {
@@ -191,6 +141,14 @@ class state
 
         // return time since last sync
         return std::chrono::duration<double, std::milli>(now - _charge_start).count();
+    }
+    inline const min::camera<float> &get_camera() const
+    {
+        return _camera;
+    }
+    inline uint32_t get_energy() const
+    {
+        return _energy;
     }
     inline bool get_fire_mode() const
     {
@@ -204,6 +162,10 @@ class state
     {
         return _pause_mode || _pause_lock;
     }
+    inline const min::mat4<float> &get_model_matrix()
+    {
+        return _model;
+    }
     inline bool get_user_input() const
     {
         return _user_input;
@@ -211,6 +173,18 @@ class state
     inline void pause_lock(const bool lock)
     {
         _pause_lock = lock;
+    }
+    inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
+    {
+        // Set camera start position and look position
+        _camera.set_position(p + min::vec3<float>(0.0, 0.5, 0.0));
+        _camera.set_look_at(look);
+
+        // Force camera to update internals
+        _camera.force_update();
+
+        // Update rotation quaternion
+        _q = update_model_rotation();
     }
     inline void set_charge_time()
     {
@@ -302,9 +276,6 @@ class state
             // Interpolate between the two rotations to avoid jerking
             _q = update_model_rotation();
         }
-
-        // Update the character
-        _player.update(_camera, step);
     }
 };
 }
