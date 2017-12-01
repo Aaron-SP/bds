@@ -208,7 +208,7 @@ class mob_instance
                 _ubuffer.set_matrix(m, id);
             }
 
-            // Update the matrix and light buffer
+            // Update the matrix buffer
             _ubuffer.update_matrix();
         }
     }

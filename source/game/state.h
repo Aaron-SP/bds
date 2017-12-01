@@ -85,8 +85,9 @@ class state
     }
 
   public:
-    state()
-        : _energy(0), _fire_mode(true),
+    state(particle *const particles)
+        : _player(particles),
+          _energy(0), _fire_mode(true),
           _x{}, _y{}, _frame_count{},
           _mode("MODE: PLAY"),
           _pause_mode(false), _pause_lock(false), _user_input(true)
@@ -100,7 +101,7 @@ class state
         const uint16_t value = 0x1 << (atlas_id);
         _energy += value;
     }
-    inline player_abort_animation()
+    inline void player_abort_animation()
     {
         _player.abort_animation();
     }
@@ -151,12 +152,12 @@ class state
         // Not enough energy
         return false;
     }
-    inline void draw(const float dt)
+    inline void draw()
     {
         // Draw the character if fire mode activated
         if (_fire_mode)
         {
-            _player.draw(_camera, dt);
+            _player.draw();
         }
     }
     inline min::camera<float> &get_camera()
@@ -301,6 +302,9 @@ class state
             // Interpolate between the two rotations to avoid jerking
             _q = update_model_rotation();
         }
+
+        // Update the character
+        _player.update(_camera, step);
     }
 };
 }

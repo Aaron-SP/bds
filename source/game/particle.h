@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __EXPLODEPARTICLE__
-#define __EXPLODEPARTICLE__
+#ifndef __PARTICLE__
+#define __PARTICLE__
 
 #include <min/camera.h>
 #include <min/dds.h>
@@ -28,7 +28,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-class explode_particle
+class particle
 {
   private:
     // Opengl stuff
@@ -42,6 +42,7 @@ class explode_particle
 
     // Particle stuff
     min::emitter_buffer<float, GL_FLOAT> _ebuffer;
+    min::uniform_buffer<float> _ubuffer;
     float _time;
 
     inline void load_textures()
@@ -52,28 +53,47 @@ class explode_particle
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(b);
     }
+    inline void load_uniforms()
+    {
+        // Load the uniform buffer with program we will use
+        _ubuffer.set_program(_prog);
+
+        // Add light to scene
+        const min::vec4<float> col(1.0, 1.0, 1.0, 1.0);
+        const min::vec4<float> pos(0.0, 100.0, 0.0, 1.0);
+        const min::vec4<float> pow(0.3, 0.7, 0.0, 1.0);
+        _ubuffer.add_light(min::light<float>(col, pos, pow));
+
+        // Load projection and position matrix into uniform buffer
+        _ubuffer.add_matrix(min::mat4<float>());
+        _ubuffer.add_matrix(min::mat4<float>());
+
+        // Load the buffer with data
+        _ubuffer.update();
+    }
 
   public:
-    explode_particle()
+    particle()
         : _vertex("data/shader/emitter.vertex", GL_VERTEX_SHADER),
           _fragment("data/shader/emitter.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _ebuffer(min::vec3<float>(), 200, 5, 0.10, 5.0, 5.0),
+          _ubuffer(1, 2),
           _time(0.0)
     {
         // Load textures
         load_textures();
 
+        // Load uniforms
+        load_uniforms();
+
         // Set the particle gravity
         _ebuffer.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
     }
-    void draw(const min::uniform_buffer<float> &uniforms, const float dt)
+    void draw()
     {
         if (_time > 0.0)
         {
-            // Remove some of the time
-            _time -= dt;
-
             // Bind VAO
             _ebuffer.bind();
 
@@ -84,7 +104,7 @@ class explode_particle
             _prog.use();
 
             // Bind this uniform buffer
-            uniforms.bind();
+            _ubuffer.bind();
 
             // Draw the particles
             _ebuffer.draw();
@@ -104,18 +124,26 @@ class explode_particle
         // Add more time to the clock
         _time = time;
     }
-    void set_uniforms(const min::uniform_buffer<float> &uniforms)
+    void update(min::camera<float> &cam, const double dt)
     {
-        // Load use this uniform buffer for drawing
-        uniforms.set_program(_prog);
-    }
-    void update(const float dt)
-    {
-        // Update the particle positions
-        _ebuffer.step(dt);
+        if (_time > 0.0)
+        {
+            // Remove some of the time
+            _time -= dt;
 
-        // Upload data to GPU
-        _ebuffer.upload();
+            // Update matrix uniforms
+            _ubuffer.set_matrix(cam.get_pv_matrix(), 0);
+            _ubuffer.set_matrix(min::mat4<float>(cam.get_position()), 1);
+
+            // Update the matrix buffer
+            _ubuffer.update_matrix();
+
+            // Update the particle positions
+            _ebuffer.step(dt);
+
+            // Upload data to GPU
+            _ebuffer.upload();
+        }
     }
 };
 }

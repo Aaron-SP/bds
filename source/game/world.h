@@ -22,8 +22,8 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdint>
 #include <game/ai_path.h>
 #include <game/cgrid.h>
-#include <game/explode_particle.h>
 #include <game/mob.h>
+#include <game/particle.h>
 #include <game/sky.h>
 #include <game/terrain.h>
 #include <min/camera.h>
@@ -65,7 +65,7 @@ class world
     size_t _char_id;
 
     // Particle stuff
-    explode_particle _particles;
+    particle *_particles;
 
     // Skybox
     sky _sky;
@@ -154,9 +154,6 @@ class world
         _preview.set_program(_terrain.get_program());
         _geom.set_program(_terrain.get_program());
 
-        // Let the particle system use this uniform buffer
-        _particles.set_uniforms(_preview);
-
         // Change light alpha for placemark
         const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
         const min::vec4<float> pos1(0.0, 100.0, 0.0, 1.0);
@@ -172,10 +169,6 @@ class world
         // Load projection and view matrix into uniform buffer
         _preview.add_matrix(min::mat4<float>());
         _preview.add_matrix(min::mat4<float>());
-        _preview.add_matrix(min::mat4<float>());
-        _preview.add_matrix(min::mat4<float>());
-        _geom.add_matrix(min::mat4<float>());
-        _geom.add_matrix(min::mat4<float>());
         _geom.add_matrix(min::mat4<float>());
         _geom.add_matrix(min::mat4<float>());
 
@@ -195,7 +188,7 @@ class world
             generate_terrain();
 
             // Add particle effects
-            _particles.load(point, direction, 5.0);
+            _particles->load(point, direction, 5.0);
         }
     }
     inline void update_uniform(min::camera<float> &cam)
@@ -231,15 +224,11 @@ class world
 
         // Update geom matrix uniforms
         _geom.set_matrix(cam.get_pv_matrix(), 0);
-        _geom.set_matrix(cam.get_v_matrix(), 1);
-        _geom.set_matrix(translate, 2);
         _geom.update_matrix();
 
         // Update preview matrix uniforms
         _preview.set_matrix(cam.get_pv_matrix(), 0);
-        _preview.set_matrix(cam.get_v_matrix(), 1);
-        _preview.set_matrix(translate, 2);
-        _preview.set_matrix(min::mat4<float>(cam.get_position()), 3);
+        _preview.set_matrix(translate, 1);
         _preview.update_matrix();
     }
     inline void update_world_physics(const float dt)
@@ -319,9 +308,9 @@ class world
     }
 
   public:
-    world(const std::pair<min::vec3<float>, bool> &state, const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
-        : _preview(1, 4),
-          _geom(1, 4),
+    world(const std::pair<min::vec3<float>, bool> &state, particle *const particles, const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
+        : _preview(1, 2),
+          _geom(1, 2),
           _terr_mesh("atlas"),
           _scale(1, 1, 1),
           _cached_offset(1, 1, 1),
@@ -329,6 +318,7 @@ class world
           _grid(grid_size, chunk_size, view_chunk_size),
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity),
+          _particles(particles),
           _sky(_geom, grid_size),
           _dest(state.first),
           _mob_start(1),
@@ -550,12 +540,12 @@ class world
         _mobs.update(cam);
 
         // Update the particle buffer
-        _particles.update(dt);
+        _particles->update(cam, dt);
 
         // update camera matrices
         update_uniform(cam);
     }
-    void draw(const float dt)
+    void draw()
     {
         // Activate the uniform buffer
         _geom.bind();
@@ -582,8 +572,8 @@ class world
         // Draw the mobs
         _mobs.draw();
 
-        // Draw the particles, uses preview uniform buffer
-        _particles.draw(_preview, dt);
+        // Draw the particles
+        _particles->draw();
     }
     inline bool get_ai_mode()
     {

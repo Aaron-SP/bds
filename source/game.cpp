@@ -18,6 +18,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/controls.h>
 #include <game/file.h>
 #include <game/goal_seek.h>
+#include <game/particle.h>
 #include <game/state.h>
 #include <game/text.h>
 #include <game/world.h>
@@ -39,8 +40,9 @@ class mglcraft
     min::window _win;
 
     // Game specific classes
-    game::state _state;
     game::text _text;
+    game::particle _particles;
+    game::state _state;
     game::world _world;
     game::controls _controls;
     game::goal_seek _goal_seek;
@@ -171,7 +173,9 @@ class mglcraft
     mglcraft()
         : _win("MGLCRAFT", 720, 480, 3, 3),
           _text(28),
-          _world(load_state(), 64, 8, 7),
+          _particles(),
+          _state(&_particles),
+          _world(load_state(), &_particles, 64, 8, 7),
           _controls(_win, _state.get_camera(), _state, _text, _world),
           _goal_seek(_world), _fps(0.0), _idle(0.0)
     {
@@ -228,10 +232,10 @@ class mglcraft
         _world.update(_state.get_camera(), dt);
 
         // Draw world geometry
-        _world.draw(dt);
+        _world.draw();
 
         // Draw things related to player state
-        _state.draw(dt);
+        _state.draw();
 
         // Draw the text
         _text.draw();

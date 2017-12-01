@@ -18,7 +18,7 @@ layout(std140) uniform light_block
     int size;
 } light_buffer;
 
-#define MAX_NUM_TOTAL_MATRIX 4
+#define MAX_NUM_TOTAL_MATRIX 2
 layout(std140) uniform matrix_block
 {
     mat4 matrix[MAX_NUM_TOTAL_MATRIX];
@@ -32,33 +32,27 @@ void main(void)
 {
     // Get the model matrix from the uniform buffer
     mat4 pv = matrix_buffer.matrix[0];
-    mat4 view = matrix_buffer.matrix[1];
 
-    vec4 trans_vertex;
+    vec4 out_vertex = vertex;
 
 	// Calculate transformed position
-    if(light_buffer.lights[0].power.a > 0.51)
-    {
-        // Terrain
-        trans_vertex = vertex;
-    }
-    else
+    if(light_buffer.lights[0].power.a <= 0.51)
     {
         // Placemark
-        mat4 model = matrix_buffer.matrix[2];
-        trans_vertex = model * vertex;
+        mat4 model = matrix_buffer.matrix[1];
+        out_vertex = model * vertex;
     }
 
-    gl_Position =  pv * trans_vertex;
+    gl_Position =  pv * out_vertex;
 
     // Initialize reference color
-    vec4 color = vec4(0, 0, 0, 1.0);
+    vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
 
     // For all lights in the scene
     for(int i = 0; i < light_buffer.size; i++)
     {
         // Calculate the light direction in world space
-        vec4 light_direction = normalize(light_buffer.lights[i].position - trans_vertex);
+        vec4 light_direction = normalize(light_buffer.lights[i].position - out_vertex);
 
         // Calculate the diffuse lighting in world space
         float cos_theta = clamp(dot(normal, light_direction.xyz), 0, 1);

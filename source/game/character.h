@@ -18,6 +18,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __MD5_CHARACTER__
 #define __MD5_CHARACTER__
 
+#include <game/particle.h>
 #include <min/aabbox.h>
 #include <min/camera.h>
 #include <min/mat4.h>
@@ -62,6 +63,9 @@ class character
     min::vec4<float> _light_position;
     min::vec4<float> _light_power;
     size_t _light_id;
+
+    // Particle system
+    particle *_particles;
 
     // Animation indices
     bool _need_bone_reset;
@@ -131,7 +135,83 @@ class character
             _ubuffer.set_matrix(bones[i], _bone_id[i]);
         }
     }
-    inline void update_model(min::camera<float> &cam, const double dt)
+
+  public:
+    character(particle *const particles)
+        : _vertex("data/shader/md5.vertex", GL_VERTEX_SHADER),
+          _fragment("data/shader/md5.fragment", GL_FRAGMENT_SHADER),
+          _prog(_vertex, _fragment),
+          _md5_model(std::move(min::md5_mesh<float, uint32_t>("data/models/gun.md5mesh"))),
+          _ubuffer(1, 100),
+          _light_color(1.0, 1.0, 1.0, 1.0),
+          _light_position(0.0, 100.0, 0.0, 1.0),
+          _light_power(0.5, 1.0, 0.75, 1.0),
+          _particles(particles),
+          _need_bone_reset(false)
+    {
+        // Load md5 model
+        load_model();
+
+        // Load md5 model textures
+        load_textures();
+
+        // Load the md5 uniforms
+        load_uniforms();
+    }
+    void abort_animation()
+    {
+        // Set number of animation loops to zero, stops animating
+        _md5_model.get_current_animation().set_loop_count(0);
+    }
+    void draw()
+    {
+        // Bind this uniform buffer for use
+        _ubuffer.bind();
+
+        // Bind VAO
+        _skbuffer.bind();
+
+        // Bind this texture for drawing on channel '0'
+        _texture_buffer.bind(_dds_id, 0);
+
+        // Change program back to md5 shaders
+        _prog.use();
+
+        // clear depth for drawing character over terrain
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        // Draw md5 model
+        _skbuffer.draw(GL_TRIANGLES, 0);
+
+        // Draw the particles
+        _particles->draw();
+    }
+    void set_animation_charge()
+    {
+        // Flag to reset bones after animation
+        _need_bone_reset = true;
+
+        // Set charge animation
+        _md5_model.set_current_animation(_charge_index);
+    }
+    void set_animation_count(const unsigned count)
+    {
+        _md5_model.get_current_animation().set_loop_count(count);
+        _md5_model.get_current_animation().set_time(0);
+    }
+    void set_animation_shoot()
+    {
+        // Flag to reset bones after animation
+        _need_bone_reset = true;
+
+        // Set shoot animation
+        _md5_model.set_current_animation(_shoot_index);
+    }
+    void set_model_matrix(const min::mat4<float> &m)
+    {
+        _model_matrix = m;
+    }
+    inline void update(min::camera<float> &cam, const double dt)
     {
         // Update matrix uniforms
         _ubuffer.set_matrix(cam.get_pv_matrix(), _proj_view_id);
@@ -161,81 +241,9 @@ class character
 
         // Update the matrix buffer
         _ubuffer.update_matrix();
-    }
 
-  public:
-    character() : _vertex("data/shader/md5.vertex", GL_VERTEX_SHADER),
-                  _fragment("data/shader/md5.fragment", GL_FRAGMENT_SHADER),
-                  _prog(_vertex, _fragment),
-                  _md5_model(std::move(min::md5_mesh<float, uint32_t>("data/models/gun.md5mesh"))),
-                  _ubuffer(1, 100),
-                  _light_color(1.0, 1.0, 1.0, 1.0),
-                  _light_position(0.0, 100.0, 0.0, 1.0),
-                  _light_power(0.5, 1.0, 0.75, 1.0),
-                  _need_bone_reset(false)
-
-    {
-        // Load md5 model
-        load_model();
-
-        // Load md5 model textures
-        load_textures();
-
-        // Load the md5 uniforms
-        load_uniforms();
-    }
-    void abort_animation()
-    {
-        // Set number of animation loops to zero, stops animating
-        _md5_model.get_current_animation().set_loop_count(0);
-    }
-    void draw(min::camera<float> &cam, const double dt)
-    {
-        // Update the model
-        update_model(cam, dt);
-
-        // Bind this uniform buffer for use
-        _ubuffer.bind();
-
-        // Bind VAO
-        _skbuffer.bind();
-
-        // Bind this texture for drawing on channel '0'
-        _texture_buffer.bind(_dds_id, 0);
-
-        // Change program back to md5 shaders
-        _prog.use();
-
-        // clear depth for drawing character over terrain
-        glClear(GL_DEPTH_BUFFER_BIT);
-
-        // Draw md5 model
-        _skbuffer.draw(GL_TRIANGLES, 0);
-    }
-    void set_animation_charge()
-    {
-        // Flag to reset bones after animation
-        _need_bone_reset = true;
-
-        // Set charge animation
-        _md5_model.set_current_animation(_charge_index);
-    }
-    void set_animation_count(const unsigned count)
-    {
-        _md5_model.get_current_animation().set_loop_count(count);
-        _md5_model.get_current_animation().set_time(0);
-    }
-    void set_animation_shoot()
-    {
-        // Flag to reset bones after animation
-        _need_bone_reset = true;
-
-        // Set shoot animation
-        _md5_model.set_current_animation(_shoot_index);
-    }
-    void set_model_matrix(const min::mat4<float> &m)
-    {
-        _model_matrix = m;
+        // Update the particle buffer
+        _particles->update(cam, dt);
     }
 };
 }
