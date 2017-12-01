@@ -187,6 +187,9 @@ class world
             // generate new mesh
             generate_terrain();
 
+            // Set ownership of particles
+            _particles->set_owner(1);
+
             // Add particle effects
             _particles->load(point, direction, 5.0);
         }
@@ -539,9 +542,6 @@ class world
         // Update the mobs
         _mobs.update(cam);
 
-        // Update the particle buffer
-        _particles->update(cam, dt);
-
         // update camera matrices
         update_uniform(cam);
     }
@@ -572,8 +572,11 @@ class world
         // Draw the mobs
         _mobs.draw();
 
-        // Draw the particles
-        _particles->draw();
+        // Draw the particles if we are using it
+        if (_particles->is_owner(1))
+        {
+            _particles->draw();
+        }
     }
     inline bool get_ai_mode()
     {

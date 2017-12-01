@@ -41,9 +41,18 @@ class particle
     GLuint _dds_id;
 
     // Particle stuff
-    min::emitter_buffer<float, GL_FLOAT> _ebuffer;
+    min::emitter_buffer<float, GL_FLOAT> _charge;
+    min::emitter_buffer<float, GL_FLOAT> _explode;
+    min::emitter_buffer<float, GL_FLOAT> *_selected;
     min::uniform_buffer<float> _ubuffer;
+    size_t _attract_index;
     float _time;
+    unsigned _owner;
+    bool _draw;
+
+    // Cached camera settings
+    min::vec3<float> _start;
+    min::vec3<float> _direction;
 
     inline void load_textures()
     {
@@ -77,9 +86,13 @@ class particle
         : _vertex("data/shader/emitter.vertex", GL_VERTEX_SHADER),
           _fragment("data/shader/emitter.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _ebuffer(min::vec3<float>(), 200, 5, 0.10, 5.0, 5.0),
+          _charge(min::vec3<float>(), 200, 5, 0.125, 0.25, 0.5),
+          _explode(min::vec3<float>(), 1000, 1, 0.10, 5.0, 10.0),
+          _selected(&_explode),
           _ubuffer(1, 2),
-          _time(0.0)
+          _time(0.0),
+          _owner(0),
+          _draw(false)
     {
         // Load textures
         load_textures();
@@ -87,16 +100,22 @@ class particle
         // Load uniforms
         load_uniforms();
 
-        // Set the particle gravity
-        _ebuffer.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
+        // Set the particle gravity for charge
+        _charge.set_gravity(min::vec3<float>(0.0, 0.0, 0.0));
+        _attract_index = _charge.attractor_add(min::vec3<float>(0.0, 0.0, 0.0), 1.0);
+
+        // Set the particle gravity for explode
+        _explode.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
+    }
+    void abort()
+    {
+        // Abort particle animation
+        _time = -1.0;
     }
     void draw()
     {
-        if (_time > 0.0)
+        if (_draw)
         {
-            // Bind VAO
-            _ebuffer.bind();
-
             // Bind this texture for drawing
             _tbuffer.bind(_dds_id, 0);
 
@@ -106,30 +125,79 @@ class particle
             // Bind this uniform buffer
             _ubuffer.bind();
 
+            // Bind VAO
+            _selected->bind();
+
             // Draw the particles
-            _ebuffer.draw();
+            _selected->draw();
         }
     }
     void load(const min::vec3<float> &position, const min::vec3<float> &direction, const float time)
     {
         // Set speed direction
-        _ebuffer.set_speed(direction);
+        _selected->set_speed(direction);
 
         // Update the start position
-        _ebuffer.set_position(position);
+        _selected->set_position(position);
 
         // Reset the particle animation
-        _ebuffer.reset();
+        _selected->reset();
 
         // Add more time to the clock
         _time = time;
     }
+    void load(const float time)
+    {
+        // Set speed direction
+        _selected->set_speed(_direction);
+
+        // Update the start position
+        _selected->set_position(_start);
+
+        // Reset the particle animation
+        _selected->reset();
+
+        // Add more time to the clock
+        _time = time;
+    }
+    bool is_owner(const unsigned owner) const
+    {
+        return _owner == owner;
+    }
+    void set_owner(const unsigned owner)
+    {
+        _owner = owner;
+
+        // Select the appropriate particle system
+        if (_owner == 1)
+        {
+            _selected = &_explode;
+        }
+        else if (_owner == 2)
+        {
+            _selected = &_charge;
+        }
+    }
     void update(min::camera<float> &cam, const double dt)
     {
+        // Update cached camera settings
+        _start = cam.project_point(0.05) + (cam.get_right() - cam.get_up()) * 0.075;
+        _direction = cam.get_forward();
+
+        // Update the particle position and direction
+        const min::vec3<float> attr_position = _start + _direction * 0.5;
+
+        // Update attractor position
+        _charge.set_attractor(attr_position, 10.0, _attract_index);
+
+        // If caller owns the particle system
         if (_time > 0.0)
         {
             // Remove some of the time
             _time -= dt;
+
+            // Signal to draw the particles
+            _draw = true;
 
             // Update matrix uniforms
             _ubuffer.set_matrix(cam.get_pv_matrix(), 0);
@@ -138,11 +206,28 @@ class particle
             // Update the matrix buffer
             _ubuffer.update_matrix();
 
+            // If charge beam, continously update
+            if (_owner == 2)
+            {
+                // Update rotation axis
+                _selected->set_rotation_axis(_direction);
+
+                // Set speed direction
+                _selected->set_speed(_direction);
+
+                // Update the start position
+                _selected->set_position(_start);
+            }
+
             // Update the particle positions
-            _ebuffer.step(dt);
+            _selected->step(dt);
 
             // Upload data to GPU
-            _ebuffer.upload();
+            _selected->upload();
+        }
+        else
+        {
+            _draw = false;
         }
     }
 };

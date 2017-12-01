@@ -228,6 +228,9 @@ class mglcraft
             _goal_seek.seek(_world, 0);
         }
 
+        // Update the particle system
+        _particles.update(_state.get_camera(), dt);
+
         // Update the world state
         _world.update(_state.get_camera(), dt);
 

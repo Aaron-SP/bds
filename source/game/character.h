@@ -162,9 +162,21 @@ class character
     {
         // Set number of animation loops to zero, stops animating
         _md5_model.get_current_animation().set_loop_count(0);
+
+        // Abort the particle system
+        _particles->abort();
     }
     void draw()
     {
+        // Draw the particles if we are using it
+        if (_particles->is_owner(2))
+        {
+            _particles->draw();
+        }
+
+        // clear depth for drawing character over terrain
+        glClear(GL_DEPTH_BUFFER_BIT);
+
         // Bind this uniform buffer for use
         _ubuffer.bind();
 
@@ -177,19 +189,19 @@ class character
         // Change program back to md5 shaders
         _prog.use();
 
-        // clear depth for drawing character over terrain
-        glClear(GL_DEPTH_BUFFER_BIT);
-
         // Draw md5 model
         _skbuffer.draw(GL_TRIANGLES, 0);
-
-        // Draw the particles
-        _particles->draw();
     }
     void set_animation_charge()
     {
         // Flag to reset bones after animation
         _need_bone_reset = true;
+
+        // Set ownership of particles
+        _particles->set_owner(2);
+
+        // Add particle effects
+        _particles->load(86400.0);
 
         // Set charge animation
         _md5_model.set_current_animation(_charge_index);
@@ -241,9 +253,6 @@ class character
 
         // Update the matrix buffer
         _ubuffer.update_matrix();
-
-        // Update the particle buffer
-        _particles->update(cam, dt);
     }
 };
 }
