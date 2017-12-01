@@ -18,12 +18,12 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __PARTICLE__
 #define __PARTICLE__
 
+#include <game/uniforms.h>
 #include <min/camera.h>
 #include <min/dds.h>
 #include <min/emitter_buffer.h>
 #include <min/mat4.h>
 #include <min/texture_buffer.h>
-#include <min/uniform_buffer.h>
 
 namespace game
 {
@@ -44,7 +44,6 @@ class particle
     min::emitter_buffer<float, GL_FLOAT> _charge;
     min::emitter_buffer<float, GL_FLOAT> _explode;
     min::emitter_buffer<float, GL_FLOAT> *_selected;
-    min::uniform_buffer<float> _ubuffer;
     size_t _attract_index;
     float _time;
     unsigned _owner;
@@ -62,34 +61,15 @@ class particle
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(b);
     }
-    inline void load_uniforms()
-    {
-        // Load the uniform buffer with program we will use
-        _ubuffer.set_program(_prog);
-
-        // Add light to scene
-        const min::vec4<float> col(1.0, 1.0, 1.0, 1.0);
-        const min::vec4<float> pos(0.0, 100.0, 0.0, 1.0);
-        const min::vec4<float> pow(0.3, 0.7, 0.0, 1.0);
-        _ubuffer.add_light(min::light<float>(col, pos, pow));
-
-        // Load projection and position matrix into uniform buffer
-        _ubuffer.add_matrix(min::mat4<float>());
-        _ubuffer.add_matrix(min::mat4<float>());
-
-        // Load the buffer with data
-        _ubuffer.update();
-    }
 
   public:
-    particle()
+    particle(const game::uniforms &uniforms)
         : _vertex("data/shader/emitter.vertex", GL_VERTEX_SHADER),
           _fragment("data/shader/emitter.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _charge(min::vec3<float>(), 200, 5, 0.125, 0.25, 0.5),
           _explode(min::vec3<float>(), 1000, 1, 0.10, 5.0, 10.0),
           _selected(&_explode),
-          _ubuffer(1, 2),
           _time(0.0),
           _owner(0),
           _draw(false)
@@ -97,8 +77,8 @@ class particle
         // Load textures
         load_textures();
 
-        // Load uniforms
-        load_uniforms();
+        // Load the uniform buffer with program we will use
+        uniforms.set_program(_prog);
 
         // Set the particle gravity for charge
         _charge.set_gravity(min::vec3<float>(0.0, 0.0, 0.0));
@@ -112,18 +92,18 @@ class particle
         // Abort particle animation
         _time = -1.0;
     }
-    void draw()
+    void draw(const game::uniforms &uniforms)
     {
         if (_draw)
         {
+            // Activate the uniform buffer
+            uniforms.bind();
+
             // Bind this texture for drawing
             _tbuffer.bind(_dds_id, 0);
 
             // Use the shader program to draw models
             _prog.use();
-
-            // Bind this uniform buffer
-            _ubuffer.bind();
 
             // Bind VAO
             _selected->bind();
@@ -198,13 +178,6 @@ class particle
 
             // Signal to draw the particles
             _draw = true;
-
-            // Update matrix uniforms
-            _ubuffer.set_matrix(cam.get_pv_matrix(), 0);
-            _ubuffer.set_matrix(min::mat4<float>(cam.get_position()), 1);
-
-            // Update the matrix buffer
-            _ubuffer.update_matrix();
 
             // If charge beam, continously update
             if (_owner == 2)

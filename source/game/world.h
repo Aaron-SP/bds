@@ -26,10 +26,10 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/particle.h>
 #include <game/sky.h>
 #include <game/terrain.h>
+#include <game/uniforms.h>
 #include <min/camera.h>
 #include <min/physics.h>
 #include <min/tree.h>
-#include <min/uniform_buffer.h>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -44,8 +44,6 @@ class world
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
 
     game::terrain _terrain;
-    min::uniform_buffer<float> _preview;
-    min::uniform_buffer<float> _geom;
     std::vector<size_t> _view_chunks;
     std::vector<min::aabbox<float, min::vec3>> _player_col_cells;
     std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
@@ -55,6 +53,7 @@ class world
     min::vec3<unsigned> _scale;
     min::vec3<int> _cached_offset;
     min::vec3<int> _preview_offset;
+    min::vec3<float> _preview;
 
     // Grid
     cgrid _grid;
@@ -148,34 +147,6 @@ class world
         // Upload preview geometry
         _terrain.upload_preview(_terr_mesh);
     }
-    inline void load_uniform()
-    {
-        // Load the uniform buffer with program we will use
-        _preview.set_program(_terrain.get_program());
-        _geom.set_program(_terrain.get_program());
-
-        // Change light alpha for placemark
-        const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
-        const min::vec4<float> pos1(0.0, 100.0, 0.0, 1.0);
-        const min::vec4<float> pow1(0.3, 0.7, 0.0, 0.50);
-        _preview.add_light(min::light<float>(col1, pos1, pow1));
-
-        // Add light to scene
-        const min::vec4<float> col2(1.0, 1.0, 1.0, 1.0);
-        const min::vec4<float> pos2(0.0, 100.0, 0.0, 1.0);
-        const min::vec4<float> pow2(0.3, 0.7, 0.0, 1.0);
-        _geom.add_light(min::light<float>(col2, pos2, pow2));
-
-        // Load projection and view matrix into uniform buffer
-        _preview.add_matrix(min::mat4<float>());
-        _preview.add_matrix(min::mat4<float>());
-        _geom.add_matrix(min::mat4<float>());
-        _geom.add_matrix(min::mat4<float>());
-
-        // Load the buffer with data
-        _preview.update();
-        _geom.update();
-    }
     inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &direction)
     {
         // Try to remove geometry from the grid
@@ -193,46 +164,6 @@ class world
             // Add particle effects
             _particles->load(point, direction, 5.0);
         }
-    }
-    inline void update_uniform(min::camera<float> &cam)
-    {
-        // Calculate new placemark point
-        const min::vec3<float> dest = cam.project_point(3.0);
-
-        // Create a ray from camera to destination
-        const min::ray<float, min::vec3> r(cam.get_position(), dest);
-
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> translate = _grid.ray_trace_prev(r, 6);
-
-        // Update offset x-vector
-        if (cam.get_forward().x() >= 0.0)
-        {
-            _cached_offset.x(1);
-        }
-        else
-        {
-            _cached_offset.x(-1);
-        }
-
-        // Update offset z-vector
-        if (cam.get_forward().z() >= 0.0)
-        {
-            _cached_offset.z(1);
-        }
-        else
-        {
-            _cached_offset.z(-1);
-        }
-
-        // Update geom matrix uniforms
-        _geom.set_matrix(cam.get_pv_matrix(), 0);
-        _geom.update_matrix();
-
-        // Update preview matrix uniforms
-        _preview.set_matrix(cam.get_pv_matrix(), 0);
-        _preview.set_matrix(translate, 1);
-        _preview.update_matrix();
     }
     inline void update_world_physics(const float dt)
     {
@@ -311,10 +242,10 @@ class world
     }
 
   public:
-    world(const std::pair<min::vec3<float>, bool> &state, particle *const particles, const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
-        : _preview(1, 2),
-          _geom(1, 2),
-          _terr_mesh("atlas"),
+    world(const std::pair<min::vec3<float>, bool> &state,
+          particle *const particles, const game::uniforms &uniforms,
+          const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
+        : _terr_mesh("atlas"),
           _scale(1, 1, 1),
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
@@ -322,8 +253,9 @@ class world
           _gravity(0.0, -10.0, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _particles(particles),
-          _sky(_geom, grid_size),
+          _sky(uniforms, grid_size),
           _dest(state.first),
+          _mobs(uniforms),
           _mob_start(1),
           _ai_mode(false),
           _edit_mode(false)
@@ -337,8 +269,8 @@ class world
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);
 
-        // Load uniform buffers
-        load_uniform();
+        // Load the uniform buffer with program we will use
+        uniforms.set_program(_terrain.get_program());
 
         // Reserve space in the preview mesh
         _terr_mesh.vertex.reserve(_pre_max_vol);
@@ -539,16 +471,39 @@ class world
             generate_terrain();
         }
 
-        // Update the mobs
-        _mobs.update(cam);
+        // Calculate new placemark point
+        const min::vec3<float> dest = cam.project_point(3.0);
 
-        // update camera matrices
-        update_uniform(cam);
+        // Create a ray from camera to destination
+        const min::ray<float, min::vec3> r(cam.get_position(), dest);
+
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        _preview = _grid.ray_trace_prev(r, 6);
+
+        // Update offset x-vector
+        if (cam.get_forward().x() >= 0.0)
+        {
+            _cached_offset.x(1);
+        }
+        else
+        {
+            _cached_offset.x(-1);
+        }
+
+        // Update offset z-vector
+        if (cam.get_forward().z() >= 0.0)
+        {
+            _cached_offset.z(1);
+        }
+        else
+        {
+            _cached_offset.z(-1);
+        }
     }
-    void draw()
+    void draw(game::uniforms &uniforms)
     {
         // Activate the uniform buffer
-        _geom.bind();
+        uniforms.bind();
 
         // Draw the sky, uses geometry uniform buffer
         _sky.draw();
@@ -562,20 +517,23 @@ class world
         // Only draw if toggled
         if (_edit_mode)
         {
-            // Activate the uniform buffer
-            _preview.bind();
+            // Set uniforms to light1
+            uniforms.set_light2();
 
             // Draw the placemark
             _terrain.draw_placemark();
+
+            // Set uniforms to light1
+            uniforms.set_light1();
         }
 
         // Draw the mobs
-        _mobs.draw();
+        _mobs.draw(uniforms);
 
         // Draw the particles if we are using it
         if (_particles->is_owner(1))
         {
-            _particles->draw();
+            _particles->draw(uniforms);
         }
     }
     inline bool get_ai_mode()
@@ -593,6 +551,14 @@ class world
     inline const cgrid &get_grid() const
     {
         return _grid;
+    }
+    inline const std::vector<min::vec3<float>> &get_mob_positions() const
+    {
+        return _mobs.get_positions();
+    }
+    inline const min::vec3<float> &get_preview_position()
+    {
+        return _preview;
     }
     inline void reset_scale()
     {

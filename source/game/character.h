@@ -28,7 +28,6 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/shader.h>
 #include <min/skeletal_vertex.h>
 #include <min/texture_buffer.h>
-#include <min/uniform_buffer.h>
 #include <min/vec3.h>
 #include <min/vertex_buffer.h>
 
@@ -44,25 +43,11 @@ class character
 
     // md5 model
     min::md5_model<float, uint32_t, min::vec4, min::aabbox> _md5_model;
-    std::vector<size_t> _bone_id;
 
     // Buffers for model data and textures
     min::vertex_buffer<float, uint32_t, min::skeletal_vertex, GL_FLOAT, GL_UNSIGNED_INT> _skbuffer;
     min::texture_buffer _texture_buffer;
     GLuint _dds_id;
-
-    // Camera and uniform data
-    min::uniform_buffer<float> _ubuffer;
-    size_t _proj_view_id;
-    size_t _view_id;
-    size_t _model_id;
-
-    // Light and model matrices
-    min::mat4<float> _model_matrix;
-    min::vec4<float> _light_color;
-    min::vec4<float> _light_position;
-    min::vec4<float> _light_power;
-    size_t _light_id;
 
     // Particle system
     particle *_particles;
@@ -101,51 +86,13 @@ class character
         // Load texture buffer
         _dds_id = _texture_buffer.add_dds_texture(d);
     }
-    inline void load_uniforms()
-    {
-        // Load the uniform buffer with the program we will use
-        _ubuffer.set_program(_prog);
-
-        // Load light into uniform buffer
-        _light_id = _ubuffer.add_light(min::light<float>(_light_color, _light_position, _light_power));
-
-        // Load projection, view, and model matrix into uniform buffer
-        _proj_view_id = _ubuffer.add_matrix(min::mat4<float>());
-        _view_id = _ubuffer.add_matrix(min::mat4<float>());
-        _model_id = _ubuffer.add_matrix(_model_matrix);
-
-        // Add bones matrices to uniform buffer
-        _bone_id.reserve(_md5_model.get_bones().size());
-        for (const auto &bone : _md5_model.get_bones())
-        {
-            size_t bone_id = _ubuffer.add_matrix(bone);
-            _bone_id.push_back(bone_id);
-        }
-
-        // Update the matrix and light buffer
-        _ubuffer.update();
-    }
-    inline void update_bones()
-    {
-        // Update model bones matrices
-        const auto &bones = _md5_model.get_bones();
-        const size_t size = bones.size();
-        for (size_t i = 0; i < size; i++)
-        {
-            _ubuffer.set_matrix(bones[i], _bone_id[i]);
-        }
-    }
 
   public:
-    character(particle *const particles)
+    character(particle *const particles, const game::uniforms &uniforms)
         : _vertex("data/shader/md5.vertex", GL_VERTEX_SHADER),
           _fragment("data/shader/md5.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _md5_model(std::move(min::md5_mesh<float, uint32_t>("data/models/gun.md5mesh"))),
-          _ubuffer(1, 100),
-          _light_color(1.0, 1.0, 1.0, 1.0),
-          _light_position(0.0, 100.0, 0.0, 1.0),
-          _light_power(0.5, 1.0, 0.75, 1.0),
           _particles(particles),
           _need_bone_reset(false)
     {
@@ -155,8 +102,8 @@ class character
         // Load md5 model textures
         load_textures();
 
-        // Load the md5 uniforms
-        load_uniforms();
+        // Load the uniform buffer with the program we will use
+        uniforms.set_program(_prog);
     }
     void abort_animation()
     {
@@ -166,19 +113,19 @@ class character
         // Abort the particle system
         _particles->abort();
     }
-    void draw()
+    void draw(const game::uniforms &uniforms)
     {
         // Draw the particles if we are using it
         if (_particles->is_owner(2))
         {
-            _particles->draw();
+            _particles->draw(uniforms);
         }
 
         // clear depth for drawing character over terrain
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        // Bind this uniform buffer for use
-        _ubuffer.bind();
+        // Activate the uniform buffer
+        uniforms.bind();
 
         // Bind VAO
         _skbuffer.bind();
@@ -191,6 +138,10 @@ class character
 
         // Draw md5 model
         _skbuffer.draw(GL_TRIANGLES, 0);
+    }
+    const std::vector<min::mat4<float>> &get_bones() const
+    {
+        return _md5_model.get_bones();
     }
     void set_animation_charge()
     {
@@ -225,24 +176,16 @@ class character
         // Activate 1 loop of full animation
         set_animation_count(1);
     }
-    inline void update(min::camera<float> &cam, const min::mat4<float> &model, const double dt)
+    inline bool update(min::camera<float> &cam, const double dt)
     {
-        // Update the model matrix
-        _model_matrix = model;
-
-        // Update matrix uniforms
-        _ubuffer.set_matrix(cam.get_pv_matrix(), _proj_view_id);
-        _ubuffer.set_matrix(cam.get_v_matrix(), _view_id);
-        _ubuffer.set_matrix(_model_matrix, _model_id);
-
         // Only update bones if model is animating them
         if (_md5_model.is_animating())
         {
             // Update the md5 animation
             _md5_model.step(dt);
 
-            // Update bone uniform
-            update_bones();
+            // Signal need to update bones
+            return true;
         }
         else if (_need_bone_reset)
         {
@@ -252,12 +195,11 @@ class character
             // Reset bones to identity
             _md5_model.reset_bones();
 
-            // Update bone uniform
-            update_bones();
+            // Signal need to update bones
+            return true;
         }
 
-        // Update the matrix buffer
-        _ubuffer.update_matrix();
+        return false;
     }
 };
 }

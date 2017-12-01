@@ -38,13 +38,13 @@ class sky
     GLuint _dds_id;
 
   public:
-    sky(const min::uniform_buffer<float> &ub, const float extent)
+    sky(const game::uniforms &uniforms, const float extent)
         : _sv("data/shader/sky.vertex", GL_VERTEX_SHADER),
           _sf("data/shader/sky.fragment", GL_FRAGMENT_SHADER),
           _sky_program(_sv, _sf)
     {
         // Let this program use this uniform buffer
-        ub.set_program(_sky_program);
+        uniforms.set_program(_sky_program);
 
         // Load texture
         min::dds tex("data/texture/sky.dds");

@@ -18,6 +18,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __STATIC_MOB__
 #define __STATIC_MOB__
 
+#include <game/uniforms.h>
 #include <min/aabbox.h>
 #include <min/camera.h>
 #include <min/mat4.h>
@@ -25,7 +26,6 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/shader.h>
 #include <min/static_vertex.h>
 #include <min/texture_buffer.h>
-#include <min/uniform_buffer.h>
 #include <min/vec3.h>
 #include <min/vertex_buffer.h>
 #include <vector>
@@ -44,18 +44,6 @@ class mob_instance
     min::vertex_buffer<float, uint16_t, min::static_vertex, GL_FLOAT, GL_UNSIGNED_SHORT> _buffer;
     min::texture_buffer _texture_buffer;
     GLuint _dds_id;
-
-    // Camera and uniform data
-    min::uniform_buffer<float> _ubuffer;
-    size_t _proj_view_id;
-    size_t _view_id;
-    std::vector<size_t> _model_ids;
-
-    // Light properties for rendering model
-    min::vec4<float> _light_color;
-    min::vec4<float> _light_position;
-    min::vec4<float> _light_power;
-    size_t _light_id;
 
     // Bounding box for mob model
     min::aabbox<float, min::vec3> _box;
@@ -98,31 +86,12 @@ class mob_instance
         // Load texture buffer
         _dds_id = _texture_buffer.add_dds_texture(d);
     }
-    inline void load_uniforms()
-    {
-        // Load the uniform buffer with the program we will use
-        _ubuffer.set_program(_prog);
-
-        // Load light into uniform buffer
-        _light_id = _ubuffer.add_light(min::light<float>(_light_color, _light_position, _light_power));
-
-        // Load projection and view matrix into uniform buffer
-        _proj_view_id = _ubuffer.add_matrix(min::mat4<float>());
-        _view_id = _ubuffer.add_matrix(min::mat4<float>());
-
-        // Update the matrix and light buffer
-        _ubuffer.update();
-    }
 
   public:
-    mob_instance() : _vertex("data/shader/instance.vertex", GL_VERTEX_SHADER),
-                     _fragment("data/shader/instance.fragment", GL_FRAGMENT_SHADER),
-                     _prog(_vertex, _fragment),
-                     _ubuffer(1, 10),
-                     _light_color(1.0, 1.0, 1.0, 1.0),
-                     _light_position(0.0, 100.0, 0.0, 1.0),
-                     _light_power(0.5, 1.0, 0.75, 1.0)
-
+    mob_instance(const game::uniforms &uniforms)
+        : _vertex("data/shader/instance.vertex", GL_VERTEX_SHADER),
+          _fragment("data/shader/instance.fragment", GL_FRAGMENT_SHADER),
+          _prog(_vertex, _fragment)
     {
         // Load instance model
         load_model();
@@ -130,14 +99,16 @@ class mob_instance
         // Load model textures
         load_textures();
 
-        // Load the instance uniforms
-        load_uniforms();
+        // Load the uniform buffer with the program we will use
+        uniforms.set_program(_prog);
     }
     size_t add_mob(const min::vec3<float> &p)
     {
-        // Get model ID for later use
-        const size_t id = _ubuffer.add_matrix(min::mat4<float>(p));
-        _model_ids.push_back(id);
+        // Check for buffer overflow
+        if (_position.size() == 10)
+        {
+            throw std::runtime_error("mob: must change default mob count");
+        }
 
         // Push back location
         _position.push_back(p);
@@ -159,12 +130,12 @@ class mob_instance
         // Return this box for collisions
         return box;
     }
-    void draw()
+    void draw(const game::uniforms &uniforms)
     {
         if (_position.size() > 0)
         {
-            // Bind this uniform buffer for use
-            _ubuffer.bind();
+            // Activate the uniform buffer
+            uniforms.bind();
 
             // Bind VAO
             _buffer.bind();
@@ -180,6 +151,10 @@ class mob_instance
             _buffer.draw_many(GL_TRIANGLES, 0, size);
         }
     }
+    const std::vector<min::vec3<float>> &get_positions() const
+    {
+        return _position;
+    }
     size_t size() const
     {
         return _position.size();
@@ -187,30 +162,6 @@ class mob_instance
     void update_position(const min::vec3<float> &p, const size_t index)
     {
         _position[index] = p;
-    }
-    void update(min::camera<float> &cam)
-    {
-        if (_position.size() > 0)
-        {
-            // Update matrix uniforms
-            _ubuffer.set_matrix(cam.get_pv_matrix(), _proj_view_id);
-            _ubuffer.set_matrix(cam.get_v_matrix(), _view_id);
-
-            // Upload all mob positions
-            const size_t size = _position.size();
-            for (size_t i = 0; i < size; i++)
-            {
-                // Get mob matrix id
-                const size_t id = _model_ids[i];
-
-                // Update position matrix
-                const min::mat4<float> m(_position[i]);
-                _ubuffer.set_matrix(m, id);
-            }
-
-            // Update the matrix buffer
-            _ubuffer.update_matrix();
-        }
     }
 };
 }

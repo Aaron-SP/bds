@@ -21,6 +21,7 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/particle.h>
 #include <game/state.h>
 #include <game/text.h>
+#include <game/uniforms.h>
 #include <game/world.h>
 #include <iomanip>
 #include <iostream>
@@ -41,6 +42,7 @@ class mglcraft
 
     // Game specific classes
     game::text _text;
+    game::uniforms _uniforms;
     game::particle _particles;
     game::character _character;
     game::state _state;
@@ -50,7 +52,7 @@ class mglcraft
     double _fps;
     double _idle;
 
-    void load_text()
+    inline void load_text()
     {
         // Set the screen size
         _text.set_screen(720, 480);
@@ -82,7 +84,7 @@ class mglcraft
         // IDLE
         _text.add_text("IDLE:", 10, 264);
     }
-    std::pair<min::vec3<float>, bool> load_state()
+    inline std::pair<min::vec3<float>, bool> load_state()
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
@@ -127,7 +129,7 @@ class mglcraft
             return std::make_pair(p, false);
         }
     }
-    void save_state()
+    inline void save_state()
     {
         // Create output stream for saving world
         std::vector<uint8_t> stream;
@@ -151,7 +153,7 @@ class mglcraft
         // Write data to file
         game::save_file("bin/state", stream);
     }
-    std::pair<unsigned, unsigned> user_input()
+    inline std::pair<unsigned, unsigned> user_input()
     {
         if (_state.get_user_input())
         {
@@ -168,15 +170,39 @@ class mglcraft
         // return no mouse movement
         return std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
     }
+    inline void update_uniforms(min::camera<float> &camera, const bool update_bones)
+    {
+        // Update camera properties
+        _uniforms.update_camera(camera);
+
+        // Update world preview matrix
+        _uniforms.update_preview(_world.get_preview_position());
+
+        // Update md5 model matrix
+        _uniforms.update_md5_model(_state.get_model_matrix());
+
+        // Update mob positions
+        _uniforms.update_mobs(_world.get_mob_positions());
+
+        // Update md5 model bones
+        if (update_bones)
+        {
+            _uniforms.update_bones(_character.get_bones());
+        }
+
+        // Update all matrices
+        _uniforms.update_matrix_buffer();
+    }
 
   public:
     // Load window shaders and program
     mglcraft()
         : _win("MGLCRAFT", 720, 480, 3, 3),
           _text(28),
-          _particles(),
-          _character(&_particles),
-          _world(load_state(), &_particles, 64, 8, 7),
+          _uniforms(),
+          _particles(_uniforms),
+          _character(&_particles, _uniforms),
+          _world(load_state(), &_particles, _uniforms, 64, 8, 7),
           _controls(_win, _state.get_camera(), _character, _state, _text, _world),
           _goal_seek(_world), _fps(0.0), _idle(0.0)
     {
@@ -224,7 +250,6 @@ class mglcraft
 
         // Update the character
         min::camera<float> &camera = _state.get_camera();
-        _character.update(camera, _state.get_model_matrix(), dt);
 
         // If AI is in control
         if (_world.get_ai_mode())
@@ -239,13 +264,19 @@ class mglcraft
         // Update the world state
         _world.update(camera, dt);
 
+        // Update the character state
+        const bool update = _character.update(camera, dt);
+
+        // Update all uniforms
+        update_uniforms(camera, update);
+
         // Draw world geometry
-        _world.draw();
+        _world.draw(_uniforms);
 
         // Draw the character if fire mode activated
         if (_state.get_fire_mode())
         {
-            _character.draw();
+            _character.draw(_uniforms);
         }
 
         // Draw the text

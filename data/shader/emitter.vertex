@@ -16,7 +16,7 @@ layout(std140) uniform light_block
     int size;
 } light_buffer;
 
-#define MAX_NUM_TOTAL_MATRIX 2
+#define MAX_NUM_TOTAL_MATRIX 115
 layout(std140) uniform matrix_block
 {
     mat4 matrix[MAX_NUM_TOTAL_MATRIX];
@@ -29,9 +29,7 @@ void main(void)
 {
 	// Get the proj_view matrix from the uniform buffer
 	mat4 pv = matrix_buffer.matrix[0];
-	mat4 mp = matrix_buffer.matrix[1];
-
-	vec4 camera_position = mp[3];
+	vec4 camera_position = matrix_buffer.matrix[2][3];
 
 	// Set particle size by distance from camera
 	float len = length(camera_position - position);
