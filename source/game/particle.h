@@ -52,6 +52,7 @@ class particle
     // Cached camera settings
     min::vec3<float> _start;
     min::vec3<float> _direction;
+    min::vec4<float> _reference;
 
     inline void load_textures()
     {
@@ -67,7 +68,7 @@ class particle
         : _vertex("data/shader/emitter.vertex", GL_VERTEX_SHADER),
           _fragment("data/shader/emitter.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _charge(min::vec3<float>(), 200, 5, 0.125, 0.25, 0.5),
+          _charge(min::vec3<float>(), 200, 5, 0.0625, 0.125, 0.5),
           _explode(min::vec3<float>(), 1000, 1, 0.10, 5.0, 10.0),
           _selected(&_explode),
           _time(0.0),
@@ -111,6 +112,10 @@ class particle
             // Draw the particles
             _selected->draw();
         }
+    }
+    const min::vec4<float> &get_reference()
+    {
+        return _reference;
     }
     void load(const min::vec3<float> &position, const min::vec3<float> &direction, const float time)
     {
@@ -158,17 +163,41 @@ class particle
             _selected = &_charge;
         }
     }
-    void update(min::camera<float> &cam, const double dt)
+    void set_charge_reference(const float size)
+    {
+        // Set reference position
+        _reference = _start;
+
+        // Set particle size
+        _reference.w(size);
+    }
+    void set_explode_reference(const min::vec3<float> &ref, const float size)
+    {
+        _reference = min::vec4<float>(ref, size);
+    }
+    void update(min::camera<float> &cam, const min::vec3<float> &velocity, const double dt)
     {
         // Update cached camera settings
-        _start = cam.project_point(0.05) + (cam.get_right() - cam.get_up()) * 0.075;
+        _start = cam.project_point(0.05) + (cam.get_right() - cam.get_up()) * 0.1;
         _direction = cam.get_forward();
 
-        // Update the particle position and direction
-        const min::vec3<float> attr_position = _start + _direction * 0.5;
+        // If charge owns the particle system
+        if (_owner == 2)
+        {
+            // Update the particle position and direction
+            const min::vec3<float> attr_position = _start + _direction * 0.125;
 
-        // Update attractor position
-        _charge.set_attractor(attr_position, 10.0, _attract_index);
+            // Update charge position, attractor, and direction vectors
+            _charge.set_position(_start);
+            _charge.set_rotation_axis(_direction);
+            _charge.set_speed(velocity + _direction);
+            _charge.set_attractor(attr_position, 5.0, _attract_index);
+
+            const min::vec3<float> offset = _direction * 0.25;
+            _reference.x(_start.x() - offset.x());
+            _reference.y(_start.y() - offset.y());
+            _reference.z(_start.z() - offset.z());
+        }
 
         // If caller owns the particle system
         if (_time > 0.0)
@@ -178,19 +207,6 @@ class particle
 
             // Signal to draw the particles
             _draw = true;
-
-            // If charge beam, continously update
-            if (_owner == 2)
-            {
-                // Update rotation axis
-                _selected->set_rotation_axis(_direction);
-
-                // Set speed direction
-                _selected->set_speed(_direction);
-
-                // Update the start position
-                _selected->set_position(_start);
-            }
 
             // Update the particle positions
             _selected->step(dt);

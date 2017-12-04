@@ -175,6 +175,9 @@ class mglcraft
         // Update camera properties
         _uniforms.update_camera(camera);
 
+        // Update particle reference position
+        _uniforms.update_particle(_particles.get_reference());
+
         // Update world preview matrix
         _uniforms.update_preview(_world.get_preview_position());
 
@@ -258,11 +261,11 @@ class mglcraft
             _goal_seek.seek(_world, 0);
         }
 
-        // Update the particle system
-        _particles.update(camera, dt);
-
         // Update the world state
         _world.update(camera, dt);
+
+        // Update the particle system
+        _particles.update(camera, _world.character_velocity(), dt);
 
         // Update the character state
         const bool update = _character.update(camera, dt);

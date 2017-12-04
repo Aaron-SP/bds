@@ -30,33 +30,49 @@ void main(void)
 	// Get the proj_view matrix from the uniform buffer
 	mat4 pv = matrix_buffer.matrix[0];
 	vec4 camera_position = matrix_buffer.matrix[2][3];
+	float scale = camera_position.w;
+	camera_position.w = 1.0;
 
 	// Set particle size by distance from camera
 	float len = length(camera_position - position);
-	if(len > 5.0)
-	{
-		gl_PointSize = 100.0 / len;
-	}
-	else
-	{
-		gl_PointSize = 20.0 / len;
-	}
+	gl_PointSize = scale / (len + 1.0);
 
-	// Set a gradient based on particle distance from origin
-	if(len > 1.0 && len < 1.5)
+	// Black
+	float f0 = 0.0;
+	float f1 = 0.25;
+	float f2 = 0.5;
+	float f3 = 1.0;
+	if(len > f0 && len < f1)
 	{
-		float d = clamp(10.0 / len - 1.0, 0.0, 2.0);
-		out_color = vec4(d * 1.5, d, d * 0.5, 0.75);
+		// Range [0.0 - 0.125]
+		float black = 0.50 * len;
+		
+		// Black
+		out_color = vec4(black, black, black, 1.0);
 	}
-	else if(len >= 2.0 && len < 3.0)
+	else if(len > f1 && len < f2)
 	{
-		float d = clamp(11.0 / len - 1.0, 0.5, 2.0);
-		out_color = vec4(d * 4, d * 1.333, d * 0.8333, 1.0);
+		// Range [0.0 - 1.0]
+		float d = 4.0 * len - 1.0;
+		
+		// Yellow
+		out_color = vec4(d * 1.5, d, d * 0.5, 1.0);
 	}
-	else if(len >= 3.0)
+	else if(len >= f2 && len < f3)
 	{
-		float d = clamp(17.5 / len - 1.0, 1.0, 2.0);
-		out_color = vec4(d * 1.5, d * 0.333, d * 0.333, 1.0);
+		// Range [0.5 - 1.0]
+		float d = len;
+		
+		// Red
+		out_color = vec4(d * 3.0, d * 0.666, d * 0.666, 1.0);
+	}
+	else if(len >= 1.0)
+	{
+		// Range [0.5 - 0.75]
+		float d = clamp(0.5 * len, 0.5, 0.75);
+		
+		// Bright red
+		out_color = vec4(d * 8.0, d * 2.666, d * 1.666, 1.0);
 	}
 
 	// Initialize reference color

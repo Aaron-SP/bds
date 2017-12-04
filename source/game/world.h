@@ -42,26 +42,27 @@ class world
   private:
     static constexpr size_t _pre_max_scale = 5;
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
+    static constexpr float _falling_threshold = 1.0;
 
+    // Terrain stuff
     game::terrain _terrain;
     std::vector<size_t> _view_chunks;
     std::vector<min::aabbox<float, min::vec3>> _player_col_cells;
     std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
 
-    // User stuff
+    // Player control stuff
     min::mesh<float, uint32_t> _terr_mesh;
-    min::vec3<unsigned> _scale;
     min::vec3<int> _cached_offset;
     min::vec3<int> _preview_offset;
     min::vec3<float> _preview;
-
-    // Grid
-    cgrid _grid;
+    min::vec3<unsigned> _scale;
 
     // Physics stuff
     min::vec3<float> _gravity;
+    cgrid _grid;
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::tree> _simulation;
     size_t _char_id;
+    unsigned _jump_count;
 
     // Particle stuff
     particle *_particles;
@@ -161,6 +162,9 @@ class world
             // Set ownership of particles
             _particles->set_owner(1);
 
+            // Set the particle reference position
+            _particles->set_explode_reference(point, 20.0);
+
             // Add particle effects
             _particles->load(point, direction, 5.0);
         }
@@ -215,7 +219,18 @@ class world
             body.add_force(xz * body.get_mass() * friction);
 
             // Solve static collisions
-            _simulation.solve_static(_player_col_cells, _char_id, time_step, damping);
+            bool player_collide = false;
+            for (const auto &cell : _player_col_cells)
+            {
+                player_collide |= _simulation.collide(_char_id, cell);
+            }
+
+            // Reset the jump condition if collided with cell, and moving in Y axis
+            const bool is_not_falling = std::abs(body.get_linear_velocity().y()) < _falling_threshold;
+            if (player_collide && is_not_falling)
+            {
+                _jump_count = 0;
+            }
 
             // Do mob collisions
             const size_t mob_size = _mobs.size();
@@ -228,8 +243,14 @@ class world
                 _grid.create_mob_collision_cells(_mob_col_cells, mob_p);
 
                 // Solve static collisions
-                _simulation.solve_static(_mob_col_cells, _mob_start + i, time_step, damping);
+                for (const auto &cell : _mob_col_cells)
+                {
+                    _simulation.collide(_mob_start + i, cell);
+                }
             }
+
+            // Solve all collisions
+            _simulation.solve(time_step, damping);
         }
 
         // Update mob positions
@@ -246,12 +267,13 @@ class world
           particle *const particles, const game::uniforms &uniforms,
           const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
         : _terr_mesh("atlas"),
-          _scale(1, 1, 1),
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
-          _grid(grid_size, chunk_size, view_chunk_size),
+          _scale(1, 1, 1),
           _gravity(0.0, -10.0, 0.0),
+          _grid(grid_size, chunk_size, view_chunk_size),
           _simulation(_grid.get_world(), _gravity),
+          _jump_count(0),
           _particles(particles),
           _sky(uniforms, grid_size),
           _dest(state.first),
@@ -350,11 +372,23 @@ class world
     {
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
-        // If not jumping or falling, allow jump
-        if (std::abs(body.get_linear_velocity().y()) < 1.0)
+        // Allow user to jump and user boosters
+        const bool is_not_falling = std::abs(body.get_linear_velocity().y()) < _falling_threshold;
+        if (_jump_count == 0 && is_not_falling)
         {
+            // Increment jump count
+            _jump_count++;
+
             // Add force to body
             body.add_force(vel * 4000.0 * body.get_mass());
+        }
+        else if (_jump_count == 1)
+        {
+            // Increment jump count
+            _jump_count++;
+
+            // Add force to body
+            body.add_force(vel * 8000.0 * body.get_mass());
         }
     }
     inline void character_move(const min::vec3<float> &vel)
@@ -373,6 +407,13 @@ class world
 
         // Return the character position
         return body.get_position();
+    }
+    inline const min::vec3<float> &character_velocity() const
+    {
+        const min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Return the character position
+        return body.get_linear_velocity();
     }
     inline void character_warp(const min::vec3<float> &p)
     {

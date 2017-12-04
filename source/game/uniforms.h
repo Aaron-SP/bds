@@ -35,7 +35,7 @@ class uniforms
     size_t _light;
     size_t _proj_view_id;
     size_t _view_id;
-    size_t _camera_id;
+    size_t _particle_id;
     size_t _preview_id;
     size_t _md5_id;
 
@@ -58,7 +58,7 @@ class uniforms
         // Load projection, view, camera, and md5 matrix into uniform buffer
         _proj_view_id = _ub.add_matrix(min::mat4<float>());
         _view_id = _ub.add_matrix(min::mat4<float>());
-        _camera_id = _ub.add_matrix(min::mat4<float>());
+        _particle_id = _ub.add_matrix(min::mat4<float>());
         _preview_id = _ub.add_matrix(min::mat4<float>());
         _md5_id = _ub.add_matrix(min::mat4<float>());
 
@@ -122,7 +122,6 @@ class uniforms
     {
         _ub.set_matrix(cam.get_pv_matrix(), _proj_view_id);
         _ub.set_matrix(cam.get_v_matrix(), _view_id);
-        _ub.set_matrix(min::mat4<float>(cam.get_position()), _camera_id);
     }
     inline void update_md5_model(const min::mat4<float> &model)
     {
@@ -138,6 +137,16 @@ class uniforms
             const min::mat4<float> m(positions[i]);
             _ub.set_matrix(m, _mob_id[i]);
         }
+    }
+    inline void update_particle(const min::vec4<float> &p)
+    {
+        // Create matrix storing the w coordinate
+        const min::mat4<float> m(1.0, 0.0, 0.0, 0.0,
+                                 0.0, 1.0, 0.0, 0.0,
+                                 0.0, 0.0, 1.0, 0.0,
+                                 p.x(), p.y(), p.z(), p.w());
+
+        _ub.set_matrix(m, _particle_id);
     }
     inline void update_preview(const min::mat4<float> &preview)
     {

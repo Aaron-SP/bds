@@ -151,6 +151,9 @@ class character
         // Set ownership of particles
         _particles->set_owner(2);
 
+        // Set the particle reference position
+        _particles->set_charge_reference(10.0);
+
         // Add particle effects
         _particles->load(86400.0);
 
