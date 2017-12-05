@@ -23,7 +23,6 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/text.h>
 #include <game/uniforms.h>
 #include <game/world.h>
-#include <iomanip>
 #include <iostream>
 #include <min/bmp.h>
 #include <min/camera.h>
@@ -31,7 +30,6 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/settings.h>
 #include <min/utility.h>
 #include <min/window.h>
-#include <sstream>
 #include <string>
 #include <utility>
 
@@ -49,41 +47,7 @@ class mglcraft
     game::world _world;
     game::controls _controls;
     game::goal_seek _goal_seek;
-    double _fps;
-    double _idle;
 
-    inline void load_text()
-    {
-        // Set the screen size
-        _text.set_screen(720, 480);
-
-        // Add test text
-        _text.add_text("MGLCRAFT: Official Demo", 10, 460);
-
-        // Add cross hairs
-        _text.add_text("(X)", 346, 226);
-
-        // Add character position
-        _text.add_text("X: Y: Z:", 10, 432);
-
-        // Add character direction
-        _text.add_text("X: Y: Z:", 10, 404);
-
-        // Game mode
-        _text.add_text("MODE: PLAY:", 10, 376);
-
-        // Destination
-        _text.add_text("DEST:", 10, 348);
-
-        // Energy
-        _text.add_text("ENERGY:", 10, 320);
-
-        // FPS
-        _text.add_text("FPS:", 10, 292);
-
-        // IDLE
-        _text.add_text("IDLE:", 10, 264);
-    }
     inline std::pair<min::vec3<float>, bool> load_state()
     {
         // Create output stream for loading world
@@ -201,19 +165,16 @@ class mglcraft
     // Load window shaders and program
     mglcraft()
         : _win("MGLCRAFT", 720, 480, 3, 3),
-          _text(28),
+          _text(28, 720, 480),
           _uniforms(),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
           _world(load_state(), &_particles, _uniforms, 64, 8, 7),
           _controls(_win, _state.get_camera(), _character, _state, _text, _world),
-          _goal_seek(_world), _fps(0.0), _idle(0.0)
+          _goal_seek(_world)
     {
         // Set depth and cull settings
         min::settings::initialize();
-
-        // Load text into the text buffer
-        load_text();
 
         // Turn off cursor
         _win.display_cursor(false);
@@ -312,70 +273,20 @@ class mglcraft
         auto &keyboard = _win.get_keyboard();
         keyboard.update(dt);
     }
-    void update_sync(const double fps, const double idle)
-    {
-        _fps = fps;
-        _idle = idle;
-    }
-    void update_text()
+    void update_text(const double fps, const double idle)
     {
         // If drawing text mode is on, update text
         if (_text.get_draw())
         {
             // Update player position debug text
             const min::vec3<float> &p = _world.character_position();
-            std::ostringstream stream;
-            stream << "POS- " << std::fixed << std::setprecision(4) << "X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
-            _text.update_text(stream.str(), 2);
-
-            // Clear and reset the stream
-            stream.clear();
-            stream.str(std::string());
-
-            // Update player direction debug text
             const min::vec3<float> &f = _state.get_camera().get_forward();
-            stream << "DIR- X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
-            _text.update_text(stream.str(), 3);
-
-            // Clear and reset the stream
-            stream.clear();
-            stream.str(std::string());
-
-            // Update the game mode text
             const std::string &mode = _state.get_game_mode();
-            _text.update_text(mode, 4);
-
-            // Update the destination text
             const min::vec3<float> &goal = _goal_seek.get_goal();
-            stream << "DEST- X: " << goal.x() << ", Y: " << goal.y() << ", Z: " << goal.z();
-            _text.update_text(stream.str(), 5);
+            double energy = _state.get_energy();
 
-            // Clear and reset the stream
-            stream.clear();
-            stream.str(std::string());
-
-            // Update the energy text
-            stream << "ENERGY: " << _state.get_energy();
-            _text.update_text(stream.str(), 6);
-
-            // Clear and reset the stream
-            stream.clear();
-            stream.str(std::string());
-
-            // Update FPS and IDLE
-            stream << "FPS: " << _fps;
-            _text.update_text(stream.str(), 7);
-
-            // Clear and reset the stream
-            stream.clear();
-            stream.str(std::string());
-
-            // Update FPS and IDLE
-            stream << "IDLE: " << _idle;
-            _text.update_text(stream.str(), 8);
-
-            // Upload changes
-            _text.upload();
+            // Update all text and upload it
+            _text.update_text(p, f, mode, goal, energy, fps, idle);
         }
     }
     void update_window()
@@ -431,11 +342,8 @@ void run()
         // Calculate the percentage of frame spent idle
         const double idle = sync.idle();
 
-        // Update fps and idle text
-        game.update_sync(fps, idle);
-
         // Update the debug text
-        game.update_text();
+        game.update_text(fps, idle);
     }
 }
 
