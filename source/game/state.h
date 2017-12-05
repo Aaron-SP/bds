@@ -42,6 +42,7 @@ class state
     bool _pause_mode;
     bool _pause_lock;
     bool _user_input;
+    bool _shoot_cooldown;
 
     inline void load_camera()
     {
@@ -88,7 +89,8 @@ class state
         : _energy(0), _fire_mode(true),
           _x{}, _y{}, _frame_count{},
           _mode("MODE: PLAY"),
-          _pause_mode(false), _pause_lock(false), _user_input(true)
+          _pause_mode(false), _pause_lock(false),
+          _user_input(true), _shoot_cooldown(false)
     {
         // Load camera
         load_camera();
@@ -145,6 +147,10 @@ class state
     inline const min::camera<float> &get_camera() const
     {
         return _camera;
+    }
+    inline bool get_cooldown() const
+    {
+        return _shoot_cooldown;
     }
     inline uint32_t get_energy() const
     {
@@ -209,6 +215,10 @@ class state
     inline void set_user_input(const bool mode)
     {
         _user_input = mode;
+    }
+    inline bool toggle_cooldown()
+    {
+        return _shoot_cooldown = !_shoot_cooldown;
     }
     inline bool toggle_game_pause()
     {

@@ -226,7 +226,8 @@ class mglcraft
         _world.update(camera, dt);
 
         // Update the particle system
-        _particles.update(camera, _world.character_velocity(), dt);
+        _particles.set_velocity(_world.character_velocity());
+        _particles.update(camera, dt);
 
         // Update the character state
         const bool update = _character.update(camera, dt);

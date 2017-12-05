@@ -104,8 +104,8 @@ class text
         add_text("MGLCRAFT: Official Demo", 10, y);
 
         // Add cross hairs
-        const uint16_t center_w = width / 2 - font / 2;
-        const uint16_t center_h = height / 2 - font / 2;
+        const uint16_t center_w = width / 2 - font / 4;
+        const uint16_t center_h = height / 2 - font / 4;
         add_text("(X)", center_w, center_h);
 
         // Add character position

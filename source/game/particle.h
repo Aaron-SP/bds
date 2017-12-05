@@ -50,9 +50,10 @@ class particle
     bool _draw;
 
     // Cached camera settings
-    min::vec3<float> _start;
     min::vec3<float> _direction;
+    min::vec3<float> _start;
     min::vec4<float> _reference;
+    min::vec3<float> _velocity;
 
     inline void load_textures()
     {
@@ -163,6 +164,10 @@ class particle
             _selected = &_charge;
         }
     }
+    void set_velocity(const min::vec3<float> &velocity)
+    {
+        _velocity = velocity;
+    }
     void set_charge_reference(const float size)
     {
         // Set reference position
@@ -175,7 +180,7 @@ class particle
     {
         _reference = min::vec4<float>(ref, size);
     }
-    void update(min::camera<float> &cam, const min::vec3<float> &velocity, const double dt)
+    void update(min::camera<float> &cam, const double dt)
     {
         // Update cached camera settings
         _start = cam.project_point(0.05) + (cam.get_right() - cam.get_up()) * 0.1;
@@ -190,7 +195,7 @@ class particle
             // Update charge position, attractor, and direction vectors
             _charge.set_position(_start);
             _charge.set_rotation_axis(_direction);
-            _charge.set_speed(velocity + _direction);
+            _charge.set_speed(_velocity + _direction);
             _charge.set_attractor(attr_position, 5.0, _attract_index);
 
             const min::vec3<float> offset = _direction * 0.25;

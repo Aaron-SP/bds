@@ -43,6 +43,7 @@ class world
     static constexpr size_t _pre_max_scale = 5;
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
     static constexpr float _falling_threshold = 1.0;
+    static constexpr float _ray_max_dist = 100.0;
 
     // Terrain stuff
     game::terrain _terrain;
@@ -328,15 +329,15 @@ class world
     inline void ray_block(const min::ray<float, min::vec3> &r)
     {
         // Shoot a ray of blocks
-        _grid.ray_trace_atlas(r, 100);
+        _grid.ray_trace_atlas(r, _ray_max_dist);
 
         // generate new mesh
         generate_terrain();
     }
-    inline int8_t remove_block(const min::ray<float, min::vec3> &r)
+    inline int8_t remove_block(const min::ray<float, min::vec3> &r, const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_last(r, 6);
+        const min::vec3<float> traced = _grid.ray_trace_last(r, _ray_max_dist);
 
         // Get the atlas of target block, if hit a block remove it
         const int8_t value = _grid.grid_value(traced);
@@ -344,6 +345,16 @@ class world
         {
             // Get direction for particle spray
             const min::vec3<float> direction = r.get_direction() * -1.0;
+
+            // Invoke the function callback if provided
+            if (f)
+            {
+                // Get character body
+                min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+                // Call function callback
+                f(traced, body);
+            }
 
             // Remove the block
             remove_block(traced, direction);
@@ -425,20 +436,11 @@ class world
     }
     int8_t grappling(const min::ray<float, min::vec3> &r)
     {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_last(r, 100);
+        // Create lambda force applicator
+        const auto f = [&r](const min::vec3<float> &traced, min::body<float, min::vec3> &body) {
 
-        // Get grid atlas at point
-        const int8_t atlas = _grid.grid_value(traced);
-
-        // See if we hit a block
-        if (atlas != -1)
-        {
             // Compute force along the way proportional to the distance
             const min::vec3<float> d = (traced - r.get_origin());
-
-            // Get character body
-            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
             // Calculate distance of ray
             const float mag = d.magnitude();
@@ -451,15 +453,10 @@ class world
 
             // Add force to body
             body.add_force(d * 1E3 * d_factor * y_factor * body.get_mass());
+        };
 
-            // Reset the scale
-            reset_scale();
-
-            // Destroy block
-            remove_block(traced, r.get_direction());
-        }
-
-        return atlas;
+        // Call remove_block with function callback
+        return remove_block(r, f);
     }
     inline void mob_path(const ai_path &path, const path_data &data, const size_t mob_index)
     {

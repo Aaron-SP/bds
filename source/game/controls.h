@@ -411,7 +411,20 @@ class controls
         // If we are in fire mode we can charge the weapon
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
-        if (state->get_fire_mode())
+
+        // Check if we are off cooldown
+        bool cool_down = state->get_cooldown();
+        if (cool_down)
+        {
+            const double dt = state->get_charge_time();
+            if (dt > 2000.0)
+            {
+                cool_down = state->toggle_cooldown();
+            }
+        }
+
+        // Check if we are in fire mode
+        if (!cool_down && state->get_fire_mode())
         {
             // Record the start charge time
             state->set_charge_time();
@@ -452,7 +465,7 @@ class controls
                 world->add_block(r);
             }
         }
-        else
+        else if (!state->get_cooldown())
         {
             // Abort the charge animation
             character->abort_animation();
@@ -478,6 +491,10 @@ class controls
 
                     // Activate shoot animation
                     character->set_animation_shoot();
+
+                    // Record the start charge time and set cooldown
+                    state->toggle_cooldown();
+                    state->set_charge_time();
                 }
             }
         }
