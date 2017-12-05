@@ -392,7 +392,10 @@ class terrain
         }
 
         // Add mesh to vertex buffer
-        _gb.add_mesh(_parent);
+        if (_parent.vertex.size() > 0)
+        {
+            _gb.add_mesh(_parent);
+        }
 #endif
 
         // Bind the gb, this is needed!
@@ -424,7 +427,10 @@ class terrain
         }
 
         // Add mesh to the buffer
-        _pb.add_mesh(_parent);
+        if (_parent.vertex.size() > 0)
+        {
+            _pb.add_mesh(_parent);
+        }
 #endif
 
         //Bind the pb, this is needed!

@@ -29,57 +29,6 @@ bool test_cgrid()
     // Load the graph mesh with 128 pixel tile size
     game::cgrid grid(64, 8, 7);
 
-    // Test crashing cgrid
-    min::vec3<float> p(63.999999, 63.999999, 63.999999);
-    int atlas_id = grid.grid_value(p);
-    out = out && compare(-2, atlas_id);
-    if (!out)
-    {
-        throw std::runtime_error("Failed cgrid grid_value 1");
-    }
-
-    // Test crashing cgrid
-    p = min::vec3<float>(63.9999962, -2.25057721, -18.796402);
-    atlas_id = grid.grid_value(p);
-    out = out && compare(-1, atlas_id);
-    if (!out)
-    {
-        throw std::runtime_error("Failed cgrid grid_value 2");
-    }
-
-    // Check grid key for middle of grid
-    p = min::vec3<float>(0.0, 0.0, 0.0);
-    bool valid = true;
-    size_t key = grid.grid_key(p, valid);
-    out = out && valid;
-    out = out && compare(1056832, key);
-    if (!out)
-    {
-        throw std::runtime_error("Failed cgrid grid_key 1");
-    }
-
-    // Check grid key for bottom left corner
-    p = min::vec3<float>(-63.99999, -63.99999, -63.99999);
-    valid = true;
-    key = grid.grid_key(p, valid);
-    out = out && valid;
-    out = out && compare(0, key);
-    if (!out)
-    {
-        throw std::runtime_error("Failed cgrid grid_key 2");
-    }
-
-    // Check grid key for bottom left corner
-    p = min::vec3<float>(-64.0, -64.0, -64.0);
-    valid = true;
-    key = grid.grid_key(p, valid);
-    out = out && !valid;
-    out = out && compare(0, key);
-    if (!out)
-    {
-        throw std::runtime_error("Failed cgrid grid_key 3");
-    }
-
     // Test cgrid search
     min::vec3<float> start(0.5, 36.0, -0.5);
     min::vec3<float> stop(4.5, 31.5, 0.0);

@@ -326,21 +326,13 @@ class world
         // generate new mesh
         generate_terrain();
     }
-    inline void ray_block(const min::ray<float, min::vec3> &r)
-    {
-        // Shoot a ray of blocks
-        _grid.ray_trace_atlas(r, _ray_max_dist);
-
-        // generate new mesh
-        generate_terrain();
-    }
     inline int8_t remove_block(const min::ray<float, min::vec3> &r, const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_last(r, _ray_max_dist);
+        int8_t value = -2;
+        const min::vec3<float> traced = _grid.ray_trace_last(r, _ray_max_dist, value);
 
         // Get the atlas of target block, if hit a block remove it
-        const int8_t value = _grid.grid_value(traced);
         if (value >= 0)
         {
             // Get direction for particle spray
@@ -498,14 +490,9 @@ class world
         const min::vec3<float> &p = character_position();
 
         // Detect if we crossed a chunk boundary
-        bool is_valid = true;
-        const size_t current_chunk = _grid.chunk_key(p, is_valid);
-        const size_t recent_chunk = _grid.get_recent_chunk();
-        if (is_valid && recent_chunk != current_chunk)
+        const bool updated = _grid.update_chunk(p);
+        if (updated)
         {
-            // Update the recent chunk
-            _grid.update_chunk(current_chunk);
-
             // Generate a new geometry mesh
             generate_terrain();
         }
