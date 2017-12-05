@@ -7,7 +7,7 @@ FREETYPE2_INCLUDE = $(shell freetype-config --cflags)
 ifeq ($(OS),Windows_NT)
 	MGL_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mgl
 	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll
-	STATIC = -static-libgcc -static-libstdc++
+	STATIC = -static -static-libgcc -static-libstdc++
 else
 	MGL_PATH = /usr/include/mgl
 	LINKER = -lX11 -lGL -lfreetype -pthread

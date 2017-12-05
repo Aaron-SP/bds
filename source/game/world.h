@@ -198,11 +198,12 @@ class world
         const min::vec3<float> &p = body.get_position();
 
         // Calculate the timestep independent from frame rate, goal = 0.0016667
+        const float fps = 1.0 / dt;
         const unsigned steps = std::ceil(dt / 0.0016667);
         const float time_step = dt / steps;
 
-        // Damping coefficient 10@10 | 3.5@30
-        const float damping = 13.25 - 0.325 * steps;
+        // Damping coefficient
+        const float damping = 11.0 * (1.0 - std::exp(-0.0013 * fps * fps));
         const float friction = -20.0 / steps;
 
         // Solve the physics simulation
