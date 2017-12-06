@@ -99,6 +99,37 @@ class cgrid
             }
         }
     }
+    inline void cubic_grid(const min::vec3<float> &start, const min::vec3<int> &offset, const min::vec3<unsigned> &length, const std::function<void(const size_t)> &f) const
+    {
+        // Get world extents
+        const min::vec3<float> min = _world.get_min();
+        const min::vec3<float> max = _world.get_max();
+
+        // Begin at start position, clamp out of bound to world boundary
+        const min::vec3<float> restart = min::vec3<float>(start).clamp(min, max);
+
+        // Get the grid axis components
+        const size_t end = _grid_size;
+        const auto t = min::vec3<float>::grid_index(_world.get_min(), _cell_extent, restart);
+
+        // x axis: will prune points outside grid
+        size_t tx = std::get<0>(t);
+        for (size_t i = 0; i < length.x() && tx < end; i++, tx += offset.x())
+        {
+            // y axis: will prune points outside grid
+            size_t ty = std::get<1>(t);
+            for (size_t j = 0; j < length.y() && ty < end; j++, ty += offset.y())
+            {
+                // z axis: will prune points outside grid
+                size_t tz = std::get<2>(t);
+                for (size_t k = 0; k < length.z() && tz < end; k++, tz += offset.z())
+                {
+                    // Do function for cubic space
+                    f(grid_key_pack(std::make_tuple(tx, ty, tz)));
+                }
+            }
+        }
+    }
     static inline min::aabbox<float, min::vec3> create_box(const min::vec3<float> &center)
     {
         // Create box at center
@@ -108,26 +139,16 @@ class cgrid
         // return the box
         return min::aabbox<float, min::vec3>(min, max);
     }
-    inline std::tuple<size_t, size_t, size_t> chunk_key_unpack(const size_t index) const
+    inline std::tuple<size_t, size_t, size_t> chunk_key_unpack(const size_t key) const
     {
-        // Precalculate the square scale
-        const size_t chunk_scale2 = _chunk_scale * _chunk_scale;
-
-        // Calculate row, col and height
-        const size_t col = index / chunk_scale2;
-        const size_t offset = index - col * chunk_scale2;
-        const size_t row = offset / _chunk_scale;
-        const size_t hei = offset - row * _chunk_scale;
-
-        // return tuple
-        return std::make_tuple(col, row, hei);
+        return min::vec3<float>::grid_index(key, _chunk_scale);
     }
     inline size_t chunk_key_unsafe(const min::vec3<float> &point) const
     {
         // Protect against floating point round off
         const min::vec3<float> p = snap(point);
 
-        // Compute the chunk index from point
+        // Compute the chunk key from point
         const min::vec3<float> cell_extent(_chunk_size, _chunk_size, _chunk_size);
         return min::vec3<float>::grid_key(_world.get_min(), cell_extent, _chunk_scale, p);
     }
@@ -142,9 +163,9 @@ class cgrid
 
         return chunk_key_unsafe(point);
     }
-    inline min::vec3<float> chunk_start(const size_t index) const
+    inline min::vec3<float> chunk_start(const size_t key) const
     {
-        const std::tuple<size_t, size_t, size_t> comp = chunk_key_unpack(index);
+        const std::tuple<size_t, size_t, size_t> comp = chunk_key_unpack(key);
 
         // Unpack tuple
         const size_t col = std::get<0>(comp);
@@ -158,31 +179,20 @@ class cgrid
 
         return min::vec3<float>(x, y, z);
     }
-    inline std::tuple<size_t, size_t, size_t> grid_key_unpack(const size_t index) const
+    inline std::tuple<size_t, size_t, size_t> grid_key_unpack(const size_t key) const
     {
-        if (index >= _grid.size())
-        {
-            throw std::runtime_error("cgrid: grid index is not inside the world cell");
-        }
-
-        // Precalculate the square scale
-        const size_t scale2 = _grid_size * _grid_size;
-
-        // Calculate row, col and height
-        const size_t col = index / scale2;
-        const size_t offset = index - col * scale2;
-        const size_t row = offset / _grid_size;
-        const size_t hei = offset - (row * _grid_size);
-
-        // return tuple
-        return std::make_tuple(col, row, hei);
+        return min::vec3<float>::grid_index(key, _grid_size);
+    }
+    inline size_t grid_key_pack(const std::tuple<size_t, size_t, size_t> &t) const
+    {
+        return min::vec3<float>::grid_key(t, _grid_size);
     }
     inline size_t grid_key_unsafe(const min::vec3<float> &point) const
     {
         // Protect against floating point round off
         const min::vec3<float> p = snap(point);
 
-        // Compute the grid index from point
+        // Compute the grid key from point
         return min::vec3<float>::grid_key(_world.get_min(), _cell_extent, _grid_size, p);
     }
     inline size_t grid_key_safe(const min::vec3<float> &point, bool &valid) const
@@ -196,9 +206,9 @@ class cgrid
 
         return grid_key_unsafe(point);
     }
-    inline min::vec3<float> grid_center(const size_t index) const
+    inline min::vec3<float> grid_cell(const size_t key) const
     {
-        const std::tuple<size_t, size_t, size_t> comp = grid_key_unpack(index);
+        const std::tuple<size_t, size_t, size_t> comp = grid_key_unpack(key);
 
         // Unpack tuple
         const size_t col = std::get<0>(comp);
@@ -206,42 +216,49 @@ class cgrid
         const size_t hei = std::get<2>(comp);
 
         // Calculate the center point of the box cell
-        const float x = col + _world.get_min().x() + 0.5;
-        const float y = row + _world.get_min().y() + 0.5;
-        const float z = hei + _world.get_min().z() + 0.5;
+        const float x = col + _world.get_min().x();
+        const float y = row + _world.get_min().y();
+        const float z = hei + _world.get_min().z();
 
         return min::vec3<float>(x, y, z);
     }
-    inline void chunk_update(const size_t key)
+    inline min::vec3<float> grid_cell_center(const size_t key) const
+    {
+        return grid_cell(key) + 0.5;
+    }
+    inline void chunk_update(const size_t chunk_key)
     {
         // Clear this chunk
-        _chunks[key].clear();
+        _chunks[chunk_key].clear();
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, key](const min::vec3<float> &p) {
+        const auto f = [this, chunk_key](const size_t key) {
 
             // cell should always be in the chunk, if not empty
-            const size_t index = grid_key_unsafe(p);
-            const int8_t atlas = _grid[index];
+            const int8_t atlas = _grid[key];
             if (atlas != -1)
             {
                 // Find out if we are on a world edge
+                const auto t = grid_key_unpack(key);
+                const size_t tx = std::get<0>(t);
+                const size_t ty = std::get<1>(t);
+                const size_t tz = std::get<2>(t);
                 const size_t edge = _grid_size - 1;
-                const auto t = min::vec3<float>::grid_index(_world.get_min(), _cell_extent, p);
-                if (std::get<0>(t) % edge == 0 || std::get<1>(t) % edge == 0 || std::get<2>(t) % edge == 0)
+                const min::vec3<float> p = grid_cell_center(key);
+                if (tx % edge == 0 || ty % edge == 0 || tz % edge == 0)
                 {
                     // Push back block, store atlas in w component see vertex/geometry shader
-                    _chunks[key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
+                    _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
                 }
                 else
                 {
                     // Get surrounding 6 cells unsafely, check if cell is within the grid
-                    const size_t x1 = grid_key_unsafe(min::vec3<float>(p.x() - 1.0, p.y(), p.z()));
-                    const size_t x2 = grid_key_unsafe(min::vec3<float>(p.x() + 1.0, p.y(), p.z()));
-                    const size_t y1 = grid_key_unsafe(min::vec3<float>(p.x(), p.y() - 1.0, p.z()));
-                    const size_t y2 = grid_key_unsafe(min::vec3<float>(p.x(), p.y() + 1.0, p.z()));
-                    const size_t z1 = grid_key_unsafe(min::vec3<float>(p.x(), p.y(), p.z() - 1.0));
-                    const size_t z2 = grid_key_unsafe(min::vec3<float>(p.x(), p.y(), p.z() + 1.0));
+                    const size_t x1 = grid_key_pack(std::make_tuple(tx - 1, ty, tz));
+                    const size_t x2 = grid_key_pack(std::make_tuple(tx + 1, ty, tz));
+                    const size_t y1 = grid_key_pack(std::make_tuple(tx, ty - 1, tz));
+                    const size_t y2 = grid_key_pack(std::make_tuple(tx, ty + 1, tz));
+                    const size_t z1 = grid_key_pack(std::make_tuple(tx, ty, tz - 1));
+                    const size_t z2 = grid_key_pack(std::make_tuple(tx, ty, tz + 1));
 
                     const bool bx1 = _grid[x1] != -1;
                     const bool bx2 = _grid[x2] != -1;
@@ -255,19 +272,19 @@ class cgrid
                     if (!skip)
                     {
                         // Push back block, store atlas in w component see vertex/geometry shader
-                        _chunks[key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
                     }
                 }
             }
         };
 
         // Get cubic function properties
-        const min::vec3<float> start = chunk_start(key);
+        const min::vec3<float> start = chunk_start(chunk_key);
         const min::vec3<int> offset(1, 1, 1);
         const min::vec3<unsigned> length(_chunk_size, _chunk_size, _chunk_size);
 
         // Run the function
-        cubic(start, offset, length, f);
+        cubic_grid(start, offset, length, f);
     }
     inline void chunk_warm(const size_t key)
     {
@@ -278,7 +295,7 @@ class cgrid
     {
         // generate mandelbulb world using mandelbulb generator
         mandelbulb().generate(_grid, _grid_size, [this](const size_t i) {
-            return this->grid_center(i);
+            return this->grid_cell_center(i);
         });
     }
     inline void get_surrounding_chunks(const size_t key)
@@ -300,10 +317,10 @@ class cgrid
         // Run the function
         cubic(start, offset, length, f);
     }
-    inline float grid_center_square_dist(const size_t index, const min::vec3<float> &point) const
+    inline float grid_center_square_dist(const size_t key, const min::vec3<float> &point) const
     {
         // Calculate vector between points
-        const min::vec3<float> dv = grid_center(index) - point;
+        const min::vec3<float> dv = grid_cell_center(key) - point;
 
         // Calculate the square distance to this point
         return dv.dot(dv);
@@ -634,13 +651,15 @@ class cgrid
         const float atlas = static_cast<float>(_atlas_id);
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &mesh, &atlas](const min::vec3<float> &p) {
+        const auto f = [this, &mesh, &atlas](const size_t key) {
+
             // Add data to mesh for each cell
+            const min::vec3<float> p = grid_cell(key);
             mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), atlas));
         };
 
         // Run the function
-        cubic(start, offset, length, f);
+        cubic_grid(start, offset, length, f);
     }
     void create_player_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
     {
@@ -654,21 +673,18 @@ class cgrid
         const min::vec3<unsigned> length(3, 4, 3);
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &out](const min::vec3<float> &p) {
-
-            // Calculate grid key index
-            const size_t key = grid_key_unsafe(p);
+        const auto f = [this, &out](const size_t key) {
 
             // Check if valid and if the cell is not empty
             if (_grid[key] != -1)
             {
                 // Create box at this point
-                out.push_back(create_box(p));
+                out.push_back(create_box(grid_cell_center(key)));
             }
         };
 
         // Run the function
-        cubic(start, offset, length, f);
+        cubic_grid(start, offset, length, f);
     }
     void create_mob_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
     {
@@ -681,21 +697,18 @@ class cgrid
         const min::vec3<unsigned> length(3, 3, 3);
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &out](const min::vec3<float> &p) {
-
-            // Calculate grid key index
-            const size_t key = grid_key_unsafe(p);
+        const auto f = [this, &out](const size_t key) {
 
             // Check if valid and if the cell is not empty
             if (_grid[key] != -1)
             {
                 // Create box at this point
-                out.push_back(create_box(p));
+                out.push_back(create_box(grid_cell_center(key)));
             }
         };
 
         // Run the function
-        cubic(start, offset, length, f);
+        cubic_grid(start, offset, length, f);
     }
     inline int8_t get_atlas() const
     {
@@ -705,9 +718,9 @@ class cgrid
     {
         _atlas_id = id;
     }
-    inline min::mesh<float, uint32_t> &get_chunk(const size_t index)
+    inline min::mesh<float, uint32_t> &get_chunk(const size_t key)
     {
-        return _chunks[index];
+        return _chunks[key];
     }
     void get_view_chunks(std::vector<size_t> &out) const
     {
@@ -741,7 +754,7 @@ class cgrid
         if (is_valid)
         {
             // return the snapped point
-            return grid_center(key);
+            return grid_cell_center(key);
         }
 
         // return ray start point since it is not in the grid
@@ -756,7 +769,7 @@ class cgrid
         if (is_valid)
         {
             // return the snapped point
-            return grid_center(prev_key);
+            return grid_cell_center(prev_key);
         }
 
         // return ray start point since it is not in the grid
@@ -774,7 +787,7 @@ class cgrid
         // For all keys
         for (size_t i = 0; i < size; i++)
         {
-            out.push_back(grid_center(path[i]));
+            out.push_back(grid_cell_center(path[i]));
         }
     }
     // Modifies the geometry in grid
@@ -792,28 +805,26 @@ class cgrid
         const min::vec3<unsigned> &length = scale;
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &keys, &out, atlas_id](const min::vec3<float> &p) {
-
-            // Calculate grid key index
-            const size_t gkey = grid_key_unsafe(p);
+        const auto f = [this, &keys, &out, atlas_id](const size_t key) {
 
             // Count changed blocks
-            if (_grid[gkey] != atlas_id)
+            if (_grid[key] != atlas_id)
             {
                 // Increment the out counter
                 out++;
 
                 // Get the chunk key for updating
+                const min::vec3<float> p = grid_cell_center(key);
                 const size_t ckey = chunk_key_unsafe(p);
                 keys.push_back(ckey);
 
                 // Set the cell with atlas id
-                _grid[gkey] = atlas_id;
+                _grid[key] = atlas_id;
             }
         };
 
         // Run the function
-        cubic(start, offset, length, f);
+        cubic_grid(start, offset, length, f);
 
         // If we are removing blocks, add surrounding cells for update
         if (atlas_id == -1)
