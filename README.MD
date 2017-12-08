@@ -1,5 +1,5 @@
-# MGLCRAFT
-## Repository for the Minimal Graphics Library Crafting Simulator
+# Fractex
+## Repository for the Minimal Graphics Library Fractal Explorer
 
 Verify a bin directory exists before compiling with the makefile. 
 - 'mkdir -p bin'

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set working directory
-cd /opt/mglcraft
+cd /opt/fractex
 
 # Execute the game
 bin/game

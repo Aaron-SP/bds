@@ -1,19 +1,19 @@
-/* Copyright [2013-2016] [Aaron Springstroh, Minimal Graphics Library]
+/* Copyright [2013-2018] [Aaron Springstroh, Minimal Graphics Library]
 
-This file is part of the MGLCraft.
+This file is part of the Fractex.
 
-MGLCraft is free software: you can redistribute it and/or modify
+Fractex is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-MGLCraft is distributed in the hope that it will be useful,
+Fractex is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
+along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef __WORLD__
 #define __WORLD__
@@ -28,8 +28,8 @@ along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/terrain.h>
 #include <game/uniforms.h>
 #include <min/camera.h>
+#include <min/grid.h>
 #include <min/physics.h>
-#include <min/tree.h>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -61,7 +61,7 @@ class world
     // Physics stuff
     min::vec3<float> _gravity;
     cgrid _grid;
-    min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::tree> _simulation;
+    min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
     size_t _char_id;
     unsigned _jump_count;
 

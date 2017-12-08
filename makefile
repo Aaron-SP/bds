@@ -1,4 +1,4 @@
-# Tunnels Makefile - CYGWIN | LINUX
+# Fractex Makefile - CYGWIN | LINUX
 
 # Query the freetype2 package config for the include directory
 FREETYPE2_INCLUDE = $(shell freetype-config --cflags)

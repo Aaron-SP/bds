@@ -1,19 +1,19 @@
-/* Copyright [2013-2016] [Aaron Springstroh, Minimal Graphics Library]
+/* Copyright [2013-2018] [Aaron Springstroh, Minimal Graphics Library]
 
-This file is part of the MGLCraft.
+This file is part of the Fractex.
 
-MGLCraft is free software: you can redistribute it and/or modify
+Fractex is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-MGLCraft is distributed in the hope that it will be useful,
+Fractex is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with MGLCraft.  If not, see <http://www.gnu.org/licenses/>.
+along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef __TEXT__
 #define __TEXT__
@@ -101,7 +101,7 @@ class text
 
         // Add title text
         uint16_t y = height - 20;
-        add_text("MGLCRAFT: Official Demo", 10, y);
+        add_text("Fractex: Official Demo", 10, y);
 
         // Add cross hairs
         const uint16_t center_w = width / 2 - font / 4;
