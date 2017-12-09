@@ -298,13 +298,12 @@ class fractex
     }
 };
 
-void run()
+void run(const size_t frames)
 {
     // Load window shaders and program, enable shader program
     fractex game;
 
     // Setup controller to run at 60 frames per second
-    const size_t frames = 60;
     min::loop_sync sync(frames);
     double frame_time = 0.0;
 
@@ -348,11 +347,50 @@ void run()
     }
 }
 
-int main()
+void parse_uint(char *str, size_t &out)
+{
+    // Try to parse string input
+    try
+    {
+        // Get next value in string buffer
+        out = std::stoi(str);
+    }
+    catch (const std::exception &ex)
+    {
+        // Print parsing exception message
+        std::cout << "fractex: couldn't parse input: '"
+                  << str << "', expected integral type" << std::endl;
+    }
+}
+
+int main(int argc, char *argv[])
 {
     try
     {
-        run();
+        // Default frame count
+        size_t frames = 60;
+
+        // Try to parse commandline args
+        for (int i = 2; i < argc; i += 2)
+        {
+            // Get input flag
+            std::string input(argv[i - 1]);
+
+            // Check for fps flag
+            if (input.compare("-fps") == 0)
+            {
+                // Parse uint
+                parse_uint(argv[i], frames);
+            }
+            else
+            {
+                std::cout << "fractex: unknown flag '"
+                          << input << "'\"" << std::endl;
+            }
+        }
+
+        // run the game
+        run(frames);
     }
     catch (const std::exception &ex)
     {

@@ -44,6 +44,7 @@ class world
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
     static constexpr float _falling_threshold = 1.0;
     static constexpr float _ray_max_dist = 100.0;
+    static constexpr float _grav_mag = 10.0;
 
     // Terrain stuff
     game::terrain _terrain;
@@ -82,6 +83,9 @@ class world
     // Operating modes
     bool _ai_mode;
     bool _edit_mode;
+    min::vec3<float> _hook;
+    float _hook_length;
+    bool _hooked;
 
     // character_load should only be called once!
     inline void character_load(const std::pair<min::vec3<float>, bool> &state)
@@ -203,8 +207,15 @@ class world
         const unsigned steps = std::ceil(dt / 0.0016667);
         const float time_step = dt / steps;
 
+        // Calculate the damping coefficent
+        float base_damp = 11.0;
+        if (_hooked)
+        {
+            base_damp = 2.0;
+        }
+
         // Damping coefficient
-        const float damping = 11.0 * (1.0 - std::exp(-0.0013 * fps * fps));
+        const float damping = base_damp * (1.0 - std::exp(-0.0013 * fps * fps));
         const float friction = -20.0 / steps;
 
         // Solve the physics simulation
@@ -213,12 +224,21 @@ class world
             // Get all cells that could collide
             _grid.create_player_collision_cells(_player_col_cells, p);
 
-            // Add friction force
-            const min::vec3<float> &vel = body.get_linear_velocity();
-            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
+            // If hooked, add hook forces
+            if (_hooked)
+            {
+                // Calculate forces to make character swing
+                character_swing();
+            }
+            else
+            {
+                // Add friction force
+                const min::vec3<float> &vel = body.get_linear_velocity();
+                const min::vec3<float> xz(vel.x(), 0.0, vel.z());
 
-            // Add friction force opposing lateral motion
-            body.add_force(xz * body.get_mass() * friction);
+                // Add friction force opposing lateral motion
+                body.add_force(xz * body.get_mass() * friction);
+            }
 
             // Solve static collisions
             bool player_collide = false;
@@ -272,7 +292,7 @@ class world
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
           _scale(1, 1, 1),
-          _gravity(0.0, -10.0, 0.0),
+          _gravity(0.0, -_grav_mag, 0.0),
           _grid(grid_size, chunk_size, view_chunk_size),
           _simulation(_grid.get_world(), _gravity),
           _jump_count(0),
@@ -282,7 +302,9 @@ class world
           _mobs(uniforms),
           _mob_start(1),
           _ai_mode(false),
-          _edit_mode(false)
+          _edit_mode(false),
+          _hook_length(0.0),
+          _hooked(false)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)
@@ -374,36 +396,44 @@ class world
     }
     inline void character_jump(const min::vec3<float> &vel)
     {
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Allow user to jump and user boosters
-        const bool is_not_falling = std::abs(body.get_linear_velocity().y()) < _falling_threshold;
-        if (_jump_count == 0 && is_not_falling)
+        // If not hooked
+        if (!_hooked)
         {
-            // Increment jump count
-            _jump_count++;
+            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
-            // Add force to body
-            body.add_force(vel * 4000.0 * body.get_mass());
-        }
-        else if (_jump_count == 1)
-        {
-            // Increment jump count
-            _jump_count++;
+            // Allow user to jump and user boosters
+            const bool is_not_falling = std::abs(body.get_linear_velocity().y()) < _falling_threshold;
+            if (_jump_count == 0 && is_not_falling)
+            {
+                // Increment jump count
+                _jump_count++;
 
-            // Add force to body
-            body.add_force(vel * 8000.0 * body.get_mass());
+                // Add force to body
+                body.add_force(vel * 4000.0 * body.get_mass());
+            }
+            else if (_jump_count == 1)
+            {
+                // Increment jump count
+                _jump_count++;
+
+                // Add force to body
+                body.add_force(vel * 8000.0 * body.get_mass());
+            }
         }
     }
     inline void character_move(const min::vec3<float> &vel)
     {
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+        // If not hooked
+        if (!_hooked)
+        {
+            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
-        // Get the current position and set y movement to zero
-        const min::vec3<float> dxz = min::vec3<float>(vel.x(), 0.0, vel.z()).normalize();
+            // Get the current position and set y movement to zero
+            const min::vec3<float> dxz = min::vec3<float>(vel.x(), 0.0, vel.z()).normalize();
 
-        // Add force to body
-        body.add_force(dxz * 1E2 * body.get_mass());
+            // Add force to body
+            body.add_force(dxz * 1E2 * body.get_mass());
+        }
     }
     inline const min::vec3<float> &character_position() const
     {
@@ -411,6 +441,65 @@ class world
 
         // Return the character position
         return body.get_position();
+    }
+    inline void character_swing()
+    {
+        // Get the player physics object
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Get player position
+        const min::vec3<float> &p = body.get_position();
+
+        // Get player velocity
+        const min::vec3<float> &vel = body.get_linear_velocity();
+
+        // Get player mass
+        const float m = body.get_mass();
+
+        // Compute the hook vector
+        const min::vec3<float> hook_dir = (_hook - p);
+        const float d = hook_dir.magnitude();
+
+        // Calculate swing direction
+        if (d > 1.0)
+        {
+            // Normalize swing direction
+            const min::vec3<float> swing_dir = hook_dir * (1.0 / d);
+
+            // Compute pendulum double spring force
+            // Spring F=-k(x-x0)
+            const float over = _hook_length + 1.0;
+            const float under = _hook_length - 1.0;
+            if (d > over)
+            {
+                const float k = 100.0;
+                const min::vec3<float> x = swing_dir * (d - over);
+                body.add_force(x * k);
+            }
+            else if (d < under)
+            {
+                const float k = 50.0;
+                const min::vec3<float> x = swing_dir * (d - under);
+                body.add_force(x * k);
+            }
+
+            // Calculate the square velocity
+            const float vt = vel.magnitude();
+            const float vt2 = vt * vt;
+
+            // Gravity acceleration, a = g*cos_theta
+            // cos_theta = -swing_dir.dot(gravity) == swing_dir.y()
+            const float a1 = _grav_mag * swing_dir.y();
+
+            // Centripetal acceleration a = (vt^2)/L
+            const float a2 = vt2 / _hook_length;
+
+            // Combined both forces, along the radius
+            const min::vec3<float> tension = swing_dir * ((a1 + a2) * m);
+
+            // Pendulum F=-mg.dot(r) + mvt^2/L
+            body.add_force(tension);
+        }
     }
     inline const min::vec3<float> &character_velocity() const
     {
@@ -426,29 +515,28 @@ class world
         // Warp character to new position
         body.set_position(p);
     }
-    int8_t grappling(const min::ray<float, min::vec3> &r)
+    int8_t hook_set(const min::ray<float, min::vec3> &r)
     {
         // Create lambda force applicator
-        const auto f = [&r](const min::vec3<float> &traced, min::body<float, min::vec3> &body) {
+        const auto f = [this, &r](const min::vec3<float> &traced, min::body<float, min::vec3> &body) {
 
-            // Compute force along the way proportional to the distance
-            const min::vec3<float> d = (traced - r.get_origin());
+            // Set hook point
+            _hook = traced;
 
-            // Calculate distance of ray
-            const float mag = d.magnitude();
+            // Enable hooking
+            _hooked = true;
 
-            // If the distance is too short give boost
-            const float d_factor = (mag < 20.0) ? 1.0 : 0.5;
-
-            // If the pointing down weaken
-            const float y_factor = (r.get_direction().y() < -0.5) ? 0.25 : 1.0;
-
-            // Add force to body
-            body.add_force(d * 1E3 * d_factor * y_factor * body.get_mass());
+            // Calculate the hook length
+            _hook_length = (traced - r.get_origin()).magnitude();
         };
 
         // Call remove_block with function callback
         return remove_block(r, f);
+    }
+    void hook_abort()
+    {
+        // abort hooking
+        _hooked = false;
     }
     inline void mob_path(const ai_path &path, const path_data &data, const size_t mob_index)
     {

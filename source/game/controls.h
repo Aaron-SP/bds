@@ -61,6 +61,7 @@ class controls
         // Register left click events
         _window->register_lclick_down(controls::left_click_down);
         _window->register_lclick_up(controls::left_click_up);
+        _window->register_rclick_down(controls::right_click_down);
         _window->register_rclick_up(controls::right_click_up);
         _window->register_update(controls::on_resize);
 
@@ -499,12 +500,12 @@ class controls
             }
         }
     }
-    static void right_click_up(void *ptr, const uint16_t x, const uint16_t y)
+    static void right_click_down(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the camera world, and state pointers
+        // Get the camera, world, state, and character pointers
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
@@ -514,7 +515,7 @@ class controls
         if (state->get_fire_mode())
         {
             // Try to consume energy to power this resource
-            const bool consumed = state->can_consume(7);
+            const bool consumed = state->can_consume(0);
             if (consumed)
             {
                 // Calculate new point to add
@@ -524,17 +525,28 @@ class controls
                 const min::ray<float, min::vec3> r(camera->get_position(), point);
 
                 // Fire grappling hook
-                const int8_t atlas = world->grappling(r);
+                const int8_t atlas = world->hook_set(r);
                 if (atlas >= 0)
                 {
                     // Consume energy
-                    state->consume(7);
+                    state->consume(0);
 
                     // Activate shoot animation
                     character->set_animation_shoot();
                 }
             }
         }
+    }
+    static void right_click_up(void *ptr, const uint16_t x, const uint16_t y)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world pointer
+        game::world *const world = control->get_world();
+
+        //Abort grappling hook
+        world->hook_abort();
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {
