@@ -49,6 +49,16 @@ This mode benefits computers with slow CPU's but have modern GPU's that run geom
 - C:\cygwin\usr\x86_64-w64-mingw32\sys-root\mingw\include;
 - C:\cygwin\usr\x86_64-w64-mingw32\sys-root\mingw\bin;
 
+### Run flags
+
+#### -fps flag
+The '-fps' flag is an optional parameter for controlling the target playback frame count per second. The default is 60.
+- Example: 'fractex -fps 45' will render 45 frames per second.
+
+#### -view flag
+The '-view' flag is an optional parameter for controlling how many chunks are viewable on the screen. The default is 7 and must be an odd number greater than one.
+- Example: 'fractex -view 31' will render 15 chunks on each side of the player, (15 * 2) + 1 = 31.
+
 ### PLAYER USAGE INSTRUCTIONS:
 ![Alt text](pictures/spawn.png)
 

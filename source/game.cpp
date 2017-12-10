@@ -83,10 +83,10 @@ class fractex
         else
         {
             // Load character at the default position
-            const min::vec3<float> p(0.0, 31.0, 0.0);
+            const min::vec3<float> p(0.0, -58.0, 0.0);
 
             // Load camera settings
-            const min::vec3<float> look(1.0, 31.0, 0.0);
+            const min::vec3<float> look(1.0, -58.0, 0.0);
             _state.set_camera(p, look);
 
             // return the state
@@ -163,13 +163,13 @@ class fractex
 
   public:
     // Load window shaders and program
-    fractex()
+    fractex(const size_t view)
         : _win("Fractex", 720, 480, 3, 3),
           _text(28, 720, 480),
           _uniforms(),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
-          _world(load_state(), &_particles, _uniforms, 64, 8, 7),
+          _world(load_state(), &_particles, _uniforms, 64, 8, view),
           _controls(_win, _state.get_camera(), _character, _state, _text, _world),
           _goal_seek(_world)
     {
@@ -298,10 +298,10 @@ class fractex
     }
 };
 
-void run(const size_t frames)
+void run(const size_t frames, const size_t view)
 {
     // Load window shaders and program, enable shader program
-    fractex game;
+    fractex game(view);
 
     // Setup controller to run at 60 frames per second
     min::loop_sync sync(frames);
@@ -369,6 +369,7 @@ int main(int argc, char *argv[])
     {
         // Default frame count
         size_t frames = 60;
+        size_t view = 7;
 
         // Try to parse commandline args
         for (int i = 2; i < argc; i += 2)
@@ -382,6 +383,11 @@ int main(int argc, char *argv[])
                 // Parse uint
                 parse_uint(argv[i], frames);
             }
+            else if (input.compare("-view") == 0)
+            {
+                // Parse uint
+                parse_uint(argv[i], view);
+            }
             else
             {
                 std::cout << "fractex: unknown flag '"
@@ -390,7 +396,7 @@ int main(int argc, char *argv[])
         }
 
         // run the game
-        run(frames);
+        run(frames, view);
     }
     catch (const std::exception &ex)
     {

@@ -86,6 +86,7 @@ class world
     min::vec3<float> _hook;
     float _hook_length;
     bool _hooked;
+    bool _falling;
 
     // character_load should only be called once!
     inline void character_load(const std::pair<min::vec3<float>, bool> &state)
@@ -213,6 +214,10 @@ class world
         {
             base_damp = 2.0;
         }
+        else if (_falling)
+        {
+            base_damp = 6.0;
+        }
 
         // Damping coefficient
         const float damping = base_damp * (1.0 - std::exp(-0.0013 * fps * fps));
@@ -248,8 +253,8 @@ class world
             }
 
             // Reset the jump condition if collided with cell, and moving in Y axis
-            const bool is_not_falling = std::abs(body.get_linear_velocity().y()) < _falling_threshold;
-            if (player_collide && is_not_falling)
+            _falling = (std::abs(body.get_linear_velocity().y()) >= _falling_threshold);
+            if (player_collide && !_falling)
             {
                 _jump_count = 0;
             }
@@ -304,7 +309,8 @@ class world
           _ai_mode(false),
           _edit_mode(false),
           _hook_length(0.0),
-          _hooked(false)
+          _hooked(false),
+          _falling(false)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)
@@ -402,8 +408,7 @@ class world
             min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
             // Allow user to jump and user boosters
-            const bool is_not_falling = std::abs(body.get_linear_velocity().y()) < _falling_threshold;
-            if (_jump_count == 0 && is_not_falling)
+            if (_jump_count == 0 && !_falling)
             {
                 // Increment jump count
                 _jump_count++;
@@ -417,7 +422,7 @@ class world
                 _jump_count++;
 
                 // Add force to body
-                body.add_force(vel * 8000.0 * body.get_mass());
+                body.add_force(vel * 6000.0 * body.get_mass());
             }
         }
     }
@@ -485,7 +490,7 @@ class world
 
             // Calculate the square velocity
             const float vt = vel.magnitude();
-            const float vt2 = vt * vt;
+            const float vt2 = vt * vt * 1.25;
 
             // Gravity acceleration, a = g*cos_theta
             // cos_theta = -swing_dir.dot(gravity) == swing_dir.y()

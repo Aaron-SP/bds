@@ -20,6 +20,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/file.h>
 #include <game/mandelbulb.h>
+#include <game/thread_pool.h>
 #include <min/aabbox.h>
 #include <min/intersect.h>
 #include <min/mesh.h>
@@ -41,6 +42,7 @@ class cgrid
     std::vector<size_t> _surrounding_chunks;
     size_t _recent_chunk;
     size_t _view_chunk_size;
+    size_t _view_half_width;
     min::aabbox<float, min::vec3> _world;
     min::vec3<float> _cell_extent;
     int8_t _atlas_id;
@@ -293,10 +295,47 @@ class cgrid
     }
     inline void generate_world()
     {
+        // Create a threadpool for doing work in parallel
+        thread_pool pool;
+
+        // Launch the pool
+        pool.launch();
+
         // generate mandelbulb world using mandelbulb generator
-        mandelbulb().generate(_grid, _grid_size, [this](const size_t i) {
+        mandelbulb().generate(pool, _grid, _grid_size, [this](const size_t i) {
             return this->grid_cell_center(i);
         });
+
+        // Parallelize on x-axis
+        const auto work = [this](const size_t x) {
+
+            // Get offset for center of grid
+            const size_t center = _grid_size / 2;
+
+            // z axis: will prune points outside grid
+            for (size_t z = 0; z < _grid_size; z++)
+            {
+                // Create a floor of stone on the lowest level
+                const size_t xd = std::abs((int)(x - center));
+                const size_t zd = std::abs((int)(z - center));
+                const size_t key = grid_key_pack(std::make_tuple(x, 0, z));
+                if (xd == (xd % 8))
+                {
+                    _grid[key] = xd % 8;
+                }
+                else if (zd == (zd % 8))
+                {
+                    _grid[key] = zd % 8;
+                }
+                else
+                {
+                    _grid[key] = 0;
+                }
+            }
+        };
+
+        // Run the job in parallel
+        pool.run(work, 0, _grid_size);
     }
     inline void get_surrounding_chunks(const size_t key)
     {
@@ -609,9 +648,21 @@ class cgrid
           _chunks(_chunk_scale * _chunk_scale * _chunk_scale, min::mesh<float, uint32_t>("chunk")),
           _recent_chunk(0),
           _view_chunk_size(view_chunk_size),
+          _view_half_width((_view_chunk_size / 2) - 1),
           _cell_extent(1.0, 1.0, 1.0),
           _atlas_id(0)
     {
+        if (_view_chunk_size % 2 == 0 || _view_chunk_size == 1)
+        {
+            // View chunk_size is not symmetric or greater than one
+            throw std::runtime_error("cgrid: view_chunk_size must be an odd number of cells, greater than one");
+        }
+        else if (_view_half_width >= _chunk_scale)
+        {
+            // View half width is larger than chunk grid dimension
+            throw std::runtime_error("cgrid: view_chunk_size can't be greater than " + std::to_string(_chunk_scale * 2 + 1));
+        }
+
         // Create world AABB with a little border for protection
         const float max = static_cast<float>(grid_size);
         const float min = (max * -1.0);
@@ -734,8 +785,7 @@ class cgrid
         out.push_back(_recent_chunk);
 
         // Get the chunk starting point
-        const size_t half_width = (_view_chunk_size / 2) - 1;
-        const min::vec3<float> start = chunk_start(_recent_chunk) - min::vec3<float>(_chunk_size, _chunk_size, _chunk_size) * half_width;
+        const min::vec3<float> start = chunk_start(_recent_chunk) - min::vec3<float>(_chunk_size, _chunk_size, _chunk_size) * _view_half_width;
         const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
         const min::vec3<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
 

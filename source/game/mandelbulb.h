@@ -19,7 +19,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #define __MANDELBULB__
 
 #include <functional>
-#include <game/thread_map.h>
+#include <game/thread_pool.h>
 #include <min/vec3.h>
 
 namespace game
@@ -106,14 +106,9 @@ class mandelbulb
     }
 
   public:
-    mandelbulb()
+    mandelbulb() {}
+    void generate(thread_pool &pool, std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
     {
-    }
-    void generate(std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
-    {
-        // Create a threadpool for doing work in parallel
-        thread_map map;
-
         // Create working function
         const auto work = [this, &grid, gsize, &f](const size_t i) {
             // Do work
@@ -121,7 +116,7 @@ class mandelbulb
         };
 
         // Run the job in parallel
-        map.run(work, 0, grid.size());
+        pool.run(work, 0, grid.size());
     }
 };
 }
