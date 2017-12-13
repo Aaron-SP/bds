@@ -99,7 +99,7 @@ class mandelbulb
         // If we converged return atlas
         if (converged)
         {
-            return iterations % 8;
+            return iterations % 16;
         }
 
         return -1;

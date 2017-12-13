@@ -130,82 +130,149 @@ class terrain
             min::vec2<float>(1.0, 0.0),
             min::vec2<float>(1.0, 1.0)};
 
-        // grass
-        if (atlas_id == 5)
+        // Select texture from atlas
+        if (atlas_id == 0)
         {
             for (auto &uv : uvs)
             {
-                uv *= 0.248;
+                uv *= 0.124;
                 uv.x(uv.x() + 0.001);
-                uv.y(uv.y() + 0.751);
+                uv.y(uv.y() + 0.876);
             }
         }
-        // stone
-        else if (atlas_id == 0)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv.x(uv.x() + 0.251);
-                uv.y(uv.y() + 0.751);
-            }
-        }
-        // sand
         else if (atlas_id == 1)
         {
             for (auto &uv : uvs)
             {
-                uv *= 0.248;
-                uv.x(uv.x() + 0.501);
-                uv.y(uv.y() + 0.751);
+                uv *= 0.124;
+                uv.x(uv.x() + 0.126);
+                uv.y(uv.y() + 0.876);
             }
         }
-        // wood
-        else if (atlas_id == 3)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv += 0.751;
-            }
-        }
-        // dirt
-        else if (atlas_id == 4)
-        {
-            for (auto &uv : uvs)
-            {
-                uv *= 0.248;
-                uv.x(uv.x() + 0.001);
-                uv.y(uv.y() + 0.501);
-            }
-        }
-        // lava
         else if (atlas_id == 2)
         {
             for (auto &uv : uvs)
             {
-                uv *= 0.248;
+                uv *= 0.124;
                 uv.x(uv.x() + 0.251);
-                uv.y(uv.y() + 0.501);
+                uv.y(uv.y() + 0.876);
             }
         }
-        // water
+        else if (atlas_id == 3)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.376);
+                uv.y(uv.y() + 0.876);
+            }
+        }
+        else if (atlas_id == 4)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.501);
+                uv.y(uv.y() + 0.876);
+            }
+        }
+        else if (atlas_id == 5)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.626);
+                uv.y(uv.y() + 0.876);
+            }
+        }
         else if (atlas_id == 6)
         {
             for (auto &uv : uvs)
             {
-                uv *= 0.248;
-                uv += 0.501;
+                uv *= 0.124;
+                uv.x(uv.x() + 0.751);
+                uv.y(uv.y() + 0.876);
             }
         }
-        // sulphur
         else if (atlas_id == 7)
         {
             for (auto &uv : uvs)
             {
-                uv *= 0.248;
+                uv *= 0.124;
+                uv.x(uv.x() + 0.876);
+                uv.y(uv.y() + 0.876);
+            }
+        }
+        if (atlas_id == 8)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.001);
+                uv.y(uv.y() + 0.751);
+            }
+        }
+        else if (atlas_id == 9)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.126);
+                uv.y(uv.y() + 0.751);
+            }
+        }
+        else if (atlas_id == 10)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.251);
+                uv.y(uv.y() + 0.751);
+            }
+        }
+        else if (atlas_id == 11)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.376);
+                uv.y(uv.y() + 0.751);
+            }
+        }
+        else if (atlas_id == 12)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.501);
+                uv.y(uv.y() + 0.751);
+            }
+        }
+        else if (atlas_id == 13)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.626);
+                uv.y(uv.y() + 0.751);
+            }
+        }
+        else if (atlas_id == 14)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
                 uv.x(uv.x() + 0.751);
-                uv.y(uv.y() + 0.501);
+                uv.y(uv.y() + 0.751);
+            }
+        }
+        else if (atlas_id == 15)
+        {
+            for (auto &uv : uvs)
+            {
+                uv *= 0.124;
+                uv.x(uv.x() + 0.876);
+                uv.y(uv.y() + 0.751);
             }
         }
 

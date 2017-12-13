@@ -319,13 +319,13 @@ class cgrid
                 const size_t xd = std::abs((int)(x - center));
                 const size_t zd = std::abs((int)(z - center));
                 const size_t key = grid_key_pack(std::make_tuple(x, 0, z));
-                if (xd == (xd % 8))
+                if (xd == (xd % 16))
                 {
-                    _grid[key] = xd % 8;
+                    _grid[key] = xd % 16;
                 }
-                else if (zd == (zd % 8))
+                else if (zd == (zd % 16))
                 {
-                    _grid[key] = zd % 8;
+                    _grid[key] = zd % 16;
                 }
                 else
                 {

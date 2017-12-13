@@ -98,13 +98,13 @@ class state
     inline void absorb(const int8_t atlas_id)
     {
         // Absorb this amount of energy
-        const uint16_t value = 0x1 << (atlas_id);
+        const uint32_t value = 0x1 << (atlas_id);
         _energy += value;
     }
     inline bool can_consume(const int8_t atlas_id)
     {
         // Try to consume energy
-        const uint16_t value = 0x2 << (atlas_id);
+        const uint32_t value = 0x2 << (atlas_id);
         if (_energy >= value)
         {
             return true;
@@ -116,13 +116,13 @@ class state
     inline void consume(const int8_t atlas_id)
     {
         // Consume energy
-        const uint16_t value = 0x2 << (atlas_id);
+        const uint32_t value = 0x2 << (atlas_id);
         _energy -= value;
     }
     inline bool will_consume(const int8_t atlas_id)
     {
         // Try to consume energy
-        const uint16_t value = 0x2 << (atlas_id);
+        const uint32_t value = 0x2 << (atlas_id);
         if (_energy >= value)
         {
             _energy -= value;

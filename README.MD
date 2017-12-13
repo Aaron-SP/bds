@@ -18,6 +18,8 @@ These build targets have been tested for compilation on Arch Linux x64 and Windo
 
 Additional dependencies that are required and not distributed in this package include:
 - 'mgl' - Minimal Graphics Library (https://github.com/Aaron-SP/mgl)
+- 'g++-5.4' - all platforms
+- 'opengl3.3+' - all platforms
 - 'mingw32'/'mingw64' - for win32 only
 - 'freetype' - for win32 and linux
 - 'X11' - for linux only
