@@ -18,7 +18,9 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __CHUNK_GRID__
 #define __CHUNK_GRID__
 
+#include <chrono>
 #include <game/file.h>
+#include <game/height_map.h>
 #include <game/mandelbulb.h>
 #include <game/thread_pool.h>
 #include <min/aabbox.h>
@@ -26,6 +28,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/mesh.h>
 #include <min/ray.h>
 #include <min/serial.h>
+#include <random>
 
 namespace game
 {
@@ -33,6 +36,7 @@ namespace game
 class cgrid
 {
   private:
+    static constexpr size_t _floor_height = 8;
     size_t _grid_size;
     std::vector<int8_t> _grid;
     size_t _chunk_cells;
@@ -306,30 +310,30 @@ class cgrid
             return this->grid_cell_center(i);
         });
 
+        // Random numbers between -1.0, and 1.0
+        std::uniform_int_distribution<int8_t> dist(0, 15);
+        std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+
+        // Generate height map
+        const size_t level = std::ceil(std::log2(_grid_size));
+        const height_map<float, float> map(level, -1.0, 4.0);
+
         // Parallelize on x-axis
-        const auto work = [this](const size_t x) {
+        const auto work = [this, &dist, &gen, &map](const size_t i) {
 
-            // Get offset for center of grid
-            const size_t center = _grid_size / 2;
-
-            // z axis: will prune points outside grid
-            for (size_t z = 0; z < _grid_size; z++)
+            // y axis
+            for (size_t j = 0; j < _floor_height; j++)
             {
-                // Create a floor of stone on the lowest level
-                const size_t xd = std::abs((int)(x - center));
-                const size_t zd = std::abs((int)(z - center));
-                const size_t key = grid_key_pack(std::make_tuple(x, 0, z));
-                if (xd == (xd % 16))
+                // z axis
+                for (size_t k = 0; k < _grid_size; k++)
                 {
-                    _grid[key] = xd % 16;
-                }
-                else if (zd == (zd % 16))
-                {
-                    _grid[key] = zd % 16;
-                }
-                else
-                {
-                    _grid[key] = 0;
+                    // Get the height
+                    const uint8_t height = static_cast<uint8_t>(std::round(map.get(i, k)));
+                    if (j < height)
+                    {
+                        // Do function for cubic space
+                        _grid[grid_key_pack(std::make_tuple(i, j, k))] = dist(gen);
+                    }
                 }
             }
         };

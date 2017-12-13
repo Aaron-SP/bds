@@ -83,10 +83,10 @@ class fractex
         else
         {
             // Load character at the default position
-            const min::vec3<float> p(0.0, -58.0, 0.0);
+            const min::vec3<float> p(0.0, -50.0, 0.0);
 
             // Load camera settings
-            const min::vec3<float> look(1.0, -58.0, 0.0);
+            const min::vec3<float> look(1.0, -50.0, 0.0);
             _state.set_camera(p, look);
 
             // return the state
