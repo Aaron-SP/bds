@@ -236,12 +236,13 @@ class controls
         // Get the world and state pointers
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
+        gun_state &gun = state->get_gun_state();
 
         // toggle edit mode
         const bool mode = world->toggle_edit_mode();
 
         // toggle fire mode if not in edit mode
-        state->set_fire_mode(!mode);
+        gun.set_fire_mode(!mode);
 
         // reset scale
         world->reset_scale();
@@ -412,23 +413,24 @@ class controls
         // If we are in fire mode we can charge the weapon
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
+        gun_state &gun = state->get_gun_state();
 
         // Check if we are off cooldown
-        bool cool_down = state->get_cooldown();
+        bool cool_down = gun.get_cooldown();
         if (cool_down)
         {
-            const double dt = state->get_charge_time();
+            const double dt = gun.get_charge_time();
             if (dt > 2000.0)
             {
-                cool_down = state->toggle_cooldown();
+                cool_down = gun.toggle_cooldown();
             }
         }
 
         // Check if we are in fire mode
-        if (!cool_down && state->get_fire_mode())
+        if (!cool_down && gun.get_fire_mode())
         {
             // Record the start charge time
-            state->set_charge_time();
+            gun.set_charge_time();
 
             // Activate charge animation
             character->set_animation_charge();
@@ -444,6 +446,7 @@ class controls
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
+        gun_state &gun = state->get_gun_state();
 
         // Check if we are in edit mode
         const bool mode = world->get_edit_mode();
@@ -453,7 +456,7 @@ class controls
             const int8_t atlas = world->get_atlas_id();
 
             // Try to consume energy to create this resource
-            const bool consumed = state->will_consume(atlas);
+            const bool consumed = gun.will_consume(atlas);
             if (consumed)
             {
                 // Calculate new point to add
@@ -466,13 +469,13 @@ class controls
                 world->add_block(r);
             }
         }
-        else if (!state->get_cooldown())
+        else if (!gun.get_cooldown())
         {
             // Abort the charge animation
             character->abort_animation();
 
             // Get the total charge time in ms
-            const double dt = state->get_charge_time();
+            const double dt = gun.get_charge_time();
 
             // If we have enough charge to remove block
             if (dt > 1000.0)
@@ -488,14 +491,14 @@ class controls
                 if (atlas >= 0.0)
                 {
                     // Absorb energy to create this resource
-                    state->absorb(atlas);
+                    gun.absorb(atlas);
 
                     // Activate shoot animation
                     character->set_animation_shoot();
 
                     // Record the start charge time and set cooldown
-                    state->toggle_cooldown();
-                    state->set_charge_time();
+                    gun.toggle_cooldown();
+                    gun.set_charge_time();
                 }
             }
         }
@@ -510,12 +513,13 @@ class controls
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
+        gun_state &gun = state->get_gun_state();
 
         // Only allow grappling if in fire mode
-        if (state->get_fire_mode())
+        if (gun.get_fire_mode())
         {
             // Try to consume energy to power this resource
-            const bool consumed = state->can_consume(0);
+            const bool consumed = gun.can_consume(0);
             if (consumed)
             {
                 // Calculate new point to add
@@ -529,7 +533,7 @@ class controls
                 if (atlas >= 0)
                 {
                     // Consume energy
-                    state->consume(0);
+                    gun.consume(0);
 
                     // Activate shoot animation
                     character->set_animation_shoot();

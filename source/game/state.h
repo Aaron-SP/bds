@@ -18,9 +18,8 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __GAME_STATE__
 #define __GAME_STATE__
 
-#include <chrono>
 #include <game/character.h>
-#include <min/sample.h>
+#include <game/gun_state.h>
 
 namespace game
 {
@@ -32,17 +31,14 @@ class state
     min::camera<float> _camera;
     min::quat<float> _q;
     min::mat4<float> _model;
-    uint32_t _energy;
-    bool _fire_mode;
     float _x[_frame_average];
     float _y[_frame_average];
     unsigned _frame_count;
-    std::chrono::high_resolution_clock::time_point _charge_start;
     std::string _mode;
     bool _pause_mode;
     bool _pause_lock;
     bool _user_input;
-    bool _shoot_cooldown;
+    gun_state _gun_state;
 
     inline void load_camera()
     {
@@ -86,79 +82,20 @@ class state
 
   public:
     state()
-        : _energy(0), _fire_mode(true),
-          _x{}, _y{}, _frame_count{},
+        : _x{}, _y{}, _frame_count{},
           _mode("MODE: PLAY"),
-          _pause_mode(false), _pause_lock(false),
-          _user_input(true), _shoot_cooldown(false)
+          _pause_mode(false), _pause_lock(false), _user_input(true)
     {
         // Load camera
         load_camera();
-    }
-    inline void absorb(const int8_t atlas_id)
-    {
-        // Absorb this amount of energy
-        const uint32_t value = 0x1 << (atlas_id);
-        _energy += value;
-    }
-    inline bool can_consume(const int8_t atlas_id)
-    {
-        // Try to consume energy
-        const uint32_t value = 0x2 << (atlas_id);
-        if (_energy >= value)
-        {
-            return true;
-        }
-
-        // Not enough energy
-        return false;
-    }
-    inline void consume(const int8_t atlas_id)
-    {
-        // Consume energy
-        const uint32_t value = 0x2 << (atlas_id);
-        _energy -= value;
-    }
-    inline bool will_consume(const int8_t atlas_id)
-    {
-        // Try to consume energy
-        const uint32_t value = 0x2 << (atlas_id);
-        if (_energy >= value)
-        {
-            _energy -= value;
-            return true;
-        }
-
-        // Not enough energy
-        return false;
     }
     inline min::camera<float> &get_camera()
     {
         return _camera;
     }
-    inline double get_charge_time() const
-    {
-        // Get the current time
-        const std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-
-        // return time since last sync
-        return std::chrono::duration<double, std::milli>(now - _charge_start).count();
-    }
     inline const min::camera<float> &get_camera() const
     {
         return _camera;
-    }
-    inline bool get_cooldown() const
-    {
-        return _shoot_cooldown;
-    }
-    inline uint32_t get_energy() const
-    {
-        return _energy;
-    }
-    inline bool get_fire_mode() const
-    {
-        return _fire_mode;
     }
     inline const std::string &get_game_mode() const
     {
@@ -167,6 +104,10 @@ class state
     inline bool get_game_pause() const
     {
         return _pause_mode || _pause_lock;
+    }
+    inline gun_state &get_gun_state()
+    {
+        return _gun_state;
     }
     inline const min::mat4<float> &get_model_matrix()
     {
@@ -192,14 +133,6 @@ class state
         // Update rotation quaternion
         _q = update_model_rotation();
     }
-    inline void set_charge_time()
-    {
-        _charge_start = std::chrono::high_resolution_clock::now();
-    }
-    inline void set_fire_mode(const bool mode)
-    {
-        _fire_mode = mode;
-    }
     inline void set_game_mode(const std::string &mode)
     {
         _mode = mode;
@@ -215,10 +148,6 @@ class state
     inline void set_user_input(const bool mode)
     {
         _user_input = mode;
-    }
-    inline bool toggle_cooldown()
-    {
-        return _shoot_cooldown = !_shoot_cooldown;
     }
     inline bool toggle_game_pause()
     {

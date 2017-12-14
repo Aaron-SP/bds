@@ -239,7 +239,7 @@ class fractex
         _world.draw(_uniforms);
 
         // Draw the character if fire mode activated
-        if (_state.get_fire_mode())
+        if (_state.get_gun_state().get_fire_mode())
         {
             _character.draw(_uniforms);
         }
@@ -284,7 +284,7 @@ class fractex
             const min::vec3<float> &f = _state.get_camera().get_forward();
             const std::string &mode = _state.get_game_mode();
             const min::vec3<float> &goal = _goal_seek.get_goal();
-            double energy = _state.get_energy();
+            const double energy = _state.get_gun_state().get_energy();
 
             // Update all text and upload it
             _text.update_text(p, f, mode, goal, energy, fps, idle);
