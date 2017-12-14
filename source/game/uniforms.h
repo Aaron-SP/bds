@@ -127,15 +127,13 @@ class uniforms
     {
         _ub.set_matrix(model, _md5_id);
     }
-    inline void update_mobs(const std::vector<min::vec3<float>> &positions)
+    inline void update_mobs(const std::vector<min::mat4<float>> &matrices)
     {
-        // Upload all mob positions
-        const size_t size = positions.size();
+        // Upload all mob matrices
+        const size_t size = matrices.size();
         for (size_t i = 0; i < size; i++)
         {
-            // Update position matrix
-            const min::mat4<float> m(positions[i]);
-            _ub.set_matrix(m, _mob_id[i]);
+            _ub.set_matrix(matrices[i], _mob_id[i]);
         }
     }
     inline void update_particle(const min::vec4<float> &p)

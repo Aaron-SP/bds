@@ -22,9 +22,9 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdint>
 #include <game/ai_path.h>
 #include <game/cgrid.h>
-#include <game/mob.h>
 #include <game/particle.h>
 #include <game/sky.h>
+#include <game/static_instance.h>
 #include <game/terrain.h>
 #include <game/uniforms.h>
 #include <min/camera.h>
@@ -77,7 +77,7 @@ class world
     min::vec3<float> _dest;
 
     // Mob instances
-    mob_instance _mobs;
+    static_instance _instance;
     size_t _mob_start;
 
     // Operating modes
@@ -180,7 +180,7 @@ class world
         // Solve the AI path finding if toggled
         if (_ai_mode)
         {
-            const size_t mob_size = _mobs.size();
+            const size_t mob_size = _instance.cube_size();
             for (size_t i = 0; i < mob_size; i++)
             {
                 // Get mob position, mob index offset taken care of
@@ -260,7 +260,7 @@ class world
             }
 
             // Do mob collisions
-            const size_t mob_size = _mobs.size();
+            const size_t mob_size = _instance.cube_size();
             for (size_t i = 0; i < mob_size; i++)
             {
                 // Get mob position, mob index offset taken care of
@@ -281,11 +281,11 @@ class world
         }
 
         // Update mob positions
-        const size_t mob_size = _mobs.size();
+        const size_t mob_size = _instance.cube_size();
         for (size_t i = 0; i < mob_size; i++)
         {
             const min::body<float, min::vec3> &mob_body = _simulation.get_body(_mob_start + i);
-            _mobs.update_position(mob_body.get_position(), i);
+            _instance.update_cube_position(mob_body.get_position(), i);
         }
     }
 
@@ -304,7 +304,7 @@ class world
           _particles(particles),
           _sky(uniforms, grid_size),
           _dest(state.first),
-          _mobs(uniforms),
+          _instance(uniforms),
           _mob_start(1),
           _ai_mode(false),
           _edit_mode(false),
@@ -386,10 +386,10 @@ class world
     inline size_t add_mob(const min::vec3<float> &p)
     {
         // Create a mob
-        const size_t mob_id = _mobs.add_mob(p);
+        const size_t mob_id = _instance.add_cube(p);
 
         // Add to physics simulation
-        const min::aabbox<float, min::vec3> box = _mobs.mob_box(mob_id);
+        const min::aabbox<float, min::vec3> box = _instance.box_cube(mob_id);
         const size_t mob_phys_id = _simulation.add_body(box, 10.0);
 
         // Get the physics body for editing
@@ -646,8 +646,8 @@ class world
             uniforms.set_light1();
         }
 
-        // Draw the mobs
-        _mobs.draw(uniforms);
+        // Draw the static instances
+        _instance.draw(uniforms);
 
         // Draw the particles if we are using it
         if (_particles->is_owner(1))
@@ -671,9 +671,9 @@ class world
     {
         return _grid;
     }
-    inline const std::vector<min::vec3<float>> &get_mob_positions() const
+    inline const std::vector<min::mat4<float>> &get_mob_matrices() const
     {
-        return _mobs.get_positions();
+        return _instance.get_cube_matrices();
     }
     inline const min::vec3<float> &get_preview_position()
     {

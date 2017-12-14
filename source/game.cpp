@@ -149,7 +149,7 @@ class fractex
         _uniforms.update_md5_model(_state.get_model_matrix());
 
         // Update mob positions
-        _uniforms.update_mobs(_world.get_mob_positions());
+        _uniforms.update_mobs(_world.get_mob_matrices());
 
         // Update md5 model bones
         if (update_bones)
