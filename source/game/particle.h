@@ -44,14 +44,15 @@ class particle
     min::emitter_buffer<float, GL_FLOAT> _charge;
     min::emitter_buffer<float, GL_FLOAT> _explode;
     min::emitter_buffer<float, GL_FLOAT> *_selected;
-    size_t _attract_index;
+    int _attract_index;
     float _time;
     unsigned _owner;
     bool _draw;
 
     // Cached camera settings
-    min::vec3<float> _direction;
-    min::vec3<float> _start;
+    min::vec3<float> _cam_dir;
+    min::vec3<float> _cam_pos;
+    min::vec3<float> _position;
     min::vec4<float> _reference;
     min::vec3<float> _velocity;
 
@@ -72,6 +73,7 @@ class particle
           _charge(min::vec3<float>(), 200, 5, 0.0625, 0.125, 0.5),
           _explode(min::vec3<float>(), 1000, 1, 0.10, 5.0, 10.0),
           _selected(&_explode),
+          _attract_index(-1),
           _time(0.0),
           _owner(0),
           _draw(false)
@@ -84,7 +86,6 @@ class particle
 
         // Set the particle gravity for charge
         _charge.set_gravity(min::vec3<float>(0.0, 0.0, 0.0));
-        _attract_index = _charge.attractor_add(min::vec3<float>(0.0, 0.0, 0.0), 1.0);
 
         // Set the particle gravity for explode
         _explode.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
@@ -94,7 +95,7 @@ class particle
         // Abort particle animation
         _time = -1.0;
     }
-    void draw(const game::uniforms &uniforms)
+    void draw(const game::uniforms &uniforms) const
     {
         if (_draw)
         {
@@ -135,10 +136,10 @@ class particle
     void load(const float time)
     {
         // Set speed direction
-        _selected->set_speed(_direction);
+        _selected->set_speed(_cam_dir);
 
         // Update the start position
-        _selected->set_position(_start);
+        _selected->set_position(_cam_pos);
 
         // Reset the particle animation
         _selected->reset();
@@ -162,6 +163,18 @@ class particle
         else if (_owner == 2)
         {
             _selected = &_charge;
+
+            // Recreate the attractor
+            if (_attract_index == -1)
+            {
+                _attract_index = _charge.attractor_add(min::vec3<float>(0.0, 0.0, 0.0), 1.0);
+            }
+        }
+        else if (_owner == 3)
+        {
+            _selected = &_charge;
+            _attract_index = -1;
+            _charge.attractor_clear();
         }
     }
     void set_velocity(const min::vec3<float> &velocity)
@@ -171,37 +184,61 @@ class particle
     void set_charge_reference(const float size)
     {
         // Set reference position
-        _reference = _start;
+        _reference = min::vec4<float>(_cam_pos, size);
 
-        // Set particle size
-        _reference.w(size);
+        // Reset the wind vector
+        _charge.set_wind(min::vec3<float>(0.0, 0.0, 0.0));
     }
     void set_explode_reference(const min::vec3<float> &ref, const float size)
     {
+        // Set reference position and particle size
         _reference = min::vec4<float>(ref, size);
+    }
+    void set_launch_reference(const min::vec3<float> &dir, const float size)
+    {
+        // Set reference position
+        _reference = min::vec4<float>(_cam_pos, size);
+
+        // Set the wind in opposite direction of launch direction
+        _charge.set_wind(dir);
+    }
+    void set_position(const min::vec3<float> &p)
+    {
+        _position = p;
     }
     void update(min::camera<float> &cam, const double dt)
     {
         // Update cached camera settings
-        _start = cam.project_point(0.05) + (cam.get_right() - cam.get_up()) * 0.1;
-        _direction = cam.get_forward();
+        _cam_pos = cam.project_point(0.05) + (cam.get_right() - cam.get_up()) * 0.1;
+        _cam_dir = cam.get_forward();
 
         // If charge owns the particle system
         if (_owner == 2)
         {
             // Update the particle position and direction
-            const min::vec3<float> attr_position = _start + _direction * 0.125;
+            const min::vec3<float> attr_position = _cam_pos + _cam_dir * 0.125;
 
             // Update charge position, attractor, and direction vectors
-            _charge.set_position(_start);
-            _charge.set_rotation_axis(_direction);
-            _charge.set_speed(_velocity + _direction);
+            _charge.set_position(_cam_pos);
+            _charge.set_rotation_axis(_cam_dir);
+            _charge.set_speed(_velocity + _cam_dir);
             _charge.set_attractor(attr_position, 5.0, _attract_index);
 
-            const min::vec3<float> offset = _direction * 0.25;
-            _reference.x(_start.x() - offset.x());
-            _reference.y(_start.y() - offset.y());
-            _reference.z(_start.z() - offset.z());
+            // Set the reference position
+            const min::vec3<float> offset = _cam_dir * 0.25;
+            _reference.x(_cam_pos.x() - offset.x());
+            _reference.y(_cam_pos.y() - offset.y());
+            _reference.z(_cam_pos.z() - offset.z());
+        }
+        else if (_owner == 3)
+        {
+            // Update launch position
+            _charge.set_position(_position);
+
+            // Set the reference position
+            _reference.x(_position.x());
+            _reference.y(_position.y());
+            _reference.z(_position.z());
         }
 
         // If caller owns the particle system

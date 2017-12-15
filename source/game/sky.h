@@ -52,7 +52,7 @@ class sky
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);
     }
-    void draw()
+    void draw() const
     {
         // Bind this texture for drawing
         _tbuffer.bind(_dds_id, 0);

@@ -19,7 +19,7 @@ layout(std140) uniform light_block
     int size;
 } light_buffer;
 
-#define MAX_NUM_TOTAL_MATRIX 115
+#define MAX_NUM_TOTAL_MATRIX 125
 layout(std140) uniform matrix_block
 {
     mat4 matrix[MAX_NUM_TOTAL_MATRIX];

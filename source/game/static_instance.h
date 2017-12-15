@@ -40,6 +40,7 @@ class static_instance
     min::shader _vertex;
     min::shader _fragment;
     min::program _prog;
+    GLint _index_location;
 
     // Buffers for model data and textures
     min::vertex_buffer<float, uint16_t, min::static_vertex, GL_FLOAT, GL_UNSIGNED_SHORT> _buffer;
@@ -101,6 +102,15 @@ class static_instance
         // Load vertex buffer with data
         _buffer.upload();
     }
+    inline void load_program_index()
+    {
+        // Get the start_index uniform location
+        _index_location = glGetUniformLocation(_prog.id(), "start_index");
+        if (_index_location == -1)
+        {
+            throw std::runtime_error("static_instance: could not find uniform 'start_index'");
+        }
+    }
     inline void load_textures()
     {
         // Load cube textures
@@ -114,6 +124,11 @@ class static_instance
 
         // Load dds into texture buffer
         _miss_tid = _texture_buffer.add_dds_texture(missile);
+    }
+    void set_start_index(const GLint start_index) const
+    {
+        // Set the sampler active texture
+        glUniform1i(_index_location, start_index);
     }
 
   public:
@@ -131,6 +146,9 @@ class static_instance
 
         // Load model textures
         load_textures();
+
+        // Load program index
+        load_program_index();
 
         // Load the uniform buffer with the program we will use
         uniforms.set_program(_prog);
@@ -163,6 +181,10 @@ class static_instance
         // return mob id
         return _miss_mat.size() - 1;
     }
+    void clear_missile()
+    {
+        _miss_mat.clear();
+    }
     min::aabbox<float, min::vec3> box_cube(const size_t index) const
     {
         // Create box for this mob
@@ -185,7 +207,7 @@ class static_instance
         // Return this box for collisions
         return box;
     }
-    void draw(const game::uniforms &uniforms)
+    void draw(const game::uniforms &uniforms) const
     {
         // If we are going to draw anything
         if (_cube_mat.size() > 0 || _miss_mat.size() > 0)
@@ -206,6 +228,9 @@ class static_instance
             // Bind this texture for drawing on channel '0'
             _texture_buffer.bind(_cube_tid, 0);
 
+            // Set the start index for cubes
+            set_start_index(5);
+
             // Draw mob instances
             const size_t size = _cube_mat.size();
             _buffer.draw_many(GL_TRIANGLES, _cube_index, size);
@@ -216,6 +241,9 @@ class static_instance
         {
             // Bind this texture for drawing on channel '0'
             _texture_buffer.bind(_miss_tid, 0);
+
+            // Set the start index for missiles
+            set_start_index(15);
 
             // Draw missile instances
             const size_t size = _miss_mat.size();

@@ -76,7 +76,6 @@ class controls
         keyboard.add(min::window::key_code::KEYA);
         keyboard.add(min::window::key_code::KEYD);
         keyboard.add(min::window::key_code::KEYE);
-        keyboard.add(min::window::key_code::SPACE);
         keyboard.add(min::window::key_code::KEYZ);
         keyboard.add(min::window::key_code::KEYX);
         keyboard.add(min::window::key_code::KEYC);
@@ -88,6 +87,8 @@ class controls
         keyboard.add(min::window::key_code::KEY6);
         keyboard.add(min::window::key_code::KEY7);
         keyboard.add(min::window::key_code::KEY8);
+        keyboard.add(min::window::key_code::SPACE);
+        keyboard.add(min::window::key_code::KEYF);
 
         // Register callback function F1
         keyboard.register_keydown(min::window::key_code::F1, controls::close_window, (void *)_window);
@@ -123,9 +124,6 @@ class controls
         keyboard.register_keydown(min::window::key_code::KEYS, controls::back, (void *)this);
         keyboard.set_per_frame(min::window::key_code::KEYS, true);
 
-        // Register callback function SPACE
-        keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)this);
-
         // Register callback function Z
         keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
 
@@ -141,23 +139,29 @@ class controls
         // Register callback function KEY2 for switching texture to 'sand'
         keyboard.register_keydown(min::window::key_code::KEY2, controls::switch_sand, (void *)_world);
 
-        // Register callback function KEY2 for switching texture to 'lava'
+        // Register callback function KEY3 for switching texture to 'lava'
         keyboard.register_keydown(min::window::key_code::KEY3, controls::switch_lava, (void *)_world);
 
-        // Register callback function KEY2 for switching texture to 'wood'
+        // Register callback function KEY4 for switching texture to 'wood'
         keyboard.register_keydown(min::window::key_code::KEY4, controls::switch_wood, (void *)_world);
 
-        // Register callback function KEY1 for switching texture to 'dirt'
+        // Register callback function KEY5 for switching texture to 'dirt'
         keyboard.register_keydown(min::window::key_code::KEY5, controls::switch_dirt, (void *)_world);
 
-        // Register callback function KEY2 for switching texture to 'grass'
+        // Register callback function KEY6 for switching texture to 'grass'
         keyboard.register_keydown(min::window::key_code::KEY6, controls::switch_grass, (void *)_world);
 
-        // Register callback function KEY2 for switching texture to 'water'
+        // Register callback function KEY7 for switching texture to 'water'
         keyboard.register_keydown(min::window::key_code::KEY7, controls::switch_water, (void *)_world);
 
-        // Register callback function KEY2 for switching texture to 'sulphur'
+        // Register callback function KEY8 for switching texture to 'sulphur'
         keyboard.register_keydown(min::window::key_code::KEY8, controls::switch_sulphur, (void *)_world);
+
+        // Register callback function SPACE
+        keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)_world);
+
+        // Register callback function KEYF
+        keyboard.register_keydown(min::window::key_code::KEYF, controls::switch_weapon, (void *)_state);
     }
     min::camera<float> *get_camera()
     {
@@ -312,15 +316,6 @@ class controls
         game::world *const world = control->get_world();
         const min::vec3<float> &direction = camera->get_forward();
         world->character_move(direction * -1.0);
-    }
-    static void jump(void *ptr, double step)
-    {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the world pointer
-        game::world *const world = control->get_world();
-        world->character_jump(min::vec3<float>(0.0, 1.0, 0.0));
     }
     static void switch_stone(void *ptr, double step)
     {
@@ -486,19 +481,28 @@ class controls
                 // Create a ray from camera to destination
                 const min::ray<float, min::vec3> r(camera->get_position(), point);
 
-                // Remove block from world, get the removed atlas
-                const int8_t atlas = world->remove_block(r);
-                if (atlas >= 0.0)
+                // Select which type of gun shot
+                if (gun.get_beam_mode())
                 {
-                    // Absorb energy to create this resource
-                    gun.absorb(atlas);
+                    // Remove block from world, get the removed atlas
+                    const int8_t atlas = world->remove_block(r);
+                    if (atlas >= 0.0)
+                    {
+                        // Absorb energy to create this resource
+                        gun.absorb(atlas);
 
-                    // Activate shoot animation
-                    character->set_animation_shoot();
+                        // Activate shoot animation
+                        character->set_animation_shoot();
 
-                    // Record the start charge time and set cooldown
-                    gun.toggle_cooldown();
-                    gun.set_charge_time();
+                        // Record the start charge time and set cooldown
+                        gun.toggle_cooldown();
+                        gun.set_charge_time();
+                    }
+                }
+                else
+                {
+                    // Launch a missile
+                    world->launch_missile(r);
                 }
             }
         }
@@ -551,6 +555,21 @@ class controls
 
         //Abort grappling hook
         world->hook_abort();
+    }
+    static void jump(void *ptr, double step)
+    {
+        // Get the world pointer
+        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world->character_jump(min::vec3<float>(0.0, 1.0, 0.0));
+    }
+    static void switch_weapon(void *ptr, double step)
+    {
+        // Get the gun_state pointer
+        game::state *const state = reinterpret_cast<game::state *>(ptr);
+        gun_state &gun = state->get_gun_state();
+
+        // Switch weapon type
+        gun.toggle_beam_mode();
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {

@@ -23,6 +23,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/ai_path.h>
 #include <game/cgrid.h>
 #include <game/particle.h>
+#include <game/projectile.h>
 #include <game/sky.h>
 #include <game/static_instance.h>
 #include <game/terrain.h>
@@ -43,7 +44,7 @@ class world
     static constexpr size_t _pre_max_scale = 5;
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
     static constexpr float _falling_threshold = 1.0;
-    static constexpr float _ray_max_dist = 100.0;
+    static constexpr size_t _ray_max_dist = 100;
     static constexpr float _grav_mag = 10.0;
 
     // Terrain stuff
@@ -79,6 +80,9 @@ class world
     // Mob instances
     static_instance _instance;
     size_t _mob_start;
+
+    // Missiles
+    projectile _projectile;
 
     // Operating modes
     bool _ai_mode;
@@ -154,10 +158,10 @@ class world
         // Upload preview geometry
         _terrain.upload_preview(_terr_mesh);
     }
-    inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &direction)
+    inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale)
     {
         // Try to remove geometry from the grid
-        const unsigned removed = _grid.set_geometry(point, _scale, _preview_offset, -1);
+        const unsigned removed = _grid.set_geometry(point, scale, _preview_offset, -1);
 
         // If we removed geometry, play particles
         if (removed > 0)
@@ -174,6 +178,10 @@ class world
             // Add particle effects
             _particles->load(point, direction, 5.0);
         }
+    }
+    inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &direction)
+    {
+        remove_block(point, direction, _scale);
     }
     inline void update_world_physics(const float dt)
     {
@@ -287,6 +295,16 @@ class world
             const min::body<float, min::vec3> &mob_body = _simulation.get_body(_mob_start + i);
             _instance.update_cube_position(mob_body.get_position(), i);
         }
+
+        // On missile collision remove block
+        const auto on_collide = [this](const min::vec3<float> &point,
+                                       const min::vec3<float> &direction,
+                                       const min::vec3<unsigned> &scale) {
+            this->remove_block(point, direction, scale);
+        };
+
+        // Update any missiles
+        _projectile.update(steps / 50.0, on_collide);
     }
 
   public:
@@ -306,6 +324,7 @@ class world
           _dest(state.first),
           _instance(uniforms),
           _mob_start(1),
+          _projectile(particles, &_instance),
           _ai_mode(false),
           _edit_mode(false),
           _hook_length(0.0),
@@ -543,6 +562,11 @@ class world
         // abort hooking
         _hooked = false;
     }
+    inline void launch_missile(const min::ray<float, min::vec3> &r)
+    {
+        // Launch a missile on this ray
+        _projectile.launch_missile(r, _grid, _ray_max_dist);
+    }
     inline void mob_path(const ai_path &path, const path_data &data, const size_t mob_index)
     {
         // Get the character rigid body
@@ -619,7 +643,7 @@ class world
             _cached_offset.z(-1);
         }
     }
-    void draw(game::uniforms &uniforms)
+    void draw(game::uniforms &uniforms) const
     {
         // Activate the uniform buffer
         uniforms.bind();
@@ -654,6 +678,9 @@ class world
         {
             _particles->draw(uniforms);
         }
+
+        // Draw projectiles
+        _projectile.draw(uniforms);
     }
     inline bool get_ai_mode()
     {
@@ -671,9 +698,9 @@ class world
     {
         return _grid;
     }
-    inline const std::vector<min::mat4<float>> &get_mob_matrices() const
+    inline const static_instance &get_instances() const
     {
-        return _instance.get_cube_matrices();
+        return _instance;
     }
     inline const min::vec3<float> &get_preview_position()
     {

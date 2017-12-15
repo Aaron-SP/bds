@@ -148,8 +148,10 @@ class fractex
         // Update md5 model matrix
         _uniforms.update_md5_model(_state.get_model_matrix());
 
-        // Update mob positions
-        _uniforms.update_mobs(_world.get_mob_matrices());
+        // Update mob and missile matrices
+        const game::static_instance &instance = _world.get_instances();
+        _uniforms.update_mobs(instance.get_cube_matrices());
+        _uniforms.update_missiles(instance.get_missile_matrices());
 
         // Update md5 model bones
         if (update_bones)

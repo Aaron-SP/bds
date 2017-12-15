@@ -30,11 +30,12 @@ class gun_state
   private:
     std::chrono::high_resolution_clock::time_point _charge_start;
     uint32_t _energy;
+    bool _beam_mode;
     bool _fire_mode;
     bool _shoot_cooldown;
 
   public:
-    gun_state() : _energy(0), _fire_mode(true), _shoot_cooldown(false) {}
+    gun_state() : _energy(0), _beam_mode(true), _fire_mode(true), _shoot_cooldown(false) {}
     inline void absorb(const int8_t atlas_id)
     {
         // Absorb this amount of energy
@@ -80,6 +81,10 @@ class gun_state
         // return time since last sync
         return std::chrono::duration<double, std::milli>(now - _charge_start).count();
     }
+    inline bool get_beam_mode() const
+    {
+        return _beam_mode;
+    }
     inline bool get_cooldown() const
     {
         return _shoot_cooldown;
@@ -99,6 +104,10 @@ class gun_state
     inline void set_fire_mode(const bool mode)
     {
         _fire_mode = mode;
+    }
+    inline void toggle_beam_mode()
+    {
+        _beam_mode = !_beam_mode;
     }
     inline bool toggle_cooldown()
     {

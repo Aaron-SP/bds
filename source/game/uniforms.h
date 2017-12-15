@@ -40,9 +40,10 @@ class uniforms
     size_t _md5_id;
 
     std::vector<size_t> _mob_id;
+    std::vector<size_t> _missile_id;
     std::vector<size_t> _bone_id;
 
-    inline void load_uniforms(const size_t mobs, const size_t bones)
+    inline void load_uniforms(const size_t mobs, const size_t missiles, const size_t bones)
     {
         // Change light alpha for placemark
         const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
@@ -69,6 +70,13 @@ class uniforms
             _mob_id[i] = _ub.add_matrix(min::mat4<float>());
         }
 
+        // Upload all missile positions
+        _missile_id.resize(missiles);
+        for (size_t i = 0; i < missiles; i++)
+        {
+            _missile_id[i] = _ub.add_matrix(min::mat4<float>());
+        }
+
         // Add bones matrices to uniform buffer
         _bone_id.resize(bones);
         for (size_t i = 0; i < bones; i++)
@@ -81,11 +89,10 @@ class uniforms
     }
 
   public:
-    uniforms()
-        : _ub(1, 115)
+    uniforms() : _ub(1, 125)
     {
         // Load the number of used uniforms into the buffer
-        load_uniforms(10, 100);
+        load_uniforms(10, 10, 100);
     }
     inline void bind() const
     {
@@ -134,6 +141,15 @@ class uniforms
         for (size_t i = 0; i < size; i++)
         {
             _ub.set_matrix(matrices[i], _mob_id[i]);
+        }
+    }
+    inline void update_missiles(const std::vector<min::mat4<float>> &matrices)
+    {
+        // Upload all mob matrices
+        const size_t size = matrices.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            _ub.set_matrix(matrices[i], _missile_id[i]);
         }
     }
     inline void update_particle(const min::vec4<float> &p)
