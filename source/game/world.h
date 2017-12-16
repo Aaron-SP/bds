@@ -347,9 +347,6 @@ class world
         _terr_mesh.vertex.reserve(_pre_max_vol);
         _terr_mesh.index.reserve(_pre_max_vol);
 
-        // Generate the preview buffer
-        generate_preview();
-
         // Load character
         character_load(state);
 
@@ -708,20 +705,35 @@ class world
     }
     inline void reset_scale()
     {
+        // Reset the scale and the cached offset
         _scale = min::vec3<unsigned>(1, 1, 1);
+        _cached_offset = min::vec3<int>(1, 1, 1);
 
-        // Regenerate the preview mesh
-        generate_preview();
+        // Only applicable in edit mode
+        if (_edit_mode)
+        {
+            // Regenerate the preview mesh
+            generate_preview();
+        }
+        else
+        {
+            _preview_offset = _cached_offset;
+        }
     }
     inline void set_atlas_id(const int8_t id)
     {
-        _grid.set_atlas(id);
+        // Only applicable in edit mode
+        if (_edit_mode)
+        {
+            _grid.set_atlas(id);
 
-        // Regenerate the preview mesh
-        generate_preview();
+            // Regenerate the preview mesh
+            generate_preview();
+        }
     }
     void set_scale_x(unsigned dx)
     {
+        // Only applicable in edit mode
         if (_edit_mode)
         {
             if (_cached_offset.x() != _preview_offset.x())
@@ -740,6 +752,7 @@ class world
     }
     void set_scale_y(unsigned dy)
     {
+        // Only applicable in edit mode
         if (_edit_mode)
         {
             if (_cached_offset.y() != _preview_offset.y())
@@ -758,6 +771,7 @@ class world
     }
     void set_scale_z(unsigned dz)
     {
+        // Only applicable in edit mode
         if (_edit_mode)
         {
             if (_cached_offset.z() != _preview_offset.z())
