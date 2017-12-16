@@ -44,14 +44,11 @@ class projectile
 
     inline void set_launch_particles()
     {
-        // Set ownership of particles
-        _particles->set_owner(3);
-
         // Set the particle reference position
         _particles->set_launch_reference(_ray.get_direction() * -10.0, 10.0);
 
         // Add particle effects
-        _particles->load(86400.0);
+        _particles->load_launch(86400.0);
     }
 
     inline void launch_missile(const min::ray<float, min::vec3> &r, const cgrid &grid, const size_t max_length)
@@ -87,11 +84,8 @@ class projectile
     }
     inline void draw(game::uniforms &uniforms) const
     {
-        // Draw if owner of particle system
-        if (_particles->is_owner(3))
-        {
-            _particles->draw(uniforms);
-        }
+        // Draw launch particles
+        _particles->draw_launch(uniforms);
     }
     inline void update(const float speed,
                        const std::function<void(
@@ -114,7 +108,7 @@ class projectile
                 _instance->clear_missile();
 
                 // Stop playing particles
-                _particles->abort();
+                _particles->abort_launch();
 
                 // If we hit a block remove it
                 if (_remove)
@@ -141,7 +135,7 @@ class projectile
 
                 // Set particle position slightly behind the rocket
                 const min::vec3<float> offset = point - _ray.get_direction() * 0.5;
-                _particles->set_position(offset);
+                _particles->set_launch_position(offset);
             }
         }
     }

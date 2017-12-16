@@ -139,9 +139,6 @@ class fractex
         // Update camera properties
         _uniforms.update_camera(camera);
 
-        // Update particle reference position
-        _uniforms.update_particle(_particles.get_reference());
-
         // Update world preview matrix
         _uniforms.update_preview(_world.get_preview_position());
 
@@ -228,7 +225,7 @@ class fractex
         _world.update(camera, dt);
 
         // Update the particle system
-        _particles.set_velocity(_world.character_velocity());
+        _particles.set_charge_velocity(_world.character_velocity());
         _particles.update(camera, dt);
 
         // Update the character state

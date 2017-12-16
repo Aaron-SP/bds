@@ -169,14 +169,11 @@ class world
             // generate new mesh
             generate_terrain();
 
-            // Set ownership of particles
-            _particles->set_owner(1);
-
             // Set the particle reference position
             _particles->set_explode_reference(point, 20.0);
 
             // Add particle effects
-            _particles->load(point, direction, 5.0);
+            _particles->load_explode(point, direction, 5.0);
         }
     }
     inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &direction)
@@ -670,11 +667,8 @@ class world
         // Draw the static instances
         _instance.draw(uniforms);
 
-        // Draw the particles if we are using it
-        if (_particles->is_owner(1))
-        {
-            _particles->draw(uniforms);
-        }
+        // Draw the explode particles
+        _particles->draw_explode(uniforms);
 
         // Draw projectiles
         _projectile.draw(uniforms);

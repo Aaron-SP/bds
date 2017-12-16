@@ -102,7 +102,7 @@ class static_instance
         // Load vertex buffer with data
         _buffer.upload();
     }
-    inline void load_program_index()
+    inline void load_program_index(const game::uniforms &uniforms)
     {
         // Get the start_index uniform location
         _index_location = glGetUniformLocation(_prog.id(), "start_index");
@@ -110,6 +110,9 @@ class static_instance
         {
             throw std::runtime_error("static_instance: could not find uniform 'start_index'");
         }
+
+        // Load the uniform buffer with the program we will use
+        uniforms.set_program(_prog);
     }
     inline void load_textures()
     {
@@ -148,10 +151,7 @@ class static_instance
         load_textures();
 
         // Load program index
-        load_program_index();
-
-        // Load the uniform buffer with the program we will use
-        uniforms.set_program(_prog);
+        load_program_index(uniforms);
     }
     size_t add_cube(const min::vec3<float> &p)
     {
@@ -209,18 +209,14 @@ class static_instance
     }
     void draw(const game::uniforms &uniforms) const
     {
-        // If we are going to draw anything
-        if (_cube_mat.size() > 0 || _miss_mat.size() > 0)
-        {
-            // Activate the uniform buffer
-            uniforms.bind();
+        // Activate the uniform buffer
+        uniforms.bind();
 
-            // Bind VAO
-            _buffer.bind();
+        // Bind VAO
+        _buffer.bind();
 
-            // Change program to instance shaders
-            _prog.use();
-        }
+        // Change program to instance shaders
+        _prog.use();
 
         // Draw cubes
         if (_cube_mat.size() > 0)

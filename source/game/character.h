@@ -111,15 +111,12 @@ class character
         _md5_model.get_current_animation().set_loop_count(0);
 
         // Abort the particle system
-        _particles->abort();
+        _particles->abort_charge();
     }
     void draw(const game::uniforms &uniforms)
     {
-        // Draw the particles if we are using it
-        if (_particles->is_owner(2))
-        {
-            _particles->draw(uniforms);
-        }
+        // Draw the charge particles
+        _particles->draw_charge(uniforms);
 
         // clear depth for drawing character over terrain
         glClear(GL_DEPTH_BUFFER_BIT);
@@ -148,14 +145,11 @@ class character
         // Flag to reset bones after animation
         _need_bone_reset = true;
 
-        // Set ownership of particles
-        _particles->set_owner(2);
-
         // Set the particle reference position
         _particles->set_charge_reference(10.0);
 
         // Add particle effects
-        _particles->load(86400.0);
+        _particles->load_charge(86400.0);
 
         // Set charge animation
         _md5_model.set_current_animation(_charge_index);

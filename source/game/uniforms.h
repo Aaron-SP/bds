@@ -152,16 +152,6 @@ class uniforms
             _ub.set_matrix(matrices[i], _missile_id[i]);
         }
     }
-    inline void update_particle(const min::vec4<float> &p)
-    {
-        // Create matrix storing the w coordinate
-        const min::mat4<float> m(1.0, 0.0, 0.0, 0.0,
-                                 0.0, 1.0, 0.0, 0.0,
-                                 0.0, 0.0, 1.0, 0.0,
-                                 p.x(), p.y(), p.z(), p.w());
-
-        _ub.set_matrix(m, _particle_id);
-    }
     inline void update_preview(const min::mat4<float> &preview)
     {
         _ub.set_matrix(preview, _preview_id);

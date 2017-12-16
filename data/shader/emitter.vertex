@@ -23,18 +23,17 @@ layout(std140) uniform matrix_block
     int size;
 } matrix_buffer;
 
+uniform vec4 camera_position;
 out vec4 out_color;
 
 void main(void)
 {
 	// Get the proj_view matrix from the uniform buffer
 	mat4 pv = matrix_buffer.matrix[0];
-	vec4 camera_position = matrix_buffer.matrix[2][3];
 	float scale = camera_position.w;
-	camera_position.w = 1.0;
 
 	// Set particle size by distance from camera
-	float len = length(camera_position - position);
+	float len = length(camera_position.xyz - position.xyz);
 	gl_PointSize = scale / (len + 1.0);
 
 	// Black
