@@ -118,7 +118,7 @@ class character
         // Draw the charge particles
         _particles->draw_charge(uniforms);
 
-        // clear depth for drawing character over terrain
+        // Clear depth for drawing character over terrain
         glClear(GL_DEPTH_BUFFER_BIT);
 
         // Activate the uniform buffer

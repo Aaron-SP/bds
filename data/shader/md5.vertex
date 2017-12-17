@@ -6,7 +6,7 @@ layout (location = 2) in vec3 normal;
 layout (location = 5) in vec4 bone_index;
 layout (location = 6) in vec4 bone_weight;
 
-#define MAX_NUM_TOTAL_MATRIX 125
+#define MAX_NUM_TOTAL_MATRIX 145
 layout(std140) uniform matrix_block
 {
     mat4 matrix[MAX_NUM_TOTAL_MATRIX];
@@ -26,10 +26,10 @@ void main(void)
     mat4 model = matrix_buffer.matrix[4];
 
     // Perform vertex skinning
-    mat4 bone_transform = matrix_buffer.matrix[int(bone_index.x) + 25] * bone_weight.x;
-	bone_transform += matrix_buffer.matrix[int(bone_index.y) + 25] * bone_weight.y;
-	bone_transform += matrix_buffer.matrix[int(bone_index.z) + 25] * bone_weight.z;
-	bone_transform += matrix_buffer.matrix[int(bone_index.w) + 25] * bone_weight.w;
+    mat4 bone_transform = matrix_buffer.matrix[int(bone_index.x) + 45] * bone_weight.x;
+	bone_transform += matrix_buffer.matrix[int(bone_index.y) + 45] * bone_weight.y;
+	bone_transform += matrix_buffer.matrix[int(bone_index.z) + 45] * bone_weight.z;
+	bone_transform += matrix_buffer.matrix[int(bone_index.w) + 45] * bone_weight.w;
 
     // Extract the rotation matrix from bone transform; use inverse-transpose here if object is scaled
     mat3 normal_matrix = mat3(bone_transform);

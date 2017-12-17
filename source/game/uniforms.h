@@ -39,11 +39,13 @@ class uniforms
     size_t _preview_id;
     size_t _md5_id;
 
+    std::vector<size_t> _ui_scale_id;
+    std::vector<size_t> _ui_uv_id;
     std::vector<size_t> _mob_id;
     std::vector<size_t> _missile_id;
     std::vector<size_t> _bone_id;
 
-    inline void load_uniforms(const size_t mobs, const size_t missiles, const size_t bones)
+    inline void load_uniforms(const size_t ui, const size_t mobs, const size_t missiles, const size_t bones)
     {
         // Change light alpha for placemark
         const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
@@ -62,6 +64,20 @@ class uniforms
         _particle_id = _ub.add_matrix(min::mat4<float>());
         _preview_id = _ub.add_matrix(min::mat4<float>());
         _md5_id = _ub.add_matrix(min::mat4<float>());
+
+        // Upload all ui scale matrices
+        _ui_scale_id.resize(ui);
+        for (size_t i = 0; i < ui; i++)
+        {
+            _ui_scale_id[i] = _ub.add_matrix(min::mat4<float>());
+        }
+
+        // Upload all ui scale matrices
+        _ui_uv_id.resize(ui);
+        for (size_t i = 0; i < ui; i++)
+        {
+            _ui_uv_id[i] = _ub.add_matrix(min::mat4<float>());
+        }
 
         // Upload all mob positions
         _mob_id.resize(mobs);
@@ -89,10 +105,10 @@ class uniforms
     }
 
   public:
-    uniforms() : _ub(1, 125)
+    uniforms() : _ub(1, 145)
     {
         // Load the number of used uniforms into the buffer
-        load_uniforms(10, 10, 100);
+        load_uniforms(10, 10, 10, 100);
     }
     inline void bind() const
     {
@@ -101,6 +117,10 @@ class uniforms
     void set_program(const min::program &p) const
     {
         _ub.set_program(p);
+    }
+    void set_program_matrix_only(const min::program &p) const
+    {
+        _ub.set_program_matrix_only(p);
     }
     void set_light1()
     {
@@ -150,6 +170,22 @@ class uniforms
         for (size_t i = 0; i < size; i++)
         {
             _ub.set_matrix(matrices[i], _missile_id[i]);
+        }
+    }
+    inline void update_ui(const std::vector<min::mat3<float>> &scale, const std::vector<min::mat3<float>> &uv)
+    {
+        // Upload all ui scale matrices
+        const size_t s_size = scale.size();
+        for (size_t i = 0; i < s_size; i++)
+        {
+            _ub.set_matrix(scale[i], _ui_scale_id[i]);
+        }
+
+        // Upload all ui uv matrices
+        const size_t uv_size = uv.size();
+        for (size_t i = 0; i < uv_size; i++)
+        {
+            _ub.set_matrix(uv[i], _ui_uv_id[i]);
         }
     }
     inline void update_preview(const min::mat4<float> &preview)

@@ -225,7 +225,7 @@ class static_instance
             _texture_buffer.bind(_cube_tid, 0);
 
             // Set the start index for cubes
-            set_start_index(5);
+            set_start_index(25);
 
             // Draw mob instances
             const size_t size = _cube_mat.size();
@@ -239,7 +239,7 @@ class static_instance
             _texture_buffer.bind(_miss_tid, 0);
 
             // Set the start index for missiles
-            set_start_index(15);
+            set_start_index(35);
 
             // Draw missile instances
             const size_t size = _miss_mat.size();

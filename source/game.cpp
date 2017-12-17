@@ -21,6 +21,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/particle.h>
 #include <game/state.h>
 #include <game/text.h>
+#include <game/ui_overlay.h>
 #include <game/uniforms.h>
 #include <game/world.h>
 #include <iostream>
@@ -41,6 +42,7 @@ class fractex
     // Game specific classes
     game::text _text;
     game::uniforms _uniforms;
+    game::ui_overlay _ui;
     game::particle _particles;
     game::character _character;
     game::state _state;
@@ -145,6 +147,9 @@ class fractex
         // Update md5 model matrix
         _uniforms.update_md5_model(_state.get_model_matrix());
 
+        // Update ui matrices
+        _uniforms.update_ui(_ui.get_scale(), _ui.get_uv());
+
         // Update mob and missile matrices
         const game::static_instance &instance = _world.get_instances();
         _uniforms.update_mobs(instance.get_cube_matrices());
@@ -164,12 +169,13 @@ class fractex
     // Load window shaders and program
     fractex(const size_t view)
         : _win("Fractex", 720, 480, 3, 3),
-          _text(28, 720, 480),
+          _text(28, _win.get_width(), _win.get_height()),
           _uniforms(),
+          _ui(_uniforms, _win.get_width(), _win.get_height()),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
           _world(load_state(), &_particles, _uniforms, 64, 8, view),
-          _controls(_win, _state.get_camera(), _character, _state, _text, _world),
+          _controls(_win, _state.get_camera(), _character, _state, _text, _ui, _world),
           _goal_seek(_world)
     {
         // Set depth and cull settings
@@ -242,6 +248,9 @@ class fractex
         {
             _character.draw(_uniforms);
         }
+
+        // Draw the ui
+        _ui.draw(_uniforms);
 
         // Draw the text
         _text.draw();

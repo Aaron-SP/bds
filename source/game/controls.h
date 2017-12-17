@@ -20,6 +20,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/state.h>
 #include <game/text.h>
+#include <game/ui_overlay.h>
 #include <game/world.h>
 #include <iostream>
 #include <min/camera.h>
@@ -39,15 +40,18 @@ class controls
     game::character *_character;
     game::state *_state;
     game::text *_text;
+    game::ui_overlay *_ui;
     game::world *_world;
 
   public:
-    controls(min::window &window, min::camera<float> &camera, game::character &ch, game::state &state, game::text &text, game::world &world)
+    controls(min::window &window, min::camera<float> &camera,
+             game::character &ch, game::state &state,
+             game::text &text, game::ui_overlay &ui, game::world &world)
         : _window(&window), _camera(&camera), _character(&ch),
-          _state(&state), _text(&text), _world(&world)
+          _state(&state), _text(&text), _ui(&ui), _world(&world)
     {
         // Check that pointers are valid
-        if (!_window || !_character || !_camera || !_state || !_text || !_world)
+        if (!_window || !_character || !_camera || !_state || !_text || !_ui || !_world)
         {
             throw std::runtime_error("control: Invalid control pointers");
         }
@@ -178,6 +182,10 @@ class controls
     game::text *get_text()
     {
         return _text;
+    }
+    game::ui_overlay *get_ui()
+    {
+        return _ui;
     }
     game::world *get_world()
     {
@@ -579,6 +587,7 @@ class controls
         // Get the camera and text pointer
         min::camera<float> *const camera = control->get_camera();
         game::text *const text = control->get_text();
+        game::ui_overlay *const ui = control->get_ui();
 
         // Get camera frustum
         auto &f = camera->get_frustum();
@@ -588,8 +597,9 @@ class controls
         f.make_dirty();
         camera->make_dirty();
 
-        // Update the text screen size
+        // Update the screen size for ui and text
         text->set_screen(width, height);
+        ui->set_screen(width, height);
     }
 };
 }
