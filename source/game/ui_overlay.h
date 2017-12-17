@@ -33,6 +33,23 @@ namespace game
 class ui_overlay
 {
   private:
+    static constexpr float _x_cursor_uv = 4.0 / 512.0;
+    static constexpr float _y_cursor_uv = 4.0 / 512.0;
+    static constexpr float _s = 32.0;
+    static constexpr float _s_uv = 32.0 / 512.0;
+    static constexpr float _x_black_uv = 40.0 / 512.0;
+    static constexpr float _y_black_uv = 4.0 / 512.0;
+    static constexpr float _x_yellow_uv = 76.0 / 512.0;
+    static constexpr float _y_yellow_uv = 4.0 / 512.0;
+    static constexpr float _x_red_uv = 112.0 / 512.0;
+    static constexpr float _y_red_uv = 4.0 / 512.0;
+    static constexpr float _s_red_x = 32.0;
+    static constexpr float _s_red_y = 96.0;
+    static constexpr float _x_blue_uv = 148.0 / 512.0;
+    static constexpr float _y_blue_uv = 4.0 / 512.0;
+    static constexpr float _s_blue_x = 32.0;
+    static constexpr float _s_blue_y = 96.0;
+
     // OpenGL stuff
     min::shader _vertex;
     min::shader _fragment;
@@ -50,12 +67,16 @@ class ui_overlay
     // Screen properties
     size_t _width;
     size_t _height;
+    size_t _center_w;
+    size_t _center_h;
     size_t _index;
+    float _energy;
+    float _health;
 
     inline size_t add_rect()
     {
         // Check for buffer overflow
-        if (_v.size() == 10)
+        if (_v.size() == 20)
         {
             throw std::runtime_error("ui_overlay: must change default ui count");
         }
@@ -69,7 +90,7 @@ class ui_overlay
         // return the index
         return _v.size() - 1;
     }
-    inline void set_rect(const size_t index, const min::vec2<float> &scale, const min::vec2<float> &p, const min::vec3<float> &coord)
+    inline void set_rect(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec3<float> &coord)
     {
         // Calculate scale and offset
         const float sx = 2.0 / _width;
@@ -137,31 +158,73 @@ class ui_overlay
         // Load texture into texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);
     }
-    inline void reposition_ui()
+    inline void load_fps_cursor(const size_t index, const min::vec2<float> &p)
     {
-        // Calculate screen center
-        const size_t center_x = _width / 2;
-        const size_t center_y = _height / 2;
+        const min::vec2<float> scale = min::vec2<float>(_s, _s);
+        const min::vec3<float> fps_coord = min::vec3<float>(_x_cursor_uv, _y_cursor_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index, p, scale, fps_coord);
+    }
+    inline void load_background_black(const size_t index)
+    {
+        const float offset = -184.0 + index * 48;
+        const min::vec2<float> p = min::vec2<float>(_center_w + offset, 48);
+        const min::vec2<float> scale = min::vec2<float>(_s, _s);
+        const min::vec3<float> black_coord = min::vec3<float>(_x_black_uv, _y_black_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index, p, scale, black_coord);
+    }
+    inline void load_background_yellow(const size_t index)
+    {
+        const float offset = -184.0 + index * 48;
+        const min::vec2<float> p = min::vec2<float>(_center_w + offset, 48);
+        const min::vec2<float> scale = min::vec2<float>(_s, _s);
+        const min::vec3<float> yellow_coord = min::vec3<float>(_x_yellow_uv, _y_yellow_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index, p, scale, yellow_coord);
+    }
+    inline void load_energy_meter()
+    {
+        const float y_height = _s_blue_y * _energy;
+        const float y_offset = (y_height - _s_blue_x) * 0.5;
+        const min::vec2<float> p = min::vec2<float>(_center_w + 200, 48 + y_offset);
+        const min::vec2<float> scale = min::vec2<float>(_s_blue_x, y_height);
+        const min::vec3<float> blue_coord = min::vec3<float>(_x_blue_uv, _y_blue_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(9, p, scale, blue_coord);
+    }
+    inline void load_health_meter()
+    {
+        const float y_height = _s_red_y * _health;
+        const float y_offset = (y_height - _s_red_x) * 0.5;
+        const min::vec2<float> p = min::vec2<float>(_center_w - 236, 48 + y_offset);
+        const min::vec2<float> scale = min::vec2<float>(_s_red_x, y_height);
+        const min::vec3<float> red_coord = min::vec3<float>(_x_red_uv, _y_red_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(10, p, scale, red_coord);
+    }
+    inline void position_ui()
+    {
+        // Add 8 black rectangles along bottom
+        for (size_t i = 0; i < 8; i++)
+        {
+            set_key_up(i);
+        }
 
         // Add FPS cursor
-        const min::vec2<float> scale(32.0, 32.0);
-        min::vec2<float> p(center_x - 16, center_y - 16);
-        constexpr float x_cursor_uv = 4.0 / 512.0;
-        constexpr float y_cursor_uv = 4.0 / 512.0;
-        constexpr float s32_uv = 32.0 / 512.0;
-        min::vec3<float> coord(x_cursor_uv, y_cursor_uv, s32_uv);
-        set_rect(0, scale, p, coord);
+        const min::vec2<float> p_fps(_center_w - 16, _center_h - 16);
+        load_fps_cursor(8, p_fps);
 
-        // Add 8 black rectangles along bottom
-        float offset = -184.0;
-        constexpr float x_back_uv = 40.0 / 512.0;
-        constexpr float y_back_uv = 4.0 / 512.0;
-        coord = min::vec3<float>(x_back_uv, y_back_uv, s32_uv);
-        for (size_t i = 1; i < 9; i++, offset += 48)
-        {
-            p = min::vec2<float>(center_x + offset, 48);
-            set_rect(i, scale, p, coord);
-        }
+        // Add Health meter
+        load_energy_meter();
+
+        // Add Health meter
+        load_health_meter();
     }
 
   public:
@@ -169,7 +232,8 @@ class ui_overlay
         : _vertex("data/shader/ui.vertex", GL_VERTEX_SHADER),
           _fragment("data/shader/ui.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _width(width), _height(height)
+          _width(width), _height(height),
+          _energy(1.0), _health(1.0)
     {
         // Create the instance rectangle
         load_base_rect();
@@ -181,13 +245,13 @@ class ui_overlay
         uniforms.set_program_matrix_only(_prog);
 
         // Add 9 rectangles
-        for (size_t i = 0; i < 9; i++)
+        for (size_t i = 0; i < 11; i++)
         {
             add_rect();
         }
 
         // Reposition all ui on the screen
-        reposition_ui();
+        position_ui();
     }
 
     inline void draw(game::uniforms &uniforms) const
@@ -228,8 +292,36 @@ class ui_overlay
         _width = width;
         _height = height;
 
+        // Update screen center
+        _center_w = _width / 2;
+        _center_h = _height / 2;
+
         // Reposition all ui on the screen
-        reposition_ui();
+        position_ui();
+    }
+    inline void set_energy(const float energy)
+    {
+        // Set energy in percent
+        _energy = energy;
+
+        // Set the size of the health bar
+        load_energy_meter();
+    }
+    inline void set_health(const float health)
+    {
+        // Set health in percent
+        _health = health;
+
+        // Set the size of the health bar
+        load_health_meter();
+    }
+    inline void set_key_down(const size_t index)
+    {
+        load_background_yellow(index);
+    }
+    inline void set_key_up(const size_t index)
+    {
+        load_background_black(index);
     }
 };
 }

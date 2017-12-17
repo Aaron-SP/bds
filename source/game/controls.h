@@ -137,29 +137,37 @@ class controls
         // Register callback function C
         keyboard.register_keydown(min::window::key_code::KEYC, controls::add_z, (void *)_world);
 
-        // Register callback function KEY1 for switching texture to 'stone'
-        keyboard.register_keydown(min::window::key_code::KEY1, controls::switch_stone, (void *)_world);
+        // Register callback function KEY1 for switching texture
+        keyboard.register_keydown(min::window::key_code::KEY1, controls::key1_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::KEY1, controls::key1_up, (void *)this);
 
-        // Register callback function KEY2 for switching texture to 'sand'
-        keyboard.register_keydown(min::window::key_code::KEY2, controls::switch_sand, (void *)_world);
+        // Register callback function KEY2 for switching texture
+        keyboard.register_keydown(min::window::key_code::KEY2, controls::key2_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::KEY2, controls::key2_up, (void *)this);
 
-        // Register callback function KEY3 for switching texture to 'lava'
-        keyboard.register_keydown(min::window::key_code::KEY3, controls::switch_lava, (void *)_world);
+        // Register callback function KEY3 for switching texture
+        keyboard.register_keydown(min::window::key_code::KEY3, controls::key3_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::KEY3, controls::key3_up, (void *)this);
 
-        // Register callback function KEY4 for switching texture to 'wood'
-        keyboard.register_keydown(min::window::key_code::KEY4, controls::switch_wood, (void *)_world);
+        // Register callback function KEY4 for switching texture
+        keyboard.register_keydown(min::window::key_code::KEY4, controls::key4_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::KEY4, controls::key4_up, (void *)this);
 
-        // Register callback function KEY5 for switching texture to 'dirt'
-        keyboard.register_keydown(min::window::key_code::KEY5, controls::switch_dirt, (void *)_world);
+        // Register callback function KEY5 for switching texture
+        keyboard.register_keydown(min::window::key_code::KEY5, controls::key5_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::KEY5, controls::key5_up, (void *)this);
 
-        // Register callback function KEY6 for switching texture to 'grass'
-        keyboard.register_keydown(min::window::key_code::KEY6, controls::switch_grass, (void *)_world);
+        // Register callback function KEY6 for switching texture
+        keyboard.register_keydown(min::window::key_code::KEY6, controls::key6_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::KEY6, controls::key6_up, (void *)this);
 
-        // Register callback function KEY7 for switching texture to 'water'
-        keyboard.register_keydown(min::window::key_code::KEY7, controls::switch_water, (void *)_world);
+        // Register callback function KEY7 for switching texture
+        keyboard.register_keydown(min::window::key_code::KEY7, controls::key7_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::KEY7, controls::key7_up, (void *)this);
 
-        // Register callback function KEY8 for switching texture to 'sulphur'
-        keyboard.register_keydown(min::window::key_code::KEY8, controls::switch_sulphur, (void *)_world);
+        // Register callback function KEY8 for switching texture
+        keyboard.register_keydown(min::window::key_code::KEY8, controls::key8_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::KEY8, controls::key8_up, (void *)this);
 
         // Register callback function SPACE
         keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)_world);
@@ -325,53 +333,173 @@ class controls
         const min::vec3<float> &direction = camera->get_forward();
         world->character_move(direction * -1.0);
     }
-    static void switch_stone(void *ptr, double step)
+    static void key1_down(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to 'stone'
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world and ui pointer
+        game::world *const world = control->get_world();
+        game::ui_overlay *const ui = control->get_ui();
+
         world->set_atlas_id(0);
+        ui->set_key_down(0);
     }
-    static void switch_sand(void *ptr, double step)
+    static void key2_down(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to 'sand'
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world and ui pointer
+        game::world *const world = control->get_world();
+        game::ui_overlay *const ui = control->get_ui();
+
         world->set_atlas_id(1);
+        ui->set_key_down(1);
     }
-    static void switch_lava(void *ptr, double step)
+    static void key3_down(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to 'lava'
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world and ui pointer
+        game::world *const world = control->get_world();
+        game::ui_overlay *const ui = control->get_ui();
+
         world->set_atlas_id(2);
+        ui->set_key_down(2);
     }
-    static void switch_wood(void *ptr, double step)
+    static void key4_down(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to 'wood'
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world and ui pointer
+        game::world *const world = control->get_world();
+        game::ui_overlay *const ui = control->get_ui();
+
         world->set_atlas_id(3);
+        ui->set_key_down(3);
     }
-    static void switch_dirt(void *ptr, double step)
+    static void key5_down(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to 'dirt'
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world and ui pointer
+        game::world *const world = control->get_world();
+        game::ui_overlay *const ui = control->get_ui();
+
         world->set_atlas_id(4);
+        ui->set_key_down(4);
     }
-    static void switch_grass(void *ptr, double step)
+    static void key6_down(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to 'grass'
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world and ui pointer
+        game::world *const world = control->get_world();
+        game::ui_overlay *const ui = control->get_ui();
+
         world->set_atlas_id(5);
+        ui->set_key_down(5);
     }
-    static void switch_water(void *ptr, double step)
+    static void key7_down(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to 'water'
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world and ui pointer
+        game::world *const world = control->get_world();
+        game::ui_overlay *const ui = control->get_ui();
+
         world->set_atlas_id(6);
+        ui->set_key_down(6);
     }
-    static void switch_sulphur(void *ptr, double step)
+    static void key8_down(void *ptr, double step)
     {
-        // Cast to world pointer type and set atlas id to 'sulphur'
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the world and ui pointer
+        game::world *const world = control->get_world();
+        game::ui_overlay *const ui = control->get_ui();
+
         world->set_atlas_id(7);
+        ui->set_key_down(7);
+    }
+    static void key1_up(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the ui pointer
+        game::ui_overlay *const ui = control->get_ui();
+        ui->set_key_up(0);
+    }
+    static void key2_up(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the ui pointer
+        game::ui_overlay *const ui = control->get_ui();
+        ui->set_key_up(1);
+    }
+    static void key3_up(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the ui pointer
+        game::ui_overlay *const ui = control->get_ui();
+        ui->set_key_up(2);
+    }
+    static void key4_up(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the ui pointer
+        game::ui_overlay *const ui = control->get_ui();
+        ui->set_key_up(3);
+    }
+    static void key5_up(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the ui pointer
+        game::ui_overlay *const ui = control->get_ui();
+        ui->set_key_up(4);
+    }
+    static void key6_up(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the ui pointer
+        game::ui_overlay *const ui = control->get_ui();
+        ui->set_key_up(5);
+    }
+    static void key7_up(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the ui pointer
+        game::ui_overlay *const ui = control->get_ui();
+        ui->set_key_up(6);
+    }
+    static void key8_up(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the ui pointer
+        game::ui_overlay *const ui = control->get_ui();
+        ui->set_key_up(7);
     }
     static void add_x(void *ptr, double step)
     {

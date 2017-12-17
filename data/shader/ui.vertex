@@ -4,7 +4,7 @@ layout (location = 0) in vec4 vertex;
 layout (location = 1) in vec2 uv;
 out vec2 out_uv;
 
-#define MAX_NUM_TOTAL_MATRIX 145
+#define MAX_NUM_TOTAL_MATRIX 165
 layout(std140) uniform matrix_block
 {
     mat4 matrix[MAX_NUM_TOTAL_MATRIX];
@@ -13,7 +13,7 @@ layout(std140) uniform matrix_block
 
 void main(void) {
   mat3 screen_mat = mat3(matrix_buffer.matrix[5 + gl_InstanceID]);
-  mat3 uv_mat = mat3(matrix_buffer.matrix[15 + gl_InstanceID]);
+  mat3 uv_mat = mat3(matrix_buffer.matrix[25 + gl_InstanceID]);
   gl_Position = vec4(screen_mat * vertex.xyz, 1.0);
   out_uv = (uv_mat * vec3(uv, 1.0)).xy;
 }

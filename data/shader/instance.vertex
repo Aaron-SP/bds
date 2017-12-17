@@ -9,7 +9,7 @@ out vec2 out_uv;
 out vec4 out_vertex;
 flat out mat4 out_view;
 
-#define MAX_NUM_TOTAL_MATRIX 145
+#define MAX_NUM_TOTAL_MATRIX 165
 layout(std140) uniform matrix_block
 {
     mat4 matrix[MAX_NUM_TOTAL_MATRIX];
