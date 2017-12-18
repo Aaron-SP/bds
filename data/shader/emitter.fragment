@@ -1,10 +1,11 @@
 #version 330 core
 
 uniform sampler2D in_texture;
-in vec4 out_color;
+in vec3 out_color;
 out vec4 color;
 
 void main(void)
 {
-	color =  texture(in_texture, gl_PointCoord) * out_color;
+	vec4 tex = texture(in_texture, gl_PointCoord);
+	color =  vec4(tex.xyz * out_color, tex.w);
 }

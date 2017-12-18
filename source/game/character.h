@@ -146,7 +146,7 @@ class character
         _need_bone_reset = true;
 
         // Set the particle reference position
-        _particles->set_charge_reference(10.0);
+        _particles->set_charge_reference(15.0);
 
         // Add particle effects
         _particles->load_charge(86400.0);

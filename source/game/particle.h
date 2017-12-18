@@ -61,7 +61,7 @@ class particle
     inline void load_textures()
     {
         // Load textures
-        const min::dds b = min::dds("data/texture/stone.dds");
+        const min::dds b = min::dds("data/texture/smoke.dds");
 
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(b);
@@ -320,6 +320,9 @@ class particle
         {
             // Remove some of the time
             _launch_time -= dt;
+
+            // Turn off the velocity
+            _charge.set_speed(min::vec3<float>(0.0, 0.0, 0.0));
 
             // Update the particle positions
             _charge.step(dt);

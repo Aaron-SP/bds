@@ -45,7 +45,7 @@ class projectile
     inline void set_launch_particles()
     {
         // Set the particle reference position
-        _particles->set_launch_reference(_ray.get_direction() * -10.0, 10.0);
+        _particles->set_launch_reference(_ray.get_direction() * -10.0, 20.0);
 
         // Add particle effects
         _particles->load_launch(86400.0);
@@ -134,7 +134,7 @@ class projectile
                 _instance->update_missile_position(point, _id);
 
                 // Set particle position slightly behind the rocket
-                const min::vec3<float> offset = point - _ray.get_direction() * 0.5;
+                const min::vec3<float> offset = point - _ray.get_direction() * 0.25;
                 _particles->set_launch_position(offset);
             }
         }
