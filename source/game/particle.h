@@ -95,6 +95,20 @@ class particle
         // Draw the particles
         _static.draw();
     }
+    inline void load_emit(const min::vec3<float> &p, const min::vec3<float> &speed, const min::vec3<float> &wind)
+    {
+        // Update the start position
+        _emit.set_position(p);
+
+        // Set speed direction
+        _emit.set_speed(speed);
+
+        // Reset the wind vector
+        _emit.set_wind(wind);
+
+        // Reset the particle animation
+        _emit.reset();
+    }
     inline void load_textures()
     {
         // Load textures
@@ -122,6 +136,28 @@ class particle
 
         // Set the sampler reference point
         glUniform4f(_index_location, ref.x(), ref.y(), ref.z(), ref.w());
+    }
+    inline void set_charge_ref(const min::vec3<float> &ref)
+    {
+        _charge_ref.x(ref.x());
+        _charge_ref.y(ref.y());
+        _charge_ref.z(ref.z());
+    }
+    inline void set_launch_ref(const min::vec3<float> &ref)
+    {
+        _launch_ref.x(ref.x());
+        _launch_ref.y(ref.y());
+        _launch_ref.z(ref.z());
+    }
+    inline void set_explode_ref(const min::vec3<float> &ref, const float size)
+    {
+        _explode_ref = min::vec4<float>(ref, size);
+    }
+    inline void set_line_ref(const min::vec3<float> &ref)
+    {
+        _line_ref.x(ref.x());
+        _line_ref.y(ref.y());
+        _line_ref.z(ref.z());
     }
 
   public:
@@ -219,24 +255,17 @@ class particle
     }
     inline void load_emit_charge(const min::camera<float> &cam, const float time, const float size)
     {
+        // Abort launching
+        abort_launch();
+
+        // Add time to the clock
+        _charge_time = time;
+
         // Set the charge particle size
         _charge_ref.w(size);
 
-        // Update the start position
-        _emit.set_position(gun_position(cam));
-
-        // Set speed direction
-        _emit.set_speed(cam.get_forward());
-
-        // Reset the wind vector
-        _emit.set_wind(min::vec3<float>(0.0, 0.0, 0.0));
-
-        // Reset the particle animation
-        _emit.reset();
-
-        // Add more time to the clock
-        _charge_time = time;
-        _launch_time = -1;
+        // Load into emit buffer
+        load_emit(gun_position(cam), cam.get_forward(), min::vec3<float>(0.0, 0.0, 0.0));
 
         // Recreate the attractor
         if (_attract_index == -1)
@@ -249,21 +278,14 @@ class particle
         // Abort charging
         abort_charge();
 
+        // Add time to the clock
+        _launch_time = time;
+
         // Set the launch particle size
         _launch_ref.w(size);
 
-        // Update the start position
-        _emit.set_position(p);
-
-        // Set the wind in opposite direction of launch direction
-        _emit.set_wind(wind);
-
-        // Reset the particle animation
-        _emit.reset();
-
-        // Add more time to the clock
-        _charge_time = -1;
-        _launch_time = time;
+        // Load into emit buffer
+        load_emit(p, min::vec3<float>(0.0, 0.0, 0.0), wind);
 
         // Delete any attractor
         _attract_index = -1;
@@ -271,8 +293,14 @@ class particle
     }
     inline void load_static_explode(const min::vec3<float> &p, const min::vec3<float> &direction, const float time, const float size)
     {
+        // Abort line
+        abort_line();
+
+        // Add time to the clock
+        _explode_time = time;
+
         // Set the explode reference position
-        _explode_ref = min::vec4<float>(p, size);
+        set_explode_ref(p, size);
 
         // Update the start position
         _static.set_position(p);
@@ -282,23 +310,20 @@ class particle
 
         // Reset the static buffer
         _static.reset();
-
-        // Add more time to the clock
-        _explode_time = time;
     }
     inline void load_static_line(const min::vec3<float> &p, const float time, const float size)
     {
         // Abort exploding
         abort_explode();
 
+        // Add more time to the clock
+        _line_time = time;
+
         // Set the line destination
         _line_pos = p;
 
         // Set the explode reference position
         _line_ref.w(size);
-
-        // Add more time to the clock
-        _line_time = time;
     }
     inline void set_velocity(const min::vec3<float> &velocity)
     {
@@ -310,9 +335,7 @@ class particle
         _emit.set_position(p);
 
         // Set the reference position
-        _launch_ref.x(p.x());
-        _launch_ref.y(p.y());
-        _launch_ref.z(p.z());
+        set_launch_ref(p);
     }
     void update(min::camera<float> &cam, const double dt)
     {
@@ -326,22 +349,17 @@ class particle
             const min::vec3<float> cam_pos = gun_position(cam);
             const min::vec3<float> cam_dir = cam.get_forward();
 
-            // Update the particle position and direction
+            // Update the particle attractor position and direction
             const min::vec3<float> attr_position = cam_pos + cam_dir * 0.125;
 
-            // Update charge position, attractor, and direction vectors
+            // Update particle properties
             _emit.set_position(cam_pos);
             _emit.set_rotation_axis(cam_dir);
             _emit.set_attractor(attr_position, 5.0, _attract_index);
+            _emit.set_speed(_velocity + cam_dir);
 
             // Set the reference position
-            const min::vec3<float> offset = cam_dir * 0.25;
-            _charge_ref.x(cam_pos.x() - offset.x());
-            _charge_ref.y(cam_pos.y() - offset.y());
-            _charge_ref.z(cam_pos.z() - offset.z());
-
-            // Turn on the velocity
-            _emit.set_speed(_velocity + cam_dir);
+            set_charge_ref(cam_pos - cam_dir * 0.25);
 
             // Update the particle positions
             _emit.step(dt);
@@ -353,9 +371,6 @@ class particle
         {
             // Remove some of the time
             _launch_time -= dt;
-
-            // Turn off the velocity
-            _emit.set_speed(min::vec3<float>(0.0, 0.0, 0.0));
 
             // Update the particle positions
             _emit.step(dt);
@@ -403,9 +418,7 @@ class particle
             };
 
             // Update the line reference
-            _line_ref.x(cam_pos.x());
-            _line_ref.y(cam_pos.y());
-            _line_ref.z(cam_pos.z());
+            set_line_ref(cam_pos);
 
             // Update the particle positions
             _static.set(f);

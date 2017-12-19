@@ -86,6 +86,28 @@ class character
         // Load texture buffer
         _dds_id = _texture_buffer.add_dds_texture(d);
     }
+    inline void reset_animation()
+    {
+        // Flag off need reset
+        _need_bone_reset = false;
+
+        // Reset bones to identity
+        _md5_model.reset_bones();
+    }
+    inline void set_animation(const size_t index, const unsigned count)
+    {
+        // Flag to reset bones after animation is FINISHED
+        _need_bone_reset = true;
+
+        // Set shoot animation
+        _md5_model.set_current_animation(index);
+
+        // Set number of loops
+        _md5_model.get_current_animation().set_loop_count(count);
+
+        // Restart animation at beginning
+        _md5_model.get_current_animation().set_time(0.0);
+    }
 
   public:
     character(particle *const particles, const game::uniforms &uniforms)
@@ -156,44 +178,21 @@ class character
         // Add charge particle effects
         _particles->load_emit_charge(cam, 86400.0, 15.0);
 
-        // Flag to reset bones after animation
-        _need_bone_reset = true;
-
-        // Set charge animation
-        _md5_model.set_current_animation(_charge_index);
-
         // Activate 999 loop of full animation
-        set_animation_count(86400);
+        set_animation(_charge_index, 86400);
     }
     inline void set_animation_grapple(const min::vec3<float> &p)
     {
         // Add grapple particle effects
         _particles->load_static_line(p, 86400.0, 30.0);
 
-        // Flag to reset bones after animation
-        _need_bone_reset = true;
-
-        // Set charge animation
-        _md5_model.set_current_animation(_charge_index);
-
         // Activate 999 loop of full animation
-        set_animation_count(86400);
-    }
-    inline void set_animation_count(const unsigned count)
-    {
-        _md5_model.get_current_animation().set_loop_count(count);
-        _md5_model.get_current_animation().set_time(0);
+        set_animation(_charge_index, 86400);
     }
     inline void set_animation_shoot()
     {
-        // Flag to reset bones after animation
-        _need_bone_reset = true;
-
-        // Set shoot animation
-        _md5_model.set_current_animation(_shoot_index);
-
         // Activate 1 loop of full animation
-        set_animation_count(1);
+        set_animation(_shoot_index, 1);
     }
     inline bool update(min::camera<float> &cam, const double dt)
     {
@@ -208,11 +207,8 @@ class character
         }
         else if (_need_bone_reset)
         {
-            // Flag off need reset
-            _need_bone_reset = false;
-
-            // Reset bones to identity
-            _md5_model.reset_bones();
+            // Reset model to bind pose
+            reset_animation();
 
             // Signal need to update bones
             return true;

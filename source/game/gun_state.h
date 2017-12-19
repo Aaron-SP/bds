@@ -28,11 +28,29 @@ namespace game
 class gun_state
 {
   private:
-    std::chrono::high_resolution_clock::time_point _charge_start;
+    std::chrono::high_resolution_clock::time_point _charge;
+    std::chrono::high_resolution_clock::time_point _cool;
     uint32_t _energy;
     bool _beam_mode;
     bool _fire_mode;
     bool _shoot_cooldown;
+
+    inline double get_charge_time() const
+    {
+        // Get the current time
+        const std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+
+        // return time since last sync
+        return std::chrono::duration<double, std::milli>(now - _charge).count();
+    }
+    inline double get_cool_time() const
+    {
+        // Get the current time
+        const std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+
+        // return time since last sync
+        return std::chrono::duration<double, std::milli>(now - _cool).count();
+    }
 
   public:
     gun_state() : _energy(0), _beam_mode(true), _fire_mode(true), _shoot_cooldown(false) {}
@@ -73,22 +91,6 @@ class gun_state
         // Not enough energy
         return false;
     }
-    inline double get_charge_time() const
-    {
-        // Get the current time
-        const std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-
-        // return time since last sync
-        return std::chrono::duration<double, std::milli>(now - _charge_start).count();
-    }
-    inline bool get_beam_mode() const
-    {
-        return _beam_mode;
-    }
-    inline bool get_cooldown() const
-    {
-        return _shoot_cooldown;
-    }
     inline uint32_t get_energy() const
     {
         return _energy;
@@ -97,9 +99,42 @@ class gun_state
     {
         return _fire_mode;
     }
-    inline void set_charge_time()
+    inline bool is_beam_charged() const
     {
-        _charge_start = std::chrono::high_resolution_clock::now();
+        return _beam_mode && !_shoot_cooldown && get_charge_time() > 1000.0;
+    }
+    inline bool is_beam_mode() const
+    {
+        return _beam_mode;
+    }
+    inline bool is_missile_mode() const
+    {
+        return !_beam_mode;
+    }
+    inline bool check_cooldown()
+    {
+        if (_shoot_cooldown)
+        {
+            const double dt = get_cool_time();
+            if (dt > 2000.0)
+            {
+                _shoot_cooldown = !_shoot_cooldown;
+            }
+        }
+
+        return !_shoot_cooldown;
+    }
+    inline void start_charge()
+    {
+        _charge = std::chrono::high_resolution_clock::now();
+    }
+    inline void start_cooldown()
+    {
+        // Start the cooldown timer
+        _shoot_cooldown = true;
+
+        // Update start time
+        _cool = std::chrono::high_resolution_clock::now();
     }
     inline void set_fire_mode(const bool mode)
     {
@@ -108,10 +143,6 @@ class gun_state
     inline void toggle_beam_mode()
     {
         _beam_mode = !_beam_mode;
-    }
-    inline bool toggle_cooldown()
-    {
-        return _shoot_cooldown = !_shoot_cooldown;
     }
 };
 }

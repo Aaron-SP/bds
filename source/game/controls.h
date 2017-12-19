@@ -547,25 +547,18 @@ class controls
         game::state *const state = control->get_state();
         gun_state &gun = state->get_gun_state();
 
-        // Check if we are off cooldown
-        bool cool_down = gun.get_cooldown();
-        if (cool_down)
+        // Check if we are in beam mode
+        if (gun.get_fire_mode() && gun.is_beam_mode())
         {
-            const double dt = gun.get_charge_time();
-            if (dt > 2000.0)
+            // Check if we are off cooldown
+            if (gun.check_cooldown())
             {
-                cool_down = gun.toggle_cooldown();
+                // Record the start charge time
+                gun.start_charge();
+
+                // Activate charge animation
+                character->set_animation_charge(*cam);
             }
-        }
-
-        // Check if we are in fire mode
-        if (!cool_down && gun.get_fire_mode())
-        {
-            // Record the start charge time
-            gun.set_charge_time();
-
-            // Activate charge animation
-            character->set_animation_charge(*cam);
         }
     }
     static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
@@ -605,63 +598,54 @@ class controls
                 ui->set_energy(gun.get_energy() / 1048576.0);
             }
         }
-        else if (!gun.get_cooldown())
+        else if (gun.get_fire_mode())
         {
             // Abort the charge animation
             character->abort_animation_shoot();
 
-            // Get the total charge time in ms
-            const double dt = gun.get_charge_time();
+            // Calculate point to remove from
+            const min::vec3<float> point = camera->project_point(3.0);
 
-            // If we have enough charge to remove block
-            if (dt > 1000.0)
+            // Create a ray from camera to destination
+            const min::ray<float, min::vec3> r(camera->get_position(), point);
+
+            // If we are in beam mode and charged up
+            if (gun.is_beam_charged())
             {
-                // Calculate point to remove from
-                const min::vec3<float> point = camera->project_point(3.0);
-
-                // Create a ray from camera to destination
-                const min::ray<float, min::vec3> r(camera->get_position(), point);
-
-                // Select which type of gun shot
-                if (gun.get_beam_mode())
+                // Remove block from world, get the removed atlas
+                const int8_t atlas = world->remove_block(r);
+                if (atlas >= 0.0)
                 {
-                    // Remove block from world, get the removed atlas
-                    const int8_t atlas = world->remove_block(r);
-                    if (atlas >= 0.0)
-                    {
-                        // Absorb energy to create this resource
-                        gun.absorb(atlas);
+                    // Absorb energy to create this resource
+                    gun.absorb(atlas);
 
-                        // Update the ui energy
-                        ui->set_energy(gun.get_energy() / 1048576.0);
+                    // Update the ui energy
+                    ui->set_energy(gun.get_energy() / 1048576.0);
 
-                        // Activate shoot animation
-                        character->set_animation_shoot();
+                    // Activate shoot animation
+                    character->set_animation_shoot();
 
-                        // Record the start charge time and set cooldown
-                        gun.toggle_cooldown();
-                        gun.set_charge_time();
-                    }
+                    // Start gun cooldown timer
+                    gun.start_cooldown();
                 }
-                else
+            }
+            else if (gun.is_missile_mode() && gun.check_cooldown())
+            {
+                // Try to consume energy to create missile
+                const bool consumed = gun.will_consume(12);
+                if (consumed)
                 {
-                    // Try to consume energy to create this resource
-                    const bool consumed = gun.will_consume(12);
-                    if (consumed)
-                    {
-                        // Update the ui energy
-                        ui->set_energy(gun.get_energy() / 1048576.0);
+                    // Update the ui energy
+                    ui->set_energy(gun.get_energy() / 1048576.0);
 
-                        // Launch a missile
-                        world->launch_missile(r);
+                    // Launch a missile
+                    world->launch_missile(r);
 
-                        // Activate shoot animation
-                        character->set_animation_shoot();
+                    // Activate shoot animation
+                    character->set_animation_shoot();
 
-                        // Record the start charge time and set cooldown
-                        gun.toggle_cooldown();
-                        gun.set_charge_time();
-                    }
+                    // Start gun cooldown timer
+                    gun.start_cooldown();
                 }
             }
         }
