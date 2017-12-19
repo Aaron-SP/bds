@@ -56,15 +56,17 @@ class particle
     float _line_time;
 
     // Cached camera settings
-    min::vec3<float> _cam_dir;
-    min::vec3<float> _cam_pos;
     min::vec4<float> _charge_ref;
     min::vec4<float> _explode_ref;
     min::vec4<float> _launch_ref;
-    min::vec3<float> _line_pos;
     min::vec4<float> _line_ref;
+    min::vec3<float> _line_pos;
     min::vec3<float> _velocity;
 
+    inline min::vec3<float> gun_position(const min::camera<float> &cam)
+    {
+        return cam.get_position() + (cam.get_right() - cam.get_up()) * 0.1;
+    }
     inline void draw_emit(const game::uniforms &uniforms) const
     {
         // Activate the uniform buffer
@@ -92,17 +94,6 @@ class particle
 
         // Draw the particles
         _static.draw();
-    }
-    inline void load_emit()
-    {
-        // Update the start position
-        _emit.set_position(_cam_pos);
-
-        // Set speed direction
-        _emit.set_speed(_cam_dir);
-
-        // Reset the particle animation
-        _emit.reset();
     }
     inline void load_textures()
     {
@@ -226,16 +217,22 @@ class particle
             draw_static(uniforms);
         }
     }
-    inline void load_emit_charge(const float time, const float size)
+    inline void load_emit_charge(const min::camera<float> &cam, const float time, const float size)
     {
-        // Set the charge reference position
-        _charge_ref = min::vec4<float>(_cam_pos, size);
+        // Set the charge particle size
+        _charge_ref.w(size);
+
+        // Update the start position
+        _emit.set_position(gun_position(cam));
+
+        // Set speed direction
+        _emit.set_speed(cam.get_forward());
 
         // Reset the wind vector
         _emit.set_wind(min::vec3<float>(0.0, 0.0, 0.0));
 
-        // Load particles in emit buffer
-        load_emit();
+        // Reset the particle animation
+        _emit.reset();
 
         // Add more time to the clock
         _charge_time = time;
@@ -247,19 +244,22 @@ class particle
             _attract_index = _emit.attractor_add(min::vec3<float>(0.0, 0.0, 0.0), 1.0);
         }
     }
-    inline void load_emit_launch(const min::vec3<float> &wind, const float time, const float size)
+    inline void load_emit_launch(const min::vec3<float> &p, const min::vec3<float> &wind, const float time, const float size)
     {
         // Abort charging
         abort_charge();
 
-        // Set the launch reference position
-        _launch_ref = min::vec4<float>(_cam_pos, size);
+        // Set the launch particle size
+        _launch_ref.w(size);
+
+        // Update the start position
+        _emit.set_position(p);
 
         // Set the wind in opposite direction of launch direction
         _emit.set_wind(wind);
 
-        // Load particles in emit buffer
-        load_emit();
+        // Reset the particle animation
+        _emit.reset();
 
         // Add more time to the clock
         _charge_time = -1;
@@ -269,13 +269,13 @@ class particle
         _attract_index = -1;
         _emit.attractor_clear();
     }
-    inline void load_static_explode(const min::vec3<float> &position, const min::vec3<float> &direction, const float time, const float size)
+    inline void load_static_explode(const min::vec3<float> &p, const min::vec3<float> &direction, const float time, const float size)
     {
         // Set the explode reference position
-        _explode_ref = min::vec4<float>(position, size);
+        _explode_ref = min::vec4<float>(p, size);
 
         // Update the start position
-        _static.set_position(position);
+        _static.set_position(p);
 
         // Set speed direction
         _static.set_speed(direction);
@@ -286,16 +286,16 @@ class particle
         // Add more time to the clock
         _explode_time = time;
     }
-    inline void load_static_line(const min::vec3<float> &position, const float time, const float size)
+    inline void load_static_line(const min::vec3<float> &p, const float time, const float size)
     {
         // Abort exploding
         abort_explode();
 
         // Set the line destination
-        _line_pos = position;
+        _line_pos = p;
 
         // Set the explode reference position
-        _line_ref = min::vec4<float>(_cam_pos, size);
+        _line_ref.w(size);
 
         // Add more time to the clock
         _line_time = time;
@@ -316,32 +316,32 @@ class particle
     }
     void update(min::camera<float> &cam, const double dt)
     {
-        // Update cached camera settings
-        _cam_pos = cam.project_point(0.05) + (cam.get_right() - cam.get_up()) * 0.1;
-        _cam_dir = cam.get_forward();
-
         // Update charge or launch
         if (_charge_time > 0.0)
         {
-            // Update the particle position and direction
-            const min::vec3<float> attr_position = _cam_pos + _cam_dir * 0.125;
-
-            // Update charge position, attractor, and direction vectors
-            _emit.set_position(_cam_pos);
-            _emit.set_rotation_axis(_cam_dir);
-            _emit.set_attractor(attr_position, 5.0, _attract_index);
-
-            // Set the reference position
-            const min::vec3<float> offset = _cam_dir * 0.25;
-            _charge_ref.x(_cam_pos.x() - offset.x());
-            _charge_ref.y(_cam_pos.y() - offset.y());
-            _charge_ref.z(_cam_pos.z() - offset.z());
-
             // Remove some of the time
             _charge_time -= dt;
 
+            // Calculate camera settings
+            const min::vec3<float> cam_pos = gun_position(cam);
+            const min::vec3<float> cam_dir = cam.get_forward();
+
+            // Update the particle position and direction
+            const min::vec3<float> attr_position = cam_pos + cam_dir * 0.125;
+
+            // Update charge position, attractor, and direction vectors
+            _emit.set_position(cam_pos);
+            _emit.set_rotation_axis(cam_dir);
+            _emit.set_attractor(attr_position, 5.0, _attract_index);
+
+            // Set the reference position
+            const min::vec3<float> offset = cam_dir * 0.25;
+            _charge_ref.x(cam_pos.x() - offset.x());
+            _charge_ref.y(cam_pos.y() - offset.y());
+            _charge_ref.z(cam_pos.z() - offset.z());
+
             // Turn on the velocity
-            _emit.set_speed(_velocity + _cam_dir);
+            _emit.set_speed(_velocity + cam_dir);
 
             // Update the particle positions
             _emit.step(dt);
@@ -381,22 +381,31 @@ class particle
             // Remove some of the time
             _line_time -= dt;
 
+            // Calculate camera settings
+            const min::vec3<float> cam_pos = gun_position(cam);
+
             // Generate particles in a line
-            min::vec3<float> p = _cam_pos;
-            const min::vec3<float> spacing = (_line_pos - _cam_pos) * _inv_static_count;
-            const auto f = [this, &p, spacing](min::vec3<float> &position, min::vec3<float> &speed, const float inv_mass) -> void {
+            size_t count = 0;
+            const min::vec3<float> spacing = (_line_pos - cam_pos) * _inv_static_count;
+            const auto f = [this, &count, &cam_pos, spacing](min::vec3<float> &position, min::vec3<float> &speed, const float inv_mass) -> void {
+
+                // Calculate particle density
+                const float density = (3.75E-6 * count) + 0.00125;
+
+                // Calculate offset
+                const min::vec3<float> offset = (spacing * count) + (_static.random() * density);
 
                 // Update each particle at position
-                position = p + (_static.random() * 0.0025);
+                position = cam_pos + offset;
 
-                // Update position
-                p += spacing;
+                // Update counter
+                count++;
             };
 
             // Update the line reference
-            _line_ref.x(_cam_pos.x());
-            _line_ref.y(_cam_pos.y());
-            _line_ref.z(_cam_pos.z());
+            _line_ref.x(cam_pos.x());
+            _line_ref.y(cam_pos.y());
+            _line_ref.z(cam_pos.z());
 
             // Update the particle positions
             _static.set(f);

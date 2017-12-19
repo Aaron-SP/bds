@@ -541,9 +541,10 @@ class controls
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // If we are in fire mode we can charge the weapon
-        game::state *const state = control->get_state();
+        // Get the camera, character, gun, and state pointers
+        min::camera<float> *const cam = control->get_camera();
         game::character *const character = control->get_character();
+        game::state *const state = control->get_state();
         gun_state &gun = state->get_gun_state();
 
         // Check if we are off cooldown
@@ -564,7 +565,7 @@ class controls
             gun.set_charge_time();
 
             // Activate charge animation
-            character->set_animation_charge();
+            character->set_animation_charge(*cam);
         }
     }
     static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
@@ -671,7 +672,7 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera, world, state, and character pointers
-        min::camera<float> *const camera = control->get_camera();
+        min::camera<float> *const cam = control->get_camera();
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
@@ -686,10 +687,10 @@ class controls
             if (can_consume)
             {
                 // Calculate new point to add
-                const min::vec3<float> proj = camera->project_point(3.0);
+                const min::vec3<float> proj = cam->project_point(3.0);
 
                 // Create a ray from camera to destination
-                const min::ray<float, min::vec3> r(camera->get_position(), proj);
+                const min::ray<float, min::vec3> r(cam->get_position(), proj);
 
                 // Fire grappling hook
                 min::vec3<float> point;

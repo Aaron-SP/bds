@@ -151,13 +151,27 @@ class character
     {
         return _md5_model.get_bones();
     }
-    inline void set_animation_charge()
+    inline void set_animation_charge(const min::camera<float> &cam)
     {
+        // Add charge particle effects
+        _particles->load_emit_charge(cam, 86400.0, 15.0);
+
         // Flag to reset bones after animation
         _need_bone_reset = true;
 
-        // Add charge particle effects
-        _particles->load_emit_charge(86400.0, 15.0);
+        // Set charge animation
+        _md5_model.set_current_animation(_charge_index);
+
+        // Activate 999 loop of full animation
+        set_animation_count(86400);
+    }
+    inline void set_animation_grapple(const min::vec3<float> &p)
+    {
+        // Add grapple particle effects
+        _particles->load_static_line(p, 86400.0, 30.0);
+
+        // Flag to reset bones after animation
+        _need_bone_reset = true;
 
         // Set charge animation
         _md5_model.set_current_animation(_charge_index);
@@ -169,14 +183,6 @@ class character
     {
         _md5_model.get_current_animation().set_loop_count(count);
         _md5_model.get_current_animation().set_time(0);
-    }
-    inline void set_animation_grapple(const min::vec3<float> &p)
-    {
-        // Animate the gun model
-        set_animation_shoot();
-
-        // Add grapple particle effects
-        _particles->load_static_line(p, 86400.0, 30.0);
     }
     inline void set_animation_shoot()
     {

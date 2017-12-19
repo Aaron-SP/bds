@@ -44,8 +44,9 @@ class projectile
 
     inline void set_launch_particles()
     {
-        // Add particle effects
-        _particles->load_emit_launch(_ray.get_direction() * -10.0, 86400.0, 20.0);
+        // Add particle effects along ray
+        const min::vec3<float> dir = _ray.get_direction() * -10.0;
+        _particles->load_emit_launch(_ray.get_origin(), dir, 86400.0, 20.0);
     }
 
     inline void launch_missile(const min::ray<float, min::vec3> &r, const cgrid &grid, const size_t max_length)
