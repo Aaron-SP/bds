@@ -231,7 +231,7 @@ class fractex
         _world.update(camera, dt);
 
         // Update the particle system
-        _particles.set_charge_velocity(_world.character_velocity());
+        _particles.set_velocity(_world.character_velocity());
         _particles.update(camera, dt);
 
         // Update the character state

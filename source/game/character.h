@@ -105,7 +105,15 @@ class character
         // Load the uniform buffer with the program we will use
         uniforms.set_program(_prog);
     }
-    void abort_animation()
+    inline void abort_animation_grapple()
+    {
+        // Set number of animation loops to zero, stops animating
+        _md5_model.get_current_animation().set_loop_count(0);
+
+        // Abort the particle system
+        _particles->abort_line();
+    }
+    inline void abort_animation_shoot()
     {
         // Set number of animation loops to zero, stops animating
         _md5_model.get_current_animation().set_loop_count(0);
@@ -113,10 +121,13 @@ class character
         // Abort the particle system
         _particles->abort_charge();
     }
-    void draw(const game::uniforms &uniforms)
+    inline void draw(const game::uniforms &uniforms)
     {
         // Draw the charge particles
-        _particles->draw_charge(uniforms);
+        _particles->draw_emit_charge(uniforms);
+
+        // Draw the line particles
+        _particles->draw_static_line(uniforms);
 
         // Clear depth for drawing character over terrain
         glClear(GL_DEPTH_BUFFER_BIT);
@@ -136,20 +147,17 @@ class character
         // Draw md5 model
         _skbuffer.draw(GL_TRIANGLES, 0);
     }
-    const std::vector<min::mat4<float>> &get_bones() const
+    inline const std::vector<min::mat4<float>> &get_bones() const
     {
         return _md5_model.get_bones();
     }
-    void set_animation_charge()
+    inline void set_animation_charge()
     {
         // Flag to reset bones after animation
         _need_bone_reset = true;
 
-        // Set the particle reference position
-        _particles->set_charge_reference(15.0);
-
-        // Add particle effects
-        _particles->load_charge(86400.0);
+        // Add charge particle effects
+        _particles->load_emit_charge(86400.0, 15.0);
 
         // Set charge animation
         _md5_model.set_current_animation(_charge_index);
@@ -157,12 +165,20 @@ class character
         // Activate 999 loop of full animation
         set_animation_count(86400);
     }
-    void set_animation_count(const unsigned count)
+    inline void set_animation_count(const unsigned count)
     {
         _md5_model.get_current_animation().set_loop_count(count);
         _md5_model.get_current_animation().set_time(0);
     }
-    void set_animation_shoot()
+    inline void set_animation_grapple(const min::vec3<float> &p)
+    {
+        // Animate the gun model
+        set_animation_shoot();
+
+        // Add grapple particle effects
+        _particles->load_static_line(p, 86400.0, 30.0);
+    }
+    inline void set_animation_shoot()
     {
         // Flag to reset bones after animation
         _need_bone_reset = true;

@@ -31,6 +31,9 @@ namespace game
 class particle
 {
   private:
+    static constexpr size_t _static_count = 1000;
+    static constexpr float _inv_static_count = 1.0 / _static_count;
+
     // Opengl stuff
     min::shader _vertex;
     min::shader _fragment;
@@ -42,14 +45,15 @@ class particle
     GLuint _dds_id;
 
     // Particle stuff
-    min::emitter_buffer<float, GL_FLOAT> _charge;
-    min::emitter_buffer<float, GL_FLOAT> _explode;
+    min::emitter_buffer<float, GL_FLOAT> _emit;
+    min::emitter_buffer<float, GL_FLOAT> _static;
     int _attract_index;
 
     // Control
     float _charge_time;
     float _explode_time;
     float _launch_time;
+    float _line_time;
 
     // Cached camera settings
     min::vec3<float> _cam_dir;
@@ -57,7 +61,49 @@ class particle
     min::vec4<float> _charge_ref;
     min::vec4<float> _explode_ref;
     min::vec4<float> _launch_ref;
+    min::vec3<float> _line_pos;
+    min::vec4<float> _line_ref;
+    min::vec3<float> _velocity;
 
+    inline void draw_emit(const game::uniforms &uniforms) const
+    {
+        // Activate the uniform buffer
+        uniforms.bind();
+
+        // Bind this texture for drawing
+        _tbuffer.bind(_dds_id, 0);
+
+        // Bind VAO
+        _emit.bind();
+
+        // Draw the particles
+        _emit.draw();
+    }
+    inline void draw_static(const game::uniforms &uniforms) const
+    {
+        // Activate the uniform buffer
+        uniforms.bind();
+
+        // Bind this texture for drawing
+        _tbuffer.bind(_dds_id, 0);
+
+        // Bind VAO
+        _static.bind();
+
+        // Draw the particles
+        _static.draw();
+    }
+    inline void load_emit()
+    {
+        // Update the start position
+        _emit.set_position(_cam_pos);
+
+        // Set speed direction
+        _emit.set_speed(_cam_dir);
+
+        // Reset the particle animation
+        _emit.reset();
+    }
     inline void load_textures()
     {
         // Load textures
@@ -80,6 +126,9 @@ class particle
     }
     inline void set_reference(const min::vec4<float> &ref) const
     {
+        // Use the shader program to draw models
+        _prog.use();
+
         // Set the sampler reference point
         glUniform4f(_index_location, ref.x(), ref.y(), ref.z(), ref.w());
     }
@@ -89,12 +138,13 @@ class particle
         : _vertex("data/shader/emitter.vertex", GL_VERTEX_SHADER),
           _fragment("data/shader/emitter.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _charge(min::vec3<float>(), 200, 5, 0.0625, 0.125, 0.5),
-          _explode(min::vec3<float>(), 1000, 1, 0.10, 5.0, 10.0),
+          _emit(min::vec3<float>(), 200, 5, 0.0625, 0.125, 0.5),
+          _static(min::vec3<float>(), _static_count, 1, 0.10, 5.0, 10.0),
           _attract_index(-1),
           _charge_time(-1),
           _explode_time(-1),
-          _launch_time(-1)
+          _launch_time(-1),
+          _line_time(-1)
     {
         // Load textures
         load_textures();
@@ -103,10 +153,10 @@ class particle
         load_program_index(uniforms);
 
         // Set the particle gravity for charge
-        _charge.set_gravity(min::vec3<float>(0.0, 0.0, 0.0));
+        _emit.set_gravity(min::vec3<float>(0.0, 0.0, 0.0));
 
         // Set the particle gravity for explode
-        _explode.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
+        _static.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
     }
     inline void abort_charge()
     {
@@ -123,88 +173,69 @@ class particle
         // Abort particle animation
         _launch_time = -1.0;
     }
-    inline void draw_charge(const game::uniforms &uniforms) const
+    inline void abort_line()
+    {
+        // Abort particle animation
+        _line_time = -1.0;
+    }
+    inline void draw_emit_charge(const game::uniforms &uniforms) const
     {
         // Draw charge
         if (_charge_time > 0.0)
         {
-            // Activate the uniform buffer
-            uniforms.bind();
-
-            // Bind this texture for drawing
-            _tbuffer.bind(_dds_id, 0);
-
-            // Use the shader program to draw models
-            _prog.use();
-
             // Set the charge reference point
             set_reference(_charge_ref);
 
-            // Bind VAO
-            _charge.bind();
-
-            // Draw the particles
-            _charge.draw();
+            // Draw on emit buffer
+            draw_emit(uniforms);
         }
     }
-    inline void draw_explode(const game::uniforms &uniforms) const
+    inline void draw_emit_launch(const game::uniforms &uniforms) const
+    {
+        // Draw launch
+        if (_launch_time > 0.0)
+        {
+            // Set the launch reference point
+            set_reference(_launch_ref);
+
+            // Draw on emit buffer
+            draw_emit(uniforms);
+        }
+    }
+    inline void draw_static_explode(const game::uniforms &uniforms) const
     {
         // Draw explode
         if (_explode_time > 0.0)
         {
-            // Activate the uniform buffer
-            uniforms.bind();
-
-            // Bind this texture for drawing
-            _tbuffer.bind(_dds_id, 0);
-
-            // Use the shader program to draw models
-            _prog.use();
-
             // Set the explode reference point
             set_reference(_explode_ref);
 
-            // Bind VAO
-            _explode.bind();
-
-            // Draw the particles
-            _explode.draw();
+            // Draw on static buffer
+            draw_static(uniforms);
         }
     }
-    inline void draw_launch(const game::uniforms &uniforms) const
+    inline void draw_static_line(const game::uniforms &uniforms) const
     {
-        // Draw charge
-        if (_launch_time > 0.0)
+        // Draw draw
+        if (_line_time > 0.0)
         {
-            // Activate the uniform buffer
-            uniforms.bind();
+            // Set the explode reference point
+            set_reference(_line_ref);
 
-            // Bind this texture for drawing
-            _tbuffer.bind(_dds_id, 0);
-
-            // Use the shader program to draw models
-            _prog.use();
-
-            // Set the launch reference point
-            set_reference(_launch_ref);
-
-            // Bind VAO
-            _charge.bind();
-
-            // Draw the particles
-            _charge.draw();
+            // Draw on static buffer
+            draw_static(uniforms);
         }
     }
-    inline void load_charge(const float time)
+    inline void load_emit_charge(const float time, const float size)
     {
-        // Update the start position
-        _charge.set_position(_cam_pos);
+        // Set the charge reference position
+        _charge_ref = min::vec4<float>(_cam_pos, size);
 
-        // Set speed direction
-        _charge.set_speed(_cam_dir);
+        // Reset the wind vector
+        _emit.set_wind(min::vec3<float>(0.0, 0.0, 0.0));
 
-        // Reset the particle animation
-        _charge.reset();
+        // Load particles in emit buffer
+        load_emit();
 
         // Add more time to the clock
         _charge_time = time;
@@ -213,33 +244,22 @@ class particle
         // Recreate the attractor
         if (_attract_index == -1)
         {
-            _attract_index = _charge.attractor_add(min::vec3<float>(0.0, 0.0, 0.0), 1.0);
+            _attract_index = _emit.attractor_add(min::vec3<float>(0.0, 0.0, 0.0), 1.0);
         }
     }
-    inline void load_explode(const min::vec3<float> &position, const min::vec3<float> &direction, const float time)
+    inline void load_emit_launch(const min::vec3<float> &wind, const float time, const float size)
     {
-        // Update the start position
-        _explode.set_position(position);
+        // Abort charging
+        abort_charge();
 
-        // Set speed direction
-        _explode.set_speed(direction);
+        // Set the launch reference position
+        _launch_ref = min::vec4<float>(_cam_pos, size);
 
-        // Reset the particle animation
-        _explode.reset();
+        // Set the wind in opposite direction of launch direction
+        _emit.set_wind(wind);
 
-        // Add more time to the clock
-        _explode_time = time;
-    }
-    inline void load_launch(const float time)
-    {
-        // Update the start position
-        _charge.set_position(_cam_pos);
-
-        // Set speed direction
-        _charge.set_speed(_cam_dir);
-
-        // Reset the particle animation
-        _charge.reset();
+        // Load particles in emit buffer
+        load_emit();
 
         // Add more time to the clock
         _charge_time = -1;
@@ -247,42 +267,52 @@ class particle
 
         // Delete any attractor
         _attract_index = -1;
-        _charge.attractor_clear();
+        _emit.attractor_clear();
     }
-    inline void set_charge_reference(const float size)
+    inline void load_static_explode(const min::vec3<float> &position, const min::vec3<float> &direction, const float time, const float size)
     {
-        // Set reference position
-        _charge_ref = min::vec4<float>(_cam_pos, size);
+        // Set the explode reference position
+        _explode_ref = min::vec4<float>(position, size);
 
-        // Reset the wind vector
-        _charge.set_wind(min::vec3<float>(0.0, 0.0, 0.0));
+        // Update the start position
+        _static.set_position(position);
+
+        // Set speed direction
+        _static.set_speed(direction);
+
+        // Reset the static buffer
+        _static.reset();
+
+        // Add more time to the clock
+        _explode_time = time;
     }
-    inline void set_charge_velocity(const min::vec3<float> &velocity)
+    inline void load_static_line(const min::vec3<float> &position, const float time, const float size)
     {
-        _charge.set_speed(velocity + _cam_dir);
+        // Abort exploding
+        abort_explode();
+
+        // Set the line destination
+        _line_pos = position;
+
+        // Set the explode reference position
+        _line_ref = min::vec4<float>(_cam_pos, size);
+
+        // Add more time to the clock
+        _line_time = time;
     }
-    inline void set_explode_reference(const min::vec3<float> &ref, const float size)
+    inline void set_velocity(const min::vec3<float> &velocity)
     {
-        // Set reference position and particle size
-        _explode_ref = min::vec4<float>(ref, size);
+        _velocity = velocity;
     }
     inline void set_launch_position(const min::vec3<float> &p)
     {
         // Update launch position
-        _charge.set_position(p);
+        _emit.set_position(p);
 
         // Set the reference position
         _launch_ref.x(p.x());
         _launch_ref.y(p.y());
         _launch_ref.z(p.z());
-    }
-    inline void set_launch_reference(const min::vec3<float> &dir, const float size)
-    {
-        // Set reference position
-        _launch_ref = min::vec4<float>(_cam_pos, size);
-
-        // Set the wind in opposite direction of launch direction
-        _charge.set_wind(dir);
     }
     void update(min::camera<float> &cam, const double dt)
     {
@@ -297,9 +327,9 @@ class particle
             const min::vec3<float> attr_position = _cam_pos + _cam_dir * 0.125;
 
             // Update charge position, attractor, and direction vectors
-            _charge.set_position(_cam_pos);
-            _charge.set_rotation_axis(_cam_dir);
-            _charge.set_attractor(attr_position, 5.0, _attract_index);
+            _emit.set_position(_cam_pos);
+            _emit.set_rotation_axis(_cam_dir);
+            _emit.set_attractor(attr_position, 5.0, _attract_index);
 
             // Set the reference position
             const min::vec3<float> offset = _cam_dir * 0.25;
@@ -310,11 +340,14 @@ class particle
             // Remove some of the time
             _charge_time -= dt;
 
+            // Turn on the velocity
+            _emit.set_speed(_velocity + _cam_dir);
+
             // Update the particle positions
-            _charge.step(dt);
+            _emit.step(dt);
 
             // Upload data to GPU
-            _charge.upload();
+            _emit.upload();
         }
         else if (_launch_time > 0.0)
         {
@@ -322,13 +355,13 @@ class particle
             _launch_time -= dt;
 
             // Turn off the velocity
-            _charge.set_speed(min::vec3<float>(0.0, 0.0, 0.0));
+            _emit.set_speed(min::vec3<float>(0.0, 0.0, 0.0));
 
             // Update the particle positions
-            _charge.step(dt);
+            _emit.step(dt);
 
             // Upload data to GPU
-            _charge.upload();
+            _emit.upload();
         }
 
         // Update explode
@@ -338,10 +371,38 @@ class particle
             _explode_time -= dt;
 
             // Update the particle positions
-            _explode.step(dt);
+            _static.step(dt);
 
             // Upload data to GPU
-            _explode.upload();
+            _static.upload();
+        }
+        else if (_line_time > 0.0)
+        {
+            // Remove some of the time
+            _line_time -= dt;
+
+            // Generate particles in a line
+            min::vec3<float> p = _cam_pos;
+            const min::vec3<float> spacing = (_line_pos - _cam_pos) * _inv_static_count;
+            const auto f = [this, &p, spacing](min::vec3<float> &position, min::vec3<float> &speed, const float inv_mass) -> void {
+
+                // Update each particle at position
+                position = p + (_static.random() * 0.0025);
+
+                // Update position
+                p += spacing;
+            };
+
+            // Update the line reference
+            _line_ref.x(_cam_pos.x());
+            _line_ref.y(_cam_pos.y());
+            _line_ref.z(_cam_pos.z());
+
+            // Update the particle positions
+            _static.set(f);
+
+            // Upload data to GPU
+            _static.upload();
         }
     }
 };

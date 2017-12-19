@@ -44,11 +44,8 @@ class projectile
 
     inline void set_launch_particles()
     {
-        // Set the particle reference position
-        _particles->set_launch_reference(_ray.get_direction() * -10.0, 20.0);
-
         // Add particle effects
-        _particles->load_launch(86400.0);
+        _particles->load_emit_launch(_ray.get_direction() * -10.0, 86400.0, 20.0);
     }
 
     inline void launch_missile(const min::ray<float, min::vec3> &r, const cgrid &grid, const size_t max_length)
@@ -85,7 +82,7 @@ class projectile
     inline void draw(game::uniforms &uniforms) const
     {
         // Draw launch particles
-        _particles->draw_launch(uniforms);
+        _particles->draw_emit_launch(uniforms);
     }
     inline void update(const float speed,
                        const std::function<void(

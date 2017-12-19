@@ -233,7 +233,7 @@ class ui_overlay
           _fragment("data/shader/ui.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _width(width), _height(height),
-          _energy(1.0), _health(1.0)
+          _energy(0.0), _health(1.0)
     {
         // Create the instance rectangle
         load_base_rect();

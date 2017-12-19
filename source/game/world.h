@@ -169,11 +169,8 @@ class world
             // generate new mesh
             generate_terrain();
 
-            // Set the particle reference position
-            _particles->set_explode_reference(point, 20.0);
-
             // Add particle effects
-            _particles->load_explode(point, direction, 5.0);
+            _particles->load_static_explode(point, direction, 5.0, 20.0);
         }
     }
     inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &direction)
@@ -533,23 +530,30 @@ class world
         // Warp character to new position
         body.set_position(p);
     }
-    int8_t hook_set(const min::ray<float, min::vec3> &r)
+    bool hook_set(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
     {
-        // Create lambda force applicator
-        const auto f = [this, &r](const min::vec3<float> &traced, min::body<float, min::vec3> &body) {
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        int8_t value = -2;
+        out = _grid.ray_trace_last(r, _ray_max_dist, value);
 
+        // Get the atlas of target block, if hit a block remove it
+        if (value >= 0)
+        {
             // Set hook point
-            _hook = traced;
+            _hook = out;
 
             // Enable hooking
             _hooked = true;
 
             // Calculate the hook length
-            _hook_length = (traced - r.get_origin()).magnitude();
-        };
+            _hook_length = (out - r.get_origin()).magnitude();
 
-        // Call remove_block with function callback
-        return remove_block(r, f);
+            // Signal that we hit a block
+            return true;
+        }
+
+        // return the end of ray
+        return false;
     }
     void hook_abort()
     {
@@ -668,7 +672,7 @@ class world
         _instance.draw(uniforms);
 
         // Draw the explode particles
-        _particles->draw_explode(uniforms);
+        _particles->draw_static_explode(uniforms);
 
         // Draw projectiles
         _projectile.draw(uniforms);

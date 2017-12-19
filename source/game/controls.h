@@ -578,6 +578,7 @@ class controls
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
         gun_state &gun = state->get_gun_state();
+        game::ui_overlay *const ui = control->get_ui();
 
         // Check if we are in edit mode
         const bool mode = world->get_edit_mode();
@@ -598,12 +599,15 @@ class controls
 
                 // Add block to world
                 world->add_block(r);
+
+                // Update the ui
+                ui->set_energy(gun.get_energy() / 1048576.0);
             }
         }
         else if (!gun.get_cooldown())
         {
             // Abort the charge animation
-            character->abort_animation();
+            character->abort_animation_shoot();
 
             // Get the total charge time in ms
             const double dt = gun.get_charge_time();
@@ -627,6 +631,9 @@ class controls
                         // Absorb energy to create this resource
                         gun.absorb(atlas);
 
+                        // Update the ui energy
+                        ui->set_energy(gun.get_energy() / 1048576.0);
+
                         // Activate shoot animation
                         character->set_animation_shoot();
 
@@ -637,8 +644,23 @@ class controls
                 }
                 else
                 {
-                    // Launch a missile
-                    world->launch_missile(r);
+                    // Try to consume energy to create this resource
+                    const bool consumed = gun.will_consume(12);
+                    if (consumed)
+                    {
+                        // Update the ui energy
+                        ui->set_energy(gun.get_energy() / 1048576.0);
+
+                        // Launch a missile
+                        world->launch_missile(r);
+
+                        // Activate shoot animation
+                        character->set_animation_shoot();
+
+                        // Record the start charge time and set cooldown
+                        gun.toggle_cooldown();
+                        gun.set_charge_time();
+                    }
                 }
             }
         }
@@ -654,29 +676,34 @@ class controls
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
         gun_state &gun = state->get_gun_state();
+        game::ui_overlay *const ui = control->get_ui();
 
         // Only allow grappling if in fire mode
         if (gun.get_fire_mode())
         {
             // Try to consume energy to power this resource
-            const bool consumed = gun.can_consume(0);
-            if (consumed)
+            const bool can_consume = gun.can_consume(10);
+            if (can_consume)
             {
                 // Calculate new point to add
-                const min::vec3<float> point = camera->project_point(3.0);
+                const min::vec3<float> proj = camera->project_point(3.0);
 
                 // Create a ray from camera to destination
-                const min::ray<float, min::vec3> r(camera->get_position(), point);
+                const min::ray<float, min::vec3> r(camera->get_position(), proj);
 
                 // Fire grappling hook
-                const int8_t atlas = world->hook_set(r);
-                if (atlas >= 0)
+                min::vec3<float> point;
+                const bool hit = world->hook_set(r, point);
+                if (hit)
                 {
                     // Consume energy
-                    gun.consume(0);
+                    gun.consume(10);
 
-                    // Activate shoot animation
-                    character->set_animation_shoot();
+                    // Update the ui energy
+                    ui->set_energy(gun.get_energy() / 1048576.0);
+
+                    // Activate grapple animation
+                    character->set_animation_grapple(point);
                 }
             }
         }
@@ -686,11 +713,13 @@ class controls
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world pointer
+        // Get the character and world pointer
         game::world *const world = control->get_world();
+        game::character *const character = control->get_character();
 
         //Abort grappling hook
         world->hook_abort();
+        character->abort_animation_grapple();
     }
     static void jump(void *ptr, double step)
     {
