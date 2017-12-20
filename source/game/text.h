@@ -195,7 +195,7 @@ class text
             clear_stream();
 
             // Update FPS and IDLE
-            _stream << "FPS: " << fps;
+            _stream << "FPS: " << std::round(fps);
             update_text(_stream.str(), 6);
 
             // Clear and reset the _stream
