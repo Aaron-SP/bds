@@ -19,6 +19,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #define __THREAD_POOL__
 
 #include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <stdexcept>
@@ -57,6 +58,8 @@ class thread_pool
     std::vector<std::vector<work_item>> _queue;
     std::vector<std::atomic<bool>> _state;
     std::vector<std::thread> _threads;
+    std::mutex _sleep_lock;
+    std::condition_variable _more_data;
     std::atomic<bool> _die;
     bool _launch;
 
@@ -92,6 +95,12 @@ class thread_pool
                 // Kill thread
                 break;
             }
+            else
+            {
+                // Acquire condition variable
+                std::unique_lock<std::mutex> lock(_sleep_lock);
+                _more_data.wait(lock);
+            }
         }
     }
 
@@ -123,6 +132,9 @@ class thread_pool
     void kill()
     {
         _die = true;
+
+        // Wake up idle threads
+        _more_data.notify_all();
     }
     void launch()
     {
@@ -144,7 +156,7 @@ class thread_pool
         // See if we launched the pool
         if (!_launch)
         {
-            throw std::runtime_error("thread_pool: trying to run but pool never launched");
+            throw std::runtime_error("thread_pool: trying to run but pool was never launched");
         }
 
         // Load queue with work
@@ -166,6 +178,9 @@ class thread_pool
             // Signal finished
             _state[i] = true;
         }
+
+        // Wake up idle threads
+        _more_data.notify_all();
 
         // Boot the residual work on this thread
         const size_t remain = stop - begin;

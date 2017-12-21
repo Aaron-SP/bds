@@ -200,50 +200,50 @@ vec2 select_uv(vec2 uv, const int id)
     else if (id == 8)
     {
         uv *= 0.124;
-        uv.x += 0.001
-        uv.y += 0.751
+        uv.x += 0.001;
+        uv.y += 0.751;
     }
     else if (id == 9)
     {
         uv *= 0.124;
-        uv.x += 0.126
-        uv.y += 0.751
+        uv.x += 0.126;
+        uv.y += 0.751;
     }
     else if (id == 10)
     {
         uv *= 0.124;
-        uv.x += 0.251
-        uv.y += 0.751
+        uv.x += 0.251;
+        uv.y += 0.751;
     }
     else if (id == 11)
     {
         uv *= 0.124;
-        uv.x += 0.376
-        uv.y += 0.751
+        uv.x += 0.376;
+        uv.y += 0.751;
     }
     else if (id == 12)
     {
         uv *= 0.124;
-        uv.x += 0.501
-        uv.y += 0.751
+        uv.x += 0.501;
+        uv.y += 0.751;
     }
     else if (id == 13)
     {
         uv *= 0.124;
-        uv.x += 0.626
-        uv.y += 0.751
+        uv.x += 0.626;
+        uv.y += 0.751;
     }
     else if (id == 14)
     {
         uv *= 0.124;
-        uv.x += 0.751
-        uv.y += 0.751
+        uv.x += 0.751;
+        uv.y += 0.751;
     }
     else if (id == 15)
     {
         uv *= 0.124;
-        uv.x += 0.876
-        uv.y += 0.751
+        uv.x += 0.876;
+        uv.y += 0.751;
     }
 
     return uv;

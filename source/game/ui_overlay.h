@@ -33,22 +33,46 @@ namespace game
 class ui_overlay
 {
   private:
+    // Backgrounds
     static constexpr float _x_cursor_uv = 4.0 / 512.0;
     static constexpr float _y_cursor_uv = 4.0 / 512.0;
-    static constexpr float _s = 32.0;
-    static constexpr float _s_uv = 32.0 / 512.0;
     static constexpr float _x_black_uv = 40.0 / 512.0;
     static constexpr float _y_black_uv = 4.0 / 512.0;
     static constexpr float _x_yellow_uv = 76.0 / 512.0;
     static constexpr float _y_yellow_uv = 4.0 / 512.0;
     static constexpr float _x_red_uv = 112.0 / 512.0;
     static constexpr float _y_red_uv = 4.0 / 512.0;
-    static constexpr float _s_red_x = 32.0;
-    static constexpr float _s_red_y = 96.0;
     static constexpr float _x_blue_uv = 148.0 / 512.0;
     static constexpr float _y_blue_uv = 4.0 / 512.0;
+
+    // Icons
+    static constexpr float _x_jet_uv = 4.0 / 512.0;
+    static constexpr float _y_jet_uv = 40.0 / 512.0;
+    static constexpr float _x_ex_uv = 40.0 / 512.0;
+    static constexpr float _y_ex_uv = 40.0 / 512.0;
+    static constexpr float _x_miss_uv = 76.0 / 512.0;
+    static constexpr float _y_miss_uv = 40.0 / 512.0;
+    static constexpr float _x_up_uv = 112.0 / 512.0;
+    static constexpr float _y_up_uv = 40.0 / 512.0;
+
+    // Scale sizes
+    static constexpr float _s_bg = 40.0;
+    static constexpr float _s_fg = 32.0;
+    static constexpr float _s2_fg = _s_fg / 2;
+    static constexpr float _s_uv = 32.0 / 512.0;
+    static constexpr float _s_red_x = 32.0;
+    static constexpr float _s_red_y = 96.0;
     static constexpr float _s_blue_x = 32.0;
     static constexpr float _s_blue_y = 96.0;
+
+    // Placement values
+    static constexpr size_t _num_buttons = 8;
+    static constexpr size_t _num_half_buttons = _num_buttons / 2;
+    static constexpr float _tool_height = 48.0;
+    static constexpr float _tool_space = 48.0;
+    static constexpr float _tool_start = -_tool_space * _num_half_buttons + _s_bg / 4;
+    static constexpr float _energy_start = _tool_space * _num_half_buttons + _s_bg / 4;
+    static constexpr float _health_start = _tool_start - _tool_space - 4.0;
 
     // OpenGL stuff
     min::shader _vertex;
@@ -112,6 +136,14 @@ class ui_overlay
         _uv[index].set_scale(min::vec2<float>(z, z));
         _uv[index].set_translation(min::vec2<float>(coord.x(), coord.y()));
     }
+    inline min::vec2<float> toolbar_position(const size_t index)
+    {
+        // Calculate offset from center for this toolbar element
+        const float offset = _tool_start + index * _tool_space;
+
+        // Return toolbar position
+        return min::vec2<float>(_center_w + offset, _tool_height);
+    }
     inline void load_base_rect()
     {
         // Cached parent mesh
@@ -158,19 +190,10 @@ class ui_overlay
         // Load texture into texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);
     }
-    inline void load_fps_cursor(const size_t index, const min::vec2<float> &p)
-    {
-        const min::vec2<float> scale = min::vec2<float>(_s, _s);
-        const min::vec3<float> fps_coord = min::vec3<float>(_x_cursor_uv, _y_cursor_uv, _s_uv);
-
-        // Load rect at position
-        set_rect(index, p, scale, fps_coord);
-    }
     inline void load_background_black(const size_t index)
     {
-        const float offset = -184.0 + index * 48;
-        const min::vec2<float> p = min::vec2<float>(_center_w + offset, 48);
-        const min::vec2<float> scale = min::vec2<float>(_s, _s);
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale = min::vec2<float>(_s_bg, _s_bg);
         const min::vec3<float> black_coord = min::vec3<float>(_x_black_uv, _y_black_uv, _s_uv);
 
         // Load rect at position
@@ -178,19 +201,26 @@ class ui_overlay
     }
     inline void load_background_yellow(const size_t index)
     {
-        const float offset = -184.0 + index * 48;
-        const min::vec2<float> p = min::vec2<float>(_center_w + offset, 48);
-        const min::vec2<float> scale = min::vec2<float>(_s, _s);
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale = min::vec2<float>(_s_bg, _s_bg);
         const min::vec3<float> yellow_coord = min::vec3<float>(_x_yellow_uv, _y_yellow_uv, _s_uv);
 
         // Load rect at position
         set_rect(index, p, scale, yellow_coord);
     }
+    inline void load_fps_cursor(const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
+        const min::vec3<float> fps_coord = min::vec3<float>(_x_cursor_uv, _y_cursor_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(8, p, scale, fps_coord);
+    }
     inline void load_energy_meter()
     {
         const float y_height = _s_blue_y * _energy;
-        const float y_offset = (y_height - _s_blue_x) * 0.5;
-        const min::vec2<float> p = min::vec2<float>(_center_w + 200, 48 + y_offset);
+        const float y_offset = (y_height - _s_blue_x) * 0.5 + _tool_height;
+        const min::vec2<float> p = min::vec2<float>(_center_w + _energy_start, y_offset);
         const min::vec2<float> scale = min::vec2<float>(_s_blue_x, y_height);
         const min::vec3<float> blue_coord = min::vec3<float>(_x_blue_uv, _y_blue_uv, _s_uv);
 
@@ -200,13 +230,49 @@ class ui_overlay
     inline void load_health_meter()
     {
         const float y_height = _s_red_y * _health;
-        const float y_offset = (y_height - _s_red_x) * 0.5;
-        const min::vec2<float> p = min::vec2<float>(_center_w - 236, 48 + y_offset);
+        const float y_offset = (y_height - _s_red_x) * 0.5 + _tool_height;
+        const min::vec2<float> p = min::vec2<float>(_center_w + _health_start, y_offset);
         const min::vec2<float> scale = min::vec2<float>(_s_red_x, y_height);
         const min::vec3<float> red_coord = min::vec3<float>(_x_red_uv, _y_red_uv, _s_uv);
 
         // Load rect at position
         set_rect(10, p, scale, red_coord);
+    }
+    inline void load_jet_icon(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
+        const min::vec3<float> jet_coord = min::vec3<float>(_x_jet_uv, _y_jet_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(11, p, scale, jet_coord);
+    }
+    inline void load_explode_icon(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
+        const min::vec3<float> ex_coord = min::vec3<float>(_x_ex_uv, _y_ex_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(12, p, scale, ex_coord);
+    }
+    inline void load_missile_icon(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
+        const min::vec3<float> miss_coord = min::vec3<float>(_x_miss_uv, _y_miss_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(13, p, scale, miss_coord);
+    }
+    inline void load_up_icon(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
+        const min::vec3<float> up_coord = min::vec3<float>(_x_up_uv, _y_up_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(14, p, scale, up_coord);
     }
     inline void position_ui()
     {
@@ -217,8 +283,8 @@ class ui_overlay
         }
 
         // Add FPS cursor
-        const min::vec2<float> p_fps(_center_w - 16, _center_h - 16);
-        load_fps_cursor(8, p_fps);
+        const min::vec2<float> p_fps(_center_w - _s2_fg, _center_h - _s2_fg);
+        load_fps_cursor(p_fps);
 
         // Add Health meter
         load_energy_meter();
@@ -244,8 +310,8 @@ class ui_overlay
         // Load the uniform buffer with program we will use
         uniforms.set_program_matrix_only(_prog);
 
-        // Add 9 rectangles
-        for (size_t i = 0; i < 11; i++)
+        // Add 15 rectangles
+        for (size_t i = 0; i < 15; i++)
         {
             add_rect();
         }
@@ -322,6 +388,19 @@ class ui_overlay
     inline void set_key_up(const size_t index)
     {
         load_background_black(index);
+
+        // Draw key overlay
+        switch (index)
+        {
+        case 0:
+            return load_jet_icon(index);
+        case 1:
+            return load_explode_icon(index);
+        case 2:
+            return load_missile_icon(index);
+        case 3:
+            return load_up_icon(index);
+        }
     }
 };
 }
