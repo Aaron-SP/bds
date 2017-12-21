@@ -22,7 +22,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/file.h>
 #include <game/height_map.h>
 #include <game/mandelbulb.h>
-#include <game/thread_pool.h>
+#include <game/work_queue.h>
 #include <min/aabbox.h>
 #include <min/intersect.h>
 #include <min/mesh.h>
@@ -299,14 +299,8 @@ class cgrid
     }
     inline void generate_world()
     {
-        // Create a threadpool for doing work in parallel
-        thread_pool pool;
-
-        // Launch the pool
-        pool.launch();
-
         // generate mandelbulb world using mandelbulb generator
-        mandelbulb().generate(pool, _grid, _grid_size, [this](const size_t i) {
+        mandelbulb().generate(work_queue::worker, _grid, _grid_size, [this](const size_t i) {
             return this->grid_cell_center(i);
         });
 
@@ -339,7 +333,7 @@ class cgrid
         };
 
         // Run the job in parallel
-        pool.run(work, 0, _grid_size);
+        work_queue::worker.run(work, 0, _grid_size);
     }
     inline void get_surrounding_chunks(const size_t key)
     {

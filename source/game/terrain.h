@@ -21,7 +21,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/terrain_vertex.h>
 
 #ifndef USE_GS_RENDER
-#include <game/thread_pool.h>
+#include <game/work_queue.h>
 #endif
 
 #include <min/dds.h>
@@ -52,7 +52,6 @@ class terrain
 #ifndef USE_GS_RENDER
     min::mesh<float, uint32_t> _parent;
     std::vector<min::vec4<float>> _cell_buffer;
-    thread_pool _pool;
 
     // About 6MB vertex and 4MB index; 8*8*8*7*7*7 = 175616 cells
     static constexpr size_t _cell_size = 175616;
@@ -424,7 +423,6 @@ class terrain
         _parent.normal.reserve(_reserve_size);
         _parent.index.reserve(_index_reserve_size);
         _cell_buffer.reserve(_cell_size);
-        _pool.launch();
 #endif
     }
     inline void bind() const
@@ -498,7 +496,7 @@ class terrain
 
         // Convert cells to mesh in parallel
         const size_t size = _cell_buffer.size();
-        _pool.run(work, 0, size);
+        work_queue::worker.run(work, 0, size);
 
         // Add mesh to vertex buffer
         if (_parent.vertex.size() > 0)

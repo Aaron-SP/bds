@@ -61,7 +61,6 @@ class thread_pool
     std::mutex _sleep_lock;
     std::condition_variable _more_data;
     std::atomic<bool> _die;
-    bool _launch;
 
     inline void work(const size_t index)
     {
@@ -105,28 +104,31 @@ class thread_pool
     }
 
   public:
-    thread_pool() : _thread_count(std::thread::hardware_concurrency()),
-                    _queue(_thread_count - 1), _state(_thread_count - 1), _threads(_thread_count - 1),
-                    _die(false), _launch(false)
+    thread_pool() : _thread_count(std::thread::hardware_concurrency()), _queue(_thread_count - 1),
+                    _state(_thread_count - 1), _threads(_thread_count - 1), _die(false)
     {
         // Error out if can't determine core count
         if (_thread_count < 1)
         {
             throw std::runtime_error("thread_pool: can't determine number of CPU cores");
         }
+
+        // Boot all threads
+        for (size_t i = 0; i < _thread_count - 1; i++)
+        {
+            // Boot the thread
+            _threads[i] = std::thread(&thread_pool::work, this, i);
+        }
     }
     ~thread_pool()
     {
-        if (_launch)
-        {
-            // Kill all threads in pool
-            kill();
+        // Kill all threads in pool
+        kill();
 
-            // Join all threads
-            for (size_t i = 0; i < _thread_count - 1; i++)
-            {
-                _threads[i].join();
-            }
+        // Join all threads
+        for (size_t i = 0; i < _thread_count - 1; i++)
+        {
+            _threads[i].join();
         }
     }
     void kill()
@@ -136,29 +138,8 @@ class thread_pool
         // Wake up idle threads
         _more_data.notify_all();
     }
-    void launch()
-    {
-        if (!_launch)
-        {
-            // Boot all threads
-            for (size_t i = 0; i < _thread_count - 1; i++)
-            {
-                // Boot the thread
-                _threads[i] = std::thread(&thread_pool::work, this, i);
-            }
-
-            // Set launch flag
-            _launch = true;
-        }
-    }
     void run(const std::function<void(const size_t)> &f, const size_t start, const size_t stop)
     {
-        // See if we launched the pool
-        if (!_launch)
-        {
-            throw std::runtime_error("thread_pool: trying to run but pool was never launched");
-        }
-
         // Load queue with work
         const size_t length = (stop - start) / _thread_count;
 

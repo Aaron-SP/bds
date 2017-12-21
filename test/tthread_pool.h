@@ -37,9 +37,6 @@ bool test_thread_pool()
         items[i]++;
     };
 
-    // Launch the pool
-    pool.launch();
-
     // Run the job in parallel
     pool.run(work, 0, 8);
 

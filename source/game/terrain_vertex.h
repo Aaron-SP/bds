@@ -23,6 +23,10 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/vec4.h>
 #include <min/window.h>
 
+#ifndef USE_GS_RENDER
+#include <game/work_queue.h>
+#endif
+
 namespace game
 {
 
@@ -57,10 +61,14 @@ class terrain_vertex
         // Disable the vertex attributes
         glDisableVertexAttribArray(0);
     }
-    inline static void copy(const min::mesh<T, K> &m, std::vector<T> &data, const size_t data_offset, size_t i)
+    inline static void copy(std::vector<T> &data, const min::mesh<T, K> &m, const size_t mesh_offset)
     {
-        // Copy the vertex data, 4 floats
-        std::memcpy(&data[data_offset], &m.vertex[i], vertex_size);
+        const auto vert_size = m.vertex.size();
+        for (size_t i = 0, j = mesh_offset; i < vert_size; i++, j += width_size)
+        {
+            // Copy the vertex data, 4 floats
+            std::memcpy(&data[j], &m.vertex[i], vertex_size);
+        }
     }
     inline static constexpr size_t width()
     {
@@ -113,8 +121,8 @@ class terrain_vertex
     inline static void check(const min::mesh<T, K> &m)
     {
         // Verify normal, tangent and bitangent sizes
-        const auto attr_size = m.vertex.size();
-        if (m.uv.size() != attr_size || m.normal.size() != attr_size)
+        const auto vert_size = m.vertex.size();
+        if (m.uv.size() != vert_size || m.normal.size() != vert_size)
         {
             throw std::runtime_error("terrain_vertex: vertex, uv, or normals invalid length");
         }
@@ -126,16 +134,26 @@ class terrain_vertex
         glDisableVertexAttribArray(1);
         glDisableVertexAttribArray(2);
     }
-    inline static void copy(const min::mesh<T, K> &m, std::vector<T> &data, const size_t data_offset, size_t i)
+    inline static void copy(std::vector<T> &data, const min::mesh<T, K> &m, const size_t mesh_offset)
     {
-        // Copy the vertex data, 4 floats
-        std::memcpy(&data[data_offset], &m.vertex[i], vertex_size);
+        // Parallelize on copying data
+        const auto work = [&data, &m, mesh_offset](const size_t i) {
 
-        // Copy the uv data, 2 floats, offset is in number of floats
-        std::memcpy(&data[data_offset + uv_off], &m.uv[i], uv_size);
+            // Calculate index into data buffer
+            const size_t j = mesh_offset + (i * width_size);
 
-        // Copy the normal data, 3 floats, offset is in number of floats
-        std::memcpy(&data[data_offset + normal_off], &m.normal[i], normal_size);
+            // Copy the vertex data, 4 floats
+            std::memcpy(&data[j], &m.vertex[i], vertex_size);
+
+            // Copy the uv data, 2 floats, offset is in number of floats
+            std::memcpy(&data[j + uv_off], &m.uv[i], uv_size);
+
+            // Copy the normal data, 3 floats, offset is in number of floats
+            std::memcpy(&data[j + normal_off], &m.normal[i], normal_size);
+        };
+
+        // Convert cells to mesh in parallel
+        work_queue::worker.run(work, 0, m.vertex.size());
     }
     inline static constexpr size_t width()
     {

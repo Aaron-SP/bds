@@ -60,8 +60,8 @@ class ui_vertex
     inline static void check(const min::mesh<T, K> &m)
     {
         // Verify normal, tangent and bitangent sizes
-        const auto attr_size = m.vertex.size();
-        if (m.uv.size() != attr_size)
+        const auto vert_size = m.vertex.size();
+        if (m.uv.size() != vert_size)
         {
             throw std::runtime_error("ui_vertex: vertex & uv invalid length");
         }
@@ -72,13 +72,17 @@ class ui_vertex
         glDisableVertexAttribArray(0);
         glDisableVertexAttribArray(1);
     }
-    inline static void copy(const min::mesh<T, K> &m, std::vector<T> &data, const size_t data_offset, size_t i)
+    inline static void copy(std::vector<T> &data, const min::mesh<T, K> &m, const size_t mesh_offset)
     {
-        // Copy the vertex data, 4 floats
-        std::memcpy(&data[data_offset], &m.vertex[i], vertex_size);
+        const auto vert_size = m.vertex.size();
+        for (size_t i = 0, j = mesh_offset; i < vert_size; i++, j += width_size)
+        {
+            // Copy the vertex data, 4 floats
+            std::memcpy(&data[j], &m.vertex[i], vertex_size);
 
-        // Copy the uv data, 2 floats, offset is in number of floats
-        std::memcpy(&data[data_offset + uv_off], &m.uv[i], uv_size);
+            // Copy the uv data, 2 floats, offset is in number of floats
+            std::memcpy(&data[j + uv_off], &m.uv[i], uv_size);
+        }
     }
     inline static constexpr size_t width()
     {
