@@ -127,6 +127,10 @@ class gun_state
     {
         return _locked;
     }
+    inline bool is_off_cooldown() const
+    {
+        return !_shoot_cooldown;
+    }
     inline void lock()
     {
         _locked = true;

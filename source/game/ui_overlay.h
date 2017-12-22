@@ -25,6 +25,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/shader.h>
 #include <min/texture_buffer.h>
 #include <min/vertex_buffer.h>
+#include <utility>
 #include <vector>
 
 namespace game
@@ -46,13 +47,15 @@ class ui_overlay
     static constexpr float _y_blue_uv = 4.0 / 512.0;
 
     // Icons
-    static constexpr float _x_jet_uv = 4.0 / 512.0;
+    static constexpr float _x_reload_uv = 4.0 / 512.0;
+    static constexpr float _y_reload_uv = 40.0 / 512.0;
+    static constexpr float _x_jet_uv = 40.0 / 512.0;
     static constexpr float _y_jet_uv = 40.0 / 512.0;
-    static constexpr float _x_ex_uv = 40.0 / 512.0;
+    static constexpr float _x_ex_uv = 76.0 / 512.0;
     static constexpr float _y_ex_uv = 40.0 / 512.0;
-    static constexpr float _x_miss_uv = 76.0 / 512.0;
+    static constexpr float _x_miss_uv = 112.0 / 512.0;
     static constexpr float _y_miss_uv = 40.0 / 512.0;
-    static constexpr float _x_up_uv = 112.0 / 512.0;
+    static constexpr float _x_up_uv = 148.0 / 512.0;
     static constexpr float _y_up_uv = 40.0 / 512.0;
 
     // Scale sizes
@@ -97,6 +100,7 @@ class ui_overlay
     size_t _selected;
     float _energy;
     float _health;
+    float _cursor_angle;
 
     inline size_t add_rect()
     {
@@ -115,7 +119,14 @@ class ui_overlay
         // return the index
         return _v.size() - 1;
     }
-    inline void set_rect(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec3<float> &coord)
+    inline void set_uv(const size_t index, const min::vec3<float> &coord)
+    {
+        // Add uv matrix to buffer
+        const float z = coord.z();
+        _uv[index].set_scale(min::vec2<float>(z, z));
+        _uv[index].set_translation(min::vec2<float>(coord.x(), coord.y()));
+    }
+    inline std::pair<min::vec2<float>, min::vec2<float>> to_screen(const min::vec2<float> &p, const min::vec2<float> &scale)
     {
         // Calculate scale and offset
         const float sx = 2.0 / _width;
@@ -128,14 +139,43 @@ class ui_overlay
         const float ox = p.x() * sx - 1.0;
         const float oy = p.y() * sy - 1.0;
 
-        // Add matrix to the matrix buffer
-        _v[index].set_scale(min::vec2<float>(size_x, size_y));
-        _v[index].set_translation(min::vec2<float>(ox, oy));
+        return std::make_pair(min::vec2<float>(ox, oy), min::vec2<float>(size_x, size_y));
+    }
+    inline void set_rect(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec3<float> &coord)
+    {
+        // Calculate screen coordinates
+        const auto ps = to_screen(p, scale);
 
-        // Add uv matrix to buffer
-        const float z = coord.z();
-        _uv[index].set_scale(min::vec2<float>(z, z));
-        _uv[index].set_translation(min::vec2<float>(coord.x(), coord.y()));
+        // Set matrix components
+        _v[index].set_translation(ps.first);
+        _v[index].set_scale(ps.second);
+
+        // Set uv coordinates
+        set_uv(index, coord);
+    }
+    inline void set_rect_reset(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec3<float> &coord)
+    {
+        // Calculate screen coordinates
+        const auto ps = to_screen(p, scale);
+
+        // Add matrix to the matrix buffer
+        _v[index] = min::mat3<float>(ps.first);
+        _v[index].set_scale(ps.second);
+
+        // Set uv coordinates
+        set_uv(index, coord);
+    }
+    inline void set_rect_rot(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec3<float> &coord, const float angle)
+    {
+        // Calculate screen coordinates
+        const auto ps = to_screen(p, scale);
+
+        // Add matrix to the matrix buffer
+        _v[index] = min::mat3<float>(ps.first, min::mat2<float>(angle));
+        _v[index] *= min::mat3<float>().set_scale(ps.second);
+
+        // Set uv coordinates
+        set_uv(index, coord);
     }
     inline min::vec2<float> toolbar_position(const size_t index)
     {
@@ -218,13 +258,30 @@ class ui_overlay
         // Load rect at position
         set_rect(index, p, scale, yellow_coord);
     }
-    inline void load_fps_cursor(const min::vec2<float> &p)
+    inline void load_fps_cursor()
     {
+        const min::vec2<float> p(_center_w - _s2_fg, _center_h - _s2_fg);
         const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
         const min::vec3<float> fps_coord = min::vec3<float>(_x_cursor_uv, _y_cursor_uv, _s_uv);
 
         // Load rect at position
-        set_rect(8, p, scale, fps_coord);
+        set_rect_reset(8, p, scale, fps_coord);
+    }
+    inline void load_reload_cursor()
+    {
+        const min::vec2<float> p(_center_w - _s2_fg, _center_h - _s2_fg);
+        const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
+        const min::vec3<float> reload_coord = min::vec3<float>(_x_reload_uv, _y_reload_uv, _s_uv);
+
+        // Rotate rect by angle
+        _cursor_angle -= 4.0;
+        if (_cursor_angle > 180.0)
+        {
+            _cursor_angle -= 180.0;
+        }
+
+        // Load rect at position
+        set_rect_rot(8, p, scale, reload_coord, _cursor_angle);
     }
     inline void load_energy_meter()
     {
@@ -293,8 +350,7 @@ class ui_overlay
         }
 
         // Add FPS cursor
-        const min::vec2<float> p_fps(_center_w - _s2_fg, _center_h - _s2_fg);
-        load_fps_cursor(p_fps);
+        load_fps_cursor();
 
         // Add Health meter
         load_energy_meter();
@@ -376,6 +432,14 @@ class ui_overlay
 
         // Reposition all ui on the screen
         position_ui();
+    }
+    inline void set_target_cursor()
+    {
+        load_fps_cursor();
+    }
+    inline void set_reload_cursor()
+    {
+        load_reload_cursor();
     }
     inline void set_energy(const float energy)
     {

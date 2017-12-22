@@ -554,20 +554,16 @@ class controls
         game::ui_overlay *const ui = control->get_ui();
 
         // Check if we are in beam mode
-        if (gun.is_gun_active() && gun.is_beam_mode())
+        if (gun.is_gun_active() && gun.is_beam_mode() && gun.is_off_cooldown())
         {
-            // Check if we are off cooldown
-            if (gun.check_cooldown())
-            {
-                // Record the start charge time
-                gun.start_charge();
+            // Record the start charge time
+            gun.start_charge();
 
-                // Activate charge animation
-                character->set_animation_charge(*cam);
+            // Activate charge animation
+            character->set_animation_charge(*cam);
 
-                // Lock the gun in beam mode
-                gun.lock();
-            }
+            // Lock the gun in beam mode
+            gun.lock();
         }
         else if (gun.is_grapple_mode())
         {
@@ -600,7 +596,7 @@ class controls
                 }
             }
         }
-        else if (gun.is_missile_mode() && gun.check_cooldown())
+        else if (gun.is_missile_mode() && gun.is_off_cooldown())
         {
             // Lock the gun in beam mode
             gun.lock();
@@ -654,61 +650,70 @@ class controls
             // Create a ray from camera to destination
             const min::ray<float, min::vec3> r(cam->get_position(), point);
 
-            // If we are in beam mode and charged up
-            if (gun.is_beam_charged() && gun.is_locked())
+            // If the gun is locked into a mode
+            if (gun.is_locked())
             {
-                // Remove block from world, get the removed atlas
-                const int8_t atlas = world->remove_block(r);
-                if (atlas >= 0.0)
+                // If we are in beam mode and charged up
+                if (gun.is_beam_charged())
                 {
-                    // Absorb energy to create this resource
-                    gun.absorb(atlas);
+                    // Remove block from world, get the removed atlas
+                    const int8_t atlas = world->remove_block(r);
+                    if (atlas >= 0.0)
+                    {
+                        // Absorb energy to create this resource
+                        gun.absorb(atlas);
 
-                    // Update the ui energy
-                    ui->set_energy(gun.get_energy() / 1048576.0);
+                        // Update the ui energy
+                        ui->set_energy(gun.get_energy() / 1048576.0);
 
-                    // Activate shoot animation
-                    character->set_animation_shoot();
+                        // Activate shoot animation
+                        character->set_animation_shoot();
 
-                    // Start gun cooldown timer
-                    gun.start_cooldown();
+                        // Start gun cooldown timer
+                        gun.start_cooldown();
 
+                        // Unlock the gun if beam mode
+                        gun.unlock_beam();
+                    }
+                }
+                else if (gun.is_beam_mode())
+                {
                     // Unlock the gun if beam mode
                     gun.unlock_beam();
                 }
-            }
-            else if (gun.is_grapple_mode() && gun.is_locked())
-            {
-                //Abort grappling hook
-                world->hook_abort();
-
-                // Stop grapple animation
-                character->abort_animation_grapple();
-
-                // Unlock the gun if beam mode
-                gun.unlock_grapple();
-            }
-            else if (gun.is_missile_mode() && gun.is_locked())
-            {
-                // Try to consume energy to create missile
-                const bool consumed = gun.will_consume(12);
-                if (consumed)
+                else if (gun.is_grapple_mode())
                 {
-                    // Update the ui energy
-                    ui->set_energy(gun.get_energy() / 1048576.0);
+                    //Abort grappling hook
+                    world->hook_abort();
 
-                    // Launch a missile
-                    world->launch_missile(r);
+                    // Stop grapple animation
+                    character->abort_animation_grapple();
 
-                    // Activate shoot animation
-                    character->set_animation_shoot();
-
-                    // Start gun cooldown timer
-                    gun.start_cooldown();
+                    // Unlock the gun if beam mode
+                    gun.unlock_grapple();
                 }
+                else if (gun.is_missile_mode())
+                {
+                    // Try to consume energy to create missile
+                    const bool consumed = gun.will_consume(12);
+                    if (consumed)
+                    {
+                        // Update the ui energy
+                        ui->set_energy(gun.get_energy() / 1048576.0);
 
-                // Unlock the gun if beam mode
-                gun.unlock_missile();
+                        // Launch a missile
+                        world->launch_missile(r);
+
+                        // Activate shoot animation
+                        character->set_animation_shoot();
+
+                        // Start gun cooldown timer
+                        gun.start_cooldown();
+                    }
+
+                    // Unlock the gun if beam mode
+                    gun.unlock_missile();
+                }
             }
         }
     }

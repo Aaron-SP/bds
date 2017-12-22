@@ -136,6 +136,18 @@ class fractex
         // return no mouse movement
         return std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
     }
+    inline void update_ui()
+    {
+        // Check cooldown state and update ui
+        if (_state.get_gun_state().check_cooldown())
+        {
+            _ui.set_target_cursor();
+        }
+        else
+        {
+            _ui.set_reload_cursor();
+        }
+    }
     inline void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
         // Update camera properties
@@ -236,6 +248,9 @@ class fractex
 
         // Update the character state
         const bool update = _character.update(camera, dt);
+
+        // Update ui elements
+        update_ui();
 
         // Update all uniforms
         update_uniforms(camera, update);
