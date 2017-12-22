@@ -312,7 +312,7 @@ void run(const size_t frames, const size_t view)
     fractex game(view);
 
     // Setup controller to run at 60 frames per second
-    min::loop_sync sync(frames);
+    min::loop_sync sync(frames, 0.25, 0.25, 0.25);
     double frame_time = 0.0;
 
     // User can close with Q or use window manager
