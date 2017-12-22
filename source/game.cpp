@@ -244,7 +244,7 @@ class fractex
         _world.draw(_uniforms);
 
         // Draw the character if fire mode activated
-        if (_state.get_gun_state().get_fire_mode())
+        if (_state.get_gun_state().is_gun_active())
         {
             _character.draw(_uniforms);
         }

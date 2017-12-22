@@ -28,11 +28,19 @@ namespace game
 class gun_state
 {
   private:
+    enum gun_mode
+    {
+        beam,
+        grapple,
+        missile
+    };
+
     std::chrono::high_resolution_clock::time_point _charge;
     std::chrono::high_resolution_clock::time_point _cool;
     uint32_t _energy;
-    bool _beam_mode;
-    bool _fire_mode;
+    bool _gun_active;
+    bool _locked;
+    gun_mode _mode;
     bool _shoot_cooldown;
 
     inline double get_charge_time() const
@@ -53,7 +61,7 @@ class gun_state
     }
 
   public:
-    gun_state() : _energy(0), _beam_mode(true), _fire_mode(true), _shoot_cooldown(false) {}
+    gun_state() : _energy(0), _gun_active(true), _locked(false), _mode(gun_mode::beam), _shoot_cooldown(false) {}
     inline void absorb(const int8_t atlas_id)
     {
         // Absorb this amount of energy
@@ -95,21 +103,54 @@ class gun_state
     {
         return _energy;
     }
-    inline bool get_fire_mode() const
-    {
-        return _fire_mode;
-    }
     inline bool is_beam_charged() const
     {
-        return _beam_mode && !_shoot_cooldown && get_charge_time() > 1000.0;
+        return is_beam_mode() && !_shoot_cooldown && get_charge_time() > 1000.0;
+    }
+    inline bool is_gun_active() const
+    {
+        return _gun_active;
     }
     inline bool is_beam_mode() const
     {
-        return _beam_mode;
+        return _mode == gun_mode::beam;
+    }
+    inline bool is_grapple_mode() const
+    {
+        return _mode == gun_mode::grapple;
     }
     inline bool is_missile_mode() const
     {
-        return !_beam_mode;
+        return _mode == gun_mode::missile;
+    }
+    inline bool is_locked() const
+    {
+        return _locked;
+    }
+    inline void lock()
+    {
+        _locked = true;
+    }
+    inline void unlock_beam()
+    {
+        if (_mode == gun_mode::beam)
+        {
+            _locked = false;
+        }
+    }
+    inline void unlock_grapple()
+    {
+        if (_mode == gun_mode::grapple)
+        {
+            _locked = false;
+        }
+    }
+    inline void unlock_missile()
+    {
+        if (_mode == gun_mode::missile)
+        {
+            _locked = false;
+        }
     }
     inline bool check_cooldown()
     {
@@ -136,13 +177,21 @@ class gun_state
         // Update start time
         _cool = std::chrono::high_resolution_clock::now();
     }
-    inline void set_fire_mode(const bool mode)
+    inline void set_gun_active(const bool mode)
     {
-        _fire_mode = mode;
+        _gun_active = mode;
     }
-    inline void toggle_beam_mode()
+    inline void set_beam_mode()
     {
-        _beam_mode = !_beam_mode;
+        _mode = gun_mode::beam;
+    }
+    inline void set_grapple_mode()
+    {
+        _mode = gun_mode::grapple;
+    }
+    inline void set_missile_mode()
+    {
+        _mode = gun_mode::missile;
     }
 };
 }

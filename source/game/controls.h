@@ -65,8 +65,6 @@ class controls
         // Register left click events
         _window->register_lclick_down(controls::left_click_down);
         _window->register_lclick_up(controls::left_click_up);
-        _window->register_rclick_down(controls::right_click_down);
-        _window->register_rclick_up(controls::right_click_up);
         _window->register_update(controls::on_resize);
 
         // Add FPS(WADS) keys to watch
@@ -92,7 +90,6 @@ class controls
         keyboard.add(min::window::key_code::KEY7);
         keyboard.add(min::window::key_code::KEY8);
         keyboard.add(min::window::key_code::SPACE);
-        keyboard.add(min::window::key_code::KEYF);
 
         // Register callback function F1
         keyboard.register_keydown(min::window::key_code::F1, controls::close_window, (void *)_window);
@@ -171,9 +168,6 @@ class controls
 
         // Register callback function SPACE
         keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)_world);
-
-        // Register callback function KEYF
-        keyboard.register_keydown(min::window::key_code::KEYF, controls::switch_weapon, (void *)_state);
     }
     min::camera<float> *get_camera()
     {
@@ -262,7 +256,7 @@ class controls
         const bool mode = world->toggle_edit_mode();
 
         // toggle fire mode if not in edit mode
-        gun.set_fire_mode(!mode);
+        gun.set_gun_active(!mode);
 
         // reset scale
         world->reset_scale();
@@ -338,48 +332,107 @@ class controls
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world and ui pointer
-        game::world *const world = control->get_world();
+        // Set key down on overlay
         game::ui_overlay *const ui = control->get_ui();
-
-        world->set_atlas_id(0);
         ui->set_key_down(0);
+
+        // Get the world and gun_state pointer
+        game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
+        gun_state &gun = state->get_gun_state();
+
+        // If gun is active
+        if (!gun.is_locked() && gun.is_gun_active())
+        {
+            // Do something here!
+        }
+        else if (world->get_edit_mode())
+        {
+            // Get the world pointer
+            game::world *const world = control->get_world();
+            world->set_atlas_id(0);
+        }
     }
     static void key2_down(void *ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world and ui pointer
-        game::world *const world = control->get_world();
+        // Set key down on overlay
         game::ui_overlay *const ui = control->get_ui();
-
-        world->set_atlas_id(1);
         ui->set_key_down(1);
+
+        // Get the world and gun_state pointer
+        game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
+        gun_state &gun = state->get_gun_state();
+
+        // If gun is active
+        if (!gun.is_locked() && gun.is_gun_active())
+        {
+            // Switch to beam weapon type
+            gun.set_beam_mode();
+        }
+        else if (world->get_edit_mode())
+        {
+            // Get the world pointer
+            game::world *const world = control->get_world();
+            world->set_atlas_id(1);
+        }
     }
     static void key3_down(void *ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world and ui pointer
-        game::world *const world = control->get_world();
+        // Set key down on overlay
         game::ui_overlay *const ui = control->get_ui();
-
-        world->set_atlas_id(2);
         ui->set_key_down(2);
+
+        // Get the world and gun_state pointer
+        game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
+        gun_state &gun = state->get_gun_state();
+
+        // If gun is active
+        if (!gun.is_locked() && gun.is_gun_active())
+        {
+            // Switch to missile weapon type
+            gun.set_missile_mode();
+        }
+        else if (world->get_edit_mode())
+        {
+            // Get the world pointer
+            game::world *const world = control->get_world();
+            world->set_atlas_id(2);
+        }
     }
     static void key4_down(void *ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the world and ui pointer
-        game::world *const world = control->get_world();
+        // Set key down on overlay
         game::ui_overlay *const ui = control->get_ui();
-
-        world->set_atlas_id(3);
         ui->set_key_down(3);
+
+        // Get the world and gun_state pointer
+        game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
+        gun_state &gun = state->get_gun_state();
+
+        // If gun is active
+        if (!gun.is_locked() && gun.is_gun_active())
+        {
+            // Switch to missile weapon type
+            gun.set_grapple_mode();
+        }
+        else if (world->get_edit_mode())
+        {
+            // Get the world pointer
+            game::world *const world = control->get_world();
+            world->set_atlas_id(3);
+        }
     }
     static void key5_down(void *ptr, double step)
     {
@@ -541,14 +594,16 @@ class controls
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the camera, character, gun, and state pointers
+        // Get the ALL the pointers
         min::camera<float> *const cam = control->get_camera();
-        game::character *const character = control->get_character();
+        game::world *const world = control->get_world();
         game::state *const state = control->get_state();
+        game::character *const character = control->get_character();
         gun_state &gun = state->get_gun_state();
+        game::ui_overlay *const ui = control->get_ui();
 
         // Check if we are in beam mode
-        if (gun.get_fire_mode() && gun.is_beam_mode())
+        if (gun.is_gun_active() && gun.is_beam_mode())
         {
             // Check if we are off cooldown
             if (gun.check_cooldown())
@@ -558,113 +613,12 @@ class controls
 
                 // Activate charge animation
                 character->set_animation_charge(*cam);
+
+                // Lock the gun in beam mode
+                gun.lock();
             }
         }
-    }
-    static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
-    {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the camera, world, and state pointers
-        min::camera<float> *const camera = control->get_camera();
-        game::world *const world = control->get_world();
-        game::state *const state = control->get_state();
-        game::character *const character = control->get_character();
-        gun_state &gun = state->get_gun_state();
-        game::ui_overlay *const ui = control->get_ui();
-
-        // Check if we are in edit mode
-        const bool mode = world->get_edit_mode();
-        if (mode)
-        {
-            // Get the selected atlas
-            const int8_t atlas = world->get_atlas_id();
-
-            // Try to consume energy to create this resource
-            const bool consumed = gun.will_consume(atlas);
-            if (consumed)
-            {
-                // Calculate new point to add
-                const min::vec3<float> point = camera->project_point(3.0);
-
-                // Create a ray from camera to destination
-                const min::ray<float, min::vec3> r(camera->get_position(), point);
-
-                // Add block to world
-                world->add_block(r);
-
-                // Update the ui
-                ui->set_energy(gun.get_energy() / 1048576.0);
-            }
-        }
-        else if (gun.get_fire_mode())
-        {
-            // Abort the charge animation
-            character->abort_animation_shoot();
-
-            // Calculate point to remove from
-            const min::vec3<float> point = camera->project_point(3.0);
-
-            // Create a ray from camera to destination
-            const min::ray<float, min::vec3> r(camera->get_position(), point);
-
-            // If we are in beam mode and charged up
-            if (gun.is_beam_charged())
-            {
-                // Remove block from world, get the removed atlas
-                const int8_t atlas = world->remove_block(r);
-                if (atlas >= 0.0)
-                {
-                    // Absorb energy to create this resource
-                    gun.absorb(atlas);
-
-                    // Update the ui energy
-                    ui->set_energy(gun.get_energy() / 1048576.0);
-
-                    // Activate shoot animation
-                    character->set_animation_shoot();
-
-                    // Start gun cooldown timer
-                    gun.start_cooldown();
-                }
-            }
-            else if (gun.is_missile_mode() && gun.check_cooldown())
-            {
-                // Try to consume energy to create missile
-                const bool consumed = gun.will_consume(12);
-                if (consumed)
-                {
-                    // Update the ui energy
-                    ui->set_energy(gun.get_energy() / 1048576.0);
-
-                    // Launch a missile
-                    world->launch_missile(r);
-
-                    // Activate shoot animation
-                    character->set_animation_shoot();
-
-                    // Start gun cooldown timer
-                    gun.start_cooldown();
-                }
-            }
-        }
-    }
-    static void right_click_down(void *ptr, const uint16_t x, const uint16_t y)
-    {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the camera, world, state, and character pointers
-        min::camera<float> *const cam = control->get_camera();
-        game::world *const world = control->get_world();
-        game::state *const state = control->get_state();
-        game::character *const character = control->get_character();
-        gun_state &gun = state->get_gun_state();
-        game::ui_overlay *const ui = control->get_ui();
-
-        // Only allow grappling if in fire mode
-        if (gun.get_fire_mode())
+        else if (gun.is_grapple_mode())
         {
             // Try to consume energy to power this resource
             const bool can_consume = gun.can_consume(10);
@@ -689,37 +643,129 @@ class controls
 
                     // Activate grapple animation
                     character->set_animation_grapple(point);
+
+                    // Lock the gun in beam mode
+                    gun.lock();
                 }
             }
         }
+        else if (gun.is_missile_mode())
+        {
+            // Lock the gun in beam mode
+            gun.lock();
+        }
     }
-    static void right_click_up(void *ptr, const uint16_t x, const uint16_t y)
+    static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the character and world pointer
+        // Get the ALL the pointers
+        min::camera<float> *const cam = control->get_camera();
         game::world *const world = control->get_world();
+        game::state *const state = control->get_state();
         game::character *const character = control->get_character();
+        gun_state &gun = state->get_gun_state();
+        game::ui_overlay *const ui = control->get_ui();
 
-        //Abort grappling hook
-        world->hook_abort();
-        character->abort_animation_grapple();
+        // Check if we are in edit mode
+        const bool mode = world->get_edit_mode();
+        if (mode)
+        {
+            // Get the selected atlas
+            const int8_t atlas = world->get_atlas_id();
+
+            // Try to consume energy to create this resource
+            const bool consumed = gun.will_consume(atlas);
+            if (consumed)
+            {
+                // Calculate new point to add
+                const min::vec3<float> point = cam->project_point(3.0);
+
+                // Create a ray from camera to destination
+                const min::ray<float, min::vec3> r(cam->get_position(), point);
+
+                // Add block to world
+                world->add_block(r);
+
+                // Update the ui
+                ui->set_energy(gun.get_energy() / 1048576.0);
+            }
+        }
+        else if (gun.is_gun_active())
+        {
+            // Abort the charge animation
+            character->abort_animation_shoot();
+
+            // Calculate point to remove from
+            const min::vec3<float> point = cam->project_point(3.0);
+
+            // Create a ray from camera to destination
+            const min::ray<float, min::vec3> r(cam->get_position(), point);
+
+            // If we are in beam mode and charged up
+            if (gun.is_beam_charged())
+            {
+                // Remove block from world, get the removed atlas
+                const int8_t atlas = world->remove_block(r);
+                if (atlas >= 0.0)
+                {
+                    // Absorb energy to create this resource
+                    gun.absorb(atlas);
+
+                    // Update the ui energy
+                    ui->set_energy(gun.get_energy() / 1048576.0);
+
+                    // Activate shoot animation
+                    character->set_animation_shoot();
+
+                    // Start gun cooldown timer
+                    gun.start_cooldown();
+
+                    // Unlock the gun if beam mode
+                    gun.unlock_beam();
+                }
+            }
+            else if (gun.is_grapple_mode())
+            {
+                //Abort grappling hook
+                world->hook_abort();
+
+                // Stop grapple animation
+                character->abort_animation_grapple();
+
+                // Unlock the gun if beam mode
+                gun.unlock_grapple();
+            }
+            else if (gun.is_missile_mode() && gun.check_cooldown())
+            {
+                // Try to consume energy to create missile
+                const bool consumed = gun.will_consume(12);
+                if (consumed)
+                {
+                    // Update the ui energy
+                    ui->set_energy(gun.get_energy() / 1048576.0);
+
+                    // Launch a missile
+                    world->launch_missile(r);
+
+                    // Activate shoot animation
+                    character->set_animation_shoot();
+
+                    // Start gun cooldown timer
+                    gun.start_cooldown();
+
+                    // Unlock the gun if beam mode
+                    gun.unlock_missile();
+                }
+            }
+        }
     }
     static void jump(void *ptr, double step)
     {
         // Get the world pointer
         game::world *const world = reinterpret_cast<game::world *>(ptr);
         world->character_jump(min::vec3<float>(0.0, 1.0, 0.0));
-    }
-    static void switch_weapon(void *ptr, double step)
-    {
-        // Get the gun_state pointer
-        game::state *const state = reinterpret_cast<game::state *>(ptr);
-        gun_state &gun = state->get_gun_state();
-
-        // Switch weapon type
-        gun.toggle_beam_mode();
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {
