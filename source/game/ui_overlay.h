@@ -94,6 +94,7 @@ class ui_overlay
     size_t _center_w;
     size_t _center_h;
     size_t _index;
+    size_t _selected;
     float _energy;
     float _health;
 
@@ -199,6 +200,15 @@ class ui_overlay
         // Load rect at position
         set_rect(index, p, scale, black_coord);
     }
+    inline void load_background_red(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale = min::vec2<float>(_s_bg, _s_bg);
+        const min::vec3<float> red_coord = min::vec3<float>(_x_red_uv, _y_red_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index, p, scale, red_coord);
+    }
     inline void load_background_yellow(const size_t index)
     {
         const min::vec2<float> p = toolbar_position(index);
@@ -299,6 +309,8 @@ class ui_overlay
           _fragment("data/shader/ui.fragment", GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _width(width), _height(height),
+          _center_w(width / 2), _center_h(height / 2),
+          _index(0), _selected(1),
           _energy(0.0), _health(1.0)
     {
         // Create the instance rectangle
@@ -383,11 +395,30 @@ class ui_overlay
     }
     inline void set_key_down(const size_t index)
     {
+        // Set unselected color to black
+        load_background_black(_selected);
+
+        // Set selected index
+        _selected = index;
+
+        // Set selected color to yellow
         load_background_yellow(index);
+    }
+    inline void set_key_down_fail(const size_t index)
+    {
+        load_background_red(index);
     }
     inline void set_key_up(const size_t index)
     {
-        load_background_black(index);
+        // Set correct background if selected
+        if (index == _selected)
+        {
+            load_background_yellow(index);
+        }
+        else
+        {
+            load_background_black(index);
+        }
 
         // Draw key overlay
         switch (index)
