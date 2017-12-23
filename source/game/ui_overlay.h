@@ -393,9 +393,6 @@ class ui_overlay
         const size_t size = _v.size();
         if (size > 0)
         {
-            // Activate the uniform buffer
-            uniforms.bind();
-
             // Bind the text_buffer vao
             _vb.bind();
 

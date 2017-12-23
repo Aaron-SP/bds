@@ -643,9 +643,6 @@ class world
     }
     void draw(game::uniforms &uniforms) const
     {
-        // Activate the uniform buffer
-        uniforms.bind();
-
         // Draw the sky, uses geometry uniform buffer
         _sky.draw();
 

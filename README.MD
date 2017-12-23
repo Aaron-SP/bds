@@ -80,6 +80,6 @@ The '-view' flag is an optional parameter for controlling how many chunks are vi
 
 8.) Key [F2] to toggle debug text
 
-9.) Key [F3] to pause the game
+9.) Key [ESCAPE] to pause the game
 
 

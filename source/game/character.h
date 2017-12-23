@@ -154,9 +154,6 @@ class character
         // Clear depth for drawing character over terrain
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        // Activate the uniform buffer
-        uniforms.bind();
-
         // Bind VAO
         _skbuffer.bind();
 

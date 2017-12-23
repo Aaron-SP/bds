@@ -71,7 +71,7 @@ class controls
         // Add FPS(WADS) keys to watch
         keyboard.add(min::window::key_code::F1);
         keyboard.add(min::window::key_code::F2);
-        keyboard.add(min::window::key_code::F3);
+        keyboard.add(min::window::key_code::ESCAPE);
         keyboard.add(min::window::key_code::KEYQ);
         keyboard.add(min::window::key_code::KEYR);
         keyboard.add(min::window::key_code::KEYW);
@@ -99,7 +99,7 @@ class controls
         keyboard.register_keydown(min::window::key_code::F2, controls::toggle_text, (void *)_text);
 
         // Register callback function F3
-        keyboard.register_keydown(min::window::key_code::F3, controls::toggle_pause, (void *)this);
+        keyboard.register_keydown(min::window::key_code::ESCAPE, controls::toggle_pause, (void *)this);
 
         // Register callback function Q
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::toggle_edit_mode, (void *)this);

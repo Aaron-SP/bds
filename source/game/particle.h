@@ -69,9 +69,6 @@ class particle
     }
     inline void draw_emit(const game::uniforms &uniforms) const
     {
-        // Activate the uniform buffer
-        uniforms.bind();
-
         // Bind this texture for drawing
         _tbuffer.bind(_dds_id, 0);
 
@@ -83,9 +80,6 @@ class particle
     }
     inline void draw_static(const game::uniforms &uniforms) const
     {
-        // Activate the uniform buffer
-        uniforms.bind();
-
         // Bind this texture for drawing
         _tbuffer.bind(_dds_id, 0);
 

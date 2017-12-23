@@ -150,6 +150,9 @@ class fractex
     }
     inline void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
+        // Bind uniforms
+        _uniforms.bind();
+
         // Update camera properties
         _uniforms.update_camera(camera);
 

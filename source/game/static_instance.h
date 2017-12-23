@@ -209,9 +209,6 @@ class static_instance
     }
     void draw(const game::uniforms &uniforms) const
     {
-        // Activate the uniform buffer
-        uniforms.bind();
-
         // Bind VAO
         _buffer.bind();
 
