@@ -136,27 +136,6 @@ class fractex
         // return no mouse movement
         return std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
     }
-    inline void update_skill_state()
-    {
-        // Check if in jetpack mode
-        game::skill_state &skill = _state.get_skill_state();
-        if (skill.is_jetpack_mode() && skill.is_locked())
-        {
-            _world.character_jetpack();
-        }
-    }
-    inline void update_ui()
-    {
-        // Check cooldown state and update ui
-        if (_state.get_skill_state().check_cooldown())
-        {
-            _ui.set_target_cursor();
-        }
-        else
-        {
-            _ui.set_reload_cursor();
-        }
-    }
     inline void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
         // Bind uniforms
@@ -261,11 +240,8 @@ class fractex
         // Update the character state
         const bool update = _character.update(camera, dt);
 
-        // Update ui elements
-        update_ui();
-
-        // Update gun state
-        update_skill_state();
+        // Update control class
+        _controls.update();
 
         // Update all uniforms
         update_uniforms(camera, update);

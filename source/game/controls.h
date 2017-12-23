@@ -756,6 +756,35 @@ class controls
         text->set_screen(width, height);
         ui->set_screen(width, height);
     }
+    inline void update_skill_state()
+    {
+        // Check if in jetpack mode
+        game::skill_state &skill = _state->get_skill_state();
+        if (skill.is_jetpack_mode() && skill.is_locked())
+        {
+            _world->character_jetpack();
+        }
+    }
+    inline void update_ui()
+    {
+        // Check cooldown state and update ui
+        if (_state->get_skill_state().check_cooldown())
+        {
+            _ui->set_target_cursor();
+        }
+        else
+        {
+            _ui->set_reload_cursor();
+        }
+    }
+    void update()
+    {
+        // Update ui
+        update_ui();
+
+        // Update skill_state
+        update_skill_state();
+    }
 };
 }
 

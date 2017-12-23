@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __GUN_STATE__
-#define __GUN_STATE__
+#ifndef __SKILL_STATE__
+#define __SKILL_STATE__
 
 #include <chrono>
 #include <game/character.h>
@@ -28,7 +28,7 @@ namespace game
 class skill_state
 {
   private:
-    enum gun_mode
+    enum skill_mode
     {
         jetpack,
         beam,
@@ -41,7 +41,7 @@ class skill_state
     uint32_t _energy;
     bool _gun_active;
     bool _locked;
-    gun_mode _mode;
+    skill_mode _mode;
     bool _shoot_cooldown;
 
     inline double get_charge_time() const
@@ -62,7 +62,7 @@ class skill_state
     }
 
   public:
-    skill_state() : _energy(0), _gun_active(true), _locked(false), _mode(gun_mode::beam), _shoot_cooldown(false) {}
+    skill_state() : _energy(0), _gun_active(true), _locked(false), _mode(skill_mode::beam), _shoot_cooldown(false) {}
     inline void absorb(const int8_t atlas_id)
     {
         // Absorb this amount of energy
@@ -114,19 +114,19 @@ class skill_state
     }
     inline bool is_jetpack_mode() const
     {
-        return _mode == gun_mode::jetpack;
+        return _mode == skill_mode::jetpack;
     }
     inline bool is_beam_mode() const
     {
-        return _mode == gun_mode::beam;
+        return _mode == skill_mode::beam;
     }
     inline bool is_grapple_mode() const
     {
-        return _mode == gun_mode::grapple;
+        return _mode == skill_mode::grapple;
     }
     inline bool is_missile_mode() const
     {
-        return _mode == gun_mode::missile;
+        return _mode == skill_mode::missile;
     }
     inline bool is_locked() const
     {
@@ -142,28 +142,28 @@ class skill_state
     }
     inline void unlock_jetpack()
     {
-        if (_mode == gun_mode::jetpack)
+        if (_mode == skill_mode::jetpack)
         {
             _locked = false;
         }
     }
     inline void unlock_beam()
     {
-        if (_mode == gun_mode::beam)
+        if (_mode == skill_mode::beam)
         {
             _locked = false;
         }
     }
     inline void unlock_grapple()
     {
-        if (_mode == gun_mode::grapple)
+        if (_mode == skill_mode::grapple)
         {
             _locked = false;
         }
     }
     inline void unlock_missile()
     {
-        if (_mode == gun_mode::missile)
+        if (_mode == skill_mode::missile)
         {
             _locked = false;
         }
@@ -199,19 +199,19 @@ class skill_state
     }
     inline void set_jetpack_mode()
     {
-        _mode = gun_mode::jetpack;
+        _mode = skill_mode::jetpack;
     }
     inline void set_beam_mode()
     {
-        _mode = gun_mode::beam;
+        _mode = skill_mode::beam;
     }
     inline void set_grapple_mode()
     {
-        _mode = gun_mode::grapple;
+        _mode = skill_mode::grapple;
     }
     inline void set_missile_mode()
     {
-        _mode = gun_mode::missile;
+        _mode = skill_mode::missile;
     }
 };
 }
