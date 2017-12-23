@@ -41,8 +41,10 @@ class text
     min::text_buffer _text_buffer;
     std::vector<size_t> _indices;
     std::ostringstream _stream;
-    size_t _font;
+    size_t _font_size;
+    size_t _menu_offset;
     bool _draw;
+    bool _draw_menu;
 
     inline void add_text(const std::string &s, const float x, const float y)
     {
@@ -50,6 +52,14 @@ class text
 
         // Add text index to index buffer
         _indices.push_back(index);
+    }
+    inline void bind() const
+    {
+        // Bind the text_buffer vao, and textures on channel '1'
+        _text_buffer.bind(1);
+
+        // Bind the text program
+        _text_prog.use();
     }
     inline void clear_stream()
     {
@@ -60,30 +70,36 @@ class text
     {
         // Rescale all text items
         uint16_t y = height - 20;
-        for (const size_t index : _indices)
+        for (size_t i = 0; i < _menu_offset; i++)
         {
             // Update the text location
-            _text_buffer.set_text_location(index, 10, y);
-            y -= _font;
+            _text_buffer.set_text_location(i, 10, y);
+            y -= _font_size;
         }
+
+        // Position the menu elements
+        const float menu_x = (width / 2) - 1.903 * _font_size;
+        const float menu_y = (height / 2) - 0.3611 * _font_size;
+        _text_buffer.set_text_location(_menu_offset, menu_x, menu_y);
     }
     inline void update_text(const std::string &s, const size_t index)
     {
         _text_buffer.set_text(s, index);
     }
-    void upload()
+    inline void upload() const
     {
         // Upload the text glyphs to the GPU
         _text_buffer.upload();
     }
 
   public:
-    text(const size_t font, const uint16_t width, const uint16_t height)
+    text(const size_t font_size, const uint16_t width, const uint16_t height)
         : _text_vertex("data/shader/text.vertex", GL_VERTEX_SHADER),
           _text_fragment("data/shader/text.fragment", GL_FRAGMENT_SHADER),
           _text_prog(_text_vertex, _text_fragment),
-          _text_buffer("data/fonts/open_sans.ttf", font),
-          _font(font), _draw(false)
+          _text_buffer("data/fonts/open_sans.ttf", font_size),
+          _font_size(font_size), _menu_offset(8),
+          _draw(false), _draw_menu(false)
     {
         // Set the texture channel for this program, we need to do this here because we render text on channel '1'
         // _text_prog will be in use by the end of this call
@@ -93,60 +109,62 @@ class text
         _text_buffer.set_screen(width, height);
 
         // Add title text
-        uint16_t y = height - 20;
-        add_text("Fractex: Official Demo", 10, y);
+        add_text("Fractex: Official Demo", 0, 0);
 
-        // Add character position
-        y -= font;
-        add_text("X: Y: Z:", 10, y);
+        // Add 8 text entries
+        for (size_t i = 1; i < _menu_offset; i++)
+        {
+            add_text("", 0, 0);
+        }
 
-        // Add character direction
-        y -= font;
-        add_text("X: Y: Z:", 10, y);
+        // Menu PAUSE
+        add_text("PAUSED", 0, 0);
 
-        // Game mode
-        y -= font;
-        add_text("MODE: PLAY:", 10, y);
-
-        // Destination
-        y -= font;
-        add_text("DEST:", 10, y);
-
-        // Energy
-        y -= font;
-        add_text("ENERGY:", 10, y);
-
-        // FPS
-        y -= font;
-        add_text("FPS:", 10, y);
-
-        // IDLE
-        y -= font;
-        add_text("IDLE:", 10, y);
+        // Reposition all of the text
+        reposition_text(width, height);
     }
     void draw()
     {
-        if (_draw)
+        if (_draw && _draw_menu)
         {
-            // Bind the text_buffer vao, and textures on channel '1'
-            _text_buffer.bind(1);
+            // Bind texture and program
+            bind();
 
-            // Bind the text program
-            _text_prog.use();
-
-            // Draw the FPS text
+            // Draw all the  text
             _text_buffer.draw_all();
         }
+        else if (_draw)
+        {
+            // Bind texture and program
+            bind();
+
+            // Calculate last index in buffer
+            const size_t end = _menu_offset - 1;
+
+            // Draw only debug text
+            _text_buffer.draw(0, end);
+        }
+        else if (_draw_menu)
+        {
+            // Bind texture and program
+            bind();
+
+            // Calculate last index in buffer
+            const size_t end = _indices.size() - 1;
+
+            // Draw from menu start to end of buffer
+            _text_buffer.draw(_menu_offset, end);
+        }
     }
-    bool get_draw() const
+    inline bool get_draw() const
     {
         return _draw;
     }
-    void toggle_draw()
+    inline void set_draw_menu(const bool flag)
     {
-        _draw = !_draw;
+        _draw_menu = flag;
     }
-    void set_screen(const float width, const float height)
+    inline void set_screen(const float width, const float height)
     {
         // Update the text buffer screen dimensions
         _text_buffer.set_screen(width, height);
@@ -156,6 +174,10 @@ class text
 
         // Upload new text
         upload();
+    }
+    inline void toggle_draw()
+    {
+        _draw = !_draw;
     }
     void update_text(const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
                      const min::vec3<float> &goal, const double energy, const double fps, const double idle)

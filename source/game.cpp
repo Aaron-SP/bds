@@ -214,34 +214,38 @@ class fractex
         // Get player physics body position
         const min::vec3<float> &p = _world.character_position();
 
-        // get user input
-        const auto c = user_input();
-
-        // Must update state properties, camera before drawing world
-        _state.update(p, c, _win.get_width(), _win.get_height(), dt);
-
-        // Update the character
+        bool update = false;
         min::camera<float> &camera = _state.get_camera();
 
-        // If AI is in control
-        if (_world.get_ai_mode())
+        // If game is not paused update game state
+        if (!_state.get_game_pause())
         {
-            // Perform goal seek
-            _goal_seek.seek(_world, 0);
+            // get user input
+            const auto c = user_input();
+
+            // Must update state properties, camera before drawing world
+            _state.update(p, c, _win.get_width(), _win.get_height(), dt);
+
+            // If AI is in control
+            if (_world.get_ai_mode())
+            {
+                // Perform goal seek
+                _goal_seek.seek(_world, 0);
+            }
+
+            // Update the world state
+            _world.update(camera, dt);
+
+            // Update the particle system
+            _particles.set_velocity(_world.character_velocity());
+            _particles.update(camera, dt);
+
+            // Update the character state
+            update = _character.update(camera, dt);
+
+            // Update control class
+            _controls.update();
         }
-
-        // Update the world state
-        _world.update(camera, dt);
-
-        // Update the particle system
-        _particles.set_velocity(_world.character_velocity());
-        _particles.update(camera, dt);
-
-        // Update the character state
-        const bool update = _character.update(camera, dt);
-
-        // Update control class
-        _controls.update();
 
         // Update all uniforms
         update_uniforms(camera, update);
@@ -264,10 +268,6 @@ class fractex
     bool is_closed() const
     {
         return _win.get_shutdown();
-    }
-    bool is_paused() const
-    {
-        return _state.get_game_pause();
     }
     void set_title(const std::string &title)
     {
@@ -332,16 +332,11 @@ void run(const size_t frames, const size_t view)
             // Update the keyboard
             game.update_keyboard(frame_time);
 
-            // Is the game paused?
-            const bool skip = game.is_paused();
-            if (!skip)
-            {
-                // Clear the background color
-                game.clear_background();
+            // Clear the background color
+            game.clear_background();
 
-                // Draw the model
-                game.draw(frame_time);
-            }
+            // Draw the model
+            game.draw(frame_time);
 
             // Update the window after draw command
             game.update_window();

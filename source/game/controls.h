@@ -217,14 +217,12 @@ class controls
     }
     static void toggle_pause(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Get the state, text, window and ui pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Cast to state pointer for pausing
         game::state *const state = control->get_state();
-
-        // Cast to window pointer for setting window cursor
+        game::text *const text = control->get_text();
         min::window *const win = control->get_window();
+        game::ui_overlay *const ui = control->get_ui();
 
         // Toggle the game pause
         const bool mode = state->toggle_game_pause();
@@ -234,13 +232,29 @@ class controls
         {
             // Turn on cursor
             win->display_cursor(true);
+
+            // Set state text to pause
             state->set_game_mode("MODE: PAUSE");
+
+            // Turn on the menu
+            ui->set_draw_menu(true);
+
+            // Turn on the menu text
+            text->set_draw_menu(true);
         }
         else
         {
             // Turn off cursor
             win->display_cursor(false);
+
+            // Set state text to play
             state->set_game_mode("MODE: PLAY");
+
+            // Turn off the menu
+            ui->set_draw_menu(false);
+
+            // Turn off the menu text
+            text->set_draw_menu(false);
         }
     }
     static void toggle_edit_mode(void *ptr, double step)
@@ -357,7 +371,7 @@ class controls
     }
     static void key1_down(void *ptr, double step)
     {
-        // Get the ui, and skill_state pointer
+        // Get the skill_state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
@@ -371,7 +385,7 @@ class controls
     }
     static void key2_down(void *ptr, double step)
     {
-        // Get the ui, and skill_state pointer
+        // Get the skill_state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
@@ -385,7 +399,7 @@ class controls
     }
     static void key3_down(void *ptr, double step)
     {
-        // Get the ui, and skill_state pointer
+        // Get the skill_state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
@@ -398,7 +412,7 @@ class controls
     }
     static void key4_down(void *ptr, double step)
     {
-        // Get the ui, and skill_state pointer
+        // Get the skill_state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
