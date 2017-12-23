@@ -46,6 +46,7 @@ class world
     static constexpr float _falling_threshold = 1.0;
     static constexpr size_t _ray_max_dist = 100;
     static constexpr float _grav_mag = 10.0;
+    static constexpr float _explosion_radius = 4.0;
 
     // Terrain stuff
     game::terrain _terrain;
@@ -91,6 +92,7 @@ class world
     float _hook_length;
     bool _hooked;
     bool _falling;
+    bool _exploded;
 
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {
@@ -100,8 +102,6 @@ class world
         // return center position
         return center;
     }
-
-    // character_load should only be called once!
     inline void character_load(const std::pair<min::vec3<float>, bool> &state)
     {
         // Create a hitbox for character world collisions
@@ -135,10 +135,34 @@ class world
             const min::vec3<float> direction = (position + min::vec3<float>(-1.0, 0.0, 0.0)).normalize();
 
             // Remove geometry around player, requires position snapped to grid and calculated direction vector
-            explode_block(snapped, direction);
+            explode_block(snapped, direction, _scale, 100.0);
 
             // Reset scale to default value
             _scale = min::vec3<unsigned>(1, 1, 1);
+        }
+    }
+    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const float size = 100.0)
+    {
+        // Try to remove geometry from the grid
+        const unsigned removed = _grid.set_geometry(point, scale, _preview_offset, -1);
+
+        // If we removed geometry, play particles
+        if (removed > 0)
+        {
+            // generate new mesh
+            generate_terrain();
+
+            // Add particle effects
+            _particles->load_static_explode(point, direction, 5.0, size);
+
+            // Check if character is too close to the explosion
+            const min::vec3<float> &p = character_position();
+            const float d = (point - p).magnitude();
+            if (d < _explosion_radius)
+            {
+                // Signal dead
+                _exploded = true;
+            }
         }
     }
     // Generate all geometry in grid and adds it to geometry buffer
@@ -166,25 +190,6 @@ class world
 
         // Upload preview geometry
         _terrain.upload_preview(_terr_mesh);
-    }
-    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const float size = 100.0)
-    {
-        // Try to remove geometry from the grid
-        const unsigned removed = _grid.set_geometry(point, scale, _preview_offset, -1);
-
-        // If we removed geometry, play particles
-        if (removed > 0)
-        {
-            // generate new mesh
-            generate_terrain();
-
-            // Add particle effects
-            _particles->load_static_explode(point, direction, 5.0, size);
-        }
-    }
-    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction)
-    {
-        explode_block(point, direction, _scale);
     }
     inline void update_world_physics(const float dt)
     {
@@ -326,7 +331,7 @@ class world
         const auto on_collide = [this](const min::vec3<float> &point,
                                        const min::vec3<float> &direction,
                                        const min::vec3<unsigned> &scale) {
-            this->explode_block(point, direction, scale);
+            this->explode_block(point, direction, scale, 100.0);
         };
 
         // Update any missiles
@@ -355,7 +360,8 @@ class world
           _edit_mode(false),
           _hook_length(0.0),
           _hooked(false),
-          _falling(false)
+          _falling(false),
+          _exploded(false)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)
@@ -373,7 +379,7 @@ class world
         _terr_mesh.vertex.reserve(_pre_max_vol);
         _terr_mesh.index.reserve(_pre_max_vol);
 
-        // Load character
+        // character_load should only be called once!
         character_load(state);
 
         // Reserve space for collision cells
@@ -395,42 +401,6 @@ class world
 
         // generate new mesh
         generate_terrain();
-    }
-    inline int8_t explode_block(const min::ray<float, min::vec3> &r, const min::vec3<unsigned> &scale,
-                                const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
-    {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        int8_t value = -2;
-        const min::vec3<float> traced = _grid.ray_trace_last(r, _ray_max_dist, value);
-
-        // Get the atlas of target block, if hit a block remove it
-        if (value >= 0)
-        {
-            // Get direction for particle spray
-            const min::vec3<float> direction = r.get_direction() * -1.0;
-
-            // Invoke the function callback if provided
-            if (f)
-            {
-                // Get character body
-                min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-                // Call function callback
-                f(traced, body);
-            }
-
-            // Remove the block
-            const min::vec3<float> center = center_radius(traced, scale);
-            explode_block(center, direction, scale, size);
-        }
-
-        // return the block atlas id
-        return value;
-    }
-    inline int8_t explode_block(const min::ray<float, min::vec3> &r,
-                                const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
-    {
-        return explode_block(r, _scale, f, size);
     }
     inline size_t add_mob(const min::vec3<float> &p)
     {
@@ -582,6 +552,99 @@ class world
         // Warp character to new position
         body.set_position(p);
     }
+    void draw(game::uniforms &uniforms) const
+    {
+        // Draw the sky, uses geometry uniform buffer
+        _sky.draw();
+
+        // Binds textures and uses program
+        _terrain.bind();
+
+        // Draw the world geometry
+        _terrain.draw_terrain();
+
+        // Only draw if toggled
+        if (_edit_mode)
+        {
+            // Set uniforms to light1
+            uniforms.set_light2();
+
+            // Draw the placemark
+            _terrain.draw_placemark();
+
+            // Set uniforms to light1
+            uniforms.set_light1();
+        }
+
+        // Draw the static instances
+        _instance.draw(uniforms);
+
+        // Draw the explode particles
+        _particles->draw_static_explode(uniforms);
+
+        // Draw projectiles
+        _projectile.draw(uniforms);
+    }
+    inline int8_t explode_block(const min::ray<float, min::vec3> &r, const min::vec3<unsigned> &scale,
+                                const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
+    {
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        int8_t value = -2;
+        const min::vec3<float> traced = _grid.ray_trace_last(r, _ray_max_dist, value);
+
+        // Get the atlas of target block, if hit a block remove it
+        if (value >= 0)
+        {
+            // Get direction for particle spray
+            const min::vec3<float> direction = r.get_direction() * -1.0;
+
+            // Invoke the function callback if provided
+            if (f)
+            {
+                // Get character body
+                min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+                // Call function callback
+                f(traced, body);
+            }
+
+            // Remove the block
+            const min::vec3<float> center = center_radius(traced, scale);
+            explode_block(center, direction, scale, size);
+        }
+
+        // return the block atlas id
+        return value;
+    }
+    inline int8_t explode_block(const min::ray<float, min::vec3> &r,
+                                const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
+    {
+        return explode_block(r, _scale, f, size);
+    }
+    inline bool get_ai_mode()
+    {
+        return _ai_mode;
+    }
+    inline uint8_t get_atlas_id() const
+    {
+        return _grid.get_atlas();
+    }
+    inline bool get_edit_mode()
+    {
+        return _edit_mode;
+    }
+    inline const cgrid &get_grid() const
+    {
+        return _grid;
+    }
+    inline const static_instance &get_instances() const
+    {
+        return _instance;
+    }
+    inline const min::vec3<float> &get_preview_position()
+    {
+        return _preview;
+    }
     bool hook_set(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
@@ -599,18 +662,27 @@ class world
 
             // Calculate the hook length
             _hook_length = (out - r.get_origin()).magnitude();
-
-            // Signal that we hit a block
-            return true;
         }
 
         // return the end of ray
-        return false;
+        return _hooked;
     }
     void hook_abort()
     {
         // abort hooking
         _hooked = false;
+    }
+    inline bool is_exploded() const
+    {
+        return _exploded;
+    }
+    inline bool is_falling() const
+    {
+        return _falling;
+    }
+    inline bool is_hooked() const
+    {
+        return _hooked;
     }
     inline void launch_missile(const min::ray<float, min::vec3> &r)
     {
@@ -648,108 +720,6 @@ class world
         // Warp character to new position
         body.set_position(p);
     }
-    void update(min::camera<float> &cam, const float dt)
-    {
-        // Update the physics and AI in world
-        update_world_physics(dt);
-
-        // Get player position
-        const min::vec3<float> &p = character_position();
-
-        // Detect if we crossed a chunk boundary
-        const bool updated = _grid.update_chunk(p);
-        if (updated)
-        {
-            // Generate a new geometry mesh
-            generate_terrain();
-        }
-
-        // Calculate new placemark point
-        const min::vec3<float> dest = cam.project_point(3.0);
-
-        // Create a ray from camera to destination
-        const min::ray<float, min::vec3> r(cam.get_position(), dest);
-
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        _preview = _grid.ray_trace_prev(r, 6);
-
-        // Update offset x-vector
-        if (cam.get_forward().x() >= 0.0)
-        {
-            _cached_offset.x(1);
-        }
-        else
-        {
-            _cached_offset.x(-1);
-        }
-
-        // Update offset z-vector
-        if (cam.get_forward().z() >= 0.0)
-        {
-            _cached_offset.z(1);
-        }
-        else
-        {
-            _cached_offset.z(-1);
-        }
-    }
-    void draw(game::uniforms &uniforms) const
-    {
-        // Draw the sky, uses geometry uniform buffer
-        _sky.draw();
-
-        // Binds textures and uses program
-        _terrain.bind();
-
-        // Draw the world geometry
-        _terrain.draw_terrain();
-
-        // Only draw if toggled
-        if (_edit_mode)
-        {
-            // Set uniforms to light1
-            uniforms.set_light2();
-
-            // Draw the placemark
-            _terrain.draw_placemark();
-
-            // Set uniforms to light1
-            uniforms.set_light1();
-        }
-
-        // Draw the static instances
-        _instance.draw(uniforms);
-
-        // Draw the explode particles
-        _particles->draw_static_explode(uniforms);
-
-        // Draw projectiles
-        _projectile.draw(uniforms);
-    }
-    inline bool get_ai_mode()
-    {
-        return _ai_mode;
-    }
-    inline uint8_t get_atlas_id() const
-    {
-        return _grid.get_atlas();
-    }
-    inline bool get_edit_mode()
-    {
-        return _edit_mode;
-    }
-    inline const cgrid &get_grid() const
-    {
-        return _grid;
-    }
-    inline const static_instance &get_instances() const
-    {
-        return _instance;
-    }
-    inline const min::vec3<float> &get_preview_position()
-    {
-        return _preview;
-    }
     inline void reset_scale()
     {
         // Reset the scale and the cached offset
@@ -777,6 +747,11 @@ class world
             // Regenerate the preview mesh
             generate_preview();
         }
+    }
+    inline void set_destination(const min::vec3<float> &dest)
+    {
+        // Set destination point
+        _dest = dest;
     }
     void set_scale_x(unsigned dx)
     {
@@ -835,11 +810,6 @@ class world
             }
         }
     }
-    inline void set_destination(const min::vec3<float> &dest)
-    {
-        // Set destination point
-        _dest = dest;
-    }
     inline bool toggle_ai_mode()
     {
         // Toggle flag and return result
@@ -849,6 +819,51 @@ class world
     {
         // Toggle flag and return result
         return (_edit_mode = !_edit_mode);
+    }
+    void update(min::camera<float> &cam, const float dt)
+    {
+        // Update the physics and AI in world
+        update_world_physics(dt);
+
+        // Get player position
+        const min::vec3<float> &p = character_position();
+
+        // Detect if we crossed a chunk boundary
+        const bool updated = _grid.update_chunk(p);
+        if (updated)
+        {
+            // Generate a new geometry mesh
+            generate_terrain();
+        }
+
+        // Calculate new placemark point
+        const min::vec3<float> dest = cam.project_point(3.0);
+
+        // Create a ray from camera to destination
+        const min::ray<float, min::vec3> r(cam.get_position(), dest);
+
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        _preview = _grid.ray_trace_prev(r, 6);
+
+        // Update offset x-vector
+        if (cam.get_forward().x() >= 0.0)
+        {
+            _cached_offset.x(1);
+        }
+        else
+        {
+            _cached_offset.x(-1);
+        }
+
+        // Update offset z-vector
+        if (cam.get_forward().z() >= 0.0)
+        {
+            _cached_offset.z(1);
+        }
+        else
+        {
+            _cached_offset.z(-1);
+        }
     }
 };
 }

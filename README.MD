@@ -64,22 +64,14 @@ The '-view' flag is an optional parameter for controlling how many chunks are vi
 ### PLAYER USAGE INSTRUCTIONS:
 ![Alt text](pictures/spawn.png)
 
-1.) Keys [WASD] to move
-
-2.) Keys [Q] Enter/Exit block edit mode
-
-3.) Keys [ZXC] to scale unit block [E] to reset scale
-
-4.) Keys [1-8] to switch textures (edit mode)
-
-5.) Left mouse button to place and remove blocks (edit mode)
-
-6.) Right mouse button to launch a grappling hook
-
-7.) Key [F1] to quit
-
-8.) Key [F2] to toggle debug text
-
-9.) Key [ESCAPE] to pause the game
+1.) Keys [WASD]: forward/left/back/right
+2.) Key [Q]: switch between block edit mode and power suit mode
+3.) Keys [ZXC]: scale unit block (block edit mode)
+4.) Key [E]: reset scale unit block (block edit mode)
+5.) Keys [1-8]: switch textures (edit mode), switch power suit skills (power suit mode)
+6.) Left mouse: use skill (edit mode / power suite mode)
+7.) Key [F1]: quit
+8.) Key [F2]: toggle debug text
+9.) Key [ESCAPE]: pause the game
 
 
