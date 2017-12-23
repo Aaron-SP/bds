@@ -37,6 +37,15 @@ class projectile
     bool _launch;
     bool _remove;
 
+    static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
+    {
+        const min::vec3<float> offset(scale.x() / 2, scale.y() / 2, scale.z() / 2);
+        const min::vec3<float> center = p - offset;
+
+        // return center position
+        return center;
+    }
+
   public:
     projectile(particle *const particles, static_instance *const instance)
         : _instance(instance), _particles(particles), _scale(3, 3, 3),
@@ -118,11 +127,10 @@ class projectile
                         const min::vec3<float> dir = _ray.get_direction() * -1.0;
 
                         // Center the explosion point of missile explosion
-                        const min::vec3<float> offset(_scale.x() / 2, _scale.y() / 2, _scale.z() / 2);
-                        const min::vec3<float> exp = _traj.get_dest() - offset;
+                        const min::vec3<float> center = center_radius(_traj.get_dest(), _scale);
 
                         // Call function callback
-                        f(exp, dir, _scale);
+                        f(center, dir, _scale);
                     }
                 }
             }

@@ -28,6 +28,7 @@ namespace game
 class skill_state
 {
   private:
+    static constexpr uint32_t _max_energy = 256;
     enum skill_mode
     {
         jetpack,
@@ -43,6 +44,7 @@ class skill_state
     bool _locked;
     skill_mode _mode;
     bool _shoot_cooldown;
+    bool _charging;
 
     inline double get_charge_time() const
     {
@@ -63,13 +65,45 @@ class skill_state
 
   public:
     skill_state() : _energy(0), _gun_active(true), _locked(false), _mode(skill_mode::beam), _shoot_cooldown(false) {}
-    inline void absorb(const int8_t atlas_id)
+    inline void add_energy(const int8_t atlas_id)
     {
-        // Absorb this amount of energy
-        const uint32_t value = 0x1 << (atlas_id);
-        _energy += value;
+        // Absorb this amount of energy if not full
+        if (_energy < _max_energy)
+        {
+            const uint32_t value = 0x1 << (atlas_id);
+            _energy += value;
+
+            // Cap energy at maximum
+            if (_energy > _max_energy)
+            {
+                _energy = _max_energy;
+            }
+        }
     }
-    inline bool can_consume(const int8_t atlas_id)
+    inline bool activate_charge()
+    {
+        // Should we start charging?
+        if (!_charging)
+        {
+            // Check if we have activated beam mode
+            if (is_beam_mode() && _locked)
+            {
+                // If minimum charging has been activated
+                if (get_charge_time() > 250.0)
+                {
+                    // Set charging debounce
+                    _charging = true;
+
+                    // Activate charging
+                    return true;
+                }
+            }
+        }
+
+        // Do not active charging
+        return false;
+    }
+    inline bool can_consume(const int8_t atlas_id) const
     {
         // Try to consume energy
         const uint32_t value = 0x2 << (atlas_id);
@@ -104,9 +138,13 @@ class skill_state
     {
         return _energy;
     }
+    inline float get_energy_percent() const
+    {
+        return static_cast<float>(_energy) / _max_energy;
+    }
     inline bool is_beam_charged() const
     {
-        return is_beam_mode() && !_shoot_cooldown && get_charge_time() > 1000.0;
+        return is_beam_mode() && _locked && get_charge_time() > 1000.0;
     }
     inline bool is_gun_active() const
     {
@@ -140,18 +178,12 @@ class skill_state
     {
         _locked = true;
     }
-    inline void unlock_jetpack()
-    {
-        if (_mode == skill_mode::jetpack)
-        {
-            _locked = false;
-        }
-    }
     inline void unlock_beam()
     {
         if (_mode == skill_mode::beam)
         {
             _locked = false;
+            _charging = false;
         }
     }
     inline void unlock_grapple()
@@ -164,6 +196,13 @@ class skill_state
     inline void unlock_missile()
     {
         if (_mode == skill_mode::missile)
+        {
+            _locked = false;
+        }
+    }
+    inline void unlock_jetpack()
+    {
+        if (_mode == skill_mode::jetpack)
         {
             _locked = false;
         }

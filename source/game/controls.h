@@ -552,60 +552,55 @@ class controls
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
         skill_state &skill = state->get_skill_state();
-        game::ui_overlay *const ui = control->get_ui();
 
-        // Check if we are in beam mode
-        if (skill.is_gun_active() && skill.is_beam_mode() && skill.is_off_cooldown())
+        // Activate gun skill if active
+        if (skill.is_gun_active())
         {
-            // Record the start charge time
-            skill.start_charge();
-
-            // Activate charge animation
-            character->set_animation_charge(*cam);
-
-            // Lock the gun in beam mode
-            skill.lock();
-        }
-        else if (skill.is_grapple_mode())
-        {
-            // Try to consume energy to power this resource
-            const bool can_consume = skill.can_consume(10);
-            if (can_consume)
+            if (skill.is_beam_mode() && skill.is_off_cooldown())
             {
-                // Calculate new point to add
-                const min::vec3<float> proj = cam->project_point(3.0);
+                // Record the start charge time
+                skill.start_charge();
 
-                // Create a ray from camera to destination
-                const min::ray<float, min::vec3> r(cam->get_position(), proj);
-
-                // Fire grappling hook
-                min::vec3<float> point;
-                const bool hit = world->hook_set(r, point);
-                if (hit)
+                // Lock the gun in beam mode
+                skill.lock();
+            }
+            else if (skill.is_grapple_mode())
+            {
+                // Try to consume energy to power this resource
+                if (skill.can_consume(7))
                 {
-                    // Consume energy
-                    skill.consume(10);
+                    // Calculate new point to add
+                    const min::vec3<float> proj = cam->project_point(3.0);
 
-                    // Update the ui energy
-                    ui->set_energy(skill.get_energy() / 1048576.0);
+                    // Create a ray from camera to destination
+                    const min::ray<float, min::vec3> r(cam->get_position(), proj);
 
-                    // Activate grapple animation
-                    character->set_animation_grapple(point);
+                    // Fire grappling hook
+                    min::vec3<float> point;
+                    const bool hit = world->hook_set(r, point);
+                    if (hit)
+                    {
+                        // Consume energy
+                        skill.consume(7);
 
-                    // Lock the gun in beam mode
-                    skill.lock();
+                        // Activate grapple animation
+                        character->set_animation_grapple(point);
+
+                        // Lock the gun in beam mode
+                        skill.lock();
+                    }
                 }
             }
-        }
-        else if (skill.is_missile_mode() && skill.is_off_cooldown())
-        {
-            // Lock the gun in missile mode
-            skill.lock();
-        }
-        else if (skill.is_jetpack_mode())
-        {
-            // Lock the gun in jetpack mode
-            skill.lock();
+            else if (skill.is_missile_mode() && skill.is_off_cooldown())
+            {
+                // Lock the gun in missile mode
+                skill.lock();
+            }
+            else if (skill.is_jetpack_mode())
+            {
+                // Lock the gun in jetpack mode
+                skill.lock();
+            }
         }
     }
     static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
@@ -619,7 +614,6 @@ class controls
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
         skill_state &skill = state->get_skill_state();
-        game::ui_overlay *const ui = control->get_ui();
 
         // Check if we are in edit mode
         const bool mode = world->get_edit_mode();
@@ -640,9 +634,6 @@ class controls
 
                 // Add block to world
                 world->add_block(r);
-
-                // Update the ui
-                ui->set_energy(skill.get_energy() / 1048576.0);
             }
         }
         else if (skill.is_gun_active())
@@ -663,27 +654,43 @@ class controls
                 if (skill.is_beam_charged())
                 {
                     // Remove block from world, get the removed atlas
-                    const int8_t atlas = world->remove_block(r);
-                    if (atlas >= 0.0)
+                    if (skill.can_consume(5))
                     {
-                        // Absorb energy to create this resource
-                        skill.absorb(atlas);
+                        // Remove scaled block from world, get the removed atlas
+                        min::vec3<unsigned> explode_radius(3, 3, 3);
+                        const int8_t atlas = world->explode_block(r, explode_radius);
+                        if (atlas >= 0)
+                        {
+                            // Consume energy
+                            skill.consume(5);
 
-                        // Update the ui energy
-                        ui->set_energy(skill.get_energy() / 1048576.0);
+                            // Activate shoot animation
+                            character->set_animation_shoot();
 
-                        // Activate shoot animation
-                        character->set_animation_shoot();
-
-                        // Start gun cooldown timer
-                        skill.start_cooldown();
-
-                        // Unlock the gun if beam mode
-                        skill.unlock_beam();
+                            // Start gun cooldown timer
+                            skill.start_cooldown();
+                        }
                     }
+
+                    // Unlock the gun if beam mode
+                    skill.unlock_beam();
                 }
                 else if (skill.is_beam_mode())
                 {
+                    // Remove block from world, get the removed atlas
+                    if (skill.can_consume(6))
+                    {
+                        const int8_t atlas = world->explode_block(r, nullptr, 20.0);
+                        if (atlas >= 0)
+                        {
+                            // Consume energy
+                            skill.consume(6);
+
+                            // Activate shoot animation
+                            character->set_animation_shoot();
+                        }
+                    }
+
                     // Unlock the gun if beam mode
                     skill.unlock_beam();
                 }
@@ -701,12 +708,9 @@ class controls
                 else if (skill.is_missile_mode())
                 {
                     // Try to consume energy to create missile
-                    const bool consumed = skill.will_consume(12);
+                    const bool consumed = skill.will_consume(7);
                     if (consumed)
                     {
-                        // Update the ui energy
-                        ui->set_energy(skill.get_energy() / 1048576.0);
-
                         // Launch a missile
                         world->launch_missile(r);
 
@@ -756,13 +760,39 @@ class controls
         text->set_screen(width, height);
         ui->set_screen(width, height);
     }
+    inline void update_energy_regen()
+    {
+        // Regen energy
+        skill_state &skill = _state->get_skill_state();
+        if (!skill.is_locked())
+        {
+            skill.add_energy(1);
+        }
+
+        // Update the ui energy bar if not being used
+        _ui->set_energy(skill.get_energy_percent());
+    }
     inline void update_skill_state()
     {
         // Check if in jetpack mode
         game::skill_state &skill = _state->get_skill_state();
         if (skill.is_jetpack_mode() && skill.is_locked())
         {
-            _world->character_jetpack();
+            const bool consumed = skill.will_consume(1);
+            if (consumed)
+            {
+                _world->character_jetpack();
+            }
+            else
+            {
+                skill.unlock_jetpack();
+            }
+        }
+
+        // Activate charge animation
+        if (skill.activate_charge())
+        {
+            _character->set_animation_charge(*_camera);
         }
     }
     inline void update_ui()
@@ -779,6 +809,9 @@ class controls
     }
     void update()
     {
+        // Update energy regen
+        update_energy_regen();
+
         // Update ui
         update_ui();
 

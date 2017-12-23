@@ -50,7 +50,7 @@ class world
     // Terrain stuff
     game::terrain _terrain;
     std::vector<size_t> _view_chunks;
-    std::vector<min::aabbox<float, min::vec3>> _player_col_cells;
+    std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _player_col_cells;
     std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
 
     // Player control stuff
@@ -92,6 +92,15 @@ class world
     bool _hooked;
     bool _falling;
 
+    static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
+    {
+        const min::vec3<float> offset(scale.x() / 2, scale.y() / 2, scale.z() / 2);
+        const min::vec3<float> center = p - offset;
+
+        // return center position
+        return center;
+    }
+
     // character_load should only be called once!
     inline void character_load(const std::pair<min::vec3<float>, bool> &state)
     {
@@ -126,7 +135,7 @@ class world
             const min::vec3<float> direction = (position + min::vec3<float>(-1.0, 0.0, 0.0)).normalize();
 
             // Remove geometry around player, requires position snapped to grid and calculated direction vector
-            remove_block(snapped, direction);
+            explode_block(snapped, direction);
 
             // Reset scale to default value
             _scale = min::vec3<unsigned>(1, 1, 1);
@@ -158,7 +167,7 @@ class world
         // Upload preview geometry
         _terrain.upload_preview(_terr_mesh);
     }
-    inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale)
+    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const float size = 100.0)
     {
         // Try to remove geometry from the grid
         const unsigned removed = _grid.set_geometry(point, scale, _preview_offset, -1);
@@ -170,12 +179,12 @@ class world
             generate_terrain();
 
             // Add particle effects
-            _particles->load_static_explode(point, direction, 5.0, 20.0);
+            _particles->load_static_explode(point, direction, 5.0, size);
         }
     }
-    inline void remove_block(const min::vec3<float> &point, const min::vec3<float> &direction)
+    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction)
     {
-        remove_block(point, direction, _scale);
+        explode_block(point, direction, _scale);
     }
     inline void update_world_physics(const float dt)
     {
@@ -251,7 +260,30 @@ class world
             bool player_collide = false;
             for (const auto &cell : _player_col_cells)
             {
-                player_collide |= _simulation.collide(_char_id, cell);
+                // Did we collide with block?
+                const bool collide = _simulation.collide(_char_id, cell.first);
+
+                // If we collided with cell
+                if (collide)
+                {
+                    // Check for exploding mines
+                    if (cell.second == 5 || cell.second == 7)
+                    {
+                        // Calculate position and direction
+                        const min::vec3<unsigned> radius(3, 3, 3);
+                        const min::vec3<float> box_center = center_radius(cell.first.get_center(), radius);
+                        const min::vec3<float> dir = (p - box_center).normalize();
+
+                        // Explode the block with radius
+                        explode_block(box_center, dir, radius, 100.0);
+
+                        // Apply force to the body
+                        body.add_force(dir * 7000.0 * body.get_mass());
+                    }
+                }
+
+                // Set player collide
+                player_collide |= collide;
             }
 
             // Reset the jump condition if collided with cell, and moving in Y axis
@@ -294,7 +326,7 @@ class world
         const auto on_collide = [this](const min::vec3<float> &point,
                                        const min::vec3<float> &direction,
                                        const min::vec3<unsigned> &scale) {
-            this->remove_block(point, direction, scale);
+            this->explode_block(point, direction, scale);
         };
 
         // Update any missiles
@@ -364,7 +396,8 @@ class world
         // generate new mesh
         generate_terrain();
     }
-    inline int8_t remove_block(const min::ray<float, min::vec3> &r, const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr)
+    inline int8_t explode_block(const min::ray<float, min::vec3> &r, const min::vec3<unsigned> &scale,
+                                const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
         int8_t value = -2;
@@ -387,11 +420,17 @@ class world
             }
 
             // Remove the block
-            remove_block(traced, direction);
+            const min::vec3<float> center = center_radius(traced, scale);
+            explode_block(center, direction, scale, size);
         }
 
         // return the block atlas id
         return value;
+    }
+    inline int8_t explode_block(const min::ray<float, min::vec3> &r,
+                                const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
+    {
+        return explode_block(r, _scale, f, size);
     }
     inline size_t add_mob(const min::vec3<float> &p)
     {
@@ -419,7 +458,7 @@ class world
             min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
             // Add force to body
-            body.add_force(min::vec3<float>(0.0, 100.0 * body.get_mass(), 0.0));
+            body.add_force(min::vec3<float>(0.0, 150.0 * body.get_mass(), 0.0));
         }
     }
     inline void character_jump()

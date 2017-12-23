@@ -716,7 +716,7 @@ class cgrid
         // Run the function
         cubic_grid(start, offset, length, f);
     }
-    void create_player_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
+    void create_player_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
@@ -734,7 +734,10 @@ class cgrid
             if (_grid[key] != -1)
             {
                 // Create box at this point
-                out.push_back(create_box(grid_cell_center(key)));
+                const min::aabbox<float, min::vec3> box = create_box(grid_cell_center(key));
+
+                // Add box and grid value to
+                out.emplace_back(box, _grid[key]);
             }
         };
 
