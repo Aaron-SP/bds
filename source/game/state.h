@@ -19,7 +19,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #define __GAME_STATE__
 
 #include <game/character.h>
-#include <game/gun_state.h>
+#include <game/skill_state.h>
 
 namespace game
 {
@@ -38,7 +38,7 @@ class state
     bool _pause_mode;
     bool _pause_lock;
     bool _user_input;
-    gun_state _gun_state;
+    skill_state _skill_state;
 
     inline void load_camera()
     {
@@ -105,9 +105,9 @@ class state
     {
         return _pause_mode || _pause_lock;
     }
-    inline gun_state &get_gun_state()
+    inline skill_state &get_skill_state()
     {
-        return _gun_state;
+        return _skill_state;
     }
     inline const min::mat4<float> &get_model_matrix()
     {

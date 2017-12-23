@@ -136,10 +136,19 @@ class fractex
         // return no mouse movement
         return std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
     }
+    inline void update_skill_state()
+    {
+        // Check if in jetpack mode
+        game::skill_state &skill = _state.get_skill_state();
+        if (skill.is_jetpack_mode() && skill.is_locked())
+        {
+            _world.character_jetpack();
+        }
+    }
     inline void update_ui()
     {
         // Check cooldown state and update ui
-        if (_state.get_gun_state().check_cooldown())
+        if (_state.get_skill_state().check_cooldown())
         {
             _ui.set_target_cursor();
         }
@@ -255,6 +264,9 @@ class fractex
         // Update ui elements
         update_ui();
 
+        // Update gun state
+        update_skill_state();
+
         // Update all uniforms
         update_uniforms(camera, update);
 
@@ -262,7 +274,7 @@ class fractex
         _world.draw(_uniforms);
 
         // Draw the character if fire mode activated
-        if (_state.get_gun_state().is_gun_active())
+        if (_state.get_skill_state().is_gun_active())
         {
             _character.draw(_uniforms);
         }
@@ -310,7 +322,7 @@ class fractex
             const min::vec3<float> &f = _state.get_camera().get_forward();
             const std::string &mode = _state.get_game_mode();
             const min::vec3<float> &goal = _goal_seek.get_goal();
-            const double energy = _state.get_gun_state().get_energy();
+            const double energy = _state.get_skill_state().get_energy();
 
             // Update all text and upload it
             _text.update_text(p, f, mode, goal, energy, fps, idle);

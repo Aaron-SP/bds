@@ -49,14 +49,14 @@ class ui_overlay
     // Icons
     static constexpr float _x_reload_uv = 4.0 / 512.0;
     static constexpr float _y_reload_uv = 40.0 / 512.0;
-    static constexpr float _x_jet_uv = 40.0 / 512.0;
-    static constexpr float _y_jet_uv = 40.0 / 512.0;
-    static constexpr float _x_ex_uv = 76.0 / 512.0;
-    static constexpr float _y_ex_uv = 40.0 / 512.0;
-    static constexpr float _x_miss_uv = 112.0 / 512.0;
+    static constexpr float _x_beam_uv = 40.0 / 512.0;
+    static constexpr float _y_beam_uv = 40.0 / 512.0;
+    static constexpr float _x_miss_uv = 76.0 / 512.0;
     static constexpr float _y_miss_uv = 40.0 / 512.0;
-    static constexpr float _x_up_uv = 148.0 / 512.0;
-    static constexpr float _y_up_uv = 40.0 / 512.0;
+    static constexpr float _x_grap_uv = 112.0 / 512.0;
+    static constexpr float _y_grap_uv = 40.0 / 512.0;
+    static constexpr float _x_jet_uv = 148.0 / 512.0;
+    static constexpr float _y_jet_uv = 40.0 / 512.0;
 
     // Scale sizes
     static constexpr float _s_bg = 40.0;
@@ -305,23 +305,14 @@ class ui_overlay
         // Load rect at position
         set_rect(10, p, scale, red_coord);
     }
-    inline void load_jet_icon(const size_t index)
+    inline void load_beam_icon(const size_t index)
     {
         const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
-        const min::vec3<float> jet_coord = min::vec3<float>(_x_jet_uv, _y_jet_uv, _s_uv);
+        const min::vec3<float> beam_coord = min::vec3<float>(_x_beam_uv, _y_beam_uv, _s_uv);
 
         // Load rect at position
-        set_rect(11, p, scale, jet_coord);
-    }
-    inline void load_explode_icon(const size_t index)
-    {
-        const min::vec2<float> p = toolbar_position(index);
-        const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
-        const min::vec3<float> ex_coord = min::vec3<float>(_x_ex_uv, _y_ex_uv, _s_uv);
-
-        // Load rect at position
-        set_rect(12, p, scale, ex_coord);
+        set_rect(11, p, scale, beam_coord);
     }
     inline void load_missile_icon(const size_t index)
     {
@@ -330,16 +321,25 @@ class ui_overlay
         const min::vec3<float> miss_coord = min::vec3<float>(_x_miss_uv, _y_miss_uv, _s_uv);
 
         // Load rect at position
-        set_rect(13, p, scale, miss_coord);
+        set_rect(12, p, scale, miss_coord);
     }
-    inline void load_up_icon(const size_t index)
+    inline void load_grapple_icon(const size_t index)
     {
         const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
-        const min::vec3<float> up_coord = min::vec3<float>(_x_up_uv, _y_up_uv, _s_uv);
+        const min::vec3<float> grap_coord = min::vec3<float>(_x_grap_uv, _y_grap_uv, _s_uv);
 
         // Load rect at position
-        set_rect(14, p, scale, up_coord);
+        set_rect(13, p, scale, grap_coord);
+    }
+    inline void load_jet_icon(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale = min::vec2<float>(_s_fg, _s_fg);
+        const min::vec3<float> jet_coord = min::vec3<float>(_x_jet_uv, _y_jet_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(14, p, scale, jet_coord);
     }
     inline void position_ui()
     {
@@ -366,7 +366,7 @@ class ui_overlay
           _prog(_vertex, _fragment),
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
-          _index(0), _selected(1),
+          _index(0), _selected(0),
           _energy(0.0), _health(1.0)
     {
         // Create the instance rectangle
@@ -485,13 +485,13 @@ class ui_overlay
         switch (index)
         {
         case 0:
-            return load_jet_icon(index);
+            return load_beam_icon(index);
         case 1:
-            return load_explode_icon(index);
-        case 2:
             return load_missile_icon(index);
+        case 2:
+            return load_grapple_icon(index);
         case 3:
-            return load_up_icon(index);
+            return load_jet_icon(index);
         }
     }
 };

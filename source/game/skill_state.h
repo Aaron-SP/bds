@@ -25,11 +25,12 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-class gun_state
+class skill_state
 {
   private:
     enum gun_mode
     {
+        jetpack,
         beam,
         grapple,
         missile
@@ -61,7 +62,7 @@ class gun_state
     }
 
   public:
-    gun_state() : _energy(0), _gun_active(true), _locked(false), _mode(gun_mode::beam), _shoot_cooldown(false) {}
+    skill_state() : _energy(0), _gun_active(true), _locked(false), _mode(gun_mode::beam), _shoot_cooldown(false) {}
     inline void absorb(const int8_t atlas_id)
     {
         // Absorb this amount of energy
@@ -111,6 +112,10 @@ class gun_state
     {
         return _gun_active;
     }
+    inline bool is_jetpack_mode() const
+    {
+        return _mode == gun_mode::jetpack;
+    }
     inline bool is_beam_mode() const
     {
         return _mode == gun_mode::beam;
@@ -134,6 +139,13 @@ class gun_state
     inline void lock()
     {
         _locked = true;
+    }
+    inline void unlock_jetpack()
+    {
+        if (_mode == gun_mode::jetpack)
+        {
+            _locked = false;
+        }
     }
     inline void unlock_beam()
     {
@@ -184,6 +196,10 @@ class gun_state
     inline void set_gun_active(const bool mode)
     {
         _gun_active = mode;
+    }
+    inline void set_jetpack_mode()
+    {
+        _mode = gun_mode::jetpack;
     }
     inline void set_beam_mode()
     {

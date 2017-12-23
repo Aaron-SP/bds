@@ -410,11 +410,24 @@ class world
 
         return mob_id;
     }
-    inline void character_jump(const min::vec3<float> &vel)
+    inline void character_jetpack()
     {
         // If not hooked
         if (!_hooked)
         {
+            // Get the character body
+            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+            // Add force to body
+            body.add_force(min::vec3<float>(0.0, 100.0 * body.get_mass(), 0.0));
+        }
+    }
+    inline void character_jump()
+    {
+        // If not hooked
+        if (!_hooked)
+        {
+            // Get the character body
             min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
             // Allow user to jump and user boosters
@@ -424,7 +437,7 @@ class world
                 _jump_count++;
 
                 // Add force to body
-                body.add_force(vel * 4000.0 * body.get_mass());
+                body.add_force(min::vec3<float>(0.0, 4000.0 * body.get_mass(), 0.0));
             }
             else if (_jump_count == 1)
             {
@@ -432,7 +445,7 @@ class world
                 _jump_count++;
 
                 // Add force to body
-                body.add_force(vel * 6000.0 * body.get_mass());
+                body.add_force(min::vec3<float>(0.0, 5000.0 * body.get_mass(), 0.0));
             }
         }
     }

@@ -251,13 +251,13 @@ class controls
         // Get the world and state pointers
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
-        gun_state &gun = state->get_gun_state();
+        skill_state &skill = state->get_skill_state();
 
         // toggle edit mode
         const bool mode = world->toggle_edit_mode();
 
         // toggle fire mode if not in edit mode
-        gun.set_gun_active(!mode);
+        skill.set_gun_active(!mode);
 
         // reset scale
         world->reset_scale();
@@ -330,11 +330,11 @@ class controls
     }
     void key_down(const size_t index, const std::function<void(void)> &f)
     {
-        // Get the gun_state pointer
-        gun_state &gun = _state->get_gun_state();
+        // Get the skill_state pointer
+        skill_state &skill = _state->get_skill_state();
 
         // If gun is active
-        if (!gun.is_locked() && gun.is_gun_active())
+        if (!skill.is_locked() && skill.is_gun_active())
         {
             // Modify ui toolbar
             _ui->set_key_down(index);
@@ -357,54 +357,55 @@ class controls
     }
     static void key1_down(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Get the ui, and skill_state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        control->key_down(0, nullptr);
+        game::state *const state = control->get_state();
+        skill_state &skill = state->get_skill_state();
+
+        // Switch to beam weapon type
+        const auto f = [&skill]() {
+            skill.set_beam_mode();
+        };
+
+        control->key_down(0, f);
     }
     static void key2_down(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Get the ui, and skill_state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the ui, world and gun_state pointer
         game::state *const state = control->get_state();
-        gun_state &gun = state->get_gun_state();
+        skill_state &skill = state->get_skill_state();
 
-        // Switch to beam weapon type
-        const auto f = [&gun]() {
-            gun.set_beam_mode();
+        // Switch to missile weapon type
+        const auto f = [&skill]() {
+            skill.set_missile_mode();
         };
 
         control->key_down(1, f);
     }
     static void key3_down(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Get the ui, and skill_state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the ui, world and gun_state pointer
         game::state *const state = control->get_state();
-        gun_state &gun = state->get_gun_state();
+        skill_state &skill = state->get_skill_state();
 
-        // Switch to missile weapon type
-        const auto f = [&gun]() {
-            gun.set_missile_mode();
+        // Switch to grapple weapon type
+        const auto f = [&skill]() {
+            skill.set_grapple_mode();
         };
-
         control->key_down(2, f);
     }
     static void key4_down(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Get the ui, and skill_state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the ui, world and gun_state pointer
         game::state *const state = control->get_state();
-        gun_state &gun = state->get_gun_state();
+        skill_state &skill = state->get_skill_state();
 
-        // Switch to grapple weapon type
-        const auto f = [&gun]() {
-            gun.set_grapple_mode();
+        // Switch to beam weapon type
+        const auto f = [&skill]() {
+            skill.set_jetpack_mode();
         };
 
         control->key_down(3, f);
@@ -550,25 +551,25 @@ class controls
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
-        gun_state &gun = state->get_gun_state();
+        skill_state &skill = state->get_skill_state();
         game::ui_overlay *const ui = control->get_ui();
 
         // Check if we are in beam mode
-        if (gun.is_gun_active() && gun.is_beam_mode() && gun.is_off_cooldown())
+        if (skill.is_gun_active() && skill.is_beam_mode() && skill.is_off_cooldown())
         {
             // Record the start charge time
-            gun.start_charge();
+            skill.start_charge();
 
             // Activate charge animation
             character->set_animation_charge(*cam);
 
             // Lock the gun in beam mode
-            gun.lock();
+            skill.lock();
         }
-        else if (gun.is_grapple_mode())
+        else if (skill.is_grapple_mode())
         {
             // Try to consume energy to power this resource
-            const bool can_consume = gun.can_consume(10);
+            const bool can_consume = skill.can_consume(10);
             if (can_consume)
             {
                 // Calculate new point to add
@@ -583,23 +584,28 @@ class controls
                 if (hit)
                 {
                     // Consume energy
-                    gun.consume(10);
+                    skill.consume(10);
 
                     // Update the ui energy
-                    ui->set_energy(gun.get_energy() / 1048576.0);
+                    ui->set_energy(skill.get_energy() / 1048576.0);
 
                     // Activate grapple animation
                     character->set_animation_grapple(point);
 
                     // Lock the gun in beam mode
-                    gun.lock();
+                    skill.lock();
                 }
             }
         }
-        else if (gun.is_missile_mode() && gun.is_off_cooldown())
+        else if (skill.is_missile_mode() && skill.is_off_cooldown())
         {
-            // Lock the gun in beam mode
-            gun.lock();
+            // Lock the gun in missile mode
+            skill.lock();
+        }
+        else if (skill.is_jetpack_mode())
+        {
+            // Lock the gun in jetpack mode
+            skill.lock();
         }
     }
     static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
@@ -612,7 +618,7 @@ class controls
         game::world *const world = control->get_world();
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
-        gun_state &gun = state->get_gun_state();
+        skill_state &skill = state->get_skill_state();
         game::ui_overlay *const ui = control->get_ui();
 
         // Check if we are in edit mode
@@ -623,7 +629,7 @@ class controls
             const int8_t atlas = world->get_atlas_id();
 
             // Try to consume energy to create this resource
-            const bool consumed = gun.will_consume(atlas);
+            const bool consumed = skill.will_consume(atlas);
             if (consumed)
             {
                 // Calculate new point to add
@@ -636,10 +642,10 @@ class controls
                 world->add_block(r);
 
                 // Update the ui
-                ui->set_energy(gun.get_energy() / 1048576.0);
+                ui->set_energy(skill.get_energy() / 1048576.0);
             }
         }
-        else if (gun.is_gun_active())
+        else if (skill.is_gun_active())
         {
             // Abort the charge animation
             character->abort_animation_shoot();
@@ -651,37 +657,37 @@ class controls
             const min::ray<float, min::vec3> r(cam->get_position(), point);
 
             // If the gun is locked into a mode
-            if (gun.is_locked())
+            if (skill.is_locked())
             {
                 // If we are in beam mode and charged up
-                if (gun.is_beam_charged())
+                if (skill.is_beam_charged())
                 {
                     // Remove block from world, get the removed atlas
                     const int8_t atlas = world->remove_block(r);
                     if (atlas >= 0.0)
                     {
                         // Absorb energy to create this resource
-                        gun.absorb(atlas);
+                        skill.absorb(atlas);
 
                         // Update the ui energy
-                        ui->set_energy(gun.get_energy() / 1048576.0);
+                        ui->set_energy(skill.get_energy() / 1048576.0);
 
                         // Activate shoot animation
                         character->set_animation_shoot();
 
                         // Start gun cooldown timer
-                        gun.start_cooldown();
+                        skill.start_cooldown();
 
                         // Unlock the gun if beam mode
-                        gun.unlock_beam();
+                        skill.unlock_beam();
                     }
                 }
-                else if (gun.is_beam_mode())
+                else if (skill.is_beam_mode())
                 {
                     // Unlock the gun if beam mode
-                    gun.unlock_beam();
+                    skill.unlock_beam();
                 }
-                else if (gun.is_grapple_mode())
+                else if (skill.is_grapple_mode())
                 {
                     //Abort grappling hook
                     world->hook_abort();
@@ -690,16 +696,16 @@ class controls
                     character->abort_animation_grapple();
 
                     // Unlock the gun if beam mode
-                    gun.unlock_grapple();
+                    skill.unlock_grapple();
                 }
-                else if (gun.is_missile_mode())
+                else if (skill.is_missile_mode())
                 {
                     // Try to consume energy to create missile
-                    const bool consumed = gun.will_consume(12);
+                    const bool consumed = skill.will_consume(12);
                     if (consumed)
                     {
                         // Update the ui energy
-                        ui->set_energy(gun.get_energy() / 1048576.0);
+                        ui->set_energy(skill.get_energy() / 1048576.0);
 
                         // Launch a missile
                         world->launch_missile(r);
@@ -708,11 +714,16 @@ class controls
                         character->set_animation_shoot();
 
                         // Start gun cooldown timer
-                        gun.start_cooldown();
+                        skill.start_cooldown();
                     }
 
-                    // Unlock the gun if beam mode
-                    gun.unlock_missile();
+                    // Unlock the gun if missile mode
+                    skill.unlock_missile();
+                }
+                else if (skill.is_jetpack_mode())
+                {
+                    // Unlock the gun if jetpack mode
+                    skill.unlock_jetpack();
                 }
             }
         }
@@ -721,7 +732,7 @@ class controls
     {
         // Get the world pointer
         game::world *const world = reinterpret_cast<game::world *>(ptr);
-        world->character_jump(min::vec3<float>(0.0, 1.0, 0.0));
+        world->character_jump();
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {
