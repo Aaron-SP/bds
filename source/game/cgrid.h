@@ -305,7 +305,7 @@ class cgrid
         });
 
         // Random numbers between -1.0, and 1.0
-        std::uniform_int_distribution<int8_t> dist(0, 15);
+        std::uniform_int_distribution<int8_t> dist(0, 4);
         std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
         // Generate height map
@@ -325,8 +325,25 @@ class cgrid
                     const uint8_t height = static_cast<uint8_t>(std::round(map.get(i, k)));
                     if (j < height)
                     {
-                        // Do function for cubic space
-                        _grid[grid_key_pack(std::make_tuple(i, j, k))] = dist(gen);
+                        // Select ground textures
+                        switch (dist(gen))
+                        {
+                        case 0:
+                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 1;
+                            break;
+                        case 1:
+                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 10;
+                            break;
+                        case 2:
+                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 13;
+                            break;
+                        case 3:
+                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 14;
+                            break;
+                        case 4:
+                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 15;
+                            break;
+                        }
                     }
                 }
             }

@@ -58,15 +58,26 @@ class ui_overlay
     static constexpr float _x_jet_uv = 148.0 / 512.0;
     static constexpr float _y_jet_uv = 40.0 / 512.0;
 
+    // Menu text
+    static constexpr float _x_dead_uv = 4.0 / 512.0;
+    static constexpr float _y_dead_uv = 384.0 / 512.0;
+    static constexpr float _x_pause_uv = 4.0 / 512.0;
+    static constexpr float _y_pause_uv = 256.0 / 512.0;
+
     // Scale sizes
     static constexpr float _s_bg = 40.0;
     static constexpr float _s_fg = 32.0;
-    static constexpr float _s_menu = 256.0;
     static constexpr float _s_uv = 32.0 / 512.0;
     static constexpr float _s_red_x = 32.0;
     static constexpr float _s_red_y = 96.0;
     static constexpr float _s_blue_x = 32.0;
     static constexpr float _s_blue_y = 96.0;
+
+    // Menu sizes
+    static constexpr float _s_menu_x = 504.0;
+    static constexpr float _s_menu_y = 124.0;
+    static constexpr float _s_menu_uv_x = 504.0 / 512.0;
+    static constexpr float _s_menu_uv_y = 124.0 / 512.0;
 
     // Placement values
     static constexpr size_t _num_buttons = 8;
@@ -121,11 +132,12 @@ class ui_overlay
         // return the index
         return _v.size() - 1;
     }
-    inline void set_uv(const size_t index, const min::vec3<float> &coord)
+    inline void set_uv(const size_t index, const min::vec4<float> &coord)
     {
         // Add uv matrix to buffer
-        const float z = coord.z();
-        _uv[index].set_scale(min::vec2<float>(z, z));
+        const float sx = coord.z();
+        const float sy = coord.w();
+        _uv[index].set_scale(min::vec2<float>(sx, sy));
         _uv[index].set_translation(min::vec2<float>(coord.x(), coord.y()));
     }
     inline std::pair<min::vec2<float>, min::vec2<float>> to_screen(const min::vec2<float> &p, const min::vec2<float> &scale)
@@ -143,7 +155,7 @@ class ui_overlay
 
         return std::make_pair(min::vec2<float>(ox, oy), min::vec2<float>(size_x, size_y));
     }
-    inline void set_rect(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec3<float> &coord)
+    inline void set_rect(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec4<float> &coord)
     {
         // Calculate screen coordinates
         const auto ps = to_screen(p, scale);
@@ -155,7 +167,7 @@ class ui_overlay
         // Set uv coordinates
         set_uv(index, coord);
     }
-    inline void set_rect_reset(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec3<float> &coord)
+    inline void set_rect_reset(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec4<float> &coord)
     {
         // Calculate screen coordinates
         const auto ps = to_screen(p, scale);
@@ -167,7 +179,7 @@ class ui_overlay
         // Set uv coordinates
         set_uv(index, coord);
     }
-    inline void set_rect_rot(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec3<float> &coord, const float angle)
+    inline void set_rect_rot(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec4<float> &coord, const float angle)
     {
         // Calculate screen coordinates
         const auto ps = to_screen(p, scale);
@@ -237,7 +249,7 @@ class ui_overlay
     {
         const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_bg, _s_bg);
-        const min::vec3<float> black_coord(_x_black_uv, _y_black_uv, _s_uv);
+        const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(index, p, scale, black_coord);
@@ -246,7 +258,7 @@ class ui_overlay
     {
         const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_bg, _s_bg);
-        const min::vec3<float> red_coord(_x_red_uv, _y_red_uv, _s_uv);
+        const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(index, p, scale, red_coord);
@@ -255,7 +267,7 @@ class ui_overlay
     {
         const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_bg, _s_bg);
-        const min::vec3<float> yellow_coord(_x_yellow_uv, _y_yellow_uv, _s_uv);
+        const min::vec4<float> yellow_coord(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(index, p, scale, yellow_coord);
@@ -264,7 +276,7 @@ class ui_overlay
     {
         const min::vec2<float> p(_center_w, _center_h);
         const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec3<float> fps_coord(_x_cursor_uv, _y_cursor_uv, _s_uv);
+        const min::vec4<float> fps_coord(_x_cursor_uv, _y_cursor_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect_reset(8, p, scale, fps_coord);
@@ -273,7 +285,7 @@ class ui_overlay
     {
         const min::vec2<float> p(_center_w, _center_h);
         const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec3<float> reload_coord(_x_reload_uv, _y_reload_uv, _s_uv);
+        const min::vec4<float> reload_coord(_x_reload_uv, _y_reload_uv, _s_uv, _s_uv);
 
         // Rotate rect by angle
         _cursor_angle -= 4.0;
@@ -291,7 +303,7 @@ class ui_overlay
         const float y_offset = (y_height - _s_blue_x) * 0.5 + _tool_height;
         const min::vec2<float> p(_center_w + _energy_start, y_offset);
         const min::vec2<float> scale(_s_blue_x, y_height);
-        const min::vec3<float> blue_coord(_x_blue_uv, _y_blue_uv, _s_uv);
+        const min::vec4<float> blue_coord(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(9, p, scale, blue_coord);
@@ -302,7 +314,7 @@ class ui_overlay
         const float y_offset = (y_height - _s_red_x) * 0.5 + _tool_height;
         const min::vec2<float> p(_center_w + _health_start, y_offset);
         const min::vec2<float> scale(_s_red_x, y_height);
-        const min::vec3<float> red_coord(_x_red_uv, _y_red_uv, _s_uv);
+        const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(10, p, scale, red_coord);
@@ -311,7 +323,7 @@ class ui_overlay
     {
         const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec3<float> beam_coord(_x_beam_uv, _y_beam_uv, _s_uv);
+        const min::vec4<float> beam_coord(_x_beam_uv, _y_beam_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(11, p, scale, beam_coord);
@@ -320,7 +332,7 @@ class ui_overlay
     {
         const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec3<float> miss_coord(_x_miss_uv, _y_miss_uv, _s_uv);
+        const min::vec4<float> miss_coord(_x_miss_uv, _y_miss_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(12, p, scale, miss_coord);
@@ -329,7 +341,7 @@ class ui_overlay
     {
         const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec3<float> grap_coord(_x_grap_uv, _y_grap_uv, _s_uv);
+        const min::vec4<float> grap_coord(_x_grap_uv, _y_grap_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(13, p, scale, grap_coord);
@@ -338,19 +350,28 @@ class ui_overlay
     {
         const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec3<float> jet_coord(_x_jet_uv, _y_jet_uv, _s_uv);
+        const min::vec4<float> jet_coord(_x_jet_uv, _y_jet_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(14, p, scale, jet_coord);
     }
-    inline void load_menu_background()
+    inline void load_menu_dead()
     {
         const min::vec2<float> p(_center_w, _center_h);
-        const min::vec2<float> scale(_s_menu, _s_menu);
-        const min::vec3<float> menu_coord(_x_black_uv, _y_black_uv, _s_uv);
+        const min::vec2<float> scale(_s_menu_x, _s_menu_y);
+        const min::vec4<float> pause_coord(_x_dead_uv, _y_dead_uv, _s_menu_uv_x, _s_menu_uv_y);
 
         // Load rect at position
-        set_rect(15, p, scale, menu_coord);
+        set_rect(15, p, scale, pause_coord);
+    }
+    inline void load_menu_pause()
+    {
+        const min::vec2<float> p(_center_w, _center_h);
+        const min::vec2<float> scale(_s_menu_x, _s_menu_y);
+        const min::vec4<float> pause_coord(_x_pause_uv, _y_pause_uv, _s_menu_uv_x, _s_menu_uv_y);
+
+        // Load rect at position
+        set_rect(15, p, scale, pause_coord);
     }
     inline void position_ui()
     {
@@ -369,8 +390,8 @@ class ui_overlay
         // Add Health meter
         load_health_meter();
 
-        // Load menu background
-        load_menu_background();
+        // Load pause text
+        load_menu_pause();
     }
 
   public:
@@ -442,9 +463,13 @@ class ui_overlay
     {
         return _uv;
     }
-    inline void set_draw_menu(const bool flag)
+    inline void respawn()
     {
-        _draw_menu = flag;
+        // Reset menu
+        set_menu_pause();
+
+        // Turn off showing menu
+        _draw_menu = false;
     }
     inline void set_energy(const float energy)
     {
@@ -501,6 +526,18 @@ class ui_overlay
         case 3:
             return load_jet_icon(index);
         }
+    }
+    inline void set_menu_draw(const bool flag)
+    {
+        _draw_menu = flag;
+    }
+    inline void set_menu_dead()
+    {
+        load_menu_dead();
+    }
+    inline void set_menu_pause()
+    {
+        load_menu_pause();
     }
     inline void set_reload_cursor()
     {

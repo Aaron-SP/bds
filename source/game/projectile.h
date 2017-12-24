@@ -33,6 +33,7 @@ class projectile
     min::ray<float, min::vec3> _ray;
     min::vec3<unsigned> _scale;
     min::sample<float, min::vec3> _traj;
+    int8_t _value;
     size_t _id;
     bool _launch;
     bool _remove;
@@ -64,11 +65,11 @@ class projectile
         _ray = r;
 
         // Trace a ray to the destination point to find placement position, return point is snapped
-        int8_t value = -2;
-        const min::vec3<float> traced = grid.ray_trace_last(r, max_length, value);
+        _value = -2;
+        const min::vec3<float> traced = grid.ray_trace_last(r, max_length, _value);
 
         // Record if we hit a block to remove
-        _remove = value >= 0;
+        _remove = _value >= 0;
 
         // Enabled missile launching
         _launch = true;
@@ -98,7 +99,8 @@ class projectile
                        const std::function<void(
                            const min::vec3<float> &point,
                            const min::vec3<float> &direction,
-                           const min::vec3<unsigned> &scale)> &f = nullptr)
+                           const min::vec3<unsigned> &scale,
+                           const size_t value)> &f = nullptr)
     {
         if (_launch)
         {
@@ -130,7 +132,7 @@ class projectile
                         const min::vec3<float> center = center_radius(_traj.get_dest(), _scale);
 
                         // Call function callback
-                        f(center, dir, _scale);
+                        f(center, dir, _scale, _value);
                     }
                 }
             }

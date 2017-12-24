@@ -36,6 +36,14 @@ namespace game
 class controls
 {
   private:
+    static constexpr float _block_cost = 90.0;
+    static constexpr float _beam_cost = 40.0;
+    static constexpr float _beam_charge_cost = 20.0;
+    static constexpr float _missile_cost = 90.0;
+    static constexpr float _grapple_cost = 90.0;
+    static constexpr float _jet_cost = 0.75;
+    static constexpr float _health_regen = 0.05;
+    static constexpr float _energy_regen = 0.25;
     min::window *_window;
     min::camera<float> *_camera;
     game::character *_character;
@@ -220,7 +228,6 @@ class controls
         // Get the state, text, window and ui pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
         game::state *const state = control->get_state();
-        game::text *const text = control->get_text();
         min::window *const win = control->get_window();
         game::ui_overlay *const ui = control->get_ui();
 
@@ -237,10 +244,7 @@ class controls
             state->set_game_mode("MODE: PAUSE");
 
             // Turn on the menu
-            ui->set_draw_menu(true);
-
-            // Turn on the menu text
-            text->set_draw_menu(true);
+            ui->set_menu_draw(true);
         }
         else
         {
@@ -251,10 +255,7 @@ class controls
             state->set_game_mode("MODE: PLAY");
 
             // Turn off the menu
-            ui->set_draw_menu(false);
-
-            // Turn off the menu text
-            text->set_draw_menu(false);
+            ui->set_menu_draw(false);
         }
     }
     static void toggle_edit_mode(void *ptr, double step)
@@ -567,21 +568,35 @@ class controls
         game::character *const character = control->get_character();
         skill_state &skill = state->get_skill_state();
 
+        // Are we dead?
+        const bool dead = state->is_dead();
+        if (dead)
+        {
+            // Signal for game to respawn
+            state->set_respawn(true);
+
+            // return early
+            return;
+        }
+
         // Activate gun skill if active
         if (skill.is_gun_active())
         {
             if (skill.is_beam_mode() && skill.is_off_cooldown())
             {
-                // Record the start charge time
-                skill.start_charge();
+                if (skill.can_consume(_beam_charge_cost))
+                {
+                    // Record the start charge time
+                    skill.start_charge();
 
-                // Lock the gun in beam mode
-                skill.lock();
+                    // Lock the gun in beam mode
+                    skill.lock();
+                }
             }
             else if (skill.is_grapple_mode())
             {
                 // Try to consume energy to power this resource
-                if (skill.can_consume(7))
+                if (skill.can_consume(_grapple_cost))
                 {
                     // Calculate new point to add
                     const min::vec3<float> proj = cam->project_point(3.0);
@@ -595,7 +610,7 @@ class controls
                     if (hit)
                     {
                         // Consume energy
-                        skill.consume(7);
+                        skill.consume(_grapple_cost);
 
                         // Activate grapple animation
                         character->set_animation_grapple(point);
@@ -629,15 +644,20 @@ class controls
         game::character *const character = control->get_character();
         skill_state &skill = state->get_skill_state();
 
+        // Are we dead?
+        const bool dead = state->is_dead();
+        if (dead)
+        {
+            // return early
+            return;
+        }
+
         // Check if we are in edit mode
         const bool mode = world->get_edit_mode();
         if (mode)
         {
-            // Get the selected atlas
-            const int8_t atlas = world->get_atlas_id();
-
             // Try to consume energy to create this resource
-            const bool consumed = skill.will_consume(atlas);
+            const bool consumed = skill.will_consume(_block_cost);
             if (consumed)
             {
                 // Calculate new point to add
@@ -667,23 +687,19 @@ class controls
                 // If we are in beam mode and charged up
                 if (skill.is_beam_charged())
                 {
-                    // Remove block from world, get the removed atlas
-                    if (skill.can_consume(5))
+                    // Expolode block with radius, get the ray target value
+                    min::vec3<unsigned> explode_radius(3, 3, 3);
+                    const int8_t value = world->explode_block(r, explode_radius);
+                    if (value >= 0)
                     {
-                        // Remove scaled block from world, get the removed atlas
-                        min::vec3<unsigned> explode_radius(3, 3, 3);
-                        const int8_t atlas = world->explode_block(r, explode_radius);
-                        if (atlas >= 0)
-                        {
-                            // Consume energy
-                            skill.consume(5);
+                        // Consume energy
+                        skill.consume(_beam_charge_cost);
 
-                            // Activate shoot animation
-                            character->set_animation_shoot();
+                        // Activate shoot animation
+                        character->set_animation_shoot();
 
-                            // Start gun cooldown timer
-                            skill.start_cooldown();
-                        }
+                        // Start gun cooldown timer
+                        skill.start_cooldown();
                     }
 
                     // Unlock the gun if beam mode
@@ -692,13 +708,13 @@ class controls
                 else if (skill.is_beam_mode())
                 {
                     // Remove block from world, get the removed atlas
-                    if (skill.can_consume(6))
+                    if (skill.can_consume(_beam_cost))
                     {
                         const int8_t atlas = world->explode_block(r, nullptr, 20.0);
                         if (atlas >= 0)
                         {
                             // Consume energy
-                            skill.consume(6);
+                            skill.consume(_beam_cost);
 
                             // Activate shoot animation
                             character->set_animation_shoot();
@@ -722,7 +738,7 @@ class controls
                 else if (skill.is_missile_mode())
                 {
                     // Try to consume energy to create missile
-                    const bool consumed = skill.will_consume(7);
+                    const bool consumed = skill.will_consume(_missile_cost);
                     if (consumed)
                     {
                         // Launch a missile
@@ -776,14 +792,23 @@ class controls
     }
     inline void update_energy_regen()
     {
+        // Regen some health
+        if (!_state->is_dead())
+        {
+            _state->add_health(_health_regen);
+        }
+
         // Regen energy
         skill_state &skill = _state->get_skill_state();
         if (!skill.is_locked())
         {
-            skill.add_energy(1);
+            skill.add_energy(_energy_regen);
         }
 
-        // Update the ui energy bar if not being used
+        // Update the ui health bar
+        _ui->set_health(_state->get_health_percent());
+
+        // Update the ui energy bar
         _ui->set_energy(skill.get_energy_percent());
     }
     inline void update_skill_state()
@@ -792,7 +817,7 @@ class controls
         game::skill_state &skill = _state->get_skill_state();
         if (skill.is_jetpack_mode() && skill.is_locked())
         {
-            const bool consumed = skill.will_consume(1);
+            const bool consumed = skill.will_consume(_jet_cost);
             if (consumed)
             {
                 _world->character_jetpack();

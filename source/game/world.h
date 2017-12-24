@@ -93,6 +93,7 @@ class world
     bool _hooked;
     bool _falling;
     bool _exploded;
+    int8_t _explode_id;
 
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {
@@ -135,13 +136,13 @@ class world
             const min::vec3<float> direction = (position + min::vec3<float>(-1.0, 0.0, 0.0)).normalize();
 
             // Remove geometry around player, requires position snapped to grid and calculated direction vector
-            explode_block(snapped, direction, _scale, 100.0);
+            explode_block(snapped, direction, _scale, -1, 100.0);
 
             // Reset scale to default value
             _scale = min::vec3<unsigned>(1, 1, 1);
         }
     }
-    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const float size = 100.0)
+    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
     {
         // Try to remove geometry from the grid
         const unsigned removed = _grid.set_geometry(point, scale, _preview_offset, -1);
@@ -155,13 +156,24 @@ class world
             // Add particle effects
             _particles->load_static_explode(point, direction, 5.0, size);
 
-            // Check if character is too close to the explosion
-            const min::vec3<float> &p = character_position();
-            const float d = (point - p).magnitude();
-            if (d < _explosion_radius)
+            // If explode hasn't been flagged yet
+            if (!_exploded)
             {
-                // Signal dead
-                _exploded = true;
+                // Get player position
+                const min::vec3<float> &p = character_position();
+
+                // Calculate distance from explosion center
+                const float d = (point - p).magnitude();
+
+                // Check if character is too close to the explosion
+                if (d < _explosion_radius)
+                {
+                    // Signal explode signal
+                    _exploded = true;
+
+                    // Record what we hit
+                    _explode_id = value;
+                }
             }
         }
     }
@@ -269,7 +281,7 @@ class world
                 const bool collide = _simulation.collide(_char_id, cell.first);
 
                 // If we collided with cell
-                if (collide)
+                if (collide && !_exploded)
                 {
                     // Check for exploding mines
                     if (cell.second == 5 || cell.second == 7)
@@ -280,7 +292,7 @@ class world
                         const min::vec3<float> dir = (p - box_center).normalize();
 
                         // Explode the block with radius
-                        explode_block(box_center, dir, radius, 100.0);
+                        explode_block(box_center, dir, radius, cell.second, 100.0);
 
                         // Apply force to the body
                         body.add_force(dir * 7000.0 * body.get_mass());
@@ -330,8 +342,9 @@ class world
         // On missile collision remove block
         const auto on_collide = [this](const min::vec3<float> &point,
                                        const min::vec3<float> &direction,
-                                       const min::vec3<unsigned> &scale) {
-            this->explode_block(point, direction, scale, 100.0);
+                                       const min::vec3<unsigned> &scale, const int8_t value) {
+            // Explode the block
+            this->explode_block(point, direction, scale, value, 100.0);
         };
 
         // Update any missiles
@@ -361,7 +374,8 @@ class world
           _hook_length(0.0),
           _hooked(false),
           _falling(false),
-          _exploded(false)
+          _exploded(false),
+          _explode_id(-1)
     {
         // Check if chunk_size is valid
         if (grid_size % chunk_size != 0)
@@ -545,6 +559,13 @@ class world
         // Return the character position
         return body.get_linear_velocity();
     }
+    inline void character_velocity(const min::vec3<float> &v)
+    {
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Warp character to new position
+        body.set_linear_velocity(v);
+    }
     inline void character_warp(const min::vec3<float> &p)
     {
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
@@ -610,7 +631,9 @@ class world
 
             // Remove the block
             const min::vec3<float> center = center_radius(traced, scale);
-            explode_block(center, direction, scale, size);
+
+            // Explode block
+            explode_block(center, direction, scale, value, size);
         }
 
         // return the block atlas id
@@ -672,6 +695,10 @@ class world
         // abort hooking
         _hooked = false;
     }
+    inline int8_t get_explode_id() const
+    {
+        return _explode_id;
+    }
     inline bool is_exploded() const
     {
         return _exploded;
@@ -719,6 +746,22 @@ class world
 
         // Warp character to new position
         body.set_position(p);
+    }
+    inline void reset_explode()
+    {
+        _exploded = false;
+        _explode_id = -1;
+    }
+    inline void respawn(const min::vec3<float> p)
+    {
+        // Reset explosion data
+        reset_explode();
+
+        // Set character position
+        character_warp(p);
+
+        // Zero out character velocity
+        character_velocity(min::vec3<float>());
     }
     inline void reset_scale()
     {

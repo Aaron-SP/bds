@@ -28,7 +28,7 @@ namespace game
 class skill_state
 {
   private:
-    static constexpr uint32_t _max_energy = 256;
+    static constexpr float _max_energy = 100.0;
     enum skill_mode
     {
         jetpack,
@@ -39,7 +39,7 @@ class skill_state
 
     std::chrono::high_resolution_clock::time_point _charge;
     std::chrono::high_resolution_clock::time_point _cool;
-    uint32_t _energy;
+    float _energy;
     bool _gun_active;
     bool _locked;
     skill_mode _mode;
@@ -64,16 +64,15 @@ class skill_state
     }
 
   public:
-    skill_state() : _energy(0), _gun_active(true), _locked(false), _mode(skill_mode::beam), _shoot_cooldown(false) {}
-    inline void add_energy(const int8_t atlas_id)
+    skill_state() : _energy(0.0), _gun_active(true), _locked(false), _mode(skill_mode::beam), _shoot_cooldown(false) {}
+    inline void add_energy(const float energy)
     {
         // Absorb this amount of energy if not full
         if (_energy < _max_energy)
         {
-            const uint32_t value = 0x1 << (atlas_id);
-            _energy += value;
+            _energy += energy;
 
-            // Cap energy at maximum
+            // Cap energy at max_energy
             if (_energy > _max_energy)
             {
                 _energy = _max_energy;
@@ -103,11 +102,10 @@ class skill_state
         // Do not active charging
         return false;
     }
-    inline bool can_consume(const int8_t atlas_id) const
+    inline bool can_consume(const float energy) const
     {
         // Try to consume energy
-        const uint32_t value = 0x2 << (atlas_id);
-        if (_energy >= value)
+        if (_energy >= energy)
         {
             return true;
         }
@@ -115,32 +113,30 @@ class skill_state
         // Not enough energy
         return false;
     }
-    inline void consume(const int8_t atlas_id)
+    inline void consume(const float energy)
     {
         // Consume energy
-        const uint32_t value = 0x2 << (atlas_id);
-        _energy -= value;
+        _energy -= energy;
     }
-    inline bool will_consume(const int8_t atlas_id)
+    inline bool will_consume(const float energy)
     {
         // Try to consume energy
-        const uint32_t value = 0x2 << (atlas_id);
-        if (_energy >= value)
+        if (_energy >= energy)
         {
-            _energy -= value;
+            _energy -= energy;
             return true;
         }
 
         // Not enough energy
         return false;
     }
-    inline uint32_t get_energy() const
+    inline float get_energy() const
     {
         return _energy;
     }
     inline float get_energy_percent() const
     {
-        return static_cast<float>(_energy) / _max_energy;
+        return _energy / _max_energy;
     }
     inline bool is_beam_charged() const
     {
@@ -231,6 +227,10 @@ class skill_state
 
         // Update start time
         _cool = std::chrono::high_resolution_clock::now();
+    }
+    inline void set_energy(const float energy)
+    {
+        _energy = energy;
     }
     inline void set_gun_active(const bool mode)
     {

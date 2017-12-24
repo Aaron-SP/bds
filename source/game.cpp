@@ -16,7 +16,6 @@ You should have received a copy of the GNU General Public License
 along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <game/controls.h>
-#include <game/file.h>
 #include <game/goal_seek.h>
 #include <game/particle.h>
 #include <game/state.h>
@@ -49,79 +48,37 @@ class fractex
     game::world _world;
     game::controls _controls;
     game::goal_seek _goal_seek;
-
-    inline std::pair<min::vec3<float>, bool> load_state()
+    inline void die()
     {
-        // Create output stream for loading world
-        std::vector<uint8_t> stream;
+        // Set menu for dead
+        _ui.set_menu_dead();
 
-        // Load data into stream from file
-        game::load_file("bin/state", stream);
+        // Show menu
+        _ui.set_menu_draw(true);
 
-        // If load failed dont try to parse stream data
-        if (stream.size() != 0)
-        {
-            // Character position
-            size_t next = 0;
-            const float x = min::read_le<float>(stream, next);
-            const float y = min::read_le<float>(stream, next);
-            const float z = min::read_le<float>(stream, next);
-
-            // Load character at this position
-            const min::vec3<float> p(x, y, z);
-
-            // Look direction
-            const float lx = min::read_le<float>(stream, next);
-            const float ly = min::read_le<float>(stream, next);
-            const float lz = min::read_le<float>(stream, next);
-
-            // Load camera settings
-            const min::vec3<float> look(lx, ly, lz);
-            _state.set_camera(p, look);
-
-            // return the state
-            return std::make_pair(p, true);
-        }
-        else
-        {
-            // Load character at the default position
-            const min::vec3<float> p(0.0, -50.0, 0.0);
-
-            // Load camera settings
-            const min::vec3<float> look(1.0, -50.0, 0.0);
-            _state.set_camera(p, look);
-
-            // return the state
-            return std::make_pair(p, false);
-        }
+        // Disable the keyboard
+        auto &keyboard = _win.get_keyboard();
+        keyboard.disable();
     }
-    inline void save_state()
+    inline void respawn()
     {
-        // Create output stream for saving world
-        std::vector<uint8_t> stream;
+        // Refresh state
+        _state.respawn();
 
-        // Get character position
-        const min::vec3<float> &p = _world.character_position();
+        // Refresh ui
+        _ui.respawn();
 
-        // Write position into stream
-        min::write_le<float>(stream, p.x());
-        min::write_le<float>(stream, p.y());
-        min::write_le<float>(stream, p.z());
+        // Refresh the world exploded flag
+        _world.respawn(_state.get_default_spawn());
 
-        // Get the camera look position
-        const min::vec3<float> look = _state.get_camera().project_point(3.0);
-
-        // Write look into stream
-        min::write_le<float>(stream, look.x());
-        min::write_le<float>(stream, look.y());
-        min::write_le<float>(stream, look.z());
-
-        // Write data to file
-        game::save_file("bin/state", stream);
+        // Enable the keyboard
+        auto &keyboard = _win.get_keyboard();
+        keyboard.enable();
     }
+
     inline std::pair<unsigned, unsigned> user_input()
     {
-        if (_state.get_user_input())
+        if (_state.get_user_input() && !_state.is_dead())
         {
             // Get the cursor coordinates
             const auto c = _win.get_cursor();
@@ -135,6 +92,40 @@ class fractex
 
         // return no mouse movement
         return std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
+    }
+    inline void update_die_respawn()
+    {
+        // Check if we exploded
+        if (!_state.is_dead())
+        {
+            if (_world.is_exploded())
+            {
+                const int8_t ex_id = _world.get_explode_id();
+                if (ex_id == 7 || ex_id == 5)
+                {
+                    // Kill the player
+                    _state.consume_health(90.0);
+                }
+                else
+                {
+                    _state.consume_health(10.0);
+                }
+            }
+
+            // Check if we need to die
+            if (_state.is_dead())
+            {
+                die();
+            }
+        }
+        else if (_state.is_respawn())
+        {
+            // Respawn
+            respawn();
+        }
+
+        // Reset the explosion flag
+        _world.reset_explode();
     }
     inline void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
@@ -177,7 +168,8 @@ class fractex
           _ui(_uniforms, _win.get_width(), _win.get_height()),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
-          _world(load_state(), &_particles, _uniforms, 64, 8, view),
+          _state(),
+          _world(_state.get_load_state(), &_particles, _uniforms, 64, 8, view),
           _controls(_win, _state.get_camera(), _character, _state, _text, _ui, _world),
           _goal_seek(_world)
     {
@@ -200,7 +192,7 @@ class fractex
     ~fractex()
     {
         // Save game data to file
-        save_state();
+        _state.save_state(_world.character_position());
     }
     void clear_background() const
     {
@@ -235,6 +227,9 @@ class fractex
 
             // Update the world state
             _world.update(camera, dt);
+
+            // Check if we died
+            update_die_respawn();
 
             // Update the particle system
             _particles.set_velocity(_world.character_velocity());
