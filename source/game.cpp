@@ -284,10 +284,11 @@ class fractex
         const min::vec3<float> &f = _state.get_camera().get_forward();
         const std::string &mode = _state.get_game_mode();
         const min::vec3<float> &goal = _goal_seek.get_goal();
-        const double energy = _state.get_skill_state().get_energy();
+        const float health = _state.get_health();
+        const float energy = _state.get_skill_state().get_energy();
 
         // Update all text and upload it
-        _ui.update(p, f, mode, goal, energy, fps, idle);
+        _ui.update(p, f, mode, goal, health, energy, fps, idle);
     }
     void update_window()
     {

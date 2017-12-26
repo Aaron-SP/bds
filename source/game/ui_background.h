@@ -84,8 +84,8 @@ class ui_background
     static constexpr size_t _num_half_buttons = _num_buttons / 2;
     static constexpr float _tool_height = 48.0;
     static constexpr float _tool_space = 48.0;
-    static constexpr float _tool_start = -_tool_space * _num_half_buttons + _s_bg / 4;
-    static constexpr float _energy_start = _tool_space * _num_half_buttons + _s_bg / 4;
+    static constexpr float _tool_start = -_tool_space * _num_half_buttons + _tool_space / 2;
+    static constexpr float _energy_start = _tool_space * _num_half_buttons + _tool_space / 2 + 4.0;
     static constexpr float _health_start = _tool_start - _tool_space - 4.0;
 
     // OpenGL stuff

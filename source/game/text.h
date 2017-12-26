@@ -32,10 +32,16 @@ namespace game
 class text
 {
   private:
+    static constexpr size_t _chat_offset = 9;
+    static constexpr size_t _ui_offset = 10;
+    static constexpr size_t _end = 12;
     static constexpr float _x_chat = 250.0;
     static constexpr float _y_chat = 200.0;
     static constexpr float _x_chat_wrap = 250.0;
     static constexpr float _y_chat_wrap = 40.0;
+    static constexpr float _x_health_offset = 200.0;
+    static constexpr float _x_energy_offset = 152.0;
+    static constexpr float _y_ui = 150.0;
 
     // Text OpenGL stuff
     min::shader _text_vertex;
@@ -47,9 +53,9 @@ class text
     std::vector<size_t> _indices;
     std::ostringstream _stream;
     size_t _font_size;
-    size_t _chat_offset;
-    bool _draw;
     bool _draw_chat;
+    bool _draw_debug;
+    bool _draw_ui;
 
     inline void add_text(const std::string &s, const float x, const float y)
     {
@@ -82,19 +88,19 @@ class text
             y -= _font_size;
         }
 
-        // Position the menu elements
-        const float menu_x = (width / 2) - _x_chat;
-        const float menu_y = _y_chat;
-        _text_buffer.set_text_location(_chat_offset, menu_x, menu_y);
+        // Position the chat elements
+        const uint16_t w2 = (width / 2);
+        const float chat_x = w2 - _x_chat;
+        const float chat_y = _y_chat;
+        _text_buffer.set_text_location(_chat_offset, chat_x, chat_y);
+
+        // Position the ui elements
+        _text_buffer.set_text_location(_chat_offset + 1, w2 - _x_health_offset, _y_ui);
+        _text_buffer.set_text_location(_chat_offset + 2, w2 + _x_energy_offset, _y_ui);
     }
     inline void update_text(const std::string &s, const size_t index)
     {
         _text_buffer.set_text(s, index);
-    }
-    inline void upload() const
-    {
-        // Upload the text glyphs to the GPU
-        _text_buffer.upload();
     }
 
   public:
@@ -103,8 +109,7 @@ class text
           _text_fragment("data/shader/text.fragment", GL_FRAGMENT_SHADER),
           _text_prog(_text_vertex, _text_fragment),
           _text_buffer("data/fonts/open_sans.ttf", font_size),
-          _font_size(font_size), _chat_offset(8),
-          _draw(false), _draw_chat(false)
+          _font_size(font_size), _draw_chat(false), _draw_debug(false), _draw_ui(true)
     {
         // Set the texture channel for this program, we need to do this here because we render text on channel '1'
         // _text_prog will be in use by the end of this call
@@ -122,53 +127,71 @@ class text
             add_text("", 0, 0);
         }
 
-        // Menu PAUSE
-        add_text("INSERT TEXT", 0, 0);
-        _text_buffer.set_line_wrap(_chat_offset, _x_chat_wrap, _y_chat_wrap);
+        // Add 1 text entries
+        for (size_t i = _chat_offset; i < _ui_offset; i++)
+        {
+            add_text("DEFAULT CHAT TEXT", 0, 0);
+            _text_buffer.set_line_wrap(_chat_offset, _x_chat_wrap, _y_chat_wrap);
+        }
+
+        // Add 2 text entries
+        for (size_t i = _ui_offset; i < _end; i++)
+        {
+            add_text("", 0, 0);
+        }
 
         // Reposition all of the text
         reposition_text(width, height);
     }
     void draw() const
     {
-        if (_draw && _draw_chat)
+        if (_draw_debug && _draw_chat && _draw_ui)
         {
             // Bind texture and program
             bind();
 
-            // Draw all the  text
+            // Draw all the text
             _text_buffer.draw_all();
         }
-        else if (_draw)
+        else if (_draw_debug && _draw_ui)
         {
             // Bind texture and program
             bind();
-
-            // Calculate last index in buffer
-            const size_t end = _chat_offset - 1;
 
             // Draw only debug text
-            _text_buffer.draw(0, end);
+            _text_buffer.draw(0, _chat_offset - 1);
+
+            // Draw only ui text
+            _text_buffer.draw(_ui_offset, _end - 1);
         }
-        else if (_draw_chat)
+        else if (_draw_chat && _draw_ui)
         {
             // Bind texture and program
             bind();
 
-            // Calculate last index in buffer
-            const size_t end = _indices.size() - 1;
+            // Draw from chat start to end of buffer
+            _text_buffer.draw(_chat_offset, _end - 1);
+        }
+        else if (_draw_ui)
+        {
+            // Bind texture and program
+            bind();
 
-            // Draw from menu start to end of buffer
-            _text_buffer.draw(_chat_offset, end);
+            // Draw only ui text
+            _text_buffer.draw(_ui_offset, _end - 1);
         }
     }
-    inline bool is_draw() const
+    inline void set_draw_debug(const bool flag)
     {
-        return _draw;
+        _draw_debug = flag;
     }
     inline void set_draw_chat(const bool flag)
     {
         _draw_chat = flag;
+    }
+    inline void set_draw_ui(const bool flag)
+    {
+        _draw_ui = flag;
     }
     inline void set_screen(const uint16_t width, const uint16_t height)
     {
@@ -181,15 +204,16 @@ class text
         // Upload new text
         upload();
     }
-    inline void toggle_draw()
+    inline void toggle_draw_debug()
     {
-        _draw = !_draw;
+        _draw_debug = !_draw_debug;
     }
-    void update_text(const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
-                     const min::vec3<float> &goal, const double energy, const double fps, const double idle)
+    void update_debug_text(
+        const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode, const min::vec3<float> &goal,
+        const float health, const float energy, const double fps, const double idle)
     {
         // If drawing text mode is on, update text
-        if (_draw)
+        if (_draw_debug)
         {
             // Update player position debug text
             _stream << std::fixed << std::setprecision(4) << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
@@ -216,29 +240,54 @@ class text
             clear_stream();
 
             // Update the energy text
-            _stream << "ENERGY: " << energy;
+            _stream << "HEALTH: " << health;
             update_text(_stream.str(), 5);
 
             // Clear and reset the _stream
             clear_stream();
 
-            // Update FPS and IDLE
-            _stream << "FPS: " << std::round(fps);
+            // Update the energy text
+            _stream << "ENERGY: " << energy;
             update_text(_stream.str(), 6);
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update FPS and IDLE
-            _stream << "IDLE: " << idle;
+            _stream << "FPS: " << std::round(fps);
             update_text(_stream.str(), 7);
 
             // Clear and reset the _stream
             clear_stream();
 
-            // Upload changes
-            upload();
+            // Update FPS and IDLE
+            _stream << "IDLE: " << idle;
+            update_text(_stream.str(), 8);
+
+            // Clear and reset the _stream
+            clear_stream();
         }
+    }
+    void update_ui(const float health, const float energy)
+    {
+        // Update the energy text
+        _stream << static_cast<int>(std::round(health));
+        update_text(_stream.str(), _chat_offset + 1);
+
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update the energy text
+        _stream << static_cast<int>(std::round(energy));
+        update_text(_stream.str(), _chat_offset + 2);
+
+        // Clear and reset the _stream
+        clear_stream();
+    }
+    inline void upload() const
+    {
+        // Upload the text glyphs to the GPU
+        _text_buffer.upload();
     }
 };
 }
