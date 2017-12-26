@@ -173,6 +173,9 @@ class world
 
                     // Record what we hit
                     _explode_id = value;
+
+                    // Apply force to the player body
+                    character_force(direction * 7000.0);
                 }
             }
         }
@@ -293,9 +296,6 @@ class world
 
                         // Explode the block with radius
                         explode_block(box_center, dir, radius, cell.second, 100.0);
-
-                        // Apply force to the body
-                        body.add_force(dir * 7000.0 * body.get_mass());
                     }
                 }
 
@@ -433,16 +433,21 @@ class world
 
         return mob_id;
     }
+    inline void character_force(const min::vec3<float> &f)
+    {
+        // Get the player physics object
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+        // Apply force to the body per mass
+        body.add_force(f * body.get_mass());
+    }
     inline void character_jetpack()
     {
         // If not hooked
         if (!_hooked)
         {
-            // Get the character body
-            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-            // Add force to body
-            body.add_force(min::vec3<float>(0.0, 150.0 * body.get_mass(), 0.0));
+            // Add force to player body
+            character_force(min::vec3<float>(0.0, 150.0, 0.0));
         }
     }
     inline void character_jump()
@@ -450,25 +455,22 @@ class world
         // If not hooked
         if (!_hooked)
         {
-            // Get the character body
-            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
             // Allow user to jump and user boosters
             if (_jump_count == 0 && !_falling)
             {
                 // Increment jump count
                 _jump_count++;
 
-                // Add force to body
-                body.add_force(min::vec3<float>(0.0, 4000.0 * body.get_mass(), 0.0));
+                // Add force to the player body
+                character_force(min::vec3<float>(0.0, 4000.0, 0.0));
             }
             else if (_jump_count == 1)
             {
                 // Increment jump count
                 _jump_count++;
 
-                // Add force to body
-                body.add_force(min::vec3<float>(0.0, 5000.0 * body.get_mass(), 0.0));
+                // Add force to the player body
+                character_force(min::vec3<float>(0.0, 5000.0, 0.0));
             }
         }
     }
@@ -477,13 +479,11 @@ class world
         // If not hooked
         if (!_hooked)
         {
-            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
             // Get the current position and set y movement to zero
             const min::vec3<float> dxz = min::vec3<float>(vel.x(), 0.0, vel.z()).normalize();
 
-            // Add force to body
-            body.add_force(dxz * 1E2 * body.get_mass());
+            // Add force to player body
+            character_force(dxz * 100.0);
         }
     }
     inline const min::vec3<float> &character_position() const

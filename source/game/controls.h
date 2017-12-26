@@ -42,8 +42,8 @@ class controls
     static constexpr float _missile_cost = 90.0;
     static constexpr float _grapple_cost = 40.0;
     static constexpr float _jet_cost = 0.75;
-    static constexpr float _health_regen = 0.05;
-    static constexpr float _energy_regen = 0.25;
+    static constexpr float _health_regen = 5.0;
+    static constexpr float _energy_regen = 10.0;
     min::window *_window;
     min::camera<float> *_camera;
     game::character *_character;
@@ -783,19 +783,21 @@ class controls
         // Update the screen size for ui and text
         ui->set_screen(width, height);
     }
-    inline void update_energy_regen()
+    inline void update_energy_regen(const float dt)
     {
         // Regen some health
         if (!_state->is_dead())
         {
-            _state->add_health(_health_regen);
+            // Rate is units / second
+            _state->add_health(_health_regen * dt);
         }
 
         // Regen energy
         skill_state &skill = _state->get_skill_state();
         if (!skill.is_locked())
         {
-            skill.add_energy(_energy_regen);
+            // Rate is units / second
+            skill.add_energy(_energy_regen * dt);
         }
 
         // Update the ui health bar
@@ -839,10 +841,10 @@ class controls
             _ui->set_reload_cursor();
         }
     }
-    void update()
+    void update(const float dt)
     {
         // Update energy regen
-        update_energy_regen();
+        update_energy_regen(dt);
 
         // Update ui
         update_ui();

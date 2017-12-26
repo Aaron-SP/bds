@@ -236,7 +236,7 @@ class fractex
             update = _character.update(camera, dt);
 
             // Update control class
-            _controls.update();
+            _controls.update(dt);
         }
 
         // Update all uniforms

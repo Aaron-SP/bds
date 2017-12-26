@@ -141,13 +141,14 @@ class ui_background
 
         return _menu_offset;
     }
-    inline void set_uv(const size_t index, const min::vec4<float> &coord)
+    inline void set_uv(const size_t index, const min::vec4<float> &coord, const float alpha)
     {
         // Add uv matrix to buffer
         const float sx = coord.z();
         const float sy = coord.w();
         _uv[index].set_scale(min::vec2<float>(sx, sy));
         _uv[index].set_translation(min::vec2<float>(coord.x(), coord.y()));
+        _uv[index].w(alpha);
     }
     inline std::pair<min::vec2<float>, min::vec2<float>> to_screen(const min::vec2<float> &p, const min::vec2<float> &scale)
     {
@@ -164,7 +165,9 @@ class ui_background
 
         return std::make_pair(min::vec2<float>(ox, oy), min::vec2<float>(size_x, size_y));
     }
-    inline void set_rect(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec4<float> &coord)
+    inline void set_rect(const size_t index, const min::vec2<float> &p,
+                         const min::vec2<float> &scale, const min::vec4<float> &coord,
+                         const float alpha = 1.0)
     {
         // Calculate screen coordinates
         const auto ps = to_screen(p, scale);
@@ -174,9 +177,11 @@ class ui_background
         _v[index].set_scale(ps.second);
 
         // Set uv coordinates
-        set_uv(index, coord);
+        set_uv(index, coord, alpha);
     }
-    inline void set_rect_reset(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec4<float> &coord)
+    inline void set_rect_reset(const size_t index, const min::vec2<float> &p,
+                               const min::vec2<float> &scale, const min::vec4<float> &coord,
+                               const float alpha = 1.0)
     {
         // Calculate screen coordinates
         const auto ps = to_screen(p, scale);
@@ -186,9 +191,11 @@ class ui_background
         _v[index].set_scale(ps.second);
 
         // Set uv coordinates
-        set_uv(index, coord);
+        set_uv(index, coord, alpha);
     }
-    inline void set_rect_rot(const size_t index, const min::vec2<float> &p, const min::vec2<float> &scale, const min::vec4<float> &coord, const float angle)
+    inline void set_rect_rot(const size_t index, const min::vec2<float> &p,
+                             const min::vec2<float> &scale, const min::vec4<float> &coord,
+                             const float angle, const float alpha = 1.0)
     {
         // Calculate screen coordinates
         const auto ps = to_screen(p, scale);
@@ -198,7 +205,7 @@ class ui_background
         _v[index] *= min::mat3<float>().set_scale(ps.second);
 
         // Set uv coordinates
-        set_uv(index, coord);
+        set_uv(index, coord, alpha);
     }
     inline min::vec2<float> toolbar_position(const size_t index)
     {
@@ -254,6 +261,16 @@ class ui_background
         // Load texture into texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);
     }
+    inline void load_health_overlay()
+    {
+        const min::vec2<float> p(_center_w, _center_h);
+        const min::vec2<float> scale(_width, _height);
+        const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        const float alpha = (_health > 0.0) ? 0.85 - _health * 0.85 : 0.85;
+        set_rect(0, p, scale, red_coord, alpha);
+    }
     inline void load_background_black(const size_t index)
     {
         const min::vec2<float> p = toolbar_position(index);
@@ -261,7 +278,7 @@ class ui_background
         const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(index, p, scale, black_coord);
+        set_rect(index + 1, p, scale, black_coord);
     }
     inline void load_background_red(const size_t index)
     {
@@ -270,7 +287,7 @@ class ui_background
         const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(index, p, scale, red_coord);
+        set_rect(index + 1, p, scale, red_coord);
     }
     inline void load_background_yellow(const size_t index)
     {
@@ -279,7 +296,7 @@ class ui_background
         const min::vec4<float> yellow_coord(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(index, p, scale, yellow_coord);
+        set_rect(index + 1, p, scale, yellow_coord);
     }
     inline void load_fps_cursor()
     {
@@ -288,7 +305,7 @@ class ui_background
         const min::vec4<float> fps_coord(_x_cursor_uv, _y_cursor_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect_reset(8, p, scale, fps_coord);
+        set_rect_reset(9, p, scale, fps_coord);
     }
     inline void load_reload_cursor()
     {
@@ -304,7 +321,7 @@ class ui_background
         }
 
         // Load rect at position
-        set_rect_rot(8, p, scale, reload_coord, _cursor_angle);
+        set_rect_rot(9, p, scale, reload_coord, _cursor_angle);
     }
     inline void load_energy_meter()
     {
@@ -315,7 +332,7 @@ class ui_background
         const min::vec4<float> blue_coord(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(9, p, scale, blue_coord);
+        set_rect(10, p, scale, blue_coord);
     }
     inline void load_health_meter()
     {
@@ -326,7 +343,7 @@ class ui_background
         const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(10, p, scale, red_coord);
+        set_rect(11, p, scale, red_coord);
     }
     inline void load_beam_icon(const size_t index)
     {
@@ -335,7 +352,7 @@ class ui_background
         const min::vec4<float> beam_coord(_x_beam_uv, _y_beam_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(11, p, scale, beam_coord);
+        set_rect(12, p, scale, beam_coord);
     }
     inline void load_missile_icon(const size_t index)
     {
@@ -344,7 +361,7 @@ class ui_background
         const min::vec4<float> miss_coord(_x_miss_uv, _y_miss_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(12, p, scale, miss_coord);
+        set_rect(13, p, scale, miss_coord);
     }
     inline void load_grapple_icon(const size_t index)
     {
@@ -353,7 +370,7 @@ class ui_background
         const min::vec4<float> grap_coord(_x_grap_uv, _y_grap_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(13, p, scale, grap_coord);
+        set_rect(14, p, scale, grap_coord);
     }
     inline void load_jet_icon(const size_t index)
     {
@@ -362,7 +379,7 @@ class ui_background
         const min::vec4<float> jet_coord(_x_jet_uv, _y_jet_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(14, p, scale, jet_coord);
+        set_rect(15, p, scale, jet_coord);
     }
     inline void load_menu_dead()
     {
@@ -371,7 +388,7 @@ class ui_background
         const min::vec4<float> pause_coord(_x_dead_uv, _y_dead_uv, _s_menu_uv_x, _s_menu_uv_y);
 
         // Load rect at position
-        set_rect(15, p, scale, pause_coord);
+        set_rect(_menu_offset, p, scale, pause_coord);
     }
     inline void load_menu_pause()
     {
@@ -380,10 +397,13 @@ class ui_background
         const min::vec4<float> pause_coord(_x_pause_uv, _y_pause_uv, _s_menu_uv_x, _s_menu_uv_y);
 
         // Load rect at position
-        set_rect(15, p, scale, pause_coord);
+        set_rect(_menu_offset, p, scale, pause_coord);
     }
     inline void position_ui()
     {
+        // Add health overlay
+        load_health_overlay();
+
         // Add 8 black rectangles along bottom
         for (size_t i = 0; i < 8; i++)
         {
@@ -393,10 +413,10 @@ class ui_background
         // Add FPS cursor
         load_fps_cursor();
 
-        // Add Health meter
+        // Add health meter
         load_energy_meter();
 
-        // Add Health meter
+        // Add health meter
         load_health_meter();
 
         // Load pause text
@@ -410,7 +430,7 @@ class ui_background
           _prog(_vertex, _fragment),
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
-          _index(0), _selected(0), _menu_offset(15),
+          _index(0), _selected(0), _menu_offset(16),
           _energy(0.0), _health(1.0), _cursor_angle(0.0), _draw_menu(false)
     {
         // Create the instance rectangle
@@ -483,6 +503,9 @@ class ui_background
     {
         // Set health in percent
         _health = health;
+
+        // Set the overlay alpha
+        load_health_overlay();
 
         // Set the size of the health bar
         load_health_meter();
