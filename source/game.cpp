@@ -19,7 +19,6 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/goal_seek.h>
 #include <game/particle.h>
 #include <game/state.h>
-#include <game/text.h>
 #include <game/ui_overlay.h>
 #include <game/uniforms.h>
 #include <game/world.h>
@@ -39,7 +38,6 @@ class fractex
     min::window _win;
 
     // Game specific classes
-    game::text _text;
     game::uniforms _uniforms;
     game::ui_overlay _ui;
     game::particle _particles;
@@ -163,14 +161,13 @@ class fractex
     // Load window shaders and program
     fractex(const size_t view)
         : _win("Fractex", 720, 480, 3, 3),
-          _text(28, _win.get_width(), _win.get_height()),
           _uniforms(),
           _ui(_uniforms, _win.get_width(), _win.get_height()),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
           _state(),
           _world(_state.get_load_state(), &_particles, _uniforms, 64, 8, view),
-          _controls(_win, _state.get_camera(), _character, _state, _text, _ui, _world),
+          _controls(_win, _state.get_camera(), _character, _state, _ui, _world),
           _goal_seek(_world)
     {
         // Set depth and cull settings
@@ -256,9 +253,6 @@ class fractex
 
         // Draw the ui
         _ui.draw(_uniforms);
-
-        // Draw the text
-        _text.draw();
     }
     bool is_closed() const
     {
@@ -285,19 +279,15 @@ class fractex
     }
     void update_text(const double fps, const double idle)
     {
-        // If drawing text mode is on, update text
-        if (_text.get_draw())
-        {
-            // Update player position debug text
-            const min::vec3<float> &p = _world.character_position();
-            const min::vec3<float> &f = _state.get_camera().get_forward();
-            const std::string &mode = _state.get_game_mode();
-            const min::vec3<float> &goal = _goal_seek.get_goal();
-            const double energy = _state.get_skill_state().get_energy();
+        // Update player position debug text
+        const min::vec3<float> &p = _world.character_position();
+        const min::vec3<float> &f = _state.get_camera().get_forward();
+        const std::string &mode = _state.get_game_mode();
+        const min::vec3<float> &goal = _goal_seek.get_goal();
+        const double energy = _state.get_skill_state().get_energy();
 
-            // Update all text and upload it
-            _text.update_text(p, f, mode, goal, energy, fps, idle);
-        }
+        // Update all text and upload it
+        _ui.update(p, f, mode, goal, energy, fps, idle);
     }
     void update_window()
     {

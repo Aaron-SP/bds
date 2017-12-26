@@ -32,6 +32,11 @@ namespace game
 class text
 {
   private:
+    static constexpr float _x_chat = 250.0;
+    static constexpr float _y_chat = 200.0;
+    static constexpr float _x_chat_wrap = 250.0;
+    static constexpr float _y_chat_wrap = 40.0;
+
     // Text OpenGL stuff
     min::shader _text_vertex;
     min::shader _text_fragment;
@@ -42,9 +47,9 @@ class text
     std::vector<size_t> _indices;
     std::ostringstream _stream;
     size_t _font_size;
-    size_t _menu_offset;
+    size_t _chat_offset;
     bool _draw;
-    bool _draw_menu;
+    bool _draw_chat;
 
     inline void add_text(const std::string &s, const float x, const float y)
     {
@@ -66,11 +71,11 @@ class text
         _stream.clear();
         _stream.str(std::string());
     }
-    inline void reposition_text(const float width, const float height)
+    inline void reposition_text(const uint16_t width, const uint16_t height)
     {
         // Rescale all text items
         uint16_t y = height - 20;
-        for (size_t i = 0; i < _menu_offset; i++)
+        for (size_t i = 0; i < _chat_offset; i++)
         {
             // Update the text location
             _text_buffer.set_text_location(i, 10, y);
@@ -78,9 +83,9 @@ class text
         }
 
         // Position the menu elements
-        const float menu_x = (width / 2) - 1.903 * _font_size;
-        const float menu_y = (height / 2) - 0.3611 * _font_size;
-        _text_buffer.set_text_location(_menu_offset, menu_x, menu_y);
+        const float menu_x = (width / 2) - _x_chat;
+        const float menu_y = _y_chat;
+        _text_buffer.set_text_location(_chat_offset, menu_x, menu_y);
     }
     inline void update_text(const std::string &s, const size_t index)
     {
@@ -98,8 +103,8 @@ class text
           _text_fragment("data/shader/text.fragment", GL_FRAGMENT_SHADER),
           _text_prog(_text_vertex, _text_fragment),
           _text_buffer("data/fonts/open_sans.ttf", font_size),
-          _font_size(font_size), _menu_offset(8),
-          _draw(false), _draw_menu(false)
+          _font_size(font_size), _chat_offset(8),
+          _draw(false), _draw_chat(false)
     {
         // Set the texture channel for this program, we need to do this here because we render text on channel '1'
         // _text_prog will be in use by the end of this call
@@ -112,20 +117,21 @@ class text
         add_text("Fractex: Official Demo", 0, 0);
 
         // Add 8 text entries
-        for (size_t i = 1; i < _menu_offset; i++)
+        for (size_t i = 1; i < _chat_offset; i++)
         {
             add_text("", 0, 0);
         }
 
         // Menu PAUSE
-        add_text("PAUSED", 0, 0);
+        add_text("INSERT TEXT", 0, 0);
+        _text_buffer.set_line_wrap(_chat_offset, _x_chat_wrap, _y_chat_wrap);
 
         // Reposition all of the text
         reposition_text(width, height);
     }
-    void draw()
+    void draw() const
     {
-        if (_draw && _draw_menu)
+        if (_draw && _draw_chat)
         {
             // Bind texture and program
             bind();
@@ -139,12 +145,12 @@ class text
             bind();
 
             // Calculate last index in buffer
-            const size_t end = _menu_offset - 1;
+            const size_t end = _chat_offset - 1;
 
             // Draw only debug text
             _text_buffer.draw(0, end);
         }
-        else if (_draw_menu)
+        else if (_draw_chat)
         {
             // Bind texture and program
             bind();
@@ -153,18 +159,18 @@ class text
             const size_t end = _indices.size() - 1;
 
             // Draw from menu start to end of buffer
-            _text_buffer.draw(_menu_offset, end);
+            _text_buffer.draw(_chat_offset, end);
         }
     }
-    inline bool get_draw() const
+    inline bool is_draw() const
     {
         return _draw;
     }
-    inline void set_draw_menu(const bool flag)
+    inline void set_draw_chat(const bool flag)
     {
-        _draw_menu = flag;
+        _draw_chat = flag;
     }
-    inline void set_screen(const float width, const float height)
+    inline void set_screen(const uint16_t width, const uint16_t height)
     {
         // Update the text buffer screen dimensions
         _text_buffer.set_screen(width, height);
@@ -183,7 +189,7 @@ class text
                      const min::vec3<float> &goal, const double energy, const double fps, const double idle)
     {
         // If drawing text mode is on, update text
-        if (get_draw())
+        if (_draw)
         {
             // Update player position debug text
             _stream << std::fixed << std::setprecision(4) << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();

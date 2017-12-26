@@ -36,11 +36,11 @@ namespace game
 class controls
 {
   private:
-    static constexpr float _block_cost = 90.0;
+    static constexpr float _block_cost = 40.0;
     static constexpr float _beam_cost = 40.0;
     static constexpr float _beam_charge_cost = 20.0;
     static constexpr float _missile_cost = 90.0;
-    static constexpr float _grapple_cost = 90.0;
+    static constexpr float _grapple_cost = 40.0;
     static constexpr float _jet_cost = 0.75;
     static constexpr float _health_regen = 0.05;
     static constexpr float _energy_regen = 0.25;
@@ -48,19 +48,18 @@ class controls
     min::camera<float> *_camera;
     game::character *_character;
     game::state *_state;
-    game::text *_text;
     game::ui_overlay *_ui;
     game::world *_world;
 
   public:
     controls(min::window &window, min::camera<float> &camera,
              game::character &ch, game::state &state,
-             game::text &text, game::ui_overlay &ui, game::world &world)
+             game::ui_overlay &ui, game::world &world)
         : _window(&window), _camera(&camera), _character(&ch),
-          _state(&state), _text(&text), _ui(&ui), _world(&world)
+          _state(&state), _ui(&ui), _world(&world)
     {
         // Check that pointers are valid
-        if (!_window || !_character || !_camera || !_state || !_text || !_ui || !_world)
+        if (!_window || !_character || !_camera || !_state || !_ui || !_world)
         {
             throw std::runtime_error("control: Invalid control pointers");
         }
@@ -104,7 +103,7 @@ class controls
         keyboard.register_keydown(min::window::key_code::F1, controls::close_window, (void *)_window);
 
         // Register callback function F2
-        keyboard.register_keydown(min::window::key_code::F2, controls::toggle_text, (void *)_text);
+        keyboard.register_keydown(min::window::key_code::F2, controls::toggle_text, (void *)_ui);
 
         // Register callback function F3
         keyboard.register_keydown(min::window::key_code::ESCAPE, controls::toggle_pause, (void *)this);
@@ -190,10 +189,6 @@ class controls
     {
         return _state;
     }
-    game::text *get_text()
-    {
-        return _text;
-    }
     game::ui_overlay *get_ui()
     {
         return _ui;
@@ -217,11 +212,11 @@ class controls
     }
     static void toggle_text(void *ptr, double step)
     {
-        // Cast to text pointer type and toggle draw
-        game::text *const text = reinterpret_cast<game::text *>(ptr);
+        // Cast to ui pointer type and toggle draw
+        game::ui_overlay *const ui = reinterpret_cast<game::ui_overlay *>(ptr);
 
-        // Enable / Disable drawing text
-        text->toggle_draw();
+        // Enable / Disable drawing debug text
+        ui->toggle_debug_text();
     }
     static void toggle_pause(void *ptr, double step)
     {
@@ -775,7 +770,6 @@ class controls
 
         // Get the camera and text pointer
         min::camera<float> *const camera = control->get_camera();
-        game::text *const text = control->get_text();
         game::ui_overlay *const ui = control->get_ui();
 
         // Get camera frustum
@@ -787,7 +781,6 @@ class controls
         camera->make_dirty();
 
         // Update the screen size for ui and text
-        text->set_screen(width, height);
         ui->set_screen(width, height);
     }
     inline void update_energy_regen()
