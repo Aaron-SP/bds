@@ -668,6 +668,11 @@ class world
     {
         return _preview;
     }
+    void hook_abort()
+    {
+        // abort hooking
+        _hooked = false;
+    }
     bool hook_set(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
@@ -689,11 +694,6 @@ class world
 
         // return the end of ray
         return _hooked;
-    }
-    void hook_abort()
-    {
-        // abort hooking
-        _hooked = false;
     }
     inline int8_t get_explode_id() const
     {

@@ -37,6 +37,9 @@ namespace game
 class terrain
 {
   private:
+    // About 6MB vertex and 4MB index; 8*8*8*7*7*7 = 175616 cells
+    static constexpr size_t _cell_size = 175616;
+
     // Opengl stuff
     min::shader _tv;
 #ifdef USE_GS_RENDER
@@ -49,15 +52,25 @@ class terrain
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
 
-#ifndef USE_GS_RENDER
+    // Block merge buffer
     min::mesh<float, uint32_t> _parent;
+#ifndef USE_GS_RENDER
     std::vector<min::vec4<float>> _cell_buffer;
 
-    // About 6MB vertex and 4MB index; 8*8*8*7*7*7 = 175616 cells
-    static constexpr size_t _cell_size = 175616;
     static constexpr size_t _reserve_size = 24 * _cell_size;
     static constexpr size_t _index_reserve_size = 36 * _cell_size;
 #endif
+
+    inline void populate_cell_buffer(std::vector<min::vec4<float>> &buffer, const min::mesh<float, uint32_t> &child) const
+    {
+        // Add cells to global cell buffer
+        const size_t size = child.vertex.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            // Add point to cell buffer
+            buffer.push_back(child.vertex[i]);
+        }
+    }
 
 #ifdef USE_GS_RENDER
     static constexpr GLenum RENDER_TYPE = GL_POINTS;
@@ -368,16 +381,6 @@ class terrain
             _parent.normal[n++] = min::vec3<float>(0.0, 0.0, 1.0);
         }
     }
-    inline void populate_cell_buffer(const min::mesh<float, uint32_t> &child)
-    {
-        // Add cells to global cell buffer
-        const size_t size = child.vertex.size();
-        for (size_t i = 0; i < size; i++)
-        {
-            // Add point to cell buffer
-            _cell_buffer.push_back(child.vertex[i]);
-        }
-    }
     inline void allocate_mesh_buffer()
     {
         // Resize the parent mesh from cell size
@@ -402,12 +405,11 @@ class terrain
           _tv("data/shader/terrain_gs.vertex", GL_VERTEX_SHADER),
           _tg("data/shader/terrain_gs.geometry", GL_GEOMETRY_SHADER),
           _tf("data/shader/terrain_gs.fragment", GL_FRAGMENT_SHADER),
-          _program({_tv.id(), _tg.id(), _tf.id()})
+          _program({_tv.id(), _tg.id(), _tf.id()}), _parent("parent")
 #else
           _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
           _tf("data/shader/terrain.fragment", GL_FRAGMENT_SHADER),
-          _program(_tv, _tf),
-          _parent("parent")
+          _program(_tv, _tf), _parent("parent")
 #endif
     {
         // Load texture
@@ -416,12 +418,15 @@ class terrain
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);
 
-#ifndef USE_GS_RENDER
         // Reserve space for parent mesh
+        _parent.vertex.reserve(_cell_size);
+        _parent.index.reserve(_cell_size);
+
+#ifndef USE_GS_RENDER
         _parent.vertex.reserve(_reserve_size);
+        _parent.index.reserve(_index_reserve_size);
         _parent.uv.reserve(_reserve_size);
         _parent.normal.reserve(_reserve_size);
-        _parent.index.reserve(_index_reserve_size);
         _cell_buffer.reserve(_cell_size);
 #endif
     }
@@ -459,21 +464,26 @@ class terrain
         _gb.clear();
 
 #ifdef USE_GS_RENDER
-        // For all meshes
+
+        // Clear out the parent buffers
+        _parent.vertex.clear();
+        _parent.index.clear();
+
+        // For all chunk meshes
         for (const auto &i : index)
         {
-            // Get next mesh
-            min::mesh<float, uint32_t> &mesh = f(i);
+            // Add cells in child to the global cell buffer
+            populate_cell_buffer(_parent.vertex, f(i));
+        }
 
-            // Only add if contains cells
-            if (mesh.vertex.size() > 0)
-            {
-                // Generate indices
-                generate_indices(mesh);
+        // Only add if contains cells
+        if (_parent.vertex.size() > 0)
+        {
+            // Generate indices
+            generate_indices(_parent);
 
-                // Add mesh to vertex buffer
-                _gb.add_mesh(mesh);
-            }
+            // Add mesh to vertex buffer
+            _gb.add_mesh(_parent);
         }
 #else
         // Clear out the parent and the cell buffer
@@ -483,7 +493,7 @@ class terrain
         for (const auto &i : index)
         {
             // Add cells in child to the global cell buffer
-            populate_cell_buffer(f(i));
+            populate_cell_buffer(_cell_buffer, f(i));
         }
 
         // Reserve space in parent mesh
@@ -527,7 +537,7 @@ class terrain
         _cell_buffer.clear();
 
         // Add cells in terrain mesh to the global cell buffer
-        populate_cell_buffer(terrain);
+        populate_cell_buffer(_cell_buffer, terrain);
 
         // Reserve space in parent mesh
         allocate_mesh_buffer();
