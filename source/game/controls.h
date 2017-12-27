@@ -239,7 +239,7 @@ class controls
             state->set_game_mode("MODE: PAUSE");
 
             // Turn on the menu
-            ui->set_menu_draw(true);
+            ui->set_draw_menu(true);
         }
         else
         {
@@ -250,7 +250,7 @@ class controls
             state->set_game_mode("MODE: PLAY");
 
             // Turn off the menu
-            ui->set_menu_draw(false);
+            ui->set_draw_menu(false);
         }
     }
     static void toggle_edit_mode(void *ptr, double step)
@@ -424,6 +424,10 @@ class controls
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
+        game::ui_overlay *const ui = control->get_ui();
+
+        ui->set_console_string("BLOCK: STONE");
+        ui->enable_console();
         control->key_down(4, nullptr);
     }
     static void key6_down(void *ptr, double step)
@@ -487,6 +491,7 @@ class controls
 
         // Get the ui pointer
         game::ui_overlay *const ui = control->get_ui();
+        ui->disable_console();
         ui->set_key_up(4);
     }
     static void key6_up(void *ptr, double step)

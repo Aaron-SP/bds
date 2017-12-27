@@ -32,13 +32,12 @@ namespace game
 class text
 {
   private:
-    static constexpr size_t _chat_offset = 9;
+    static constexpr size_t _console_offset = 9;
     static constexpr size_t _ui_offset = 10;
     static constexpr size_t _end = 12;
-    static constexpr float _x_chat = 250.0;
-    static constexpr float _y_chat = 200.0;
-    static constexpr float _x_chat_wrap = 250.0;
-    static constexpr float _y_chat_wrap = 40.0;
+    static constexpr float _y_console = 90.0;
+    static constexpr float _x_console_wrap = 400.0;
+    static constexpr float _y_console_wrap = 40.0;
     static constexpr float _x_health_offset = 200.0;
     static constexpr float _x_energy_offset = 152.0;
     static constexpr float _y_ui = 150.0;
@@ -53,7 +52,7 @@ class text
     std::vector<size_t> _indices;
     std::ostringstream _stream;
     size_t _font_size;
-    bool _draw_chat;
+    bool _draw_console;
     bool _draw_debug;
     bool _draw_ui;
 
@@ -81,24 +80,22 @@ class text
     {
         // Rescale all text items
         uint16_t y = height - 20;
-        for (size_t i = 0; i < _chat_offset; i++)
+        for (size_t i = 0; i < _console_offset; i++)
         {
             // Update the text location
             _text_buffer.set_text_location(i, 10, y);
             y -= _font_size;
         }
 
-        // Position the chat elements
+        // Position the console elements
         const uint16_t w2 = (width / 2);
-        const float chat_x = w2 - _x_chat;
-        const float chat_y = _y_chat;
-        _text_buffer.set_text_location(_chat_offset, chat_x, chat_y);
+        _text_buffer.set_text_center(_console_offset, w2, _y_console);
 
         // Position the ui elements
-        _text_buffer.set_text_location(_chat_offset + 1, w2 - _x_health_offset, _y_ui);
-        _text_buffer.set_text_location(_chat_offset + 2, w2 + _x_energy_offset, _y_ui);
+        _text_buffer.set_text_location(_console_offset + 1, w2 - _x_health_offset, _y_ui);
+        _text_buffer.set_text_location(_console_offset + 2, w2 + _x_energy_offset, _y_ui);
     }
-    inline void update_text(const std::string &s, const size_t index)
+    inline void update_text(const size_t index, const std::string &s)
     {
         _text_buffer.set_text(s, index);
     }
@@ -109,7 +106,7 @@ class text
           _text_fragment("data/shader/text.fragment", GL_FRAGMENT_SHADER),
           _text_prog(_text_vertex, _text_fragment),
           _text_buffer("data/fonts/open_sans.ttf", font_size),
-          _font_size(font_size), _draw_chat(false), _draw_debug(false), _draw_ui(true)
+          _font_size(font_size), _draw_console(false), _draw_debug(false), _draw_ui(true)
     {
         // Set the texture channel for this program, we need to do this here because we render text on channel '1'
         // _text_prog will be in use by the end of this call
@@ -122,16 +119,16 @@ class text
         add_text("Fractex: Official Demo", 0, 0);
 
         // Add 8 text entries
-        for (size_t i = 1; i < _chat_offset; i++)
+        for (size_t i = 1; i < _console_offset; i++)
         {
             add_text("", 0, 0);
         }
 
         // Add 1 text entries
-        for (size_t i = _chat_offset; i < _ui_offset; i++)
+        for (size_t i = _console_offset; i < _ui_offset; i++)
         {
-            add_text("DEFAULT CHAT TEXT", 0, 0);
-            _text_buffer.set_line_wrap(_chat_offset, _x_chat_wrap, _y_chat_wrap);
+            add_text("", 0, 0);
+            _text_buffer.set_line_wrap(i, _x_console_wrap, _y_console_wrap);
         }
 
         // Add 2 text entries
@@ -145,7 +142,7 @@ class text
     }
     void draw() const
     {
-        if (_draw_debug && _draw_chat && _draw_ui)
+        if (_draw_debug && _draw_console && _draw_ui)
         {
             // Bind texture and program
             bind();
@@ -159,18 +156,18 @@ class text
             bind();
 
             // Draw only debug text
-            _text_buffer.draw(0, _chat_offset - 1);
+            _text_buffer.draw(0, _console_offset - 1);
 
             // Draw only ui text
             _text_buffer.draw(_ui_offset, _end - 1);
         }
-        else if (_draw_chat && _draw_ui)
+        else if (_draw_console && _draw_ui)
         {
             // Bind texture and program
             bind();
 
-            // Draw from chat start to end of buffer
-            _text_buffer.draw(_chat_offset, _end - 1);
+            // Draw from console start to end of buffer
+            _text_buffer.draw(_console_offset, _end - 1);
         }
         else if (_draw_ui)
         {
@@ -185,9 +182,9 @@ class text
     {
         _draw_debug = flag;
     }
-    inline void set_draw_chat(const bool flag)
+    inline void set_draw_console(const bool flag)
     {
-        _draw_chat = flag;
+        _draw_console = flag;
     }
     inline void set_draw_ui(const bool flag)
     {
@@ -217,52 +214,52 @@ class text
         {
             // Update player position debug text
             _stream << std::fixed << std::setprecision(4) << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
-            update_text(_stream.str(), 1);
+            update_text(1, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update player direction debug text
             _stream << "DIR- X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
-            update_text(_stream.str(), 2);
+            update_text(2, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update the game mode text
-            update_text(mode, 3);
+            update_text(3, mode);
 
             // Update the destination text
             _stream << "DEST- X: " << goal.x() << ", Y: " << goal.y() << ", Z: " << goal.z();
-            update_text(_stream.str(), 4);
+            update_text(4, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update the energy text
             _stream << "HEALTH: " << health;
-            update_text(_stream.str(), 5);
+            update_text(5, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update the energy text
             _stream << "ENERGY: " << energy;
-            update_text(_stream.str(), 6);
+            update_text(6, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update FPS and IDLE
             _stream << "FPS: " << std::round(fps);
-            update_text(_stream.str(), 7);
+            update_text(7, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update FPS and IDLE
             _stream << "IDLE: " << idle;
-            update_text(_stream.str(), 8);
+            update_text(8, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
@@ -272,17 +269,29 @@ class text
     {
         // Update the energy text
         _stream << static_cast<int>(std::round(health));
-        update_text(_stream.str(), _chat_offset + 1);
+        update_text(_console_offset + 1, _stream.str());
 
         // Clear and reset the _stream
         clear_stream();
 
         // Update the energy text
         _stream << static_cast<int>(std::round(energy));
-        update_text(_stream.str(), _chat_offset + 2);
+        update_text(_console_offset + 2, _stream.str());
 
         // Clear and reset the _stream
         clear_stream();
+    }
+    void update_console(const std::string &str)
+    {
+        // Update console text
+        update_text(_console_offset, str);
+
+        // Get the screen dimensions
+        const std::pair<float, float> size = _text_buffer.get_screen_size();
+
+        // Position the console elements
+        const uint16_t w2 = (size.first / 2);
+        _text_buffer.set_text_center(_console_offset, w2, _y_console);
     }
     inline void upload() const
     {

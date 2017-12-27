@@ -43,6 +43,16 @@ class ui_overlay
         // Draw the text
         _text.draw();
     }
+    inline void disable_console()
+    {
+        _bg.set_draw_console(false);
+        _text.set_draw_console(false);
+    }
+    inline void enable_console()
+    {
+        _bg.set_draw_console(true);
+        _text.set_draw_console(true);
+    }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
         return _bg.get_scale();
@@ -54,6 +64,14 @@ class ui_overlay
     inline void respawn()
     {
         _bg.respawn();
+    }
+    inline void set_console_string(const std::string &str)
+    {
+        // Update the console text
+        _text.update_console(str);
+
+        // Upload changes to the buffer
+        _text.upload();
     }
     inline void set_energy(const float energy)
     {
@@ -75,9 +93,13 @@ class ui_overlay
     {
         _bg.set_key_up(index);
     }
-    inline void set_menu_draw(const bool flag)
+    inline void set_draw_console(const bool flag)
     {
-        _bg.set_menu_draw(flag);
+        _bg.set_draw_console(flag);
+    }
+    inline void set_draw_menu(const bool flag)
+    {
+        _bg.set_draw_menu(flag);
     }
     inline void set_menu_dead()
     {

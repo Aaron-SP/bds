@@ -52,7 +52,7 @@ class fractex
         _ui.set_menu_dead();
 
         // Show menu
-        _ui.set_menu_draw(true);
+        _ui.set_draw_menu(true);
 
         // Disable the keyboard
         auto &keyboard = _win.get_keyboard();
