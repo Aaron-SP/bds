@@ -45,6 +45,8 @@ class ui_background
     static constexpr float _y_red_uv = 4.0 / 512.0;
     static constexpr float _x_blue_uv = 148.0 / 512.0;
     static constexpr float _y_blue_uv = 4.0 / 512.0;
+    static constexpr float _x_white_uv = 184.0 / 512.0;
+    static constexpr float _y_white_uv = 4.0 / 512.0;
 
     // Icons
     static constexpr float _x_reload_uv = 4.0 / 512.0;
@@ -57,6 +59,8 @@ class ui_background
     static constexpr float _y_grap_uv = 40.0 / 512.0;
     static constexpr float _x_jet_uv = 148.0 / 512.0;
     static constexpr float _y_jet_uv = 40.0 / 512.0;
+    static constexpr float _x_scan_uv = 184.0 / 512.0;
+    static constexpr float _y_scan_uv = 40.0 / 512.0;
 
     // Menu text
     static constexpr float _x_dead_uv = 4.0 / 512.0;
@@ -314,6 +318,15 @@ class ui_background
         // Load rect at position
         set_rect(index + 2, p, scale, yellow_coord);
     }
+    inline void load_background_white(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale(_s_bg, _s_bg);
+        const min::vec4<float> white_coord(_x_white_uv, _y_white_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index + 2, p, scale, white_coord);
+    }
     inline void load_fps_cursor()
     {
         const min::vec2<float> p(_center_w, _center_h);
@@ -397,6 +410,15 @@ class ui_background
         // Load rect at position
         set_rect(16, p, scale, jet_coord);
     }
+    inline void load_scan_icon(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> beam_coord(_x_scan_uv, _y_scan_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(17, p, scale, beam_coord);
+    }
     inline void load_menu_dead()
     {
         const min::vec2<float> p(_center_w, _center_h);
@@ -449,9 +471,9 @@ class ui_background
           _prog(_vertex, _fragment),
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
-          _index(0), _selected(0), _menu_offset(17),
+          _index(0), _selected(0), _menu_offset(18),
           _energy(0.0), _health(1.0), _cursor_angle(0.0),
-          _draw_menu(false), _draw_console(false)
+          _draw_menu(false), _draw_console(true)
     {
         // Create the instance rectangle
         load_base_rect();
@@ -538,8 +560,8 @@ class ui_background
         // Set selected index
         _selected = index;
 
-        // Set selected color to yellow
-        load_background_yellow(index);
+        // Set selected color to white
+        load_background_white(index);
     }
     inline void set_key_down_fail(const size_t index)
     {
@@ -568,6 +590,8 @@ class ui_background
             return load_grapple_icon(index);
         case 3:
             return load_jet_icon(index);
+        case 4:
+            return load_scan_icon(index);
         }
     }
     inline void set_draw_console(const bool flag)

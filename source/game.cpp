@@ -46,6 +46,7 @@ class fractex
     game::world _world;
     game::controls _controls;
     game::goal_seek _goal_seek;
+
     inline void die()
     {
         // Set menu for dead
@@ -73,7 +74,6 @@ class fractex
         auto &keyboard = _win.get_keyboard();
         keyboard.enable();
     }
-
     inline std::pair<unsigned, unsigned> user_input()
     {
         if (_state.get_user_input() && !_state.is_dead())
@@ -265,8 +265,8 @@ class fractex
     void update_cursor()
     {
         // Get the screen dimensions
-        const uint16_t h = _win.get_height();
         const uint16_t w = _win.get_width();
+        const uint16_t h = _win.get_height();
 
         // Center cursor in middle of window
         _win.set_cursor(w / 2, h / 2);

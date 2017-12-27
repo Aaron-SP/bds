@@ -64,6 +64,9 @@ class controls
             throw std::runtime_error("control: Invalid control pointers");
         }
 
+        // Set default console message
+        _ui->set_console_string(_state->get_skill_state().get_beam_string());
+
         // Get access to the keyboard
         auto &keyboard = _window->get_keyboard();
 
@@ -252,6 +255,9 @@ class controls
             // Turn off the menu
             ui->set_draw_menu(false);
         }
+
+        // Center cursor in middle of window
+        win->set_cursor(win->get_width() / 2, win->get_height() / 2);
     }
     static void toggle_edit_mode(void *ptr, double step)
     {
@@ -371,9 +377,13 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
         game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
+        game::ui_overlay *const ui = control->get_ui();
 
         // Switch to beam weapon type
-        const auto f = [&skill]() {
+        const auto f = [&skill, ui]() {
+
+            // Load beam string in console
+            ui->set_console_string(skill.get_beam_string());
             skill.set_beam_mode();
         };
 
@@ -385,9 +395,13 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
         game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
+        game::ui_overlay *const ui = control->get_ui();
 
         // Switch to missile weapon type
-        const auto f = [&skill]() {
+        const auto f = [&skill, ui]() {
+
+            // Load missile string in console
+            ui->set_console_string(skill.get_missile_string());
             skill.set_missile_mode();
         };
 
@@ -399,11 +413,16 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
         game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
+        game::ui_overlay *const ui = control->get_ui();
 
         // Switch to grapple weapon type
-        const auto f = [&skill]() {
+        const auto f = [&skill, ui]() {
+
+            // Load grapple string in console
+            ui->set_console_string(skill.get_grapple_string());
             skill.set_grapple_mode();
         };
+
         control->key_down(2, f);
     }
     static void key4_down(void *ptr, double step)
@@ -412,9 +431,13 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
         game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
+        game::ui_overlay *const ui = control->get_ui();
 
-        // Switch to beam weapon type
-        const auto f = [&skill]() {
+        // Switch to jet weapon type
+        const auto f = [&skill, ui]() {
+
+            // Load jet string in console
+            ui->set_console_string(skill.get_jet_string());
             skill.set_jetpack_mode();
         };
 
@@ -422,13 +445,21 @@ class controls
     }
     static void key5_down(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Get the skill_state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
+        game::state *const state = control->get_state();
+        skill_state &skill = state->get_skill_state();
         game::ui_overlay *const ui = control->get_ui();
 
-        ui->set_console_string("BLOCK: STONE");
-        ui->enable_console();
-        control->key_down(4, nullptr);
+        // Switch to scan weapon type
+        const auto f = [&skill, ui]() {
+
+            // Load scan string in console
+            ui->set_console_string(skill.get_scan_string());
+            skill.set_scan_mode();
+        };
+
+        control->key_down(4, f);
     }
     static void key6_down(void *ptr, double step)
     {
@@ -491,7 +522,6 @@ class controls
 
         // Get the ui pointer
         game::ui_overlay *const ui = control->get_ui();
-        ui->disable_console();
         ui->set_key_up(4);
     }
     static void key6_up(void *ptr, double step)
@@ -630,6 +660,11 @@ class controls
                 // Lock the gun in jetpack mode
                 skill.lock();
             }
+            else if (skill.is_scan_mode())
+            {
+                // Lock the gun in scan mode
+                skill.lock();
+            }
         }
     }
     static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
@@ -643,10 +678,11 @@ class controls
         game::state *const state = control->get_state();
         game::character *const character = control->get_character();
         skill_state &skill = state->get_skill_state();
+        game::ui_overlay *const ui = control->get_ui();
 
         // Are we dead?
         const bool dead = state->is_dead();
-        if (dead)
+        if (dead && !skill.is_locked())
         {
             // return early
             return;
@@ -707,11 +743,11 @@ class controls
                 }
                 else if (skill.is_beam_mode())
                 {
-                    // Remove block from world, get the removed atlas
+                    // Remove block from world, get the removed block id
                     if (skill.can_consume(_beam_cost))
                     {
-                        const int8_t atlas = world->explode_block(r, nullptr, 20.0);
-                        if (atlas >= 0)
+                        const int8_t block_id = world->explode_block(r, nullptr, 20.0);
+                        if (block_id >= 0)
                         {
                             // Consume energy
                             skill.consume(_beam_cost);
@@ -758,6 +794,18 @@ class controls
                 {
                     // Unlock the gun if jetpack mode
                     skill.unlock_jetpack();
+                }
+                else if (skill.is_scan_mode())
+                {
+                    // Scan the block on this ray
+                    const int8_t block_id = world->scan_block(r);
+                    const std::string &text = skill.get_scan_desc(block_id);
+
+                    // Set the console text
+                    ui->set_console_string(text);
+
+                    // Unlock the gun if scan mode
+                    skill.unlock_scan();
                 }
             }
         }

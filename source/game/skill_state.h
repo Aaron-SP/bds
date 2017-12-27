@@ -18,9 +18,11 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __SKILL_STATE__
 #define __SKILL_STATE__
 
+#include <array>
 #include <chrono>
 #include <game/character.h>
 #include <min/sample.h>
+#include <string>
 
 namespace game
 {
@@ -29,20 +31,23 @@ class skill_state
 {
   private:
     static constexpr float _max_energy = 100.0;
+    static constexpr size_t _scan_id_count = 22;
     enum skill_mode
     {
         jetpack,
         beam,
         grapple,
-        missile
+        missile,
+        scan
     };
 
+    std::array<std::string, _scan_id_count> _scan_desc;
+    skill_mode _mode;
     std::chrono::high_resolution_clock::time_point _charge;
     std::chrono::high_resolution_clock::time_point _cool;
     float _energy;
     bool _gun_active;
     bool _locked;
-    skill_mode _mode;
     bool _shoot_cooldown;
     bool _charging;
 
@@ -62,9 +67,41 @@ class skill_state
         // return time since last sync
         return std::chrono::duration<double, std::milli>(now - _cool).count();
     }
+    inline void load_scan_strings()
+    {
+        // Reserve space for strings
+        _scan_desc[0] = "Stone";
+        _scan_desc[1] = "Sand";
+        _scan_desc[2] = "Fertile Soil";
+        _scan_desc[3] = "Citrine";
+        _scan_desc[4] = "Sulphur";
+        _scan_desc[5] = "Unstable Sodium";
+        _scan_desc[6] = "Erbium";
+        _scan_desc[7] = "Unstable Lithium";
+        _scan_desc[8] = "Water";
+        _scan_desc[9] = "Oxygen";
+        _scan_desc[10] = "Organic Life";
+        _scan_desc[11] = "Eskolaite";
+        _scan_desc[12] = "Carbon";
+        _scan_desc[13] = "Soil";
+        _scan_desc[14] = "Clay";
+        _scan_desc[15] = "Foliage";
+        _scan_desc[16] = "Status Unknown";
+        _scan_desc[17] = "Charge Beam";
+        _scan_desc[18] = "Missiles";
+        _scan_desc[19] = "Grapple Hook";
+        _scan_desc[20] = "Jet Pack";
+        _scan_desc[21] = "Pending Scan";
+    }
 
   public:
-    skill_state() : _energy(0.0), _gun_active(true), _locked(false), _mode(skill_mode::beam), _shoot_cooldown(false) {}
+    skill_state()
+        : _mode(skill_mode::beam), _energy(0.0),
+          _gun_active(true), _locked(false), _shoot_cooldown(false), _charging(false)
+    {
+        // Load the scan strings
+        load_scan_strings();
+    }
     inline void add_energy(const float energy)
     {
         // Absorb this amount of energy if not full
@@ -138,6 +175,37 @@ class skill_state
     {
         return _energy / _max_energy;
     }
+    inline const std::string &get_scan_desc(const int8_t id)
+    {
+        if (id >= 0 && static_cast<uint8_t>(id) < _scan_id_count)
+        {
+            return _scan_desc[id];
+        }
+        else
+        {
+            return _scan_desc[_scan_id_count - 6];
+        }
+    }
+    inline const std::string &get_beam_string()
+    {
+        return _scan_desc[_scan_id_count - 5];
+    }
+    inline const std::string &get_missile_string()
+    {
+        return _scan_desc[_scan_id_count - 4];
+    }
+    inline const std::string &get_grapple_string()
+    {
+        return _scan_desc[_scan_id_count - 3];
+    }
+    inline const std::string &get_jet_string()
+    {
+        return _scan_desc[_scan_id_count - 2];
+    }
+    inline const std::string &get_scan_string()
+    {
+        return _scan_desc[_scan_id_count - 1];
+    }
     inline bool is_beam_charged() const
     {
         return is_beam_mode() && _locked && get_charge_time() > 1000.0;
@@ -161,6 +229,10 @@ class skill_state
     inline bool is_missile_mode() const
     {
         return _mode == skill_mode::missile;
+    }
+    inline bool is_scan_mode() const
+    {
+        return _mode == skill_mode::scan;
     }
     inline bool is_locked() const
     {
@@ -203,6 +275,13 @@ class skill_state
             _locked = false;
         }
     }
+    inline void unlock_scan()
+    {
+        if (_mode == skill_mode::scan)
+        {
+            _locked = false;
+        }
+    }
     inline bool check_cooldown()
     {
         if (_shoot_cooldown)
@@ -236,10 +315,6 @@ class skill_state
     {
         _gun_active = mode;
     }
-    inline void set_jetpack_mode()
-    {
-        _mode = skill_mode::jetpack;
-    }
     inline void set_beam_mode()
     {
         _mode = skill_mode::beam;
@@ -251,6 +326,14 @@ class skill_state
     inline void set_missile_mode()
     {
         _mode = skill_mode::missile;
+    }
+    inline void set_jetpack_mode()
+    {
+        _mode = skill_mode::jetpack;
+    }
+    inline void set_scan_mode()
+    {
+        _mode = skill_mode::scan;
     }
 };
 }

@@ -780,6 +780,15 @@ class world
             _preview_offset = _cached_offset;
         }
     }
+    int8_t scan_block(const min::ray<float, min::vec3> &r)
+    {
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        int8_t value = -2;
+        _grid.ray_trace_last(r, _ray_max_dist, value);
+
+        // return the block id
+        return value;
+    }
     inline void set_atlas_id(const int8_t id)
     {
         // Only applicable in edit mode

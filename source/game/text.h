@@ -106,7 +106,7 @@ class text
           _text_fragment("data/shader/text.fragment", GL_FRAGMENT_SHADER),
           _text_prog(_text_vertex, _text_fragment),
           _text_buffer("data/fonts/open_sans.ttf", font_size),
-          _font_size(font_size), _draw_console(false), _draw_debug(false), _draw_ui(true)
+          _font_size(font_size), _draw_console(true), _draw_debug(false), _draw_ui(true)
     {
         // Set the texture channel for this program, we need to do this here because we render text on channel '1'
         // _text_prog will be in use by the end of this call
