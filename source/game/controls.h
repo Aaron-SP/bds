@@ -44,6 +44,7 @@ class controls
     static constexpr float _jet_cost = 0.75;
     static constexpr float _health_regen = 5.0;
     static constexpr float _energy_regen = 10.0;
+    static constexpr float _project_dist = 3.0;
     min::window *_window;
     min::camera<float> *_camera;
     game::character *_character;
@@ -76,6 +77,8 @@ class controls
         // Register left click events
         _window->register_lclick_down(controls::left_click_down);
         _window->register_lclick_up(controls::left_click_up);
+        _window->register_rclick_down(controls::right_click_down);
+        _window->register_rclick_up(controls::right_click_up);
         _window->register_update(controls::on_resize);
 
         // Add FPS(WADS) keys to watch
@@ -593,10 +596,10 @@ class controls
 
         // Get the ALL the pointers
         min::camera<float> *const cam = control->get_camera();
-        game::world *const world = control->get_world();
-        game::state *const state = control->get_state();
         game::character *const character = control->get_character();
+        game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
+        game::world *const world = control->get_world();
 
         // Are we dead?
         const bool dead = state->is_dead();
@@ -629,7 +632,7 @@ class controls
                 if (skill.can_consume(_grapple_cost))
                 {
                     // Calculate new point to add
-                    const min::vec3<float> proj = cam->project_point(3.0);
+                    const min::vec3<float> proj = cam->project_point(_project_dist);
 
                     // Create a ray from camera to destination
                     const min::ray<float, min::vec3> r(cam->get_position(), proj);
@@ -674,11 +677,11 @@ class controls
 
         // Get the ALL the pointers
         min::camera<float> *const cam = control->get_camera();
-        game::world *const world = control->get_world();
-        game::state *const state = control->get_state();
         game::character *const character = control->get_character();
+        game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
         game::ui_overlay *const ui = control->get_ui();
+        game::world *const world = control->get_world();
 
         // Are we dead?
         const bool dead = state->is_dead();
@@ -697,7 +700,7 @@ class controls
             if (consumed)
             {
                 // Calculate new point to add
-                const min::vec3<float> point = cam->project_point(3.0);
+                const min::vec3<float> point = cam->project_point(_project_dist);
 
                 // Create a ray from camera to destination
                 const min::ray<float, min::vec3> r(cam->get_position(), point);
@@ -712,7 +715,7 @@ class controls
             character->abort_animation_shoot();
 
             // Calculate point to remove from
-            const min::vec3<float> point = cam->project_point(3.0);
+            const min::vec3<float> point = cam->project_point(_project_dist);
 
             // Create a ray from camera to destination
             const min::ray<float, min::vec3> r(cam->get_position(), point);
@@ -809,6 +812,62 @@ class controls
                 }
             }
         }
+    }
+    static void right_click_down(void *ptr, const uint16_t x, const uint16_t y)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the camera and state pointers
+        min::camera<float> *const cam = control->get_camera();
+        game::state *const state = control->get_state();
+        game::world *const world = control->get_world();
+
+        // Are we dead?
+        const bool dead = state->is_dead();
+        if (dead)
+        {
+            // Signal for game to respawn
+            state->set_respawn(true);
+
+            // return early
+            return;
+        }
+
+        // Calculate point to remove from
+        const min::vec3<float> point = cam->project_point(_project_dist);
+
+        // Create a ray from camera to destination
+        const min::ray<float, min::vec3> r(cam->get_position(), point);
+
+        // Shoot a ray at a block and target it if we hit it
+        min::vec3<float> target;
+        const bool hit = world->target_block(r, target);
+        if (hit)
+        {
+            // Set tracking of target
+            state->track_target(target);
+        }
+    }
+    static void right_click_up(void *ptr, const uint16_t x, const uint16_t y)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the state and skill pointers
+        game::state *const state = control->get_state();
+        skill_state &skill = state->get_skill_state();
+
+        // Are we dead?
+        const bool dead = state->is_dead();
+        if (dead && !skill.is_locked())
+        {
+            // return early
+            return;
+        }
+
+        // Stop camera tracking
+        state->abort_tracking();
     }
     static void jump(void *ptr, double step)
     {

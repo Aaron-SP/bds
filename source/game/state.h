@@ -39,8 +39,10 @@ class state
     skill_state _skill_state;
     std::string _mode;
     std::pair<min::vec3<float>, bool> _load_state;
-    min::vec3<float> _spawn;
-    min::vec3<float> _look;
+    min::vec3<float> _default_spawn;
+    min::vec3<float> _default_look;
+    min::vec3<float> _target;
+    bool _fix_target;
     float _health;
     bool _pause_mode;
     bool _pause_lock;
@@ -122,10 +124,10 @@ class state
         else
         {
             // Load camera settings
-            set_camera(_spawn, _look);
+            set_camera(_default_spawn, _default_look);
 
             // return the state
-            _load_state = std::make_pair(_spawn, false);
+            _load_state = std::make_pair(_default_spawn, false);
         }
     }
 
@@ -133,7 +135,7 @@ class state
     state()
         : _x{}, _y{}, _frame_count{},
           _mode("MODE: PLAY"),
-          _spawn(0.0, -50.0, 0.0), _look(1.0, -50.0, 0.0),
+          _default_spawn(0.0, -50.0, 0.0), _default_look(1.0, -50.0, 0.0),
           _health(_health_cap),
           _pause_mode(false), _pause_lock(false), _user_input(true),
           _dead(false), _respawn(false)
@@ -143,6 +145,10 @@ class state
 
         // Load state
         load_state();
+    }
+    inline void abort_tracking()
+    {
+        _fix_target = false;
     }
     inline void add_health(float health)
     {
@@ -203,7 +209,7 @@ class state
     }
     inline const min::vec3<float> &get_default_spawn()
     {
-        return _spawn;
+        return _default_spawn;
     }
     inline bool get_user_input() const
     {
@@ -234,7 +240,7 @@ class state
         _skill_state.set_energy(0.0);
 
         // Reload camera settings
-        set_camera(_spawn, _look);
+        set_camera(_default_spawn, _default_look);
     }
     inline void save_state(const min::vec3<float> &p)
     {
@@ -293,6 +299,14 @@ class state
     {
         _user_input = mode;
     }
+    inline void track_target(min::vec3<float> target)
+    {
+        // Set the look at target to track
+        _target = target;
+
+        // Enable fixed look at
+        _fix_target = true;
+    }
     inline bool toggle_game_pause()
     {
         // If not locked
@@ -306,59 +320,77 @@ class state
     }
     void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h, const double step)
     {
-        // Set camera start position and look position
-        _camera.set_position(p + min::vec3<float>(0.0, 0.5, 0.0));
+        // Calculate position to move camera to
+        const min::vec3<float> move = p + min::vec3<float>(0.0, 0.5, 0.0);
 
-        // Update the md5 model matrix
-        update_model_matrix();
-
-        // Get the offset from screen center
-        const float sensitivity = 0.25;
-
-        // Increment frame count for updating and hash to current frame index
-        const unsigned frame_index = (_frame_count %= _frame_average)++;
-        _x[frame_index] = sensitivity * (c.first - (w / 2));
-        _y[frame_index] = sensitivity * (c.second - (h / 2));
-
-        // Calculate average value of x and y
-        float x = 0.0;
-        float y = 0.0;
-        for (unsigned i = 0; i < _frame_average; i++)
+        // Check if we are fixing look at target
+        if (_fix_target)
         {
-            x += _x[i];
-            y += _y[i];
-        }
+            // Set camera start position and look position
+            _camera.set(move, _target);
 
-        // Average value for x and y for last N frames
-        x /= _frame_average;
-        y /= _frame_average;
-
-        // If the mouse coordinates moved at all
-        if (std::abs(x) > 1E-3 || std::abs(y) > 1E-3)
-        {
-            // Get the camera forward vector
-            const min::vec3<float> &forward = _camera.get_forward();
-
-            // Check if we have looked too far on the global y axis
-            const float dy = forward.dot(min::vec3<float>::up());
-            if (dy > 0.975 && y < 0.0)
-            {
-                y = 0.0;
-            }
-            else if (dy < -0.975 && y > 0.0)
-            {
-                y = 0.0;
-            }
-
-            // Adjust the camera by the offset from screen center
-            _camera.move_look_at(x, y);
-
-            // Force camera to update internals
+            // Force camera to update
             _camera.force_update();
 
             // Interpolate between the two rotations to avoid jerking
             _q = update_model_rotation();
         }
+        else
+        {
+            // Set camera start position and look position
+            _camera.set_position(move);
+
+            // Get the offset from screen center
+            const float sensitivity = 0.25;
+
+            // Increment frame count for updating and hash to current frame index
+            const unsigned frame_index = (_frame_count %= _frame_average)++;
+            _x[frame_index] = sensitivity * (c.first - (w / 2));
+            _y[frame_index] = sensitivity * (c.second - (h / 2));
+
+            // Calculate average value of x and y
+            float x = 0.0;
+            float y = 0.0;
+            for (unsigned i = 0; i < _frame_average; i++)
+            {
+                x += _x[i];
+                y += _y[i];
+            }
+
+            // Average value for x and y for last N frames
+            x /= _frame_average;
+            y /= _frame_average;
+
+            // If the mouse coordinates moved at all
+            if (std::abs(x) > 1E-3 || std::abs(y) > 1E-3)
+            {
+                // Get the camera forward vector
+                const min::vec3<float> &forward = _camera.get_forward();
+
+                // Check if we have looked too far on the global y axis
+                const float dy = forward.dot(min::vec3<float>::up());
+                if (dy > 0.975 && y < 0.0)
+                {
+                    y = 0.0;
+                }
+                else if (dy < -0.975 && y > 0.0)
+                {
+                    y = 0.0;
+                }
+
+                // Adjust the camera by the offset from screen center
+                _camera.move_look_at(x, y);
+
+                // Force camera to update internals
+                _camera.force_update();
+
+                // Interpolate between the two rotations to avoid jerking
+                _q = update_model_rotation();
+            }
+        }
+
+        // Update the md5 model matrix
+        update_model_matrix();
     }
 };
 }

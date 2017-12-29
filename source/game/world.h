@@ -862,6 +862,15 @@ class world
             }
         }
     }
+    bool target_block(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
+    {
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        int8_t value = -2;
+        out = _grid.ray_trace_last(r, _ray_max_dist, value);
+
+        // return if we hit something
+        return value >= 0;
+    }
     inline bool toggle_ai_mode()
     {
         // Toggle flag and return result
