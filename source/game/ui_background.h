@@ -260,6 +260,9 @@ class ui_background
         // Add rect mesh to the buffer
         _index = _vb.add_mesh(rect);
 
+        // Unbind the last VAO to prevent scrambling buffers
+        _vb.unbind();
+
         // Upload the text glyphs to the GPU
         _vb.upload();
     }

@@ -159,14 +159,14 @@ class fractex
 
   public:
     // Load window shaders and program
-    fractex(const size_t view)
+    fractex(const size_t chunk, const size_t view)
         : _win("Fractex", 720, 480, 3, 3),
           _uniforms(),
           _ui(_uniforms, _win.get_width(), _win.get_height()),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
           _state(),
-          _world(_state.get_load_state(), &_particles, _uniforms, 64, 8, view),
+          _world(_state.get_load_state(), &_particles, _uniforms, 64, chunk, view),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world),
           _goal_seek(_world)
     {
@@ -298,10 +298,10 @@ class fractex
     }
 };
 
-void run(const size_t frames, const size_t view)
+void run(const size_t frames, const size_t chunk, const size_t view)
 {
     // Load window shaders and program, enable shader program
-    fractex game(view);
+    fractex game(chunk, view);
 
     // Setup controller to run at 60 frames per second
     min::loop_sync sync(frames, 0.25, 0.25, 0.25);
@@ -364,7 +364,8 @@ int main(int argc, char *argv[])
     {
         // Default frame count
         size_t frames = 60;
-        size_t view = 7;
+        size_t chunk = 32;
+        size_t view = 3;
 
         // Try to parse commandline args
         for (int i = 2; i < argc; i += 2)
@@ -378,6 +379,11 @@ int main(int argc, char *argv[])
                 // Parse uint
                 parse_uint(argv[i], frames);
             }
+            else if (input.compare("-chunk") == 0)
+            {
+                // Parse uint
+                parse_uint(argv[i], chunk);
+            }
             else if (input.compare("-view") == 0)
             {
                 // Parse uint
@@ -390,8 +396,8 @@ int main(int argc, char *argv[])
             }
         }
 
-        // run the game
-        run(frames, view);
+        // Run the game
+        run(frames, chunk, view);
     }
     catch (const std::exception &ex)
     {

@@ -43,6 +43,7 @@ class cgrid
     size_t _chunk_size;
     size_t _chunk_scale;
     std::vector<min::mesh<float, uint32_t>> _chunks;
+    std::vector<bool> _chunk_update;
     std::vector<size_t> _surrounding_chunks;
     size_t _recent_chunk;
     size_t _view_chunk_size;
@@ -283,6 +284,9 @@ class cgrid
                 }
             }
         };
+
+        // Flag that the chunk needs to be updated
+        _chunk_update[chunk_key] = true;
 
         // Get cubic function properties
         const min::vec3<float> start = chunk_start(chunk_key);
@@ -661,12 +665,21 @@ class cgrid
           _chunk_size(chunk_size),
           _chunk_scale(_grid_size / _chunk_size),
           _chunks(_chunk_scale * _chunk_scale * _chunk_scale, min::mesh<float, uint32_t>("chunk")),
+          _chunk_update(_chunks.size(), false),
           _recent_chunk(0),
           _view_chunk_size(view_chunk_size),
-          _view_half_width((_view_chunk_size / 2) - 1),
+          _view_half_width(_view_chunk_size / 2),
           _cell_extent(1.0, 1.0, 1.0),
           _atlas_id(0)
     {
+
+        // Check chunk size
+        if (grid_size % chunk_size != 0)
+        {
+            throw std::runtime_error("cgrid: chunk_size must evenly divide grid_size");
+        }
+
+        // Check view size
         if (_view_chunk_size % 2 == 0 || _view_chunk_size == 1)
         {
             // View chunk_size is not symmetric or greater than one
@@ -733,7 +746,7 @@ class cgrid
         // Run the function
         cubic_grid(start, offset, length, f);
     }
-    void create_player_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
+    inline void create_player_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
@@ -761,7 +774,7 @@ class cgrid
         // Run the function
         cubic_grid(start, offset, length, f);
     }
-    void create_mob_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
+    inline void create_mob_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
@@ -797,10 +810,13 @@ class cgrid
     {
         return _chunks[key];
     }
-    void get_view_chunks(std::vector<size_t> &out) const
+    inline size_t get_chunk_size() const
+    {
+        return _chunks.size();
+    }
+    inline void get_view_chunks(std::vector<size_t> &out) const
     {
         out.clear();
-        out.push_back(_recent_chunk);
 
         // Get the chunk starting point
         const min::vec3<float> start = chunk_start(_recent_chunk) - min::vec3<float>(_chunk_size, _chunk_size, _chunk_size) * _view_half_width;
@@ -820,7 +836,7 @@ class cgrid
     {
         return _world;
     }
-    min::vec3<float> ray_trace_last(const min::ray<float, min::vec3> &r, const size_t length, int8_t &value) const
+    inline min::vec3<float> ray_trace_last(const min::ray<float, min::vec3> &r, const size_t length, int8_t &value) const
     {
         // Trace a ray and return the last key
         size_t prev_key, key;
@@ -834,7 +850,7 @@ class cgrid
         // return ray start point since it is not in the grid
         return r.get_origin();
     }
-    min::vec3<float> ray_trace_prev(const min::ray<float, min::vec3> &r, const size_t length) const
+    inline min::vec3<float> ray_trace_prev(const min::ray<float, min::vec3> &r, const size_t length) const
     {
         // Trace a ray and return the last key
         size_t prev_key, key;
@@ -849,7 +865,7 @@ class cgrid
         // return ray start point since it is not in the grid
         return r.get_origin();
     }
-    void path(std::vector<min::vec3<float>> &out, const min::vec3<float> &start, const min::vec3<float> &stop) const
+    inline void path(std::vector<min::vec3<float>> &out, const min::vec3<float> &start, const min::vec3<float> &stop) const
     {
         // Try to find a path between points
         const std::vector<size_t> path = search(start, stop);
@@ -931,22 +947,24 @@ class cgrid
         // Return the number of modified blocks
         return out;
     }
-    bool update_chunk(const min::vec3<float> &p)
+    inline bool is_update_chunk(const size_t chunk_key) const
+    {
+        return _chunk_update[chunk_key];
+    }
+    inline void update_chunk(const size_t chunk_key)
+    {
+        _chunk_update[chunk_key] = false;
+    }
+    inline void update_current_chunk(const min::vec3<float> &p)
     {
         bool is_valid = true;
         const size_t key = chunk_key_safe(p, is_valid);
 
-        // If we moved into a new chunk, cache it
-        if (is_valid && (key != _recent_chunk))
+        // Maintain that new chunk is valid
+        if (is_valid)
         {
             _recent_chunk = key;
-
-            // we entered new chunk
-            return true;
         }
-
-        // same chunk as last time
-        return false;
     }
 };
 }

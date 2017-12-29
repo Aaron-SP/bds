@@ -69,8 +69,8 @@ class character
         min::mesh<float, uint32_t> &md5 = _md5_model.get_meshes()[0];
         md5.calculate_normals();
 
-        // Bind VAO
-        _skbuffer.bind();
+        // Unbind the last VAO to prevent scrambling buffers
+        _skbuffer.unbind();
 
         // Add mesh and update buffers
         _skbuffer.add_mesh(md5);

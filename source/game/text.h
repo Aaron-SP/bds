@@ -295,6 +295,9 @@ class text
     }
     inline void upload() const
     {
+        // Unbind the last VAO to prevent scrambling buffers
+        _text_buffer.unbind();
+
         // Upload the text glyphs to the GPU
         _text_buffer.upload();
     }

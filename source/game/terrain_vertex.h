@@ -136,9 +136,9 @@ class terrain_vertex
     }
     inline static void copy(std::vector<T> &data, const min::mesh<T, K> &m, const size_t mesh_offset)
     {
-        // Parallelize on copying data
-        const auto work = [&data, &m, mesh_offset](const size_t i) {
-
+        const size_t size = m.vertex.size();
+        for (size_t i = 0; i < size; i++)
+        {
             // Calculate index into data buffer
             const size_t j = mesh_offset + (i * width_size);
 
@@ -150,10 +150,7 @@ class terrain_vertex
 
             // Copy the normal data, 3 floats, offset is in number of floats
             std::memcpy(&data[j + normal_off], &m.normal[i], normal_size);
-        };
-
-        // Convert cells to mesh in parallel
-        work_queue::worker.run(work, 0, m.vertex.size());
+        }
     }
     inline static constexpr size_t width()
     {

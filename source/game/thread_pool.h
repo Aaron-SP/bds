@@ -62,16 +62,50 @@ class thread_pool
     std::condition_variable _more_data;
     std::atomic<bool> _die;
 
+    inline void state_wait()
+    {
+        // Wait for all workers to quit
+        while (true)
+        {
+            // Count threads asleep
+            size_t count = 0;
+            for (size_t i = 0; i < _thread_count - 1; i++)
+            {
+                // Make sure all threads are asleep
+                std::unique_lock<std::mutex> lock(_sleep_lock);
+
+                // See if worker is finished
+                if (_state[i] == false)
+                {
+                    count++;
+                }
+            }
+
+            // If all workers are finished
+            if (count == _thread_count - 1)
+            {
+                break;
+            }
+        }
+    }
     inline void work(const size_t index)
     {
         while (true)
         {
-            // ATOMIC: Read running state
-            const bool ready = _state[index];
-            const bool die = _die;
+            // Sleep on condition
+            {
+                // Acquire mutex to sleep on condition
+                std::unique_lock<std::mutex> lock(_sleep_lock);
+
+                // ATOMIC: Signal Sleeping
+                _state[index] = false;
+
+                // Wait on more data
+                _more_data.wait(lock, [this, index]() { return _state[index] || _die; });
+            }
 
             // Do work
-            if (ready)
+            if (_state[index])
             {
                 // Get access to work
                 std::vector<work_item> &items = _queue[index];
@@ -85,20 +119,11 @@ class thread_pool
 
                 // Clear the queue
                 items.clear();
-
-                // ATOMIC: Signal finished
-                _state[index] = false;
             }
-            else if (die)
+            else if (_die)
             {
                 // Kill thread
                 break;
-            }
-            else
-            {
-                // Acquire condition variable
-                std::unique_lock<std::mutex> lock(_sleep_lock);
-                _more_data.wait(lock);
             }
         }
     }
@@ -140,6 +165,9 @@ class thread_pool
     }
     void run(const std::function<void(const size_t)> &f, const size_t start, const size_t stop)
     {
+        // Wait for all workers to sleep
+        state_wait();
+
         // Load queue with work
         const size_t length = (stop - start) / _thread_count;
 
@@ -168,25 +196,8 @@ class thread_pool
         work_item item(f, begin, remain);
         item.work();
 
-        // Wait for all workers to quit
-        while (true)
-        {
-            size_t count = 0;
-            for (size_t i = 0; i < _thread_count - 1; i++)
-            {
-                // See if worker is finished
-                if (_state[i] == false)
-                {
-                    count++;
-                }
-            }
-
-            // If all workers are finished
-            if (count == _thread_count - 1)
-            {
-                break;
-            }
-        }
+        // Wait for all workers to sleep
+        state_wait();
     }
 };
 }

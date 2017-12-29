@@ -49,10 +49,17 @@ class world
     static constexpr float _explosion_radius = 4.0;
 
     // Terrain stuff
+    cgrid _grid;
     game::terrain _terrain;
     std::vector<size_t> _view_chunks;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _player_col_cells;
     std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
+
+    // Physics stuff
+    min::vec3<float> _gravity;
+    min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
+    size_t _char_id;
+    unsigned _jump_count;
 
     // Player control stuff
     min::mesh<float, uint32_t> _terr_mesh;
@@ -60,13 +67,6 @@ class world
     min::vec3<int> _preview_offset;
     min::vec3<float> _preview;
     min::vec3<unsigned> _scale;
-
-    // Physics stuff
-    min::vec3<float> _gravity;
-    cgrid _grid;
-    min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
-    size_t _char_id;
-    unsigned _jump_count;
 
     // Particle stuff
     particle *_particles;
@@ -118,10 +118,7 @@ class world
         body.set_no_rotate();
 
         // Update recent chunk
-        _grid.update_chunk(position);
-
-        // Generate a new geometry mesh
-        generate_terrain();
+        _grid.update_current_chunk(position);
 
         // If this the first time we load
         if (!state.second)
@@ -150,9 +147,6 @@ class world
         // If we removed geometry, play particles
         if (removed > 0)
         {
-            // generate new mesh
-            generate_terrain();
-
             // Add particle effects
             _particles->load_static_explode(point, direction, 5.0, size);
 
@@ -179,20 +173,6 @@ class world
                 }
             }
         }
-    }
-    // Generate all geometry in grid and adds it to geometry buffer
-    inline void generate_terrain()
-    {
-        // Get surrounding chunks for drawing
-        _grid.get_view_chunks(_view_chunks);
-
-        // Lambda that returns a mesh
-        const auto f = [this](const size_t key) -> min::mesh<float, uint32_t> & {
-            return _grid.get_chunk(key);
-        };
-
-        // Upload contents to the vertex buffer
-        _terrain.upload_geometry(_view_chunks, f);
     }
     // Generates the preview geometry and adds it to preview buffer
     inline void generate_preview()
@@ -355,14 +335,15 @@ class world
     world(const std::pair<min::vec3<float>, bool> &state,
           particle *const particles, const game::uniforms &uniforms,
           const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
-        : _terr_mesh("atlas"),
+        : _grid(grid_size, chunk_size, view_chunk_size),
+          _terrain(_grid.get_chunk_size()),
+          _gravity(0.0, -_grav_mag, 0.0),
+          _simulation(_grid.get_world(), _gravity),
+          _jump_count(0),
+          _terr_mesh("atlas"),
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
           _scale(1, 1, 1),
-          _gravity(0.0, -_grav_mag, 0.0),
-          _grid(grid_size, chunk_size, view_chunk_size),
-          _simulation(_grid.get_world(), _gravity),
-          _jump_count(0),
           _particles(particles),
           _sky(uniforms, grid_size),
           _dest(state.first),
@@ -412,9 +393,6 @@ class world
 
         // Add to grid
         _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
-
-        // generate new mesh
-        generate_terrain();
     }
     inline size_t add_mob(const min::vec3<float> &p)
     {
@@ -575,14 +553,11 @@ class world
     }
     void draw(game::uniforms &uniforms) const
     {
-        // Draw the sky, uses geometry uniform buffer
-        _sky.draw();
-
         // Binds textures and uses program
         _terrain.bind();
 
         // Draw the world geometry
-        _terrain.draw_terrain();
+        _terrain.draw_terrain(_view_chunks);
 
         // Only draw if toggled
         if (_edit_mode)
@@ -596,6 +571,9 @@ class world
             // Set uniforms to light1
             uniforms.set_light1();
         }
+
+        // Draw the sky, uses geometry VAO -- HACK!
+        _sky.draw();
 
         // Draw the static instances
         _instance.draw(uniforms);
@@ -890,11 +868,23 @@ class world
         const min::vec3<float> &p = character_position();
 
         // Detect if we crossed a chunk boundary
-        const bool updated = _grid.update_chunk(p);
-        if (updated)
+        _grid.update_current_chunk(p);
+
+        // Get surrounding chunks for drawing
+        _grid.get_view_chunks(_view_chunks);
+
+        // For all chunk meshes
+        for (const auto &i : _view_chunks)
         {
-            // Generate a new geometry mesh
-            generate_terrain();
+            // If the chunk needs updating
+            if (_grid.is_update_chunk(i))
+            {
+                // Upload contents to the vertex buffer
+                _terrain.upload_geometry(i, _grid.get_chunk(i));
+
+                // Flag that we updated the chunk
+                _grid.update_chunk(i);
+            }
         }
 
         // Calculate new placemark point

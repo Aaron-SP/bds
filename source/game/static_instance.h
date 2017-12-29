@@ -99,6 +99,9 @@ class static_instance
         // Load missile data
         load_missile_model();
 
+        // Unbind the last VAO to prevent scrambling buffers
+        _buffer.unbind();
+
         // Load vertex buffer with data
         _buffer.upload();
     }

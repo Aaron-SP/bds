@@ -333,6 +333,9 @@ class particle
     }
     void update(min::camera<float> &cam, const double dt)
     {
+        // Unbind the last VAO to prevent scrambling buffers
+        _static.unbind();
+
         // Update charge or launch
         if (_charge_time > 0.0)
         {

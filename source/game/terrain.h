@@ -34,17 +34,14 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
+#ifdef USE_GS_RENDER
+
 class terrain
 {
   private:
-    // About 6MB vertex and 4MB index; 8*8*8*7*7*7 = 175616 cells
-    static constexpr size_t _cell_size = 175616;
-
     // Opengl stuff
     min::shader _tv;
-#ifdef USE_GS_RENDER
     min::shader _tg;
-#endif
     min::shader _tf;
     min::program _program;
     min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
@@ -52,27 +49,6 @@ class terrain
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
 
-    // Block merge buffer
-    min::mesh<float, uint32_t> _parent;
-#ifndef USE_GS_RENDER
-    std::vector<min::vec4<float>> _cell_buffer;
-
-    static constexpr size_t _reserve_size = 24 * _cell_size;
-    static constexpr size_t _index_reserve_size = 36 * _cell_size;
-#endif
-
-    inline void populate_cell_buffer(std::vector<min::vec4<float>> &buffer, const min::mesh<float, uint32_t> &child) const
-    {
-        // Add cells to global cell buffer
-        const size_t size = child.vertex.size();
-        for (size_t i = 0; i < size; i++)
-        {
-            // Add point to cell buffer
-            buffer.push_back(child.vertex[i]);
-        }
-    }
-
-#ifdef USE_GS_RENDER
     static constexpr GLenum RENDER_TYPE = GL_POINTS;
     inline void generate_indices(min::mesh<float, uint32_t> &mesh)
     {
@@ -80,9 +56,121 @@ class terrain
         mesh.index.resize(mesh.vertex.size());
         std::iota(mesh.index.begin(), mesh.index.end(), 0);
     }
-#else
-    static constexpr GLenum RENDER_TYPE = GL_TRIANGLES;
 
+  public:
+    terrain(const size_t chunks)
+        : _tv("data/shader/terrain_gs.vertex", GL_VERTEX_SHADER),
+          _tg("data/shader/terrain_gs.geometry", GL_GEOMETRY_SHADER),
+          _tf("data/shader/terrain_gs.fragment", GL_FRAGMENT_SHADER),
+          _program({_tv.id(), _tg.id(), _tf.id()}),
+          _gb(chunks)
+    {
+        // Load texture
+        min::dds tex("data/texture/atlas.dds");
+
+        // Load texture buffer
+        _dds_id = _tbuffer.add_dds_texture(tex);
+    }
+    inline void bind() const
+    {
+        // Bind the terrain texture for drawing
+        _tbuffer.bind(_dds_id, 0);
+
+        // Use the terrain program for drawing
+        _program.use();
+    }
+    inline void draw_placemark() const
+    {
+        // Bind VAO
+        _pb.bind();
+
+        // Draw placemarker
+        _pb.draw_all(RENDER_TYPE);
+    }
+    inline void draw_terrain(const std::vector<size_t> &index) const
+    {
+        // For all chunk meshes
+        for (const auto &i : index)
+        {
+            // Bind VAO
+            _gb.bind_buffer(i);
+
+            // Draw graph-mesh
+            _gb.draw_all(RENDER_TYPE);
+        }
+    }
+    inline const min::program &get_program() const
+    {
+        return _program;
+    }
+    inline void upload_geometry(const size_t index, min::mesh<float, uint32_t> &child)
+    {
+        // Swap buffer index for this chunk
+        _gb.set_buffer(index);
+
+        // Reset the buffer
+        _gb.clear();
+
+        // Only add if contains cells
+        if (child.vertex.size() > 0)
+        {
+            // Generate indices
+            generate_indices(child);
+
+            // Add mesh to vertex buffer
+            _gb.add_mesh(child);
+
+            // Unbind the last VAO to prevent scrambling buffers
+            _gb.unbind();
+
+            // Upload terrain geometry to geometry buffer
+            _gb.upload();
+        }
+    }
+    inline void upload_preview(min::mesh<float, uint32_t> &terrain)
+    {
+        // Reset the buffer
+        _pb.clear();
+
+        // Only add if contains cells
+        if (terrain.vertex.size() > 0)
+        {
+            // Generate indices
+            generate_indices(terrain);
+
+            // Add mesh to the buffer
+            _pb.add_mesh(terrain);
+
+            // Unbind the last VAO to prevent scrambling buffers
+            _pb.unbind();
+
+            // Upload the preview geometry to preview buffer
+            _pb.upload();
+        }
+    }
+};
+
+#else
+
+class terrain
+{
+  private:
+    // About 6MB vertex and 4MB index; 8*8*8*7*7*7 = 175616 cells
+    static constexpr size_t _cell_size = 175616;
+    static constexpr size_t _reserve_size = 24 * _cell_size;
+    static constexpr size_t _index_reserve_size = 36 * _cell_size;
+
+    // Opengl stuff
+    min::shader _tv;
+    min::shader _tf;
+    min::program _program;
+    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
+    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
+    min::texture_buffer _tbuffer;
+    GLuint _dds_id;
+    min::mesh<float, uint32_t> _parent;
+
+    static constexpr GLenum RENDER_TYPE = GL_TRIANGLES;
     static inline std::array<min::vec2<float>, 24> create_uvs(const int8_t atlas_id)
     {
         //Create UV's for the box
@@ -256,10 +344,10 @@ class terrain
         // return the box
         return min::aabbox<float, min::vec3>(min, max);
     }
-    inline void set_cell(const size_t cell)
+    inline void set_cell(const size_t cell, std::vector<min::vec4<float>> &cell_buffer)
     {
         // Unpack the point and the atlas
-        const min::vec4<float> &unpack = _cell_buffer[cell];
+        const min::vec4<float> &unpack = cell_buffer[cell];
 
         // Calculate vertex start position
         const size_t vertex_start = 24 * cell;
@@ -381,10 +469,10 @@ class terrain
             _parent.normal[n++] = min::vec3<float>(0.0, 0.0, 1.0);
         }
     }
-    inline void allocate_mesh_buffer()
+    inline void allocate_mesh_buffer(const std::vector<min::vec4<float>> &cell_buffer)
     {
         // Resize the parent mesh from cell size
-        const size_t size = _cell_buffer.size();
+        const size_t size = cell_buffer.size();
 
         // Vertex sizes
         const size_t size24 = size * 24;
@@ -396,21 +484,13 @@ class terrain
         const size_t size36 = size * 36;
         _parent.index.resize(size36);
     }
-#endif
 
   public:
-    terrain()
-        :
-#ifdef USE_GS_RENDER
-          _tv("data/shader/terrain_gs.vertex", GL_VERTEX_SHADER),
-          _tg("data/shader/terrain_gs.geometry", GL_GEOMETRY_SHADER),
-          _tf("data/shader/terrain_gs.fragment", GL_FRAGMENT_SHADER),
-          _program({_tv.id(), _tg.id(), _tf.id()}), _parent("parent")
-#else
-          _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
+    terrain(const size_t chunks)
+        : _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
           _tf("data/shader/terrain.fragment", GL_FRAGMENT_SHADER),
-          _program(_tv, _tf), _parent("parent")
-#endif
+          _program(_tv, _tf),
+          _gb(chunks), _parent("parent")
     {
         // Load texture
         min::dds tex("data/texture/atlas.dds");
@@ -418,17 +498,11 @@ class terrain
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);
 
-        // Reserve space for parent mesh
-        _parent.vertex.reserve(_cell_size);
-        _parent.index.reserve(_cell_size);
-
-#ifndef USE_GS_RENDER
+        // Reserve space for merging
         _parent.vertex.reserve(_reserve_size);
         _parent.index.reserve(_index_reserve_size);
         _parent.uv.reserve(_reserve_size);
         _parent.normal.reserve(_reserve_size);
-        _cell_buffer.reserve(_cell_size);
-#endif
     }
     inline void bind() const
     {
@@ -446,123 +520,84 @@ class terrain
         // Draw placemarker
         _pb.draw_all(RENDER_TYPE);
     }
-    inline void draw_terrain() const
+    inline void draw_terrain(const std::vector<size_t> &index) const
     {
-        // Bind VAO
-        _gb.bind();
+        // For all chunk meshes
+        for (const auto &i : index)
+        {
+            // Bind VAO
+            _gb.bind_buffer(i);
 
-        // Draw graph-mesh
-        _gb.draw_all(RENDER_TYPE);
+            // Draw graph-mesh
+            _gb.draw_all(RENDER_TYPE);
+        }
     }
     inline const min::program &get_program() const
     {
         return _program;
     }
-    inline void upload_geometry(const std::vector<size_t> &index, const std::function<min::mesh<float, uint32_t> &(const size_t)> f)
+    inline void upload_geometry(const size_t index, min::mesh<float, uint32_t> &child)
     {
+        // Swap buffer index for this chunk
+        _gb.set_buffer(index);
+
         // Reset the buffer
         _gb.clear();
 
-#ifdef USE_GS_RENDER
-
-        // Clear out the parent buffers
-        _parent.vertex.clear();
-        _parent.index.clear();
-
-        // For all chunk meshes
-        for (const auto &i : index)
+        // Convert cells to mesh in parallel
+        const size_t size = child.vertex.size();
+        if (size > 0)
         {
-            // Add cells in child to the global cell buffer
-            populate_cell_buffer(_parent.vertex, f(i));
-        }
+            // Reserve space in parent mesh
+            allocate_mesh_buffer(child.vertex);
 
-        // Only add if contains cells
-        if (_parent.vertex.size() > 0)
-        {
-            // Generate indices
-            generate_indices(_parent);
+            // Parallelize on generating cells
+            const auto work = [this, &child](const size_t i) {
+                set_cell(i, child.vertex);
+            };
+
+            // Convert cells to mesh in parallel
+            work_queue::worker.run(work, 0, size);
 
             // Add mesh to vertex buffer
             _gb.add_mesh(_parent);
+
+            // Unbind the last VAO to prevent scrambling buffers
+            _gb.unbind();
+
+            // Upload terrain geometry to geometry buffer
+            _gb.upload();
         }
-#else
-        // Clear out the parent and the cell buffer
-        _cell_buffer.clear();
-
-        // For all chunk meshes
-        for (const auto &i : index)
-        {
-            // Add cells in child to the global cell buffer
-            populate_cell_buffer(_cell_buffer, f(i));
-        }
-
-        // Reserve space in parent mesh
-        allocate_mesh_buffer();
-
-        // Parallelize on generating cells
-        const auto work = [this](const size_t i) {
-            set_cell(i);
-        };
-
-        // Convert cells to mesh in parallel
-        const size_t size = _cell_buffer.size();
-        work_queue::worker.run(work, 0, size);
-
-        // Add mesh to vertex buffer
-        if (_parent.vertex.size() > 0)
-        {
-            _gb.add_mesh(_parent);
-        }
-#endif
-
-        // Bind the gb, this is needed!
-        _gb.bind();
-
-        // Upload terrain geometry to geometry buffer
-        _gb.upload();
     }
     inline void upload_preview(min::mesh<float, uint32_t> &terrain)
     {
         // Reset the buffer
         _pb.clear();
 
-#ifdef USE_GS_RENDER
-        // Generate indices
-        generate_indices(terrain);
-
-        // Add mesh to the buffer
-        _pb.add_mesh(terrain);
-#else
-        // Clear out the parent
-        _cell_buffer.clear();
-
-        // Add cells in terrain mesh to the global cell buffer
-        populate_cell_buffer(_cell_buffer, terrain);
-
-        // Reserve space in parent mesh
-        allocate_mesh_buffer();
-
-        // Convert cells to mesh in parallel
-        const size_t size = _cell_buffer.size();
-        for (size_t i = 0; i < size; i++)
+        // Only add if contains cells
+        if (terrain.vertex.size() > 0)
         {
-            set_cell(i);
-        }
+            // Reserve space in parent mesh
+            allocate_mesh_buffer(terrain.vertex);
 
-        // Add mesh to the buffer
-        if (_parent.vertex.size() > 0)
-        {
+            // Convert cells to mesh in parallel
+            const size_t size = terrain.vertex.size();
+            for (size_t i = 0; i < size; i++)
+            {
+                set_cell(i, terrain.vertex);
+            }
+
             _pb.add_mesh(_parent);
+
+            // Unbind the last VAO to prevent scrambling buffers
+            _pb.unbind();
+
+            // Upload the preview geometry to preview buffer
+            _pb.upload();
         }
-#endif
-
-        //Bind the pb, this is needed!
-        _pb.bind();
-
-        // Upload the preview geometry to preview buffer
-        _pb.upload();
     }
 };
+#endif
 }
 
 #endif
