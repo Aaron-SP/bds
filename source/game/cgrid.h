@@ -28,6 +28,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/mesh.h>
 #include <min/ray.h>
 #include <min/serial.h>
+#include <min/utility.h>
 #include <random>
 
 namespace game
@@ -44,7 +45,8 @@ class cgrid
     size_t _chunk_scale;
     std::vector<min::mesh<float, uint32_t>> _chunks;
     std::vector<bool> _chunk_update;
-    std::vector<size_t> _surrounding_chunks;
+    std::vector<size_t> _chunk_update_keys;
+    std::vector<size_t> _sort_copy;
     size_t _recent_chunk;
     size_t _view_chunk_size;
     size_t _view_half_width;
@@ -113,11 +115,11 @@ class cgrid
         const min::vec3<float> max = _world.get_max();
 
         // Begin at start position, clamp out of bound to world boundary
-        const min::vec3<float> restart = min::vec3<float>(start).clamp(min, max);
+        const min::vec3<float> bounded = min::vec3<float>(start).clamp(min, max);
 
         // Get the grid axis components
         const size_t end = _grid_size;
-        const auto t = min::vec3<float>::grid_index(_world.get_min(), _cell_extent, restart);
+        const auto t = min::vec3<float>::grid_index(_world.get_min(), _cell_extent, bounded);
 
         // x axis: will prune points outside grid
         size_t tx = std::get<0>(t);
@@ -179,7 +181,7 @@ class cgrid
         const size_t row = std::get<1>(comp);
         const size_t hei = std::get<2>(comp);
 
-        // Calculate the center point of the box cell
+        // Calculate the bottom left corner of the box cell
         const float x = col * _chunk_size + _world.get_min().x() + 0.5;
         const float y = row * _chunk_size + _world.get_min().y() + 0.5;
         const float z = hei * _chunk_size + _world.get_min().z() + 0.5;
@@ -222,7 +224,7 @@ class cgrid
         const size_t row = std::get<1>(comp);
         const size_t hei = std::get<2>(comp);
 
-        // Calculate the center point of the box cell
+        // Calculate the bottom left corner of the box cell
         const float x = col + _world.get_min().x();
         const float y = row + _world.get_min().y();
         const float z = hei + _world.get_min().z();
@@ -355,25 +357,6 @@ class cgrid
 
         // Run the job in parallel
         work_queue::worker.run(work, 0, _grid_size);
-    }
-    inline void get_surrounding_chunks(const size_t key)
-    {
-        _surrounding_chunks.clear();
-        _surrounding_chunks.push_back(key);
-
-        // Get cubic function properties
-        const min::vec3<float> start = chunk_start(key) - min::vec3<float>(_chunk_size, _chunk_size, _chunk_size);
-        const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
-        const min::vec3<unsigned> length(3, 3, 3);
-
-        // Create cubic function, for each cell in cubic space
-        const auto f = [this](const min::vec3<float> &p) {
-            const size_t ckey = chunk_key_unsafe(p);
-            this->_surrounding_chunks.push_back(ckey);
-        };
-
-        // Run the function
-        cubic(start, offset, length, f);
     }
     inline float grid_center_square_dist(const size_t key, const min::vec3<float> &point) const
     {
@@ -699,9 +682,6 @@ class cgrid
 
         // Add starting blocks to simulation
         world_load();
-
-        // Reserve space for surrounding chunks
-        _surrounding_chunks.reserve(27);
     }
     ~cgrid()
     {
@@ -730,7 +710,9 @@ class cgrid
         mesh.vertex.clear();
         mesh.index.clear();
 
-        // Store start point => (0,0,0)
+        // Store start point => (0,0,0),
+        // FOR ATLAS ONLY (0, 0, 0) IS THE CENTER!
+        // Different than grid because of translation matrix!
         min::vec3<float> start;
         const float atlas = static_cast<float>(_atlas_id);
 
@@ -879,66 +861,147 @@ class cgrid
             out.push_back(grid_cell_center(path[i]));
         }
     }
-    // Modifies the geometry in grid
+    inline void set_boundary_chunk(const size_t key)
+    {
+        // Find out if we are on a chunk boundary
+        const auto g = grid_key_unpack(key);
+        const size_t gx = std::get<0>(g);
+        const size_t gy = std::get<1>(g);
+        const size_t gz = std::get<2>(g);
+
+        // Relative grid components in chunk
+        const size_t rgx = gx % _chunk_size;
+        const size_t rgy = gy % _chunk_size;
+        const size_t rgz = gz % _chunk_size;
+
+        // Chunk index of grid index
+        const size_t cx = gx / _chunk_size;
+        const size_t cy = gy / _chunk_size;
+        const size_t cz = gz / _chunk_size;
+
+        // Convert chunk grid components to chunk index
+        const auto to_chunk_key = [this](const size_t x, const size_t y, const size_t z) -> size_t {
+            return (x * _chunk_scale * _chunk_scale) + (y * _chunk_scale) + (z);
+        };
+
+        // Grid top edge
+        const size_t t_edge = _chunk_size - 1;
+
+        // Check x axis boundary
+        if (rgx == 0 && gx != 0)
+        {
+            const size_t ckey = to_chunk_key(cx - 1, cy, cz);
+            this->_chunk_update_keys.push_back(ckey);
+        }
+        else if (rgx % t_edge == 0 && gx != t_edge)
+        {
+            const size_t ckey = to_chunk_key(cx + 1, cy, cz);
+            this->_chunk_update_keys.push_back(ckey);
+        }
+
+        // Check y axis boundary
+        if (rgy == 0 && gy != 0)
+        {
+            const size_t ckey = to_chunk_key(cx, cy - 1, cz);
+            this->_chunk_update_keys.push_back(ckey);
+        }
+        else if (rgy % t_edge == 0 && gy != t_edge)
+        {
+            const size_t ckey = to_chunk_key(cx, cy + 1, cz);
+            this->_chunk_update_keys.push_back(ckey);
+        }
+
+        // Check z axis boundary
+        if (rgz == 0 && gz != 0)
+        {
+            const size_t ckey = to_chunk_key(cx, cy, cz - 1);
+            this->_chunk_update_keys.push_back(ckey);
+        }
+        else if (rgz % t_edge == 0 && gz != t_edge)
+        {
+            const size_t ckey = to_chunk_key(cx, cy, cz + 1);
+            this->_chunk_update_keys.push_back(ckey);
+        }
+    }
     unsigned set_geometry(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const min::vec3<int> &offset, const int8_t atlas_id)
     {
         // Modified geometry
         unsigned out = 0;
 
         // Record all modified chunks and store them for updating
-        std::vector<size_t> keys;
-        keys.reserve(scale.x() * scale.y() * scale.z());
+        _chunk_update_keys.clear();
+        _chunk_update_keys.reserve(scale.x() * scale.y() * scale.z());
 
         // Get cubic function properties
         const min::vec3<float> &start = point;
         const min::vec3<unsigned> &length = scale;
 
-        // Create cubic function, for each cell in cubic space
-        const auto f = [this, &keys, &out, atlas_id](const size_t key) {
-
-            // Count changed blocks
-            if (_grid[key] != atlas_id)
-            {
-                // Increment the out counter
-                out++;
-
-                // Get the chunk key for updating
-                const min::vec3<float> p = grid_cell_center(key);
-                const size_t ckey = chunk_key_unsafe(p);
-                keys.push_back(ckey);
-
-                // Set the cell with atlas id
-                _grid[key] = atlas_id;
-            }
-        };
-
-        // Run the function
-        cubic_grid(start, offset, length, f);
-
-        // If we are removing blocks, add surrounding cells for update
-        if (atlas_id == -1)
+        // If we are removing blocks, add boundary cells for update
+        if (atlas_id == -1 && inside(start))
         {
-            bool is_valid = true;
-            const size_t ckey = chunk_key_safe(start, is_valid);
-            if (is_valid)
-            {
-                // Get surrounding chunks for updating
-                get_surrounding_chunks(ckey);
+            // Create cubic function, for each cell in cubic space
+            const auto f = [this, &out, atlas_id](const size_t key) {
 
-                // Insert surrounding chunks into keys
-                keys.insert(keys.end(), _surrounding_chunks.begin(), _surrounding_chunks.end());
-            }
+                // Count changed blocks
+                if (_grid[key] != atlas_id)
+                {
+                    // Increment the out counter
+                    out++;
+
+                    // Get the chunk key for updating
+                    const min::vec3<float> p = grid_cell_center(key);
+                    const size_t ckey = chunk_key_unsafe(p);
+                    _chunk_update_keys.push_back(ckey);
+
+                    // Set the cell with atlas id
+                    _grid[key] = atlas_id;
+
+                    // If cell is on chunk boundary mark for updating
+                    set_boundary_chunk(key);
+                }
+            };
+
+            // Run the function
+            cubic_grid(start, offset, length, f);
+        }
+        else
+        {
+            // Create cubic function, for each cell in cubic space
+            const auto f = [this, &out, atlas_id](const size_t key) {
+
+                // Count changed blocks
+                if (_grid[key] != atlas_id)
+                {
+                    // Increment the out counter
+                    out++;
+
+                    // Get the chunk key for updating
+                    const min::vec3<float> p = grid_cell_center(key);
+                    const size_t ckey = chunk_key_unsafe(p);
+                    _chunk_update_keys.push_back(ckey);
+
+                    // Set the cell with atlas id
+                    _grid[key] = atlas_id;
+                }
+            };
+
+            // Run the function
+            cubic_grid(start, offset, length, f);
         }
 
-        // Sort chunk keys and make the vector unique
-        std::sort(keys.begin(), keys.end());
-        const auto last = std::unique(keys.begin(), keys.end());
+        // Sort chunk keys using a radix sort
+        min::uint_sort<size_t>(_chunk_update_keys, _sort_copy, [](const size_t i) {
+            return i;
+        });
+
+        // Make keys unique
+        const auto last = std::unique(_chunk_update_keys.begin(), _chunk_update_keys.end());
 
         // Erase empty spaces in vector
-        keys.erase(last, keys.end());
+        _chunk_update_keys.erase(last, _chunk_update_keys.end());
 
         // Update all modified chunks
-        for (const auto k : keys)
+        for (const auto k : _chunk_update_keys)
         {
             chunk_update(k);
         }
