@@ -55,15 +55,15 @@ This mode benefits computers with slow CPU's but have modern GPU's that run geom
 
 #### -fps flag
 The '-fps' flag is an optional parameter for controlling the target playback frame count per second. The default is 60.
-- Example: 'fractex -fps 45' will render 45 frames per second.
+- Example: 'bin/game -fps 45' will render 45 frames per second.
 
 #### -chunk flag
-The '-chunk' flag is an optional parameter for controlling the size of each chunk. The default is 32 and must be an even divisible factor of the grid size, 128.
-- Example: 'fractex -chunk 16' produce chunks of size 16x16x16.
+The '-chunk' flag is an optional parameter for controlling the size of each chunk. The default is 16 and must be an even divisible factor of the grid size, 128.
+- Example: 'bin/game -chunk 32' produce chunks of size 32x32x32.
 
 #### -view flag
 The '-view' flag is an optional parameter for controlling how many chunks are viewable on the screen. The default is 3 and must be an odd number greater than one.
-- Example: 'fractex -view 31' will render 15 chunks on each side of the player, (15 * 2) + 1 = 31.
+- Example: 'bin/game -view 31' will render 15 chunks on each side of the player, (15 * 2) + 1 = 31.
 
 ### PLAYER USAGE INSTRUCTIONS:
 ![Alt text](pictures/spawn.png)

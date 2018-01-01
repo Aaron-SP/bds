@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     {
         // Default frame count
         size_t frames = 60;
-        size_t chunk = 32;
+        size_t chunk = 16;
         size_t view = 3;
 
         // Try to parse commandline args

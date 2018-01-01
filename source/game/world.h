@@ -358,12 +358,6 @@ class world
           _exploded(false),
           _explode_id(-1)
     {
-        // Check if chunk_size is valid
-        if (grid_size % chunk_size != 0)
-        {
-            throw std::runtime_error("world: chunk_size must be integer multiple of grid_size");
-        }
-
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);
 

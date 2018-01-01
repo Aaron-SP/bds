@@ -672,7 +672,6 @@ class cgrid
           _cell_extent(1.0, 1.0, 1.0),
           _atlas_id(0)
     {
-
         // Check chunk size
         if (grid_size % chunk_size != 0)
         {
