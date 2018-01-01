@@ -186,6 +186,38 @@ class world
         // Upload preview geometry
         _terrain.upload_preview(_terr_mesh);
     }
+    inline void reserve_memory(const size_t view_chunk_size)
+    {
+        // Reserve space in the preview mesh
+        _terr_mesh.vertex.reserve(_pre_max_vol);
+        _terr_mesh.index.reserve(_pre_max_vol);
+
+        // Reserve space for collision cells
+        _player_col_cells.reserve(36);
+
+        // Reserve space for collision cells
+        _mob_col_cells.reserve(27);
+
+        // Reserve space for view chunks
+        _view_chunks.reserve(view_chunk_size * view_chunk_size * view_chunk_size);
+    }
+    inline void update_all_chunks()
+    {
+        // For all chunk meshes
+        const size_t size = _grid.get_chunk_size();
+        for (size_t i = 0; i < size; i++)
+        {
+            // If the chunk needs updating
+            if (_grid.is_update_chunk(i))
+            {
+                // Upload contents to the vertex buffer
+                _terrain.upload_geometry(i, _grid.get_chunk(i));
+
+                // Flag that we updated the chunk
+                _grid.update_chunk(i);
+            }
+        }
+    }
     inline void update_world_physics(const float dt)
     {
         // Solve the AI path finding if toggled
@@ -364,21 +396,14 @@ class world
         // Load the uniform buffer with program we will use
         uniforms.set_program(_terrain.get_program());
 
-        // Reserve space in the preview mesh
-        _terr_mesh.vertex.reserve(_pre_max_vol);
-        _terr_mesh.index.reserve(_pre_max_vol);
+        // Reserve space for used vectors
+        reserve_memory(view_chunk_size);
 
         // character_load should only be called once!
         character_load(state);
 
-        // Reserve space for collision cells
-        _player_col_cells.reserve(36);
-
-        // Reserve space for collision cells
-        _mob_col_cells.reserve(27);
-
-        // Reserve space for view chunks
-        _view_chunks.reserve(view_chunk_size * view_chunk_size * view_chunk_size);
+        // Update chunks
+        update_all_chunks();
     }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {

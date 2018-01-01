@@ -648,7 +648,7 @@ class cgrid
           _chunk_size(chunk_size),
           _chunk_scale(_grid_size / _chunk_size),
           _chunks(_chunk_scale * _chunk_scale * _chunk_scale, min::mesh<float, uint32_t>("chunk")),
-          _chunk_update(_chunks.size(), false),
+          _chunk_update(_chunks.size(), true),
           _recent_chunk(0),
           _view_chunk_size(view_chunk_size),
           _view_half_width(_view_chunk_size / 2),
