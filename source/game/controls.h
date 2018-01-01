@@ -28,7 +28,6 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/ray.h>
 #include <min/window.h>
 #include <stdexcept>
-#include <thread>
 
 namespace game
 {
@@ -57,19 +56,42 @@ class controls
              game::character &ch, game::state &state,
              game::ui_overlay &ui, game::world &world)
         : _window(&window), _camera(&camera), _character(&ch),
-          _state(&state), _ui(&ui), _world(&world)
-    {
-        // Check that pointers are valid
-        if (!_window || !_character || !_camera || !_state || !_ui || !_world)
-        {
-            throw std::runtime_error("control: Invalid control pointers");
-        }
+          _state(&state), _ui(&ui), _world(&world) {}
 
+    min::camera<float> *get_camera()
+    {
+        return _camera;
+    }
+    game::character *get_character()
+    {
+        return _character;
+    }
+    game::state *get_state()
+    {
+        return _state;
+    }
+    game::ui_overlay *get_ui()
+    {
+        return _ui;
+    }
+    game::world *get_world()
+    {
+        return _world;
+    }
+    min::window *get_window()
+    {
+        return _window;
+    }
+    void register_control_callbacks()
+    {
         // Set default console message
         _ui->set_console_string(_state->get_skill_state().get_beam_string());
 
         // Get access to the keyboard
         auto &keyboard = _window->get_keyboard();
+
+        // Clear any keys mapped to keyboard
+        keyboard.clear();
 
         // Register click callback function for placing path
         _window->register_data((void *)this);
@@ -182,30 +204,6 @@ class controls
 
         // Register callback function SPACE
         keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)_world);
-    }
-    min::camera<float> *get_camera()
-    {
-        return _camera;
-    }
-    game::character *get_character()
-    {
-        return _character;
-    }
-    game::state *get_state()
-    {
-        return _state;
-    }
-    game::ui_overlay *get_ui()
-    {
-        return _ui;
-    }
-    game::world *get_world()
-    {
-        return _world;
-    }
-    min::window *get_window()
-    {
-        return _window;
     }
     static void close_window(void *ptr, double step)
     {

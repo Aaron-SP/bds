@@ -101,6 +101,10 @@ class ui_overlay
     {
         _bg.set_draw_menu(flag);
     }
+    inline void set_draw_title(const bool flag)
+    {
+        _bg.set_draw_title(flag);
+    }
     inline void set_menu_dead()
     {
         _bg.set_menu_dead();

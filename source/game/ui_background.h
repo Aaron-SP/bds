@@ -109,7 +109,8 @@ class ui_background
     // Index stuff
     std::vector<min::mat3<float>> _v;
     std::vector<min::mat3<float>> _uv;
-    GLuint _dds_id;
+    GLuint _title_id;
+    GLuint _ui_id;
 
     // Screen properties
     size_t _width;
@@ -124,6 +125,7 @@ class ui_background
     float _cursor_angle;
     bool _draw_menu;
     bool _draw_console;
+    bool _draw_title;
 
     inline size_t add_rect()
     {
@@ -144,7 +146,11 @@ class ui_background
     }
     inline size_t draw_size() const
     {
-        if (_draw_menu)
+        if (_draw_title)
+        {
+            return 1;
+        }
+        else if (_draw_menu)
         {
             return _v.size();
         }
@@ -268,11 +274,32 @@ class ui_background
     }
     inline void load_texture()
     {
-        // Load texture
-        min::dds tex("data/texture/ui.dds");
+        // Load the UI texture
+        {
+            // Load texture
+            const min::dds tex("data/texture/ui.dds");
 
-        // Load texture into texture buffer
-        _dds_id = _tbuffer.add_dds_texture(tex);
+            // Load texture into texture buffer
+            _ui_id = _tbuffer.add_dds_texture(tex);
+        }
+
+        // Load the title screen texture
+        {
+            // Load texture
+            const min::dds tex("data/texture/title.dds");
+
+            // Load texture into texture buffer
+            _title_id = _tbuffer.add_dds_texture(tex);
+        }
+    }
+    inline void load_title_overlay()
+    {
+        const min::vec2<float> p(_center_w, _center_h);
+        const min::vec2<float> scale(_width, _height);
+        const min::vec4<float> full_coord(0.0, 0.0, 1.0, 1.0);
+
+        // Load rect at position
+        set_rect(0, p, scale, full_coord);
     }
     inline void load_health_overlay()
     {
@@ -442,8 +469,15 @@ class ui_background
     }
     inline void position_ui()
     {
-        // Add health overlay
-        load_health_overlay();
+        if (_draw_title)
+        {
+            load_title_overlay();
+        }
+        else
+        {
+            // Add health overlay
+            load_health_overlay();
+        }
 
         // Add console background
         load_console_bg();
@@ -476,7 +510,7 @@ class ui_background
           _center_w(width / 2), _center_h(height / 2),
           _index(0), _selected(0), _menu_offset(18),
           _energy(0.0), _health(1.0), _cursor_angle(0.0),
-          _draw_menu(false), _draw_console(true)
+          _draw_menu(false), _draw_console(false), _draw_title(true)
     {
         // Create the instance rectangle
         load_base_rect();
@@ -513,11 +547,23 @@ class ui_background
             // Bind the ui program
             _prog.use();
 
-            // Bind the ui texture for drawing
-            _tbuffer.bind(_dds_id, 0);
+            // If we are drawing the title screen
+            if (_draw_title)
+            {
+                // Bind the ui texture for drawing
+                _tbuffer.bind(_title_id, 0);
 
-            // Draw the ui elements
-            _vb.draw_many(GL_TRIANGLES, _index, size);
+                // Draw the title screen
+                _vb.draw_many(GL_TRIANGLES, _index, size);
+            }
+            else
+            {
+                // Bind the ui texture for drawing
+                _tbuffer.bind(_ui_id, 0);
+
+                // Draw the ui elements
+                _vb.draw_many(GL_TRIANGLES, _index, size);
+            }
         }
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
@@ -603,6 +649,20 @@ class ui_background
 
         // Reload console data
         load_console_bg();
+    }
+    inline void set_draw_title(const bool flag)
+    {
+        _draw_title = flag;
+
+        // Set the overlay
+        if (_draw_title)
+        {
+            load_title_overlay();
+        }
+        else
+        {
+            load_health_overlay();
+        }
     }
     inline void set_draw_menu(const bool flag)
     {

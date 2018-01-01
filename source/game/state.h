@@ -42,8 +42,8 @@ class state
     min::vec3<float> _default_spawn;
     min::vec3<float> _default_look;
     min::vec3<float> _target;
-    bool _fix_target;
     float _health;
+    bool _fix_target;
     bool _pause_mode;
     bool _pause_lock;
     bool _user_input;
@@ -137,6 +137,7 @@ class state
           _mode("MODE: PLAY"),
           _default_spawn(0.0, -50.0, 0.0), _default_look(1.0, -50.0, 0.0),
           _health(_health_cap),
+          _fix_target(false),
           _pause_mode(false), _pause_lock(false), _user_input(true),
           _dead(false), _respawn(false)
     {
