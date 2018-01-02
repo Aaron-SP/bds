@@ -39,9 +39,17 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 class fractex
 {
   private:
-    min::window _win;
+#ifdef MGL_VB43
+    static constexpr size_t _gl_major = 4;
+    static constexpr size_t _gl_minor = 3;
+#else
+    static constexpr size_t _gl_major = 3;
+    static constexpr size_t _gl_minor = 3;
+#endif
+    static constexpr size_t _width = 720;
+    static constexpr size_t _height = 480;
 
-    // Game specific classes
+    min::window _win;
     game::uniforms _uniforms;
     game::ui_overlay _ui;
     game::particle _particles;
@@ -165,7 +173,7 @@ class fractex
   public:
     // Load window shaders and program
     fractex(const size_t chunk, const size_t view)
-        : _win("Fractex", 720, 480, 3, 3),
+        : _win("Fractex", _width, _height, _gl_major, _gl_minor),
           _uniforms(),
           _ui(_uniforms, _win.get_width(), _win.get_height()),
           _particles(_uniforms),

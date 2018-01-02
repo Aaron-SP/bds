@@ -29,10 +29,16 @@ Additional dependencies that are required and not distributed in this package in
 The $(MGL_DESTDIR) bash variable will override the GNU makefile with the path looking for MGL installed on the system.
 The default path is 'C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include' for CYGWIN x86 or '/usr/include' for Linux systems.
 
-An alternateive rendering mode can be enabled by exporting a variable to bash before compiling with the makefile.
+### Compile Flags
+
+An alternative rendering mode can be enabled by exporting a variable to bash before compiling with the makefile.
+This mode benefits computers with slow CPU's but have modern GPU's that run geometry shaders quickly.
 - 'export MGL_GS_RENDER=true'
 
-This mode benefits computers with slow CPU's but have modern GPU's that run geometry shaders quickly.
+An alternative VBO mode can be enabled by exporting a variable to bash before compiling with the makefile. 
+This mode allows faster vertex_buffer.bind_buffer() switching because it uses OpenGL 4.3 features to separate VBO specification from within VAO state.
+This mode requires using a OpenGL 4.3 core profile.
+- 'export MGL_VB43=true'
 
 ### For compiling on CYGWIN:
 

@@ -47,15 +47,53 @@ class ui_vertex
     static constexpr size_t width_size = width_bytes / sizeof(T);
 
   public:
-    inline static void create()
+    inline static void change_bind_buffer(const GLuint vbo)
     {
+#ifdef MGL_VB43
+        // No offset, standard stride, binding point 0
+        glBindVertexBuffer(0, vbo, 0, width_bytes);
+#else
+        // Redundantly recreate the vertex attributes
+        create_vertex_attributes();
+#endif
+    }
+    inline static void create_vertex_attributes()
+    {
+#ifdef MGL_VB43
+        // Specify the vertex attributes in location = 0, no offset
+        glVertexAttribFormat(0, 4, FLOAT_TYPE, GL_FALSE, 0);
+        // Specify the uv attributes in location = 1, offset is in bytes
+        glVertexAttribFormat(1, 2, FLOAT_TYPE, GL_FALSE, uv_off * sizeof(T));
+#else
         // Specify the vertex attributes in location = 0, no offset
         glVertexAttribPointer(0, 4, FLOAT_TYPE, GL_FALSE, width_bytes, nullptr);
-        glEnableVertexAttribArray(0);
-
         // Specify the uv attributes in location = 1, offset is in bytes
         glVertexAttribPointer(1, 2, FLOAT_TYPE, GL_FALSE, width_bytes, (GLvoid *)(uv_off * sizeof(T)));
-        glEnableVertexAttribArray(1);
+#endif
+    }
+    inline static void create_buffer_binding(const GLuint vbo, const GLuint bind_point)
+    {
+#ifdef MGL_VB43
+        //  Create the buffer binding point
+        glVertexAttribBinding(0, bind_point);
+        glVertexAttribBinding(1, bind_point);
+
+        // No offset, standard stride, binding point 0
+        glBindVertexBuffer(bind_point, vbo, 0, width_bytes);
+#endif
+    }
+    inline static void create(const GLuint vbo)
+    {
+        // Enable the attributes
+        enable_attributes();
+
+        // Create the vertex attributes
+        create_vertex_attributes();
+
+#ifdef MGL_VB43
+        // Create the buffer binding point
+        create_buffer_binding(vbo, 0);
+#endif
     }
     inline static void check(const min::mesh<T, K> &m)
     {
@@ -65,12 +103,6 @@ class ui_vertex
         {
             throw std::runtime_error("ui_vertex: vertex & uv invalid length");
         }
-    }
-    inline static void destroy()
-    {
-        // Disable the vertex attributes
-        glDisableVertexAttribArray(0);
-        glDisableVertexAttribArray(1);
     }
     inline static void copy(std::vector<T> &data, const min::mesh<T, K> &m, const size_t mesh_offset)
     {
@@ -83,6 +115,22 @@ class ui_vertex
             // Copy the uv data, 2 floats, offset is in number of floats
             std::memcpy(&data[j + uv_off], &m.uv[i], uv_size);
         }
+    }
+    inline static void destroy()
+    {
+        // Disable the vertex attributes before destruction
+        disable_attributes();
+    }
+    inline static void disable_attributes()
+    {
+        // Disable the vertex attributes
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+    }
+    inline static void enable_attributes()
+    {
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
     }
     inline static constexpr size_t width()
     {

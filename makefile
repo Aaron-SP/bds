@@ -24,8 +24,13 @@ ifdef MGL_GS_RENDER
 	MGL_GS_RENDER = -DUSE_GS_RENDER
 endif
 
+# Enable GS rendering
+ifdef MGL_VB43
+	MGL_VB43 = -DMGL_VB43
+endif
+
 # Compile parameters
-CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math $(STATIC) $(MGL_GS_RENDER)
+CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math $(STATIC) $(MGL_GS_RENDER) $(MGL_VB43)
 NATIVE =  $(CPP) -march=native
 BUILD32 = $(CPP) -m32
 BUILD64 = $(CPP) -m64
