@@ -144,18 +144,29 @@ class ui_background
         // return the index
         return _v.size() - 1;
     }
-    inline size_t draw_size() const
+    inline void draw_all() const
     {
-        if (_draw_title)
-        {
-            return 1;
-        }
-        else if (_draw_menu)
-        {
-            return _v.size();
-        }
+        // Bind the ui texture for drawing
+        _tbuffer.bind(_ui_id, 0);
 
-        return _menu_offset;
+        // Draw the ui elements
+        _vb.draw_many(GL_TRIANGLES, _index, _v.size());
+    }
+    inline void draw_title() const
+    {
+        // Bind the ui texture for drawing
+        _tbuffer.bind(_title_id, 0);
+
+        // Draw the title screen
+        _vb.draw_many(GL_TRIANGLES, _index, 1);
+    }
+    inline void draw_ui() const
+    {
+        // Bind the ui texture for drawing
+        _tbuffer.bind(_ui_id, 0);
+
+        // Draw the ui elements
+        _vb.draw_many(GL_TRIANGLES, _index, _menu_offset);
     }
     inline void set_uv(const size_t index, const min::vec4<float> &coord, const float alpha)
     {
@@ -538,32 +549,24 @@ class ui_background
     }
     inline void draw(game::uniforms &uniforms) const
     {
-        const size_t size = draw_size();
-        if (size > 0)
+        // Bind the text_buffer vao
+        _vb.bind();
+
+        // Bind the ui program
+        _prog.use();
+
+        // If we are drawing the title screen
+        if (_draw_title)
         {
-            // Bind the text_buffer vao
-            _vb.bind();
-
-            // Bind the ui program
-            _prog.use();
-
-            // If we are drawing the title screen
-            if (_draw_title)
-            {
-                // Bind the ui texture for drawing
-                _tbuffer.bind(_title_id, 0);
-
-                // Draw the title screen
-                _vb.draw_many(GL_TRIANGLES, _index, size);
-            }
-            else
-            {
-                // Bind the ui texture for drawing
-                _tbuffer.bind(_ui_id, 0);
-
-                // Draw the ui elements
-                _vb.draw_many(GL_TRIANGLES, _index, size);
-            }
+            draw_title();
+        }
+        else if (_draw_menu)
+        {
+            draw_all();
+        }
+        else
+        {
+            draw_ui();
         }
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
@@ -696,6 +699,13 @@ class ui_background
     inline void set_target_cursor()
     {
         load_fps_cursor();
+    }
+    inline void toggle_draw_console()
+    {
+        _draw_console = !_draw_console;
+
+        // Reload console data
+        load_console_bg();
     }
 };
 }

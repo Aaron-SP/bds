@@ -39,6 +39,10 @@ class title
     title(min::camera<float> &camera, game::ui_overlay &ui, min::window &window)
         : _camera(&camera), _ui(&ui), _window(&window), _show(true)
     {
+        // Enable the console and set default message
+        _ui->enable_console();
+        _ui->set_console_string("Click To Start");
+
         // Register click callback function for placing path
         _window->register_data((void *)this);
         _window->register_update(title::on_resize);

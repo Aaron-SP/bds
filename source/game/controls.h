@@ -84,7 +84,8 @@ class controls
     }
     void register_control_callbacks()
     {
-        // Set default console message
+        // Enable the console and set default message
+        _ui->enable_console();
         _ui->set_console_string(_state->get_skill_state().get_beam_string());
 
         // Get access to the keyboard

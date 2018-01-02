@@ -114,7 +114,6 @@ class fractex
                 const int8_t ex_id = _world.get_explode_id();
                 if (ex_id == 7 || ex_id == 5)
                 {
-                    // Kill the player
                     _state.consume_health(90.0);
                 }
                 else
@@ -199,6 +198,10 @@ class fractex
         // Save game data to file
         _state.save_state(_world.character_position());
     }
+    void blink_console_message()
+    {
+        _ui.toggle_console();
+    }
     void clear_background() const
     {
         // blue background
@@ -213,6 +216,7 @@ class fractex
 
         // Stop drawing title in UI
         _ui.set_draw_title(false);
+        _ui.set_draw_text_ui(true);
 
         // Turn off cursor
         _win.display_cursor(false);

@@ -24,6 +24,9 @@ inline void show_title(fractex &game, min::loop_sync &sync, const size_t frames)
             // Calculate needed delay to hit target
             frame_time = sync.sync();
         }
+
+        // Make console message blink
+        game.blink_console_message();
     }
 }
 
@@ -78,7 +81,7 @@ void run(const size_t frames, const size_t chunk, const size_t view)
     min::loop_sync sync(frames, 0.25, 0.25, 0.25);
 
     // Show the title screen
-    show_title(game, sync, frames);
+    show_title(game, sync, 15);
 
     // Run the game after the title screen
     show_game(game, sync, frames);

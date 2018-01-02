@@ -93,13 +93,13 @@ class ui_overlay
     {
         _bg.set_key_up(index);
     }
-    inline void set_draw_console(const bool flag)
-    {
-        _bg.set_draw_console(flag);
-    }
     inline void set_draw_menu(const bool flag)
     {
         _bg.set_draw_menu(flag);
+    }
+    inline void set_draw_text_ui(const bool flag)
+    {
+        _text.set_draw_ui(flag);
     }
     inline void set_draw_title(const bool flag)
     {
@@ -128,6 +128,11 @@ class ui_overlay
     inline void set_target_cursor()
     {
         _bg.set_target_cursor();
+    }
+    inline void toggle_console()
+    {
+        _text.toggle_draw_console();
+        _bg.toggle_draw_console();
     }
     inline void toggle_debug_text()
     {
