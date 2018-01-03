@@ -95,7 +95,7 @@ class fractex
             const auto c = _win.get_cursor();
 
             // Reset cursor position
-            update_cursor();
+            center_cursor();
 
             // return the mouse coordinates
             return c;
@@ -171,14 +171,14 @@ class fractex
 
   public:
     // Load window shaders and program
-    fractex(const size_t chunk, const size_t view)
+    fractex(const size_t chunk, const size_t grid, const size_t view)
         : _win("Fractex", _width, _height, _gl_major, _gl_minor),
           _uniforms(),
           _ui(_uniforms, _win.get_width(), _win.get_height()),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
           _state(),
-          _world(_state.get_load_state(), &_particles, _uniforms, 64, chunk, view),
+          _world(_state.get_load_state(), &_particles, _uniforms, chunk, grid, view),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world),
           _title(_state.get_camera(), _ui, _win),
           _goal_seek(_world)
@@ -187,7 +187,7 @@ class fractex
         min::settings::initialize();
 
         // Update cursor position for tracking
-        update_cursor();
+        center_cursor();
 
         // Test adding a mob
         const min::vec3<float> p(-4.5, 30.5, 4.5);
@@ -196,7 +196,7 @@ class fractex
     ~fractex()
     {
         // Save game data to file
-        _state.save_state(_world.character_position());
+        _state.save_state_file(_world.character_position());
     }
     void blink_console_message()
     {
@@ -223,6 +223,9 @@ class fractex
 
         // Maximize window
         _win.maximize();
+
+        // Update the mouse cursor to center
+        center_cursor();
     }
     void draw(const float dt)
     {
@@ -302,7 +305,7 @@ class fractex
     {
         _win.set_title(title);
     }
-    void update_cursor()
+    void center_cursor()
     {
         // Get the screen dimensions
         const uint16_t w = _win.get_width();

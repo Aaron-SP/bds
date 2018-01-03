@@ -22,6 +22,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdint>
 #include <game/ai_path.h>
 #include <game/cgrid.h>
+#include <game/load_state.h>
 #include <game/particle.h>
 #include <game/projectile.h>
 #include <game/sky.h>
@@ -103,11 +104,11 @@ class world
         // return center position
         return center;
     }
-    inline void character_load(const std::pair<min::vec3<float>, bool> &state)
+    inline void character_load(const load_state &state)
     {
         // Create a hitbox for character world collisions
         const min::vec3<float> half_extent(0.45, 0.95, 0.45);
-        const min::vec3<float> &position = state.first;
+        const min::vec3<float> &position = state.get_spawn();
         const min::aabbox<float, min::vec3> box(position - half_extent, position + half_extent);
         _char_id = _simulation.add_body(box, 10.0);
 
@@ -121,7 +122,7 @@ class world
         _grid.update_current_chunk(position);
 
         // If this the first time we load
-        if (!state.second)
+        if (!state.is_loaded())
         {
             // Set scale to 3x3x3
             _scale = min::vec3<unsigned>(3, 3, 3);
@@ -130,7 +131,7 @@ class world
             const min::vec3<float> snapped = cgrid::snap(position);
 
             // Get direction for particle spray, assume default look direction
-            const min::vec3<float> direction = (position + min::vec3<float>(-1.0, 0.0, 0.0)).normalize();
+            const min::vec3<float> direction = (position - state.get_look()).normalize();
 
             // Remove geometry around player, requires position snapped to grid and calculated direction vector
             explode_block(snapped, direction, _scale, -1, 100.0);
@@ -364,10 +365,9 @@ class world
     }
 
   public:
-    world(const std::pair<min::vec3<float>, bool> &state,
-          particle *const particles, const game::uniforms &uniforms,
-          const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
-        : _grid(grid_size, chunk_size, view_chunk_size),
+    world(const load_state &state, particle *const particles, const game::uniforms &uniforms,
+          const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
+        : _grid(chunk_size, grid_size, view_chunk_size),
           _terrain(_grid.get_chunk_size()),
           _gravity(0.0, -_grav_mag, 0.0),
           _simulation(_grid.get_world(), _gravity),
@@ -378,7 +378,7 @@ class world
           _scale(1, 1, 1),
           _particles(particles),
           _sky(uniforms, grid_size),
-          _dest(state.first),
+          _dest(state.get_spawn()),
           _instance(uniforms),
           _mob_start(1),
           _projectile(particles, &_instance),
@@ -890,7 +890,7 @@ class world
         _grid.update_current_chunk(p);
 
         // Get surrounding chunks for drawing
-        _grid.get_view_chunks(_view_chunks);
+        _grid.get_view_chunks(cam, _view_chunks);
 
         // For all chunk meshes
         for (const auto &i : _view_chunks)

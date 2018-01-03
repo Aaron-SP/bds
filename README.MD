@@ -67,6 +67,12 @@ The '-fps' flag is an optional parameter for controlling the target playback fra
 The '-chunk' flag is an optional parameter for controlling the size of each chunk. The default is 16 and must be an even divisible factor of the grid size, 128.
 - Example: 'bin/game -chunk 32' produce chunks of size 32x32x32.
 
+#### -grid flag
+The '-grid' flag is an optional parameter for controlling the half size of world grid. The default is 64 and must be greater than 50. 
+The default spawn point is currently 50 units away from (0, 0, 0) and thus the grid half size must be greater than this number.
+Any previous saves will be deleted upon resizing the game grid to avoid crashing the game.
+- Example: 'bin/game -grid 72 -chunk 18' produce a grid of size 144x144x144 and chunks of size 18x18x18.
+
 #### -view flag
 The '-view' flag is an optional parameter for controlling how many chunks are viewable on the screen. The default is 3 and must be an odd number greater than one.
 - Example: 'bin/game -view 31' will render 15 chunks on each side of the player, (15 * 2) + 1 = 31.

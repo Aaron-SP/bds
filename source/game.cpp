@@ -72,10 +72,10 @@ inline void show_game(fractex &game, min::loop_sync &sync, const size_t frames)
     }
 }
 
-void run(const size_t frames, const size_t chunk, const size_t view)
+void run(const size_t frames, const size_t chunk, const size_t grid, const size_t view)
 {
     // Load window shaders and program, enable shader program
-    fractex game(chunk, view);
+    fractex game(chunk, grid, view);
 
     // Setup controller to run at 60 frames per second
     min::loop_sync sync(frames, 0.25, 0.25, 0.25);
@@ -110,6 +110,7 @@ int main(int argc, char *argv[])
         // Default frame count
         size_t frames = 60;
         size_t chunk = 16;
+        size_t grid = 64;
         size_t view = 3;
 
         // Try to parse commandline args
@@ -129,6 +130,18 @@ int main(int argc, char *argv[])
                 // Parse uint
                 parse_uint(argv[i], chunk);
             }
+            else if (input.compare("-grid") == 0)
+            {
+                // Parse uint
+                parse_uint(argv[i], grid);
+
+                // Warn user that grid sizes not compatible
+                std::cout << "Resizing the grid: deleting old save caches" << std::endl;
+
+                // Erase previous state files
+                game::erase_file("bin/state");
+                game::erase_file("bin/world.bmesh");
+            }
             else if (input.compare("-view") == 0)
             {
                 // Parse uint
@@ -142,7 +155,7 @@ int main(int argc, char *argv[])
         }
 
         // Run the game
-        run(frames, chunk, view);
+        run(frames, chunk, grid, view);
     }
     catch (const std::exception &ex)
     {

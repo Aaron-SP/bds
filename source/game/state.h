@@ -20,11 +20,11 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/character.h>
 #include <game/file.h>
+#include <game/load_state.h>
 #include <game/skill_state.h>
 
 namespace game
 {
-
 class state
 {
   private:
@@ -36,11 +36,9 @@ class state
     float _x[_frame_average];
     float _y[_frame_average];
     unsigned _frame_count;
-    skill_state _skill_state;
+    load_state _load;
+    skill_state _skill;
     std::string _mode;
-    std::pair<min::vec3<float>, bool> _load_state;
-    min::vec3<float> _default_spawn;
-    min::vec3<float> _default_look;
     min::vec3<float> _target;
     float _health;
     bool _fix_target;
@@ -89,7 +87,7 @@ class state
         // Return the transformed model rotation
         return rotzx * roty;
     }
-    inline void load_state()
+    inline void load_state_file()
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
@@ -116,36 +114,33 @@ class state
 
             // Load camera settings
             const min::vec3<float> look(lx, ly, lz);
-            set_camera(p, look);
 
-            // return the state
-            _load_state = std::make_pair(p, true);
+            // Load the starting state
+            _load = load_state(look, p);
         }
         else
         {
-            // Load camera settings
-            set_camera(_default_spawn, _default_look);
-
-            // return the state
-            _load_state = std::make_pair(_default_spawn, false);
+            // Load the starting state
+            _load = load_state();
         }
+
+        // Load camera settings
+        set_camera(_load.get_spawn(), _load.get_look());
     }
 
   public:
     state()
         : _x{}, _y{}, _frame_count{},
-          _mode("MODE: PLAY"),
-          _default_spawn(0.0, -50.0, 0.0), _default_look(1.0, -50.0, 0.0),
-          _health(_health_cap),
-          _fix_target(false),
-          _pause_mode(false), _pause_lock(false), _user_input(true),
+          _mode("MODE: PLAY"), _health(_health_cap),
+          _fix_target(false), _pause_mode(false),
+          _pause_lock(false), _user_input(true),
           _dead(false), _respawn(false)
     {
         // Load camera
         load_camera();
 
         // Load state
-        load_state();
+        load_state_file();
     }
     inline void abort_tracking()
     {
@@ -196,21 +191,21 @@ class state
     {
         return _health / _health_cap;
     }
-    inline const std::pair<min::vec3<float>, bool> &get_load_state() const
+    inline const load_state &get_load_state() const
     {
-        return _load_state;
+        return _load;
     }
     inline skill_state &get_skill_state()
     {
-        return _skill_state;
+        return _skill;
     }
-    inline const min::mat4<float> &get_model_matrix()
+    inline const min::mat4<float> &get_model_matrix() const
     {
         return _model;
     }
-    inline const min::vec3<float> &get_default_spawn()
+    inline const min::vec3<float> &get_default_spawn() const
     {
-        return _default_spawn;
+        return _load.get_default_spawn();
     }
     inline bool get_user_input() const
     {
@@ -238,12 +233,12 @@ class state
         _health = _health_cap;
 
         // Reset energy
-        _skill_state.set_energy(0.0);
+        _skill.set_energy(0.0);
 
         // Reload camera settings
-        set_camera(_default_spawn, _default_look);
+        set_camera(_load.get_default_spawn(), _load.get_default_look());
     }
-    inline void save_state(const min::vec3<float> &p)
+    inline void save_state_file(const min::vec3<float> &p)
     {
         // Create output stream for saving world
         std::vector<uint8_t> stream;
@@ -254,7 +249,7 @@ class state
         min::write_le<float>(stream, p.z());
 
         // Get the camera look position
-        const min::vec3<float> look = _camera.project_point(3.0);
+        const min::vec3<float> look = _camera.project_point(1.0);
 
         // Write look into stream
         min::write_le<float>(stream, look.x());
@@ -267,8 +262,7 @@ class state
     inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
     {
         // Set camera start position and look position
-        _camera.set_position(p + min::vec3<float>(0.0, 0.5, 0.0));
-        _camera.set_look_at(look);
+        _camera.set(p + min::vec3<float>(0.0, 0.5, 0.0), look);
 
         // Force camera to update internals
         _camera.force_update();

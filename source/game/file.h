@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __FILE_UTILS__
 #define __FILE_UTILS__
 
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -25,6 +26,19 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
+void erase_file(const std::string &file_name)
+{
+    // Erase file
+    const int ret = std::remove(file_name.c_str());
+    if (ret != 0)
+    {
+        std::cout << "file: could not erase file '" << file_name << "'" << std::endl;
+    }
+    else
+    {
+        std::cout << "file: erased file '" << file_name << "'" << std::endl;
+    }
+}
 void load_file(const std::string &file_name, std::vector<uint8_t> &stream)
 {
     // read bytes from file

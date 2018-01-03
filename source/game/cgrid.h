@@ -24,6 +24,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/mandelbulb.h>
 #include <game/work_queue.h>
 #include <min/aabbox.h>
+#include <min/camera.h>
 #include <min/intersect.h>
 #include <min/mesh.h>
 #include <min/ray.h>
@@ -144,6 +145,15 @@ class cgrid
         // Create box at center
         const min::vec3<float> min = center - min::vec3<float>(0.5, 0.5, 0.5);
         const min::vec3<float> max = center + min::vec3<float>(0.5, 0.5, 0.5);
+
+        // return the box
+        return min::aabbox<float, min::vec3>(min, max);
+    }
+    inline min::aabbox<float, min::vec3> create_chunk_box(const min::vec3<float> &chunk_start) const
+    {
+        // Create box at chunk_start
+        const min::vec3<float> min = chunk_start - min::vec3<float>(0.5, 0.5, 0.5);
+        const min::vec3<float> max = min + min::vec3<float>(_chunk_size, _chunk_size, _chunk_size);
 
         // return the box
         return min::aabbox<float, min::vec3>(min, max);
@@ -399,12 +409,6 @@ class cgrid
                 count++;
             }
 
-            // Allow setting cells on edge of grid
-            if (bad_flag)
-            {
-                prev_key = key;
-            }
-
             // return the stopping cell value
             value = _grid[key];
         }
@@ -600,7 +604,7 @@ class cgrid
 
             // Check that grid load correctly
             const size_t cubic_size = _grid_size * _grid_size * _grid_size;
-            if (_grid.size() == cubic_size)
+            if (grid.size() == cubic_size)
             {
                 // Copy grid from file
                 _grid = grid;
@@ -641,7 +645,7 @@ class cgrid
     }
 
   public:
-    cgrid(const size_t grid_size, const size_t chunk_size, const size_t view_chunk_size)
+    cgrid(const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
         : _grid_size(2.0 * grid_size),
           _grid(_grid_size * _grid_size * _grid_size, -1),
           _chunk_cells(chunk_size * chunk_size * chunk_size),
@@ -795,7 +799,7 @@ class cgrid
     {
         return _chunks.size();
     }
-    inline void get_view_chunks(std::vector<size_t> &out) const
+    inline void get_view_chunks(const min::camera<float> &cam, std::vector<size_t> &out) const
     {
         out.clear();
 
@@ -805,9 +809,17 @@ class cgrid
         const min::vec3<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &out](const min::vec3<float> &p) {
-            const size_t ckey = chunk_key_unsafe(p);
-            out.push_back(ckey);
+        const auto f = [this, &out, &cam](const min::vec3<float> &p) {
+
+            // Create chunk bounding box
+            const min::aabbox<float, min::vec3> box = create_chunk_box(p);
+
+            // If the view is within the frustum
+            if (min::intersect<float>(cam.get_frustum(), box))
+            {
+                const size_t ckey = chunk_key_unsafe(p);
+                out.push_back(ckey);
+            }
         };
 
         // Run the function
