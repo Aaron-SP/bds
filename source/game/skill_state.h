@@ -31,7 +31,7 @@ class skill_state
 {
   private:
     static constexpr float _max_energy = 100.0;
-    static constexpr size_t _scan_id_count = 22;
+    static constexpr size_t _scan_id_count = 30;
     enum skill_mode
     {
         jetpack,
@@ -70,28 +70,36 @@ class skill_state
     inline void load_scan_strings()
     {
         // Reserve space for strings
-        _scan_desc[0] = "Stone";
-        _scan_desc[1] = "Sand";
+        _scan_desc[0] = "Dense Grass";
+        _scan_desc[1] = "Grass";
         _scan_desc[2] = "Fertile Soil";
-        _scan_desc[3] = "Citrine";
-        _scan_desc[4] = "Sulphur";
-        _scan_desc[5] = "Unstable Sodium";
-        _scan_desc[6] = "Erbium";
-        _scan_desc[7] = "Unstable Lithium";
-        _scan_desc[8] = "Water";
-        _scan_desc[9] = "Oxygen";
-        _scan_desc[10] = "Organic Life";
-        _scan_desc[11] = "Eskolaite";
-        _scan_desc[12] = "Carbon";
-        _scan_desc[13] = "Soil";
-        _scan_desc[14] = "Clay";
-        _scan_desc[15] = "Foliage";
-        _scan_desc[16] = "Status Unknown";
-        _scan_desc[17] = "Charge Beam";
-        _scan_desc[18] = "Missiles";
-        _scan_desc[19] = "Grapple Hook";
-        _scan_desc[20] = "Jet Pack";
-        _scan_desc[21] = "Pending Scan";
+        _scan_desc[3] = "Soil";
+        _scan_desc[4] = "Yellow Sand";
+        _scan_desc[5] = "White Sand";
+        _scan_desc[6] = "???";
+        _scan_desc[7] = "???";
+        _scan_desc[8] = "Oak";
+        _scan_desc[9] = "Pine";
+        _scan_desc[10] = "Dark Foliage";
+        _scan_desc[11] = "Light Vegetation";
+        _scan_desc[12] = "Blooming Growth";
+        _scan_desc[13] = "Flowery Growth";
+        _scan_desc[14] = "???";
+        _scan_desc[15] = "???";
+        _scan_desc[16] = "Light Stone";
+        _scan_desc[17] = "Dark Stone";
+        _scan_desc[18] = "Light clay";
+        _scan_desc[19] = "Dark Clay";
+        _scan_desc[20] = "Mossy Stone";
+        _scan_desc[21] = "Unstable Sodium";
+        _scan_desc[22] = "???";
+        _scan_desc[23] = "???";
+        _scan_desc[24] = "Status Unknown";
+        _scan_desc[25] = "Charge Beam";
+        _scan_desc[26] = "Missiles";
+        _scan_desc[27] = "Grapple Hook";
+        _scan_desc[28] = "Jet Pack";
+        _scan_desc[29] = "Pending Scan";
     }
 
   public:
