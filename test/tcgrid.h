@@ -27,7 +27,7 @@ bool test_cgrid()
     bool out = true;
 
     // Load the graph mesh with 128 pixel tile size
-    game::cgrid grid(64, 8, 7);
+    game::cgrid grid(8, 64, 7);
 
     // Test cgrid search
     min::vec3<float> start(0.5, 36.0, -0.5);

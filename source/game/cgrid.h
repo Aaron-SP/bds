@@ -19,10 +19,8 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #define __CHUNK_GRID__
 
 #include <chrono>
+#include <game/cgrid_generator.h>
 #include <game/file.h>
-#include <game/height_map.h>
-#include <game/mandelbulb.h>
-#include <game/work_queue.h>
 #include <min/aabbox.h>
 #include <min/camera.h>
 #include <min/intersect.h>
@@ -30,7 +28,6 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/ray.h>
 #include <min/serial.h>
 #include <min/utility.h>
-#include <random>
 
 namespace game
 {
@@ -39,7 +36,7 @@ class cgrid
 {
   private:
     static constexpr size_t _floor_height = 8;
-    size_t _grid_size;
+    size_t _grid_scale;
     std::vector<int8_t> _grid;
     size_t _chunk_cells;
     size_t _chunk_size;
@@ -119,7 +116,7 @@ class cgrid
         const min::vec3<float> bounded = min::vec3<float>(start).clamp(min, max);
 
         // Get the grid axis components
-        const size_t end = _grid_size;
+        const size_t end = _grid_scale;
         const auto t = min::vec3<float>::grid_index(_world.get_min(), _cell_extent, bounded);
 
         // x axis: will prune points outside grid
@@ -200,11 +197,11 @@ class cgrid
     }
     inline std::tuple<size_t, size_t, size_t> grid_key_unpack(const size_t key) const
     {
-        return min::vec3<float>::grid_index(key, _grid_size);
+        return min::vec3<float>::grid_index(key, _grid_scale);
     }
     inline size_t grid_key_pack(const std::tuple<size_t, size_t, size_t> &t) const
     {
-        return min::vec3<float>::grid_key(t, _grid_size);
+        return min::vec3<float>::grid_key(t, _grid_scale);
     }
     inline size_t grid_key_unsafe(const min::vec3<float> &point) const
     {
@@ -212,7 +209,7 @@ class cgrid
         const min::vec3<float> p = snap(point);
 
         // Compute the grid key from point
-        return min::vec3<float>::grid_key(_world.get_min(), _cell_extent, _grid_size, p);
+        return min::vec3<float>::grid_key(_world.get_min(), _cell_extent, _grid_scale, p);
     }
     inline size_t grid_key_safe(const min::vec3<float> &point, bool &valid) const
     {
@@ -262,7 +259,7 @@ class cgrid
                 const size_t tx = std::get<0>(t);
                 const size_t ty = std::get<1>(t);
                 const size_t tz = std::get<2>(t);
-                const size_t edge = _grid_size - 1;
+                const size_t edge = _grid_scale - 1;
                 const min::vec3<float> p = grid_cell_center(key);
                 if (tx % edge == 0 || ty % edge == 0 || tz % edge == 0)
                 {
@@ -313,60 +310,24 @@ class cgrid
         _chunks[key].vertex.reserve(_chunk_cells);
         _chunks[key].index.reserve(_chunk_cells);
     }
+
     inline void generate_world()
     {
-        // generate mandelbulb world using mandelbulb generator
-        mandelbulb().generate(work_queue::worker, _grid, _grid_size, [this](const size_t i) {
-            return this->grid_cell_center(i);
-        });
+        // Create a cgrid generator
+        cgrid_generator generator(_grid);
 
-        // Random numbers between -1.0, and 1.0
-        std::uniform_int_distribution<int8_t> dist(0, 4);
-        std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-
-        // Generate height map
-        const size_t level = std::ceil(std::log2(_grid_size));
-        const height_map<float, float> map(level, -1.0, 4.0);
-
-        // Parallelize on x-axis
-        const auto work = [this, &dist, &gen, &map](const size_t i) {
-
-            // y axis
-            for (size_t j = 0; j < _floor_height; j++)
-            {
-                // z axis
-                for (size_t k = 0; k < _grid_size; k++)
-                {
-                    // Get the height
-                    const uint8_t height = static_cast<uint8_t>(std::round(map.get(i, k)));
-                    if (j < height)
-                    {
-                        // Select ground textures
-                        switch (dist(gen))
-                        {
-                        case 0:
-                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 1;
-                            break;
-                        case 1:
-                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 10;
-                            break;
-                        case 2:
-                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 13;
-                            break;
-                        case 3:
-                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 14;
-                            break;
-                        case 4:
-                            _grid[grid_key_pack(std::make_tuple(i, j, k))] = 15;
-                            break;
-                        }
-                    }
-                }
-            }
+        // Function for finding grid key index
+        const auto f = [this](const std::tuple<size_t, size_t, size_t> &t) -> size_t {
+            return grid_key_pack(t);
         };
 
-        // Run the job in parallel
-        work_queue::worker.run(work, 0, _grid_size);
+        // Function for finding grid center
+        const auto g = [this](const size_t key) -> min::vec3<float> {
+            return grid_cell_center(key);
+        };
+
+        // Generate the cgrid data
+        generator.generate(_grid, _grid_scale, _floor_height, f, g);
     }
     inline float grid_center_square_dist(const size_t key, const min::vec3<float> &point) const
     {
@@ -405,7 +366,7 @@ class cgrid
                 prev_key = key;
 
                 // Increment the current key
-                key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_size);
+                key = min::vec3<float>::grid_ray_next(index, grid_ray, bad_flag, _grid_scale);
                 count++;
             }
 
@@ -479,45 +440,45 @@ class cgrid
         const size_t z = std::get<2>(comp);
 
         // Check against lower x grid dimensions
-        const size_t edge = _grid_size - 1;
+        const size_t edge = _grid_scale - 1;
         if (x != 0)
         {
-            const size_t nxk = min::vec3<float>::grid_key(std::make_tuple(x - 1, y, z), _grid_size);
+            const size_t nxk = min::vec3<float>::grid_key(std::make_tuple(x - 1, y, z), _grid_scale);
             neighbors.push_back({nxk, grid_center_square_dist(nxk, stop)});
         }
 
         // Check against upper x grid dimensions
         if (x != edge)
         {
-            const size_t pxk = min::vec3<float>::grid_key(std::make_tuple(x + 1, y, z), _grid_size);
+            const size_t pxk = min::vec3<float>::grid_key(std::make_tuple(x + 1, y, z), _grid_scale);
             neighbors.push_back({pxk, grid_center_square_dist(pxk, stop)});
         }
 
         // Check against lower y grid dimensions
         if (y != 0)
         {
-            const size_t nyk = min::vec3<float>::grid_key(std::make_tuple(x, y - 1, z), _grid_size);
+            const size_t nyk = min::vec3<float>::grid_key(std::make_tuple(x, y - 1, z), _grid_scale);
             neighbors.push_back({nyk, grid_center_square_dist(nyk, stop)});
         }
 
         // Check against upper y grid dimensions
         if (y != edge)
         {
-            const size_t pyk = min::vec3<float>::grid_key(std::make_tuple(x, y + 1, z), _grid_size);
+            const size_t pyk = min::vec3<float>::grid_key(std::make_tuple(x, y + 1, z), _grid_scale);
             neighbors.push_back({pyk, grid_center_square_dist(pyk, stop)});
         }
 
         // Check against lower z grid dimensions
         if (z != 0)
         {
-            const size_t nzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z - 1), _grid_size);
+            const size_t nzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z - 1), _grid_scale);
             neighbors.push_back({nzk, grid_center_square_dist(nzk, stop)});
         }
 
         // Check against upper z grid dimensions
         if (z != edge)
         {
-            const size_t pzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z + 1), _grid_size);
+            const size_t pzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z + 1), _grid_scale);
             neighbors.push_back({pzk, grid_center_square_dist(pzk, stop)});
         }
 
@@ -603,7 +564,7 @@ class cgrid
             const std::vector<int8_t> grid = min::read_le_vector<int8_t>(stream, next);
 
             // Check that grid load correctly
-            const size_t cubic_size = _grid_size * _grid_size * _grid_size;
+            const size_t cubic_size = _grid_scale * _grid_scale * _grid_scale;
             if (grid.size() == cubic_size)
             {
                 // Copy grid from file
@@ -645,12 +606,12 @@ class cgrid
     }
 
   public:
-    cgrid(const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
-        : _grid_size(2.0 * grid_size),
-          _grid(_grid_size * _grid_size * _grid_size, -1),
+    cgrid(const size_t chunk_size, const size_t grid_scale, const size_t view_chunk_size)
+        : _grid_scale(grid_scale * 2),
+          _grid(_grid_scale * _grid_scale * _grid_scale, -1),
           _chunk_cells(chunk_size * chunk_size * chunk_size),
           _chunk_size(chunk_size),
-          _chunk_scale(_grid_size / _chunk_size),
+          _chunk_scale(_grid_scale / _chunk_size),
           _chunks(_chunk_scale * _chunk_scale * _chunk_scale, min::mesh<float, uint32_t>("chunk")),
           _chunk_update(_chunks.size(), true),
           _recent_chunk(0),
@@ -660,9 +621,9 @@ class cgrid
           _atlas_id(0)
     {
         // Check chunk size
-        if (grid_size % chunk_size != 0)
+        if (grid_scale % chunk_size != 0)
         {
-            throw std::runtime_error("cgrid: chunk_size must evenly divide grid_size");
+            throw std::runtime_error("cgrid: chunk_size must evenly divide grid_scale");
         }
 
         // Check view size
@@ -678,7 +639,7 @@ class cgrid
         }
 
         // Create world AABB with a little border for protection
-        const float max = static_cast<float>(grid_size);
+        const float max = static_cast<float>(grid_scale);
         const float min = (max * -1.0);
         min::vec3<float> minv(min, min, min);
         min::vec3<float> maxv(max, max, max);

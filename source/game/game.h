@@ -112,7 +112,7 @@ class fractex
             if (_world.is_exploded())
             {
                 const int8_t ex_id = _world.get_explode_id();
-                if (ex_id == 7 || ex_id == 5)
+                if (ex_id == 21)
                 {
                     _state.consume_health(90.0);
                 }

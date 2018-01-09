@@ -300,7 +300,7 @@ class world
                 if (collide && !_exploded)
                 {
                     // Check for exploding mines
-                    if (cell.second == 5 || cell.second == 7)
+                    if (cell.second == 21)
                     {
                         // Calculate position and direction
                         const min::vec3<unsigned> radius(3, 3, 3);

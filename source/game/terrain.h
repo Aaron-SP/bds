@@ -200,139 +200,18 @@ class terrain
             min::vec2<float>(1.0, 0.0),
             min::vec2<float>(1.0, 1.0)};
 
-        // Select texture from atlas
-        switch (atlas_id)
-        {
-        case 0:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.001);
-                uv.y(uv.y() + 0.876);
-            }
-            break;
-        case 1:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.126);
-                uv.y(uv.y() + 0.876);
-            }
-            break;
-        case 2:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.251);
-                uv.y(uv.y() + 0.876);
-            }
-            break;
-        case 3:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.376);
-                uv.y(uv.y() + 0.876);
-            }
-            break;
-        case 4:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.501);
-                uv.y(uv.y() + 0.876);
-            }
-            break;
-        case 5:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.626);
-                uv.y(uv.y() + 0.876);
-            }
-            break;
-        case 6:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.751);
-                uv.y(uv.y() + 0.876);
-            }
-            break;
-        case 7:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.876);
-                uv.y(uv.y() + 0.876);
-            }
-            break;
-        case 8:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.001);
-                uv.y(uv.y() + 0.751);
-            }
-            break;
-        case 9:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.126);
-                uv.y(uv.y() + 0.751);
-            }
-            break;
-        case 10:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.251);
-                uv.y(uv.y() + 0.751);
-            }
-            break;
-        case 11:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.376);
-                uv.y(uv.y() + 0.751);
-            }
-            break;
-        case 12:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.501);
-                uv.y(uv.y() + 0.751);
-            }
-            break;
-        case 13:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.626);
-                uv.y(uv.y() + 0.751);
-            }
-            break;
-        case 14:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.751);
-                uv.y(uv.y() + 0.751);
-            }
-            break;
-        case 15:
-            for (auto &uv : uvs)
-            {
-                uv *= 0.124;
-                uv.x(uv.x() + 0.876);
-                uv.y(uv.y() + 0.751);
-            }
-            break;
-        }
+        // Calculate grid index
+        const size_t col = atlas_id % 8;
+        const size_t row = atlas_id / 8;
+        const float x_offset = 0.001 + 0.125 * col;
+        const float y_offset = 0.001 + (1.0 - 0.125 * (row + 1));
 
+        for (auto &uv : uvs)
+        {
+            uv *= 0.124;
+            uv.x(uv.x() + x_offset);
+            uv.y(uv.y() + y_offset);
+        }
         return uvs;
     }
     static inline min::aabbox<float, min::vec3> create_box(const min::vec3<float> &center)

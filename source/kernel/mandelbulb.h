@@ -22,7 +22,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/thread_pool.h>
 #include <min/vec3.h>
 
-namespace game
+namespace kernel
 {
 
 class mandelbulb
@@ -99,7 +99,7 @@ class mandelbulb
         // If we converged return atlas
         if (converged)
         {
-            return iterations % 16;
+            return iterations % 24;
         }
 
         return -1;
@@ -107,12 +107,16 @@ class mandelbulb
 
   public:
     mandelbulb() {}
-    void generate(thread_pool &pool, std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
+    void generate(game::thread_pool &pool, std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
     {
         // Create working function
         const auto work = [this, &grid, gsize, &f](const size_t i) {
-            // Do work
-            grid[i] = do_mandelbulb(f(i), gsize);
+
+            // Do mandelbulb on this cell if empty
+            if (grid[i] == -1)
+            {
+                grid[i] = do_mandelbulb(f(i), gsize);
+            }
         };
 
         // Run the job in parallel

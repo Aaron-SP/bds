@@ -35,11 +35,11 @@ namespace game
 class controls
 {
   private:
-    static constexpr float _block_cost = 40.0;
-    static constexpr float _beam_cost = 40.0;
+    static constexpr float _block_cost = 10.0;
+    static constexpr float _beam_cost = 10.0;
     static constexpr float _beam_charge_cost = 20.0;
-    static constexpr float _missile_cost = 90.0;
-    static constexpr float _grapple_cost = 40.0;
+    static constexpr float _missile_cost = 40.0;
+    static constexpr float _grapple_cost = 10.0;
     static constexpr float _jet_cost = 0.75;
     static constexpr float _health_regen = 5.0;
     static constexpr float _energy_regen = 10.0;

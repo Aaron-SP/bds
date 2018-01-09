@@ -56,16 +56,27 @@ class thread_pool
   private:
     unsigned _thread_count;
     std::vector<std::vector<work_item>> _queue;
+    std::vector<std::atomic<bool>> _sleep;
     std::vector<std::atomic<bool>> _state;
     std::vector<std::thread> _threads;
     std::mutex _sleep_lock;
     std::condition_variable _more_data;
     std::atomic<bool> _die;
+    std::atomic<bool> _turbo;
 
-    inline void state_wait()
+    inline void notify()
+    {
+        // If we are sleeping, wait for all threads to sleep before killing queue
+        if (!_turbo)
+        {
+            // Wake up idle threads
+            _more_data.notify_all();
+        }
+    }
+    inline void wait_sleep()
     {
         // Wait for all workers to quit
-        while (true)
+        while (!_turbo)
         {
             // Count threads asleep
             size_t count = 0;
@@ -74,6 +85,29 @@ class thread_pool
                 // Make sure all threads are asleep
                 std::unique_lock<std::mutex> lock(_sleep_lock);
 
+                // See if worker is finished
+                if (_sleep[i] == false)
+                {
+                    count++;
+                }
+            }
+
+            // If all workers are finished
+            if (count == _thread_count - 1)
+            {
+                break;
+            }
+        }
+    }
+    inline void wait_done() const
+    {
+        // Wait for all workers to quit
+        while (true)
+        {
+            // Count threads asleep
+            size_t count = 0;
+            for (size_t i = 0; i < _thread_count - 1; i++)
+            {
                 // See if worker is finished
                 if (_state[i] == false)
                 {
@@ -88,20 +122,32 @@ class thread_pool
             }
         }
     }
+    inline void wait()
+    {
+        if (!_turbo)
+        {
+            wait_sleep();
+        }
+        else
+        {
+            wait_done();
+        }
+    }
     inline void work(const size_t index)
     {
         while (true)
         {
             // Sleep on condition
+            if (!_turbo)
             {
                 // Acquire mutex to sleep on condition
                 std::unique_lock<std::mutex> lock(_sleep_lock);
 
                 // ATOMIC: Signal Sleeping
-                _state[index] = false;
+                _sleep[index] = false;
 
                 // Wait on more data
-                _more_data.wait(lock, [this, index]() { return _state[index] || _die; });
+                _more_data.wait(lock, [this, index]() { return (_state[index] || _die) || _turbo; });
             }
 
             // Do work
@@ -119,6 +165,9 @@ class thread_pool
 
                 // Clear the queue
                 items.clear();
+
+                // ATOMIC: Signal Finished
+                _state[index] = false;
             }
             else if (_die)
             {
@@ -130,12 +179,19 @@ class thread_pool
 
   public:
     thread_pool() : _thread_count(std::thread::hardware_concurrency()), _queue(_thread_count - 1),
-                    _state(_thread_count - 1), _threads(_thread_count - 1), _die(false)
+                    _sleep(_thread_count - 1), _state(_thread_count - 1), _threads(_thread_count - 1), _die(false), _turbo(false)
     {
         // Error out if can't determine core count
         if (_thread_count < 1)
         {
             throw std::runtime_error("thread_pool: can't determine number of CPU cores");
+        }
+
+        // Set all default synchronization flags
+        for (size_t i = 0; i < _thread_count - 1; i++)
+        {
+            _sleep[i] = true;
+            _state[i] = false;
         }
 
         // Boot all threads
@@ -158,7 +214,34 @@ class thread_pool
     }
     void kill()
     {
+        // Wait for threads to finish work
+        wait();
+
+        // Signal dead queue
         _die = true;
+
+        // Notify threads
+        notify();
+    }
+    void sleep()
+    {
+        // ATOMIC: Set state of all workers to 'sleep'
+        for (size_t i = 0; i < _thread_count - 1; i++)
+        {
+            // Signal finished
+            _sleep[i] = true;
+        }
+
+        // Put all threads to sleep
+        _turbo = false;
+    }
+    void wake()
+    {
+        // Wait for all workers to sleep
+        wait_sleep();
+
+        // Turn off sleeping
+        _turbo = true;
 
         // Wake up idle threads
         _more_data.notify_all();
@@ -166,7 +249,7 @@ class thread_pool
     void run(const std::function<void(const size_t)> &f, const size_t start, const size_t stop)
     {
         // Wait for all workers to sleep
-        state_wait();
+        wait();
 
         // Load queue with work
         const size_t length = (stop - start) / _thread_count;
@@ -184,20 +267,21 @@ class thread_pool
         // ATOMIC: Set state of all workers to 'run'
         for (size_t i = 0; i < _thread_count - 1; i++)
         {
-            // Signal finished
+            // Signal that there is work to do
+            _sleep[i] = true;
             _state[i] = true;
         }
 
-        // Wake up idle threads
-        _more_data.notify_all();
+        // Notify threads
+        notify();
 
         // Boot the residual work on this thread
         const size_t remain = stop - begin;
         work_item item(f, begin, remain);
         item.work();
 
-        // Wait for all workers to sleep
-        state_wait();
+        // Wait for all workers to finish work
+        wait_done();
     }
 };
 }
