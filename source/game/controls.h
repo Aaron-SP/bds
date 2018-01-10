@@ -19,6 +19,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #define __CONTROLS__
 
 #include <functional>
+#include <game/sound.h>
 #include <game/state.h>
 #include <game/text.h>
 #include <game/ui_overlay.h>
@@ -50,13 +51,14 @@ class controls
     game::state *_state;
     game::ui_overlay *_ui;
     game::world *_world;
+    game::sound *_sound;
 
   public:
     controls(min::window &window, min::camera<float> &camera,
              game::character &ch, game::state &state,
-             game::ui_overlay &ui, game::world &world)
+             game::ui_overlay &ui, game::world &world, game::sound &sound)
         : _window(&window), _camera(&camera), _character(&ch),
-          _state(&state), _ui(&ui), _world(&world) {}
+          _state(&state), _ui(&ui), _world(&world), _sound(&sound) {}
 
     min::camera<float> *get_camera()
     {
@@ -65,6 +67,10 @@ class controls
     game::character *get_character()
     {
         return _character;
+    }
+    game::sound *get_sound()
+    {
+        return _sound;
     }
     game::state *get_state()
     {
@@ -144,23 +150,19 @@ class controls
         keyboard.register_keydown(min::window::key_code::KEYR, controls::toggle_ai_mode, (void *)this);
 
         // Register callback function W
-        keyboard.register_keydown(min::window::key_code::KEYW, controls::forward, (void *)this);
-        keyboard.set_per_frame(min::window::key_code::KEYW, true);
+        keyboard.register_keydown_per_frame(min::window::key_code::KEYW, controls::forward, (void *)this);
+
+        // Register callback function S
+        keyboard.register_keydown_per_frame(min::window::key_code::KEYS, controls::back, (void *)this);
 
         // Register callback function A
-        keyboard.register_keydown(min::window::key_code::KEYA, controls::left, (void *)this);
-        keyboard.set_per_frame(min::window::key_code::KEYA, true);
+        keyboard.register_keydown_per_frame(min::window::key_code::KEYA, controls::left, (void *)this);
 
         // Register callback function D
-        keyboard.register_keydown(min::window::key_code::KEYD, controls::right, (void *)this);
-        keyboard.set_per_frame(min::window::key_code::KEYD, true);
+        keyboard.register_keydown_per_frame(min::window::key_code::KEYD, controls::right, (void *)this);
 
         // Register callback function E
         keyboard.register_keydown(min::window::key_code::KEYE, controls::reset, (void *)this);
-
-        // Register callback function S
-        keyboard.register_keydown(min::window::key_code::KEYS, controls::back, (void *)this);
-        keyboard.set_per_frame(min::window::key_code::KEYS, true);
 
         // Register callback function Z
         keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
@@ -304,47 +306,47 @@ class controls
     }
     static void forward(void *ptr, double step)
     {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
         // Get the camera and world pointers
+        controls *const control = reinterpret_cast<controls *>(ptr);
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
+
+        // Move the character
         const min::vec3<float> &direction = camera->get_forward();
-        world->character_move(direction);
+        world->get_player().move(direction);
     }
     static void left(void *ptr, double step)
     {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
         // Get the camera and world pointers
+        controls *const control = reinterpret_cast<controls *>(ptr);
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
+
+        // Move the character
         const min::vec3<float> &right = camera->get_frustum().get_right();
-        world->character_move(right * -1.0);
+        world->get_player().move(right * -1.0);
     }
     static void right(void *ptr, double step)
     {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
         // Get the camera and world pointers
+        controls *const control = reinterpret_cast<controls *>(ptr);
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
+
+        // Move the character
         const min::vec3<float> &right = camera->get_frustum().get_right();
-        world->character_move(right);
+        world->get_player().move(right);
     }
     static void back(void *ptr, double step)
     {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
         // Get the camera and world pointers
+        controls *const control = reinterpret_cast<controls *>(ptr);
         min::camera<float> *const camera = control->get_camera();
         game::world *const world = control->get_world();
+
+        // Move the character
         const min::vec3<float> &direction = camera->get_forward();
-        world->character_move(direction * -1.0);
+        world->get_player().move(direction * -1.0);
     }
     void key_down(const size_t index, const std::function<void(void)> &f)
     {
@@ -356,6 +358,9 @@ class controls
         {
             // Modify ui toolbar
             _ui->set_key_down(index);
+
+            // Play selection sound
+            _sound->play_click();
 
             // Do something
             if (f)
@@ -765,7 +770,7 @@ class controls
                 else if (skill.is_grapple_mode())
                 {
                     //Abort grappling hook
-                    world->hook_abort();
+                    world->get_player().hook_abort();
 
                     // Stop grapple animation
                     character->abort_animation_grapple();
@@ -872,7 +877,7 @@ class controls
     {
         // Get the world pointer
         game::world *const world = reinterpret_cast<game::world *>(ptr);
-        world->character_jump();
+        world->get_player().jump();
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {
@@ -926,7 +931,7 @@ class controls
             const bool consumed = skill.will_consume(_jet_cost);
             if (consumed)
             {
-                _world->character_jetpack();
+                _world->get_player().jetpack();
             }
             else
             {

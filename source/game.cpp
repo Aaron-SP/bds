@@ -27,6 +27,13 @@ inline void show_title(fractex &game, min::loop_sync &sync, const size_t frames)
 
         // Make console message blink
         game.blink_console_message();
+
+        // Check for OpenGL errors
+        if (min::check_gl_error())
+        {
+            std::cout << "OpenGL errors detected in show_title, quitting" << std::endl;
+            break;
+        }
     }
 }
 
@@ -69,6 +76,18 @@ inline void show_game(fractex &game, min::loop_sync &sync, const size_t frames)
 
         // Update the debug text
         game.update_text(fps, idle);
+
+        // Check for errors
+        if (min::check_gl_error())
+        {
+            std::cout << "OpenGL errors detected in show_game, quitting" << std::endl;
+            break;
+        }
+        else if (min::check_al_error())
+        {
+            std::cout << "OpenAL errors detected in show_game, quitting" << std::endl;
+            break;
+        }
     }
 }
 

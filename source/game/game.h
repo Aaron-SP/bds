@@ -21,6 +21,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/controls.h>
 #include <game/goal_seek.h>
 #include <game/particle.h>
+#include <game/sound.h>
 #include <game/state.h>
 #include <game/title.h>
 #include <game/ui_overlay.h>
@@ -59,6 +60,7 @@ class fractex
     game::controls _controls;
     game::title _title;
     game::goal_seek _goal_seek;
+    game::sound _sound;
 
     inline void die()
     {
@@ -109,9 +111,9 @@ class fractex
         // Check if we exploded
         if (!_state.is_dead())
         {
-            if (_world.is_exploded())
+            if (_world.get_player().is_exploded())
             {
-                const int8_t ex_id = _world.get_explode_id();
+                const int8_t ex_id = _world.get_player().get_explode_id();
                 if (ex_id == 21)
                 {
                     _state.consume_health(90.0);
@@ -179,7 +181,7 @@ class fractex
           _character(&_particles, _uniforms),
           _state(),
           _world(_state.get_load_state(), &_particles, _uniforms, chunk, grid, view),
-          _controls(_win, _state.get_camera(), _character, _state, _ui, _world),
+          _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
           _title(_state.get_camera(), _ui, _win),
           _goal_seek(_world)
     {
@@ -196,7 +198,7 @@ class fractex
     ~fractex()
     {
         // Save game data to file
-        _state.save_state_file(_world.character_position());
+        _state.save_state_file(_world.get_player().position());
     }
     void blink_console_message()
     {
@@ -230,7 +232,7 @@ class fractex
     void draw(const float dt)
     {
         // Get player physics body position
-        const min::vec3<float> &p = _world.character_position();
+        const min::vec3<float> &p = _world.get_player().position();
 
         bool update = false;
         min::camera<float> &camera = _state.get_camera();
@@ -243,6 +245,9 @@ class fractex
 
             // Must update state properties, camera before drawing world
             _state.update(p, c, _win.get_width(), _win.get_height(), dt);
+
+            // Update the sound class
+            _sound.update(camera.get_position());
 
             // If AI is in control
             if (_world.get_ai_mode())
@@ -258,8 +263,22 @@ class fractex
             update_die_respawn();
 
             // Update the particle system
-            _particles.set_velocity(_world.character_velocity());
+            const min::vec3<float> &v = _world.get_player().velocity();
+            _particles.set_velocity(v);
             _particles.update(camera, dt);
+
+            // Update the player walk sound if moving and not falling
+            if (_world.get_player().has_landed())
+            {
+                // Volume is proportional to square y velocity
+                const min::vec3<float> &lv = _world.get_player().land_velocity();
+                const float speed = std::abs(lv.y());
+                _sound.play_land(speed);
+            }
+            else
+            {
+                _sound.stop_land();
+            }
 
             // Update the character state
             update = _character.update(camera, dt);
@@ -323,7 +342,7 @@ class fractex
     void update_text(const double fps, const double idle)
     {
         // Update player position debug text
-        const min::vec3<float> &p = _world.character_position();
+        const min::vec3<float> &p = _world.get_player().position();
         const min::vec3<float> &f = _state.get_camera().get_forward();
         const std::string &mode = _state.get_game_mode();
         const min::vec3<float> &goal = _goal_seek.get_goal();

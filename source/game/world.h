@@ -24,6 +24,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/cgrid.h>
 #include <game/load_state.h>
 #include <game/particle.h>
+#include <game/player.h>
 #include <game/projectile.h>
 #include <game/sky.h>
 #include <game/static_instance.h>
@@ -42,16 +43,16 @@ namespace game
 class world
 {
   private:
+    static constexpr float _grav_mag = 10.0;
     static constexpr size_t _pre_max_scale = 5;
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
-    static constexpr float _falling_threshold = 1.0;
     static constexpr size_t _ray_max_dist = 100;
-    static constexpr float _grav_mag = 10.0;
     static constexpr float _explosion_radius = 4.0;
 
     // Terrain stuff
     cgrid _grid;
     game::terrain _terrain;
+    particle *_particles;
     std::vector<size_t> _view_chunks;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _player_col_cells;
     std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
@@ -59,8 +60,8 @@ class world
     // Physics stuff
     min::vec3<float> _gravity;
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
+    player _player;
     size_t _char_id;
-    unsigned _jump_count;
 
     // Player control stuff
     min::mesh<float, uint32_t> _terr_mesh;
@@ -68,9 +69,8 @@ class world
     min::vec3<int> _preview_offset;
     min::vec3<float> _preview;
     min::vec3<unsigned> _scale;
-
-    // Particle stuff
-    particle *_particles;
+    bool _ai_mode;
+    bool _edit_mode;
 
     // Skybox
     sky _sky;
@@ -86,16 +86,6 @@ class world
     // Missiles
     projectile _projectile;
 
-    // Operating modes
-    bool _ai_mode;
-    bool _edit_mode;
-    min::vec3<float> _hook;
-    float _hook_length;
-    bool _hooked;
-    bool _falling;
-    bool _exploded;
-    int8_t _explode_id;
-
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {
         const min::vec3<float> offset(scale.x() / 2, scale.y() / 2, scale.z() / 2);
@@ -104,19 +94,16 @@ class world
         // return center position
         return center;
     }
-    inline void character_load(const load_state &state)
+    inline size_t character_load(const load_state &state)
     {
         // Create a hitbox for character world collisions
         const min::vec3<float> half_extent(0.45, 0.95, 0.45);
         const min::vec3<float> &position = state.get_spawn();
         const min::aabbox<float, min::vec3> box(position - half_extent, position + half_extent);
+
+        // Create the physics body
         _char_id = _simulation.add_body(box, 10.0);
-
-        // Get the physics body for editing
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Set this body to be unrotatable
-        body.set_no_rotate();
+        _simulation.get_body(_char_id).set_no_rotate();
 
         // Update recent chunk
         _grid.update_current_chunk(position);
@@ -130,15 +117,14 @@ class world
             // Snap to grid
             const min::vec3<float> snapped = cgrid::snap(position);
 
-            // Get direction for particle spray, assume default look direction
-            const min::vec3<float> direction = (position - state.get_look()).normalize();
-
             // Remove geometry around player, requires position snapped to grid and calculated direction vector
-            explode_block(snapped, direction, _scale, -1, 100.0);
+            _grid.set_geometry(snapped, _scale, _preview_offset, -1);
 
             // Reset scale to default value
             _scale = min::vec3<unsigned>(1, 1, 1);
         }
+
+        return _char_id;
     }
     inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
     {
@@ -152,10 +138,10 @@ class world
             _particles->load_static_explode(point, direction, 5.0, size);
 
             // If explode hasn't been flagged yet
-            if (!_exploded)
+            if (!_player.is_exploded())
             {
                 // Get player position
-                const min::vec3<float> &p = character_position();
+                const min::vec3<float> &p = _player.position();
 
                 // Calculate distance from explosion center
                 const float d = (point - p).magnitude();
@@ -163,14 +149,7 @@ class world
                 // Check if character is too close to the explosion
                 if (d < _explosion_radius)
                 {
-                    // Signal explode signal
-                    _exploded = true;
-
-                    // Record what we hit
-                    _explode_id = value;
-
-                    // Apply force to the player body
-                    character_force(direction * 7000.0);
+                    _player.explode(direction, value);
                 }
             }
         }
@@ -241,12 +220,6 @@ class world
             }
         }
 
-        // Get the player physics object
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Get player position
-        const min::vec3<float> &p = body.get_position();
-
         // Calculate the timestep independent from frame rate, goal = 0.0016667
         const float fps = 1.0 / dt;
         const unsigned steps = std::ceil(dt / 0.0016667);
@@ -254,11 +227,11 @@ class world
 
         // Calculate the damping coefficent
         float base_damp = 11.0;
-        if (_hooked)
+        if (_player.is_hooked())
         {
             base_damp = 2.0;
         }
-        else if (_falling)
+        else if (_player.is_airborn())
         {
             base_damp = 6.0;
         }
@@ -268,36 +241,34 @@ class world
         const float friction = -20.0 / steps;
 
         // Solve the physics simulation
+        const min::vec3<float> &p = _player.position();
         for (size_t i = 0; i < steps; i++)
         {
             // Get all cells that could collide
             _grid.create_player_collision_cells(_player_col_cells, p);
 
-            // If hooked, add hook forces
-            if (_hooked)
-            {
-                // Calculate forces to make character swing
-                character_swing();
-            }
-            else
-            {
-                // Add friction force
-                const min::vec3<float> &vel = body.get_linear_velocity();
-                const min::vec3<float> xz(vel.x(), 0.0, vel.z());
-
-                // Add friction force opposing lateral motion
-                body.add_force(xz * body.get_mass() * friction);
-            }
+            // Update the player class
+            _player.update_position(friction);
 
             // Solve static collisions
-            bool player_collide = false;
+            bool player_land = false;
             for (const auto &cell : _player_col_cells)
             {
                 // Did we collide with block?
                 const bool collide = _simulation.collide(_char_id, cell.first);
 
+                // Detect if player has landed
+                if (collide)
+                {
+                    const min::vec3<float> center = cell.first.get_center();
+                    if (center.y() < p.y())
+                    {
+                        player_land = true;
+                    }
+                }
+
                 // If we collided with cell
-                if (collide && !_exploded)
+                if (collide && !_player.is_exploded())
                 {
                     // Check for exploding mines
                     if (cell.second == 21)
@@ -311,17 +282,10 @@ class world
                         explode_block(box_center, dir, radius, cell.second, 100.0);
                     }
                 }
-
-                // Set player collide
-                player_collide |= collide;
             }
 
-            // Reset the jump condition if collided with cell, and moving in Y axis
-            _falling = (std::abs(body.get_linear_velocity().y()) >= _falling_threshold);
-            if (player_collide && !_falling)
-            {
-                _jump_count = 0;
-            }
+            // Update the player landing condition
+            _player.update_land(player_land);
 
             // Do mob collisions
             const size_t mob_size = _instance.cube_size();
@@ -369,26 +333,21 @@ class world
           const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
         : _grid(chunk_size, grid_size, view_chunk_size),
           _terrain(_grid.get_chunk_size()),
+          _particles(particles),
           _gravity(0.0, -_grav_mag, 0.0),
           _simulation(_grid.get_world(), _gravity),
-          _jump_count(0),
+          _player(&_simulation, character_load(state)),
           _terr_mesh("atlas"),
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
           _scale(1, 1, 1),
-          _particles(particles),
+          _ai_mode(false),
+          _edit_mode(false),
           _sky(uniforms, grid_size),
           _dest(state.get_spawn()),
           _instance(uniforms),
           _mob_start(1),
-          _projectile(particles, &_instance),
-          _ai_mode(false),
-          _edit_mode(false),
-          _hook_length(0.0),
-          _hooked(false),
-          _falling(false),
-          _exploded(false),
-          _explode_id(-1)
+          _projectile(particles, &_instance)
     {
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);
@@ -398,9 +357,6 @@ class world
 
         // Reserve space for used vectors
         reserve_memory(view_chunk_size);
-
-        // character_load should only be called once!
-        character_load(state);
 
         // Update chunks
         update_all_chunks();
@@ -429,146 +385,6 @@ class world
         body.set_no_rotate();
 
         return mob_id;
-    }
-    inline void character_force(const min::vec3<float> &f)
-    {
-        // Get the player physics object
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Apply force to the body per mass
-        body.add_force(f * body.get_mass());
-    }
-    inline void character_jetpack()
-    {
-        // If not hooked
-        if (!_hooked)
-        {
-            // Add force to player body
-            character_force(min::vec3<float>(0.0, 150.0, 0.0));
-        }
-    }
-    inline void character_jump()
-    {
-        // If not hooked
-        if (!_hooked)
-        {
-            // Allow user to jump and user boosters
-            if (_jump_count == 0 && !_falling)
-            {
-                // Increment jump count
-                _jump_count++;
-
-                // Add force to the player body
-                character_force(min::vec3<float>(0.0, 4000.0, 0.0));
-            }
-            else if (_jump_count == 1)
-            {
-                // Increment jump count
-                _jump_count++;
-
-                // Add force to the player body
-                character_force(min::vec3<float>(0.0, 5000.0, 0.0));
-            }
-        }
-    }
-    inline void character_move(const min::vec3<float> &vel)
-    {
-        // If not hooked
-        if (!_hooked)
-        {
-            // Get the current position and set y movement to zero
-            const min::vec3<float> dxz = min::vec3<float>(vel.x(), 0.0, vel.z()).normalize();
-
-            // Add force to player body
-            character_force(dxz * 100.0);
-        }
-    }
-    inline const min::vec3<float> &character_position() const
-    {
-        const min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Return the character position
-        return body.get_position();
-    }
-    inline void character_swing()
-    {
-        // Get the player physics object
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Get player position
-        const min::vec3<float> &p = body.get_position();
-
-        // Get player velocity
-        const min::vec3<float> &vel = body.get_linear_velocity();
-
-        // Get player mass
-        const float m = body.get_mass();
-
-        // Compute the hook vector
-        const min::vec3<float> hook_dir = (_hook - p);
-        const float d = hook_dir.magnitude();
-
-        // Calculate swing direction
-        if (d > 1.0)
-        {
-            // Normalize swing direction
-            const min::vec3<float> swing_dir = hook_dir * (1.0 / d);
-
-            // Compute pendulum double spring force
-            // Spring F=-k(x-x0)
-            const float over = _hook_length + 1.0;
-            const float under = _hook_length - 1.0;
-            if (d > over)
-            {
-                const float k = 100.0;
-                const min::vec3<float> x = swing_dir * (d - over);
-                body.add_force(x * k);
-            }
-            else if (d < under)
-            {
-                const float k = 50.0;
-                const min::vec3<float> x = swing_dir * (d - under);
-                body.add_force(x * k);
-            }
-
-            // Calculate the square velocity
-            const float vt = vel.magnitude();
-            const float vt2 = vt * vt * 1.25;
-
-            // Gravity acceleration, a = g*cos_theta
-            // cos_theta = -swing_dir.dot(gravity) == swing_dir.y()
-            const float a1 = _grav_mag * swing_dir.y();
-
-            // Centripetal acceleration a = (vt^2)/L
-            const float a2 = vt2 / _hook_length;
-
-            // Combined both forces, along the radius
-            const min::vec3<float> tension = swing_dir * ((a1 + a2) * m);
-
-            // Pendulum F=-mg.dot(r) + mvt^2/L
-            body.add_force(tension);
-        }
-    }
-    inline const min::vec3<float> &character_velocity() const
-    {
-        const min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Return the character position
-        return body.get_linear_velocity();
-    }
-    inline void character_velocity(const min::vec3<float> &v)
-    {
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Warp character to new position
-        body.set_linear_velocity(v);
-    }
-    inline void character_warp(const min::vec3<float> &p)
-    {
-        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
-
-        // Warp character to new position
-        body.set_position(p);
     }
     void draw(game::uniforms &uniforms) const
     {
@@ -661,14 +477,17 @@ class world
     {
         return _instance;
     }
+    player &get_player()
+    {
+        return _player;
+    }
+    const player &get_player() const
+    {
+        return _player;
+    }
     inline const min::vec3<float> &get_preview_position()
     {
         return _preview;
-    }
-    void hook_abort()
-    {
-        // abort hooking
-        _hooked = false;
     }
     bool hook_set(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
     {
@@ -679,34 +498,18 @@ class world
         // Get the atlas of target block, if hit a block remove it
         if (value >= 0)
         {
-            // Set hook point
-            _hook = out;
-
-            // Enable hooking
-            _hooked = true;
-
             // Calculate the hook length
-            _hook_length = (out - r.get_origin()).magnitude();
+            const float hook_length = (out - r.get_origin()).magnitude();
+
+            // Set player hook
+            _player.set_hook(out, hook_length);
+
+            // Return that we are hooked
+            return true;
         }
 
-        // return the end of ray
-        return _hooked;
-    }
-    inline int8_t get_explode_id() const
-    {
-        return _explode_id;
-    }
-    inline bool is_exploded() const
-    {
-        return _exploded;
-    }
-    inline bool is_falling() const
-    {
-        return _falling;
-    }
-    inline bool is_hooked() const
-    {
-        return _hooked;
+        // Return that we are  not hooked
+        return false;
     }
     inline void launch_missile(const min::ray<float, min::vec3> &r)
     {
@@ -746,8 +549,7 @@ class world
     }
     inline void reset_explode()
     {
-        _exploded = false;
-        _explode_id = -1;
+        _player.reset_explode();
     }
     inline void respawn(const min::vec3<float> p)
     {
@@ -755,10 +557,10 @@ class world
         reset_explode();
 
         // Set character position
-        character_warp(p);
+        _player.warp(p);
 
         // Zero out character velocity
-        character_velocity(min::vec3<float>());
+        _player.velocity(min::vec3<float>());
     }
     inline void reset_scale()
     {
@@ -884,7 +686,7 @@ class world
         update_world_physics(dt);
 
         // Get player position
-        const min::vec3<float> &p = character_position();
+        const min::vec3<float> &p = _player.position();
 
         // Detect if we crossed a chunk boundary
         _grid.update_current_chunk(p);
