@@ -655,7 +655,7 @@ class controls
 
                         // Play the grapple sound
                         const min::vec3<float> reverse = r.get_direction() * -1.0;
-                        sound->update_grapple_position(point, reverse);
+                        sound->update_grapple(point, reverse);
                         sound->play_grapple();
 
                         // Lock the gun in beam mode

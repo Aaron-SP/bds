@@ -275,10 +275,6 @@ class fractex
                 const float speed = std::abs(lv.y());
                 _sound.play_land(speed);
             }
-            else
-            {
-                _sound.update_land();
-            }
 
             // Update the character state
             update = _character.update(camera, dt);
