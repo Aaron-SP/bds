@@ -670,6 +670,9 @@ class controls
             }
             else if (skill.is_jetpack_mode())
             {
+                // Play the jet sound
+                sound->play_jet();
+
                 // Lock the gun in jetpack mode
                 skill.lock();
             }
@@ -815,6 +818,9 @@ class controls
                 }
                 else if (skill.is_jetpack_mode())
                 {
+                    // Stop the jet sound
+                    sound->stop_jet();
+
                     // Unlock the gun if jetpack mode
                     skill.unlock_jetpack();
                 }
@@ -951,6 +957,10 @@ class controls
             }
             else
             {
+                // Stop the jet sound
+                _sound->stop_jet();
+
+                // Unlock the jetpack
                 skill.unlock_jetpack();
             }
         }
