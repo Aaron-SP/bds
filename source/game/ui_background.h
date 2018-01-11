@@ -35,6 +35,7 @@ class ui_background
 {
   private:
     // Backgrounds
+    static constexpr size_t _max_size = 18;
     static constexpr float _x_cursor_uv = 4.0 / 512.0;
     static constexpr float _y_cursor_uv = 4.0 / 512.0;
     static constexpr float _x_black_uv = 40.0 / 512.0;
@@ -511,6 +512,12 @@ class ui_background
         // Load pause text
         load_menu_pause();
     }
+    inline void reserve_memory()
+    {
+        // Reserve space for number of menu items
+        _v.reserve(_max_size);
+        _uv.reserve(_max_size);
+    }
 
   public:
     ui_background(const game::uniforms &uniforms, const uint16_t width, const uint16_t height)
@@ -519,7 +526,7 @@ class ui_background
           _prog(_vertex, _fragment),
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
-          _index(0), _selected(0), _menu_offset(18),
+          _index(0), _selected(0), _menu_offset(_max_size),
           _energy(0.0), _health(1.0), _cursor_angle(0.0),
           _draw_menu(false), _draw_console(false), _draw_title(true)
     {
@@ -528,6 +535,9 @@ class ui_background
 
         // Load texture
         load_texture();
+
+        // Reserve memory
+        reserve_memory();
 
         // Load the uniform buffer with program we will use
         uniforms.set_program_matrix_only(_prog);

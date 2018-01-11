@@ -180,7 +180,7 @@ class fractex
           _particles(_uniforms),
           _character(&_particles, _uniforms),
           _state(),
-          _world(_state.get_load_state(), &_particles, _uniforms, chunk, grid, view),
+          _world(_state.get_load_state(), &_particles, &_sound, _uniforms, chunk, grid, view),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
           _title(_state.get_camera(), _ui, _win),
           _goal_seek(_world)
@@ -246,9 +246,6 @@ class fractex
             // Must update state properties, camera before drawing world
             _state.update(p, c, _win.get_width(), _win.get_height(), dt);
 
-            // Update the sound class
-            _sound.update(camera.get_position());
-
             // If AI is in control
             if (_world.get_ai_mode())
             {
@@ -258,6 +255,9 @@ class fractex
 
             // Update the world state
             _world.update(camera, dt);
+
+            // Update the sound listener properties
+            _sound.update(camera, _world.get_player().velocity());
 
             // Check if we died
             update_die_respawn();
@@ -277,7 +277,7 @@ class fractex
             }
             else
             {
-                _sound.stop_land();
+                _sound.update_land();
             }
 
             // Update the character state

@@ -604,6 +604,7 @@ class controls
         game::state *const state = control->get_state();
         skill_state &skill = state->get_skill_state();
         game::world *const world = control->get_world();
+        game::sound *const sound = control->get_sound();
 
         // Are we dead?
         const bool dead = state->is_dead();
@@ -652,6 +653,11 @@ class controls
                         // Activate grapple animation
                         character->set_animation_grapple(point);
 
+                        // Play the grapple sound
+                        const min::vec3<float> reverse = r.get_direction() * -1.0;
+                        sound->update_grapple_position(point, reverse);
+                        sound->play_grapple();
+
                         // Lock the gun in beam mode
                         skill.lock();
                     }
@@ -686,6 +692,7 @@ class controls
         skill_state &skill = state->get_skill_state();
         game::ui_overlay *const ui = control->get_ui();
         game::world *const world = control->get_world();
+        game::sound *const sound = control->get_sound();
 
         // Are we dead?
         const bool dead = state->is_dead();
@@ -741,6 +748,9 @@ class controls
                         // Activate shoot animation
                         character->set_animation_shoot();
 
+                        // Play the shot sound
+                        sound->play_shot();
+
                         // Start gun cooldown timer
                         skill.start_cooldown();
                     }
@@ -761,6 +771,9 @@ class controls
 
                             // Activate shoot animation
                             character->set_animation_shoot();
+
+                            // Play the shot sound
+                            sound->play_shot();
                         }
                     }
 
@@ -774,6 +787,9 @@ class controls
 
                     // Stop grapple animation
                     character->abort_animation_grapple();
+
+                    // Stop the grapple sound
+                    sound->stop_grapple();
 
                     // Unlock the gun if beam mode
                     skill.unlock_grapple();

@@ -27,6 +27,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/player.h>
 #include <game/projectile.h>
 #include <game/sky.h>
+#include <game/sound.h>
 #include <game/static_instance.h>
 #include <game/terrain.h>
 #include <game/uniforms.h>
@@ -53,6 +54,7 @@ class world
     cgrid _grid;
     game::terrain _terrain;
     particle *_particles;
+    sound *_sound;
     std::vector<size_t> _view_chunks;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _player_col_cells;
     std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
@@ -136,6 +138,13 @@ class world
         {
             // Add particle effects
             _particles->load_static_explode(point, direction, 5.0, size);
+
+            // If block is lava, play exploding sound
+            if (value == 21)
+            {
+                // Play explode sound
+                _sound->play_explode(point);
+            }
 
             // If explode hasn't been flagged yet
             if (!_player.is_exploded())
@@ -329,11 +338,12 @@ class world
     }
 
   public:
-    world(const load_state &state, particle *const particles, const game::uniforms &uniforms,
+    world(const load_state &state, particle *const particles, sound *const s, const game::uniforms &uniforms,
           const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
         : _grid(chunk_size, grid_size, view_chunk_size),
           _terrain(_grid.get_chunk_size()),
           _particles(particles),
+          _sound(s),
           _gravity(0.0, -_grav_mag, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _player(&_simulation, character_load(state)),
