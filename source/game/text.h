@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __TEXT__
 #define __TEXT__
 
+#include <game/memory_map.h>
 #include <iomanip>
 #include <min/dds.h>
 #include <min/program.h>
@@ -102,8 +103,8 @@ class text
 
   public:
     text(const size_t font_size, const uint16_t width, const uint16_t height)
-        : _text_vertex("data/shader/text.vertex", GL_VERTEX_SHADER),
-          _text_fragment("data/shader/text.fragment", GL_FRAGMENT_SHADER),
+        : _text_vertex(memory_map::memory.get_file("data/shader/text.vertex"), GL_VERTEX_SHADER),
+          _text_fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
           _text_prog(_text_vertex, _text_fragment),
           _text_buffer("data/fonts/open_sans.ttf", font_size),
           _font_size(font_size), _draw_console(false), _draw_debug(false), _draw_ui(false)

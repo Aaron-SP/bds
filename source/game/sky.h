@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __SKY__
 #define __SKY__
 
+#include <game/memory_map.h>
 #include <min/dds.h>
 #include <min/static_vertex.h>
 #include <min/vertex_buffer.h>
@@ -39,15 +40,16 @@ class sky
 
   public:
     sky(const game::uniforms &uniforms, const float extent)
-        : _sv("data/shader/sky.vertex", GL_VERTEX_SHADER),
-          _sf("data/shader/sky.fragment", GL_FRAGMENT_SHADER),
+        : _sv(memory_map::memory.get_file("data/shader/sky.vertex"), GL_VERTEX_SHADER),
+          _sf(memory_map::memory.get_file("data/shader/sky.fragment"), GL_FRAGMENT_SHADER),
           _sky_program(_sv, _sf)
     {
         // Let this program use this uniform buffer
         uniforms.set_program(_sky_program);
 
         // Load texture
-        min::dds tex("data/texture/sky.dds");
+        const min::mem_file &sky = memory_map::memory.get_file("data/texture/sky.dds");
+        min::dds tex(sky);
 
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);

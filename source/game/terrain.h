@@ -24,6 +24,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/work_queue.h>
 #endif
 
+#include <game/memory_map.h>
 #include <min/dds.h>
 #include <min/program.h>
 #include <min/shader.h>
@@ -59,14 +60,15 @@ class terrain
 
   public:
     terrain(const size_t chunks)
-        : _tv("data/shader/terrain_gs.vertex", GL_VERTEX_SHADER),
-          _tg("data/shader/terrain_gs.geometry", GL_GEOMETRY_SHADER),
-          _tf("data/shader/terrain_gs.fragment", GL_FRAGMENT_SHADER),
+        : _tv(memory_map::memory.get_file("data/shader/terrain_gs.vertex"), GL_VERTEX_SHADER),
+          _tg(memory_map::memory.get_file("data/shader/terrain_gs.geometry"), GL_GEOMETRY_SHADER),
+          _tf(memory_map::memory.get_file("data/shader/terrain_gs.fragment"), GL_FRAGMENT_SHADER),
           _program({_tv.id(), _tg.id(), _tf.id()}),
           _gb(chunks)
     {
         // Load texture
-        min::dds tex("data/texture/atlas.dds");
+        const min::mem_file &atlas = memory_map::memory.get_file("data/texture/atlas.dds");
+        min::dds tex(atlas);
 
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);
@@ -366,13 +368,14 @@ class terrain
 
   public:
     terrain(const size_t chunks)
-        : _tv("data/shader/terrain.vertex", GL_VERTEX_SHADER),
-          _tf("data/shader/terrain.fragment", GL_FRAGMENT_SHADER),
+        : _tv(memory_map::memory.get_file("data/shader/terrain.vertex"), GL_VERTEX_SHADER),
+          _tf(memory_map::memory.get_file("data/shader/terrain.fragment"), GL_FRAGMENT_SHADER),
           _program(_tv, _tf),
           _gb(chunks), _parent("parent")
     {
         // Load texture
-        min::dds tex("data/texture/atlas.dds");
+        const min::mem_file &atlas = memory_map::memory.get_file("data/texture/atlas.dds");
+        min::dds tex(atlas);
 
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);

@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __SOUND__
 #define __SOUND__
 
+#include <game/memory_map.h>
 #include <min/camera.h>
 #include <min/sound_buffer.h>
 #include <min/wave.h>
@@ -188,19 +189,22 @@ class sound
     inline void load_click_sound()
     {
         // Load a WAVE file
-        const min::wave sound = min::wave("data/sound/click.wav");
+        const min::mem_file &wave = memory_map::memory.get_file("data/sound/click.wav");
+        const min::wave sound = min::wave(wave);
         load_sound(sound, _click_gain);
     }
     inline void load_land_sound()
     {
         // Load a WAVE file
-        const min::wave sound = min::wave("data/sound/land.wav");
+        const min::mem_file &wave = memory_map::memory.get_file("data/sound/land.wav");
+        const min::wave sound = min::wave(wave);
         load_sound(sound, _land_gain);
     }
     inline void load_grapple_sound()
     {
         // Load a WAVE file
-        const min::wave sound = min::wave("data/sound/grapple.wav");
+        const min::mem_file &wave = memory_map::memory.get_file("data/sound/grapple.wav");
+        const min::wave sound = min::wave(wave);
         load_sound(sound, _grap_gain);
 
         // Get the grapple source
@@ -221,7 +225,8 @@ class sound
     inline void load_explode_sound()
     {
         // Load a WAVE file
-        const min::wave sound = min::wave("data/sound/explode.wav");
+        const min::mem_file &wave = memory_map::memory.get_file("data/sound/explode.wav");
+        const min::wave sound = min::wave(wave);
         load_sound(sound, _ex_gain);
 
         // Get the explode source
@@ -239,13 +244,15 @@ class sound
     inline void load_shot_sound()
     {
         // Load a WAVE file
-        const min::wave sound = min::wave("data/sound/shot.wav");
+        const min::mem_file &wave = memory_map::memory.get_file("data/sound/shot.wav");
+        const min::wave sound = min::wave(wave);
         load_sound(sound, _shot_gain);
     }
     inline void load_jet_sound()
     {
         // Load a WAVE file
-        const min::wave sound = min::wave("data/sound/jet.wav");
+        const min::mem_file &wave = memory_map::memory.get_file("data/sound/jet.wav");
+        const min::wave sound = min::wave(wave);
         load_sound(sound, _jet_gain, _jet_fade);
 
         // Set the audio to loop

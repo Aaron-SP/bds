@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _UI_BACKGROUND__
 #define _UI_BACKGROUND__
 
+#include <game/memory_map.h>
 #include <game/ui_vertex.h>
 #include <game/uniforms.h>
 #include <min/dds.h>
@@ -289,7 +290,8 @@ class ui_background
         // Load the UI texture
         {
             // Load texture
-            const min::dds tex("data/texture/ui.dds");
+            const min::mem_file &ui = memory_map::memory.get_file("data/texture/ui.dds");
+            const min::dds tex(ui);
 
             // Load texture into texture buffer
             _ui_id = _tbuffer.add_dds_texture(tex);
@@ -298,7 +300,8 @@ class ui_background
         // Load the title screen texture
         {
             // Load texture
-            const min::dds tex("data/texture/title.dds");
+            const min::mem_file &title = memory_map::memory.get_file("data/texture/title.dds");
+            const min::dds tex(title);
 
             // Load texture into texture buffer
             _title_id = _tbuffer.add_dds_texture(tex);
@@ -521,8 +524,8 @@ class ui_background
 
   public:
     ui_background(const game::uniforms &uniforms, const uint16_t width, const uint16_t height)
-        : _vertex("data/shader/ui.vertex", GL_VERTEX_SHADER),
-          _fragment("data/shader/ui.fragment", GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),

@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __PARTICLE__
 #define __PARTICLE__
 
+#include <game/memory_map.h>
 #include <game/uniforms.h>
 #include <min/camera.h>
 #include <min/dds.h>
@@ -106,7 +107,8 @@ class particle
     inline void load_textures()
     {
         // Load textures
-        const min::dds b = min::dds("data/texture/smoke.dds");
+        const min::mem_file &smoke = memory_map::memory.get_file("data/texture/smoke.dds");
+        const min::dds b = min::dds(smoke);
 
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(b);
@@ -156,8 +158,8 @@ class particle
 
   public:
     particle(const game::uniforms &uniforms)
-        : _vertex("data/shader/emitter.vertex", GL_VERTEX_SHADER),
-          _fragment("data/shader/emitter.fragment", GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory.get_file("data/shader/emitter.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory.get_file("data/shader/emitter.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _emit(min::vec3<float>(), 200, 5, 0.0625, 0.125, 0.5),
           _static(min::vec3<float>(), _static_count, 1, 0.10, 5.0, 10.0),

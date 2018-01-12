@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __STATIC_INSTANCE__
 #define __STATIC_INSTANCE__
 
+#include <game/memory_map.h>
 #include <game/uniforms.h>
 #include <min/aabbox.h>
 #include <min/camera.h>
@@ -64,7 +65,8 @@ class static_instance
     {
         // Load cube data from binary mesh file
         min::mesh<float, uint16_t> cube_mesh("companion");
-        cube_mesh.from_file("data/models/cube.bmesh");
+        const min::mem_file &cube_file = memory_map::memory.get_file("data/models/cube.bmesh");
+        cube_mesh.from_file(cube_file);
 
         // Create bounding box from mesh data
         const min::aabbox<float, min::vec4> cube_box(cube_mesh.vertex);
@@ -79,7 +81,8 @@ class static_instance
     {
         // Load missile data from binary mesh file
         min::mesh<float, uint16_t> miss_mesh("missile");
-        miss_mesh.from_file("data/models/missile.bmesh");
+        const min::mem_file &miss_file = memory_map::memory.get_file("data/models/missile.bmesh");
+        miss_mesh.from_file(miss_file);
 
         // Create bounding box from mesh data
         const min::aabbox<float, min::vec4> miss_box(miss_mesh.vertex);
@@ -120,13 +123,15 @@ class static_instance
     inline void load_textures()
     {
         // Load cube textures
-        const min::dds cube = min::dds("data/texture/cube.dds");
+        const min::mem_file &cube_file = memory_map::memory.get_file("data/texture/cube.dds");
+        const min::dds cube = min::dds(cube_file);
 
         // Load dds into texture buffer
         _cube_tid = _texture_buffer.add_dds_texture(cube);
 
         // Load missile textures
-        const min::dds missile = min::dds("data/texture/missile.dds");
+        const min::mem_file &miss_file = memory_map::memory.get_file("data/texture/missile.dds");
+        const min::dds missile = min::dds(miss_file);
 
         // Load dds into texture buffer
         _miss_tid = _texture_buffer.add_dds_texture(missile);
@@ -139,8 +144,8 @@ class static_instance
 
   public:
     static_instance(const game::uniforms &uniforms)
-        : _vertex("data/shader/instance.vertex", GL_VERTEX_SHADER),
-          _fragment("data/shader/instance.fragment", GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory.get_file("data/shader/instance.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory.get_file("data/shader/instance.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment)
     {
         // Since we are using a BMESH, assert floating point compatibility

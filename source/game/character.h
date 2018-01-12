@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __MD5_CHARACTER__
 #define __MD5_CHARACTER__
 
+#include <game/memory_map.h>
 #include <game/particle.h>
 #include <min/aabbox.h>
 #include <min/camera.h>
@@ -60,10 +61,12 @@ class character
     inline void load_model()
     {
         // Load animation
-        _charge_index = _md5_model.load_animation("data/models/gun_charge.md5anim");
+        const min::mem_file &gun_charge = memory_map::memory.get_file("data/models/gun_charge.md5anim");
+        _charge_index = _md5_model.load_animation(gun_charge);
 
         // Load shoot animation
-        _shoot_index = _md5_model.load_animation("data/models/gun_shoot.md5anim");
+        const min::mem_file &gun_shoot = memory_map::memory.get_file("data/models/gun_shoot.md5anim");
+        _shoot_index = _md5_model.load_animation(gun_shoot);
 
         // Setup the md5 mesh
         min::mesh<float, uint32_t> &md5 = _md5_model.get_meshes()[0];
@@ -81,7 +84,8 @@ class character
     inline void load_textures()
     {
         // Load textures
-        const min::dds d = min::dds("data/texture/skin.dds");
+        const min::mem_file &skin = memory_map::memory.get_file("data/texture/skin.dds");
+        const min::dds d = min::dds(skin);
 
         // Load texture buffer
         _dds_id = _texture_buffer.add_dds_texture(d);
@@ -111,10 +115,10 @@ class character
 
   public:
     character(particle *const particles, const game::uniforms &uniforms)
-        : _vertex("data/shader/md5.vertex", GL_VERTEX_SHADER),
-          _fragment("data/shader/md5.fragment", GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory.get_file("data/shader/md5.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory.get_file("data/shader/md5.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _md5_model(std::move(min::md5_mesh<float, uint32_t>("data/models/gun.md5mesh"))),
+          _md5_model(std::move(min::md5_mesh<float, uint32_t>(memory_map::memory.get_file("data/models/gun.md5mesh")))),
           _particles(particles),
           _need_bone_reset(false)
     {

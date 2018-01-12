@@ -81,7 +81,8 @@ class cgrid_generator
     }
 
   public:
-    cgrid_generator(const std::vector<int8_t> &grid) : _copy(grid.size(), -1)
+    cgrid_generator(const std::vector<int8_t> &grid)
+        : _copy(grid.size(), -1), _density(30000), _seed(100), _length(20)
     {
         // Load the terrain config file
         load_config();
