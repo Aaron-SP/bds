@@ -22,7 +22,7 @@ ifeq ($(OS),Windows_NT)
 	STATIC = -static -static-libgcc -static-libstdc++ 
 else
 	MGL_PATH = /usr/include/mgl
-	LINKER = -lX11 -lGL -lfreetype -pthread -lOpenAL32 -lvorbisfile
+	LINKER = -lX11 -lGL -lfreetype -pthread -lopenal -lvorbisfile
 	STATIC = -static-libgcc -static-libstdc++
 endif
 
