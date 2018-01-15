@@ -108,7 +108,7 @@ If your GPU supports OpenGL geometry shaders, the MGL_GS_RENDER compile time fla
 Known CPU bottleneck system configurations include AMD Phenom II x4 965 + Radeon HD 5770. However the MGL_VB43 and MGL_GS_RENDER increase performance to playable status, where previously the game would be unplayable.
 
 #### Running Linux?
-If you are running Linux, consider disabling any desktop compositor that may be running. The desktop compositor that runs with KDE Plasma can increase lag significantly. ![For more information](https://userbase.kde.org/Desktop_Effects_Performance#Desktop_Effect_Performance).
+If you are running Linux, consider disabling any desktop compositor that may be running. The desktop compositor that runs with KDE Plasma can increase lag significantly.
 
 #### GPU Bottleneck
 If you have tried all previous steps and failed, you are likely GPU bottlenecked. In this case you are lagging simply because the GPU can not draw all of the pixels on the screen. The most obvious remedy to this problem is to reduce your screen dimensions using the '-width' and '-height' command line flags. 
