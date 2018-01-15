@@ -40,12 +40,12 @@ inline void show_title(fractex &game, min::loop_sync &sync, const size_t frames)
     }
 }
 
-inline void show_game(fractex &game, min::loop_sync &sync, const size_t frames)
+inline void show_game(fractex &game, min::loop_sync &sync, const size_t frames, const bool resize)
 {
     double frame_time = 0.0;
 
     // Register the game callbacks
-    game.disable_title_screen();
+    game.disable_title_screen(resize);
 
     // User can close with Q or use window manager
     while (!game.is_closed())
@@ -94,10 +94,11 @@ inline void show_game(fractex &game, min::loop_sync &sync, const size_t frames)
     }
 }
 
-void run(const size_t frames, const size_t chunk, const size_t grid, const size_t view)
+void run(const size_t frames, const size_t chunk, const size_t grid,
+         const size_t view, const size_t width, const size_t height, const bool resize)
 {
     // Load window shaders and program, enable shader program
-    fractex game(chunk, grid, view);
+    fractex game(chunk, grid, view, width, height);
 
     // Setup controller to run at 60 frames per second
     min::loop_sync sync(frames, 0.25, 0.25, 0.25);
@@ -106,7 +107,7 @@ void run(const size_t frames, const size_t chunk, const size_t grid, const size_
     show_title(game, sync, 15);
 
     // Run the game after the title screen
-    show_game(game, sync, frames);
+    show_game(game, sync, frames, resize);
 }
 
 void parse_uint(char *str, size_t &out)
@@ -134,6 +135,9 @@ int main(int argc, char *argv[])
         size_t chunk = 16;
         size_t grid = 64;
         size_t view = 3;
+        size_t width = 720;
+        size_t height = 480;
+        bool resize = true;
 
         // Try to parse commandline args
         for (int i = 2; i < argc; i += 2)
@@ -169,6 +173,18 @@ int main(int argc, char *argv[])
                 // Parse uint
                 parse_uint(argv[i], view);
             }
+            else if (input.compare("-width") == 0)
+            {
+                // Parse uint
+                parse_uint(argv[i], width);
+                resize = false;
+            }
+            else if (input.compare("-height") == 0)
+            {
+                // Parse uint
+                parse_uint(argv[i], height);
+                resize = false;
+            }
             else
             {
                 std::cout << "fractex: unknown flag '"
@@ -177,7 +193,7 @@ int main(int argc, char *argv[])
         }
 
         // Run the game
-        run(frames, chunk, grid, view);
+        run(frames, chunk, grid, view, width, height, resize);
     }
     catch (const std::exception &ex)
     {

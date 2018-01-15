@@ -47,8 +47,6 @@ class fractex
     static constexpr size_t _gl_major = 3;
     static constexpr size_t _gl_minor = 3;
 #endif
-    static constexpr size_t _width = 720;
-    static constexpr size_t _height = 480;
 
     min::window _win;
     game::uniforms _uniforms;
@@ -173,8 +171,8 @@ class fractex
 
   public:
     // Load window shaders and program
-    fractex(const size_t chunk, const size_t grid, const size_t view)
-        : _win("Fractex", _width, _height, _gl_major, _gl_minor),
+    fractex(const size_t chunk, const size_t grid, const size_t view, const size_t width, const size_t height)
+        : _win("Fractex", width, height, _gl_major, _gl_minor),
           _uniforms(),
           _ui(_uniforms, _win.get_width(), _win.get_height()),
           _particles(_uniforms),
@@ -211,7 +209,7 @@ class fractex
         glClearBufferfv(GL_COLOR, 0, color);
         glClear(GL_DEPTH_BUFFER_BIT);
     }
-    void disable_title_screen()
+    void disable_title_screen(const bool max)
     {
         // Register window callbacks
         _controls.register_control_callbacks();
@@ -223,8 +221,11 @@ class fractex
         // Turn off cursor
         _win.display_cursor(false);
 
-        // Maximize window
-        _win.maximize();
+        // Maximize window?
+        if (max)
+        {
+            _win.maximize();
+        }
 
         // Update the mouse cursor to center
         center_cursor();

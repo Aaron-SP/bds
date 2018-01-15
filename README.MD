@@ -77,6 +77,11 @@ Any previous saves will be deleted upon resizing the game grid to avoid crashing
 The '-view' flag is an optional parameter for controlling how many chunks are viewable on the screen. The default is 3 and must be an odd number greater than one.
 - Example: 'bin/game -view 31' will render 15 chunks on each side of the player, (15 * 2) + 1 = 31.
 
+#### -width flag and -height flag
+The '-width' and '-height' flag changes the default window dimensions.
+- Example: 'bin/game -width 1600 -height 900' will created a window width of 1600 pixels and height of 900 pixels.
+
+
 ### PLAYER USAGE INSTRUCTIONS:
 ![Alt text](pictures/spawn.png)
 
@@ -93,3 +98,21 @@ The '-view' flag is an optional parameter for controlling how many chunks are vi
 11. Key [ESCAPE]: pause the game
 
 
+### Optimization: Help! I am lagging!
+Lag usually comes in two forms, a CPU bottleneck or a GPU bottleneck. If you are CPU bottlenecked, expect most of your CPU time going to creating terrain memory buffers.
+
+#### CPU Bottleneck
+The MGL_VB43 compile time flag can only be used on OpenGL 4.3 systems, but will reduce the number of OpenGL calls by a factor of 2x. 
+If your GPU supports OpenGL geometry shaders, the MGL_GS_RENDER compile time flag should alleviate any CPU bottleneck since it removes the need for the CPU to create terrain memory buffers. However this can **increase lag if** your GPU doesn't render geometry shaders efficiently.
+
+Known CPU bottleneck system configurations include AMD Phenom II x4 965 + Radeon HD 5770. However the MGL_VB43 and MGL_GS_RENDER increase performance to playable status, where previously the game would be unplayable.
+
+#### Running Linux?
+If you are running Linux, consider disabling any desktop compositor that may be running. The desktop compositor that runs with KDE Plasma can increase lag significantly. ![For more information](https://userbase.kde.org/Desktop_Effects_Performance#Desktop_Effect_Performance).
+
+#### GPU Bottleneck
+If you have tried all previous steps and failed, you are likely GPU bottlenecked. In this case you are lagging simply because the GPU can not draw all of the pixels on the screen. The most obvious remedy to this problem is to reduce your screen dimensions using the '-width' and '-height' command line flags. 
+
+However you can also try changing the size of the view frustum and chunk size using the '-view' and '-chunk' command line flags. By default the view frustum consists of 27 chunks, 3x3x3. This is actually alot of geometry to render, so we only draw the chunks inside the camera frustum which is on average ~18 (but can be 27 on a world edge). Decreasing the chunk size directly decreases the number of triangles drawn at any one time. The view frustum's lowest value is currently the default at 27 chunks. Increasing the frustum will draw more chunks and thus more geometry. 
+
+You can also set the render speed of the game by using the '-fps' command line flag. The default is 60 and if you are lagging you can drop down to 30 without many issues. However, decreasing the frames per second will increase the workload for the physics engine because it is coded to run at 600 times per second independent of the frame count. Thus decreasing the frame count will increase the number of physics iterations per frame. This is only important if you are both CPU and GPU bottlenecked.
