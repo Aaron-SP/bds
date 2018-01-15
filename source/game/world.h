@@ -139,27 +139,32 @@ class world
             // Add particle effects
             _particles->load_static_explode(point, direction, 5.0, size);
 
+            // Get player position
+            const min::vec3<float> &p = _player.position();
+
+            // Calculate distance from explosion center
+            const float d = (point - p).magnitude();
+
+            // Check if character is too close to the explosion
+            const bool in_range = d < _explosion_radius;
+
             // If block is lava, play exploding sound
-            if (value == 21)
+            // Prefer stereo if close to the explosion
+            if (in_range && value == 21)
             {
                 // Play explode sound
-                _sound->play_explode(point);
+                _sound->play_explode_stereo(point);
+            }
+            else if (value == 21)
+            {
+                // Play explode sound
+                _sound->play_explode_mono(point);
             }
 
             // If explode hasn't been flagged yet
-            if (!_player.is_exploded())
+            if (!_player.is_exploded() && in_range)
             {
-                // Get player position
-                const min::vec3<float> &p = _player.position();
-
-                // Calculate distance from explosion center
-                const float d = (point - p).magnitude();
-
-                // Check if character is too close to the explosion
-                if (d < _explosion_radius)
-                {
-                    _player.explode(direction, value);
-                }
+                _player.explode(direction, value);
             }
         }
     }
@@ -329,6 +334,9 @@ class world
         const auto on_collide = [this](const min::vec3<float> &point,
                                        const min::vec3<float> &direction,
                                        const min::vec3<unsigned> &scale, const int8_t value) {
+            // Play missile explosion sound
+            this->_sound->play_miss_ex(point);
+
             // Explode the block
             this->explode_block(point, direction, scale, value, 100.0);
         };
@@ -357,7 +365,7 @@ class world
           _dest(state.get_spawn()),
           _instance(uniforms),
           _mob_start(1),
-          _projectile(particles, &_instance)
+          _projectile(particles, &_instance, s)
     {
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);

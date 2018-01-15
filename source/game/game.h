@@ -316,6 +316,10 @@ class fractex
     {
         return _title.is_show_title();
     }
+    void play_music()
+    {
+        _sound.play_bg(true);
+    }
     void set_title(const std::string &title)
     {
         _win.set_title(title);

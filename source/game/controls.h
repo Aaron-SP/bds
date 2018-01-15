@@ -113,6 +113,8 @@ class controls
         // Add FPS(WADS) keys to watch
         keyboard.add(min::window::key_code::F1);
         keyboard.add(min::window::key_code::F2);
+        keyboard.add(min::window::key_code::F3);
+        keyboard.add(min::window::key_code::F4);
         keyboard.add(min::window::key_code::ESCAPE);
         keyboard.add(min::window::key_code::KEYQ);
         keyboard.add(min::window::key_code::KEYR);
@@ -141,6 +143,12 @@ class controls
         keyboard.register_keydown(min::window::key_code::F2, controls::toggle_text, (void *)_ui);
 
         // Register callback function F3
+        keyboard.register_keydown(min::window::key_code::F3, controls::music_down, (void *)_sound);
+
+        // Register callback function F4
+        keyboard.register_keydown(min::window::key_code::F4, controls::music_up, (void *)_sound);
+
+        // Register callback function ESCAPE
         keyboard.register_keydown(min::window::key_code::ESCAPE, controls::toggle_pause, (void *)this);
 
         // Register callback function Q
@@ -224,6 +232,22 @@ class controls
 
         // Enable / Disable drawing debug text
         ui->toggle_debug_text();
+    }
+    static void music_down(void *ptr, double step)
+    {
+        // Get the sound pointer
+        game::sound *const sound = reinterpret_cast<game::sound *>(ptr);
+
+        // Decrease the music gain
+        sound->bg_gain_down();
+    }
+    static void music_up(void *ptr, double step)
+    {
+        // Get the sound pointer
+        game::sound *const sound = reinterpret_cast<game::sound *>(ptr);
+
+        // Increase the music gain
+        sound->bg_gain_up();
     }
     static void toggle_pause(void *ptr, double step)
     {
@@ -624,6 +648,9 @@ class controls
             {
                 if (skill.can_consume(_beam_charge_cost))
                 {
+                    // Play the charge sound
+                    sound->play_charge();
+
                     // Record the start charge time
                     skill.start_charge();
 
@@ -654,8 +681,6 @@ class controls
                         character->set_animation_grapple(point);
 
                         // Play the grapple sound
-                        const min::vec3<float> reverse = r.get_direction() * -1.0;
-                        sound->update_grapple(point, reverse);
                         sound->play_grapple();
 
                         // Lock the gun in beam mode
@@ -705,6 +730,13 @@ class controls
             return;
         }
 
+        // Create explode callback to play sound
+        const auto play_ex = [sound](const min::vec3<float> &point, min::body<float, min::vec3> &body) {
+
+            // Play the missile explosion sound - !TODO!
+            sound->play_miss_ex(point);
+        };
+
         // Check if we are in edit mode
         const bool mode = world->get_edit_mode();
         if (mode)
@@ -742,7 +774,7 @@ class controls
                 {
                     // Expolode block with radius, get the ray target value
                     min::vec3<unsigned> explode_radius(3, 3, 3);
-                    const int8_t value = world->explode_block(r, explode_radius);
+                    const int8_t value = world->explode_block(r, explode_radius, play_ex);
                     if (value >= 0)
                     {
                         // Consume energy
@@ -751,12 +783,12 @@ class controls
                         // Activate shoot animation
                         character->set_animation_shoot();
 
-                        // Play the shot sound
-                        sound->play_shot();
-
                         // Start gun cooldown timer
                         skill.start_cooldown();
                     }
+
+                    // Stop the charge sound
+                    sound->stop_charge();
 
                     // Unlock the gun if beam mode
                     skill.unlock_beam();
@@ -779,6 +811,9 @@ class controls
                             sound->play_shot();
                         }
                     }
+
+                    // Stop the charge sound
+                    sound->stop_charge();
 
                     // Unlock the gun if beam mode
                     skill.unlock_beam();

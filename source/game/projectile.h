@@ -20,6 +20,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <functional>
 #include <game/particle.h>
+#include <game/sound.h>
 #include <game/static_instance.h>
 
 namespace game
@@ -30,6 +31,7 @@ class projectile
   private:
     static_instance *_instance;
     particle *_particles;
+    sound *_sound;
     min::ray<float, min::vec3> _ray;
     min::vec3<unsigned> _scale;
     min::sample<float, min::vec3> _traj;
@@ -48,8 +50,8 @@ class projectile
     }
 
   public:
-    projectile(particle *const particles, static_instance *const instance)
-        : _instance(instance), _particles(particles), _scale(3, 3, 3),
+    projectile(particle *const particles, static_instance *const instance, sound *const s)
+        : _instance(instance), _particles(particles), _sound(s), _scale(3, 3, 3),
           _launch(false), _remove(false) {}
 
     inline void set_launch_particles()
@@ -89,6 +91,9 @@ class projectile
 
         // Set the launch particle attributes
         set_launch_particles();
+
+        // Play the launch sound
+        _sound->play_miss_launch(r.get_origin());
     }
     inline void draw(game::uniforms &uniforms) const
     {
@@ -119,6 +124,9 @@ class projectile
                 // Stop playing particles
                 _particles->abort_launch();
 
+                // Stop playing launch sound
+                _sound->stop_miss_launch();
+
                 // If we hit a block remove it
                 if (_remove)
                 {
@@ -144,6 +152,9 @@ class projectile
                 // Set particle position slightly behind the rocket
                 const min::vec3<float> offset = point - _ray.get_direction() * 0.25;
                 _particles->set_launch_position(offset);
+
+                // Update the launch sound position
+                _sound->update_miss_launch(point);
             }
         }
     }

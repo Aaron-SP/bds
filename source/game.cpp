@@ -4,6 +4,9 @@ inline void show_title(fractex &game, min::loop_sync &sync, const size_t frames)
 {
     double frame_time = 0.0;
 
+    // Play the background music
+    game.play_music();
+
     // Draw the title screen before playing
     while (game.is_show_title())
     {

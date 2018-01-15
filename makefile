@@ -5,12 +5,24 @@ FREETYPE2_INCLUDE = $(shell freetype-config --cflags)
 
 # Linker parameters
 ifeq ($(OS),Windows_NT)
-	MGL_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mgl
-	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll -lOpenAL32.dll
-	STATIC = -static -static-libgcc -static-libstdc++
+	# 64 bit
+	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
+        MGL_PATH = C:/cygwin64/usr/x86_64-w64-mingw32/sys-root/mingw/include/mgl
+    endif
+
+	#64 bit
+	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
+        MGL_PATH = C:/cygwin64/usr/x86_64-w64-mingw32/sys-root/mingw/include/mgl
+    else
+	#32 bit
+        MGL_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mgl
+    endif
+
+	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll
+	STATIC = -static -static-libgcc -static-libstdc++ 
 else
 	MGL_PATH = /usr/include/mgl
-	LINKER = -lX11 -lGL -lfreetype -pthread -lOpenAL32
+	LINKER = -lX11 -lGL -lfreetype -pthread -lOpenAL32 -lvorbisfile
 	STATIC = -static-libgcc -static-libstdc++
 endif
 

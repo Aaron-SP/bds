@@ -88,6 +88,8 @@ The '-view' flag is an optional parameter for controlling how many chunks are vi
 6. Left mouse: use skill (edit mode / power suite mode)
 7. Key [F1]: quit
 8. Key [F2]: toggle debug text
-9. Key [ESCAPE]: pause the game
+9. Key [F3]: music up
+10. Key [F4]: music down
+11. Key [ESCAPE]: pause the game
 
 
