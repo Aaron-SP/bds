@@ -19,7 +19,6 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #define __GAME_HEADER__
 
 #include <game/controls.h>
-#include <game/goal_seek.h>
 #include <game/particle.h>
 #include <game/sound.h>
 #include <game/state.h>
@@ -57,7 +56,6 @@ class fractex
     game::world _world;
     game::controls _controls;
     game::title _title;
-    game::goal_seek _goal_seek;
     game::sound _sound;
 
     inline void die()
@@ -89,7 +87,8 @@ class fractex
     }
     inline std::pair<unsigned, unsigned> user_input()
     {
-        if (_state.get_user_input() && !_state.is_dead())
+        const game::player &player = _world.get_player();
+        if (_state.get_user_input() && !player.is_dead())
         {
             // Get the cursor coordinates
             const auto c = _win.get_cursor();
@@ -106,32 +105,32 @@ class fractex
     }
     inline void update_die_respawn()
     {
+        game::player &player = _world.get_player();
+
         // Check if we exploded
-        if (!_state.is_dead())
+        if (!player.is_dead())
         {
-            if (_world.get_player().is_exploded())
+            if (player.is_exploded())
             {
                 const int8_t ex_id = _world.get_player().get_explode_id();
                 if (ex_id == 21)
                 {
-                    _state.consume_health(90.0);
+                    player.consume_health(90.0);
                 }
                 else
                 {
-                    _state.consume_health(10.0);
+                    player.consume_health(10.0);
                 }
-            }
-
-            // Check if we need to die
-            if (_state.is_dead())
-            {
-                die();
             }
         }
         else if (_state.is_respawn())
         {
             // Respawn
             respawn();
+        }
+        else if (player.is_dead())
+        {
+            die();
         }
 
         // Reset the explosion flag
@@ -154,9 +153,9 @@ class fractex
         // Update ui matrices
         _uniforms.update_ui(_ui.get_scale(), _ui.get_uv());
 
-        // Update mob and missile matrices
+        // Update drone and missile matrices
         const game::static_instance &instance = _world.get_instances();
-        _uniforms.update_mobs(instance.get_cube_matrices());
+        _uniforms.update_drones(instance.get_cube_matrices());
         _uniforms.update_missiles(instance.get_missile_matrices());
 
         // Update md5 model bones
@@ -180,18 +179,13 @@ class fractex
           _state(),
           _world(_state.get_load_state(), &_particles, &_sound, _uniforms, chunk, grid, view),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
-          _title(_state.get_camera(), _ui, _win),
-          _goal_seek(_world)
+          _title(_state.get_camera(), _ui, _win)
     {
         // Set depth and cull settings
         min::settings::initialize();
 
         // Update cursor position for tracking
         center_cursor();
-
-        // Test adding a mob
-        const min::vec3<float> p(-4.5, 30.5, 4.5);
-        _world.add_mob(p);
     }
     ~fractex()
     {
@@ -230,7 +224,7 @@ class fractex
         // Update the mouse cursor to center
         center_cursor();
     }
-    void draw(const float dt)
+    void draw(const size_t phys_steps, const float dt)
     {
         // Get player physics body position
         const min::vec3<float> &p = _world.get_player().position();
@@ -245,17 +239,10 @@ class fractex
             const auto c = user_input();
 
             // Must update state properties, camera before drawing world
-            _state.update(p, c, _win.get_width(), _win.get_height(), dt);
-
-            // If AI is in control
-            if (_world.get_ai_mode())
-            {
-                // Perform goal seek
-                _goal_seek.seek(_world, 0);
-            }
+            _state.update(p, c, _win.get_width(), _win.get_height());
 
             // Update the world state
-            _world.update(camera, dt);
+            _world.update(camera, phys_steps);
 
             // Update the sound listener properties
             _sound.update(camera, _world.get_player().velocity());
@@ -291,7 +278,8 @@ class fractex
         _world.draw(_uniforms);
 
         // Draw the character if fire mode activated
-        if (_state.get_skill_state().is_gun_active())
+        const game::skills &skill = _world.get_player().get_skills();
+        if (skill.is_gun_active())
         {
             _character.draw(_uniforms);
         }
@@ -343,15 +331,16 @@ class fractex
     void update_text(const double fps, const double idle)
     {
         // Update player position debug text
+        const game::player &player = _world.get_player();
+        const game::skills &skills = player.get_skills();
         const min::vec3<float> &p = _world.get_player().position();
         const min::vec3<float> &f = _state.get_camera().get_forward();
         const std::string &mode = _state.get_game_mode();
-        const min::vec3<float> &goal = _goal_seek.get_goal();
-        const float health = _state.get_health();
-        const float energy = _state.get_skill_state().get_energy();
+        const float health = player.get_health();
+        const float energy = skills.get_energy();
 
         // Update all text and upload it
-        _ui.update(p, f, mode, goal, health, energy, fps, idle);
+        _ui.update(p, f, mode, health, energy, fps, idle);
     }
     void update_window()
     {

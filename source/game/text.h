@@ -33,7 +33,7 @@ namespace game
 class text
 {
   private:
-    static constexpr size_t _console_offset = 9;
+    static constexpr size_t _console_offset = 8;
     static constexpr size_t _ui_offset = 10;
     static constexpr size_t _end = 12;
     static constexpr float _y_console = 90.0;
@@ -119,7 +119,7 @@ class text
         // Add title text
         add_text("Fractex: Official Demo", 0, 0);
 
-        // Add 8 text entries
+        // Add 7 text entries
         for (size_t i = 1; i < _console_offset; i++)
         {
             add_text("", 0, 0);
@@ -219,7 +219,7 @@ class text
         _draw_debug = !_draw_debug;
     }
     void update_debug_text(
-        const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode, const min::vec3<float> &goal,
+        const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
         const float health, const float energy, const double fps, const double idle)
     {
         // If drawing text mode is on, update text
@@ -242,37 +242,30 @@ class text
             // Update the game mode text
             update_text(3, mode);
 
-            // Update the destination text
-            _stream << "DEST- X: " << goal.x() << ", Y: " << goal.y() << ", Z: " << goal.z();
+            // Update the energy text
+            _stream << "HEALTH: " << health;
             update_text(4, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update the energy text
-            _stream << "HEALTH: " << health;
-            update_text(5, _stream.str());
-
-            // Clear and reset the _stream
-            clear_stream();
-
-            // Update the energy text
             _stream << "ENERGY: " << energy;
-            update_text(6, _stream.str());
+            update_text(5, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update FPS and IDLE
             _stream << "FPS: " << std::round(fps);
-            update_text(7, _stream.str());
+            update_text(6, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();
 
             // Update FPS and IDLE
             _stream << "IDLE: " << idle;
-            update_text(8, _stream.str());
+            update_text(7, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();

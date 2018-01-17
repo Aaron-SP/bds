@@ -60,7 +60,7 @@ This mode requires using a OpenGL 4.3 core profile.
 ### Run flags
 
 #### -fps flag
-The '-fps' flag is an optional parameter for controlling the target playback frame count per second. The default is 60.
+The '-fps' flag is an optional parameter for controlling the target playback frame count per second. The default is 60. Adjusting the '-fps' flag may affect the playback speed of the game. If you use a multiple of 180 i.e... 1, 15, 30, 45, 60, or 90 the game time will match the time of our universe.
 - Example: 'bin/game -fps 45' will render 45 frames per second.
 
 #### -chunk flag

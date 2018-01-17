@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __PLAYER__
 #define __PLAYER__
 
+#include <game/skills.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
 #include <min/physics.h>
@@ -31,20 +32,26 @@ class player
     static constexpr float _air_threshold = 1.0;
     static constexpr float _fall_threshold = -1.0;
     static constexpr float _grav_mag = 10.0;
+    static constexpr float _health_cap = 100.0;
+    static constexpr float _jet_cost = 0.25;
 
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_simulation;
     min::vec3<float> _hook;
     min::vec3<float> _land_vel;
     float _hook_length;
-    bool _hooked;
     unsigned _jump_count;
     size_t _land_count;
     int8_t _explode_id;
     bool _airborn;
     bool _exploded;
     bool _falling;
+    bool _hooked;
+    bool _jet;
     bool _landed;
     size_t _body_id;
+    skills _skills;
+    float _health;
+    bool _dead;
 
     inline void swing()
     {
@@ -70,13 +77,13 @@ class player
             const float under = _hook_length - 1.0;
             if (d > over)
             {
-                const float k = 100.0;
+                const float k = 30.0;
                 const min::vec3<float> x = swing_dir * (d - over);
                 force(x * k);
             }
             else if (d < under)
             {
-                const float k = 50.0;
+                const float k = 15.0;
                 const min::vec3<float> x = swing_dir * (d - under);
                 force(x * k);
             }
@@ -103,11 +110,23 @@ class player
   public:
     player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const size_t body_id)
         : _simulation(sim),
-          _hook_length(0.0), _hooked(false), _jump_count(0),
-          _land_count(0), _explode_id(-1),
-          _airborn(false), _exploded(false), _falling(false), _landed(false),
-          _body_id(body_id) {}
+          _hook_length(0.0), _jump_count(0), _land_count(0), _explode_id(-1),
+          _airborn(false), _exploded(false), _falling(false), _hooked(false), _jet(false), _landed(false),
+          _body_id(body_id), _health(_health_cap), _dead(false) {}
 
+    inline void add_health(float health)
+    {
+        if (_health < _health_cap)
+        {
+            _health += health;
+
+            // Cap health at health_cap;
+            if (_health > _health_cap)
+            {
+                _health = _health_cap;
+            }
+        }
+    }
     inline const min::body<float, min::vec3> &body() const
     {
         return _simulation->get_body(_body_id);
@@ -116,7 +135,15 @@ class player
     {
         return _simulation->get_body(_body_id);
     }
-    inline void explode(const min::vec3<float> &direction, const int8_t value)
+    inline void consume_health(float health)
+    {
+        _health -= health;
+        if (_health <= 0.0)
+        {
+            _dead = true;
+        }
+    }
+    inline void explode(const min::vec3<float> &direction, const float factor, const int8_t value)
     {
         // Signal explode signal
         _exploded = true;
@@ -125,7 +152,7 @@ class player
         _explode_id = value;
 
         // Apply force to the player body
-        force(direction * 7000.0);
+        force(direction * factor);
     }
     inline void force(const min::vec3<float> &f)
     {
@@ -136,6 +163,14 @@ class player
     {
         return _explode_id;
     }
+    inline const skills &get_skills() const
+    {
+        return _skills;
+    }
+    inline skills &get_skills()
+    {
+        return _skills;
+    }
     inline bool has_landed()
     {
         const bool landed = _landed;
@@ -145,6 +180,14 @@ class player
 
         // Return landed state
         return landed;
+    }
+    inline float get_health() const
+    {
+        return _health;
+    }
+    inline float get_health_percent() const
+    {
+        return _health / _health_cap;
     }
     void hook_abort()
     {
@@ -167,14 +210,9 @@ class player
     {
         return _falling;
     }
-    inline void jetpack()
+    bool is_jet() const
     {
-        // If not hooked
-        if (!_hooked)
-        {
-            // Add force to player body
-            force(min::vec3<float>(0.0, 150.0, 0.0));
-        }
+        return _jet;
     }
     inline void jump()
     {
@@ -188,7 +226,7 @@ class player
                 _jump_count++;
 
                 // Add force to the player body
-                force(min::vec3<float>(0.0, 4000.0, 0.0));
+                force(min::vec3<float>(0.0, 900.0, 0.0));
             }
             else if (_jump_count == 1)
             {
@@ -196,9 +234,13 @@ class player
                 _jump_count++;
 
                 // Add force to the player body
-                force(min::vec3<float>(0.0, 5000.0, 0.0));
+                force(min::vec3<float>(0.0, 900.0, 0.0));
             }
         }
+    }
+    inline bool is_dead() const
+    {
+        return _dead;
     }
     inline const min::vec3<float> &land_velocity() const
     {
@@ -211,13 +253,13 @@ class player
     inline void move(const min::vec3<float> &vel)
     {
         // If not hooked
-        if (!_hooked)
+        if (!_hooked && !_jet)
         {
             // Get the current position and set y movement to zero
             const min::vec3<float> dxz = min::vec3<float>(vel.x(), 0.0, vel.z()).normalize();
 
             // Add force to player body
-            force(dxz * 100.0);
+            force(dxz * 30.0);
         }
     }
     inline const min::vec3<float> &position() const
@@ -230,6 +272,24 @@ class player
         _exploded = false;
         _explode_id = -1;
     }
+    inline void respawn()
+    {
+        // Reset explode settings
+        reset_explode();
+
+        // Stop hooking for jetting
+        _hooked = false;
+        _jet = false;
+
+        // Reset energy
+        _skills.set_energy(0.0);
+
+        // Reset dead flag
+        _dead = false;
+
+        // Reset health
+        _health = _health_cap;
+    }
     inline void set_hook(const min::vec3<float> &hook, const float hook_length)
     {
         // Set hook point
@@ -240,6 +300,10 @@ class player
 
         // Calculate the hook length
         _hook_length = hook_length;
+    }
+    inline void set_jet(const bool flag)
+    {
+        _jet = flag;
     }
     inline const min::vec3<float> &velocity() const
     {
@@ -256,13 +320,26 @@ class player
         // Warp character to new position
         body().set_position(p);
     }
-    void update_position(const float friction)
+    void update_frame(const float friction)
     {
         // If hooked, add hook forces
         if (_hooked)
         {
             // Calculate forces to make character swing
             swing();
+        }
+        else if (_jet)
+        {
+            const bool consumed = _skills.will_consume(_jet_cost);
+            if (consumed)
+            {
+                // Add force to player body
+                force(min::vec3<float>(0.0, 11.0, 0.0));
+            }
+            else
+            {
+                _jet = false;
+            }
         }
         else
         {
@@ -284,14 +361,28 @@ class player
         // If we collided with a block and we are not falling, signal landing
         if (landed && !_falling)
         {
-            _jump_count = 0;
             _land_count++;
 
             // If we have just landed
             if (_land_count == 1)
             {
+                // Reset the jump count
+                _jump_count = 0;
+
                 // Flag we just landed
                 _landed = true;
+
+                // Check for fall damage
+                const float speed = _land_vel.magnitude();
+                if (speed > 20.0)
+                {
+                    // Lethal damage
+                    consume_health(100.0);
+                }
+                else if (speed > 10.0)
+                {
+                    consume_health(50.0);
+                }
             }
         }
         else if (!_landed && _falling)

@@ -1,4 +1,5 @@
 game.txt
 test.txt
-bin/
 .vscode/
+bin/
+fractex_data/

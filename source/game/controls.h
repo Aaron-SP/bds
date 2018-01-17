@@ -41,22 +41,21 @@ class controls
     static constexpr float _beam_charge_cost = 20.0;
     static constexpr float _missile_cost = 40.0;
     static constexpr float _grapple_cost = 10.0;
-    static constexpr float _jet_cost = 0.75;
     static constexpr float _health_regen = 5.0;
     static constexpr float _energy_regen = 10.0;
     static constexpr float _project_dist = 3.0;
     min::window *_window;
     min::camera<float> *_camera;
-    game::character *_character;
-    game::state *_state;
-    game::ui_overlay *_ui;
-    game::world *_world;
-    game::sound *_sound;
+    character *_character;
+    state *_state;
+    ui_overlay *_ui;
+    world *_world;
+    sound *_sound;
 
   public:
     controls(min::window &window, min::camera<float> &camera,
-             game::character &ch, game::state &state,
-             game::ui_overlay &ui, game::world &world, game::sound &sound)
+             character &ch, state &state,
+             ui_overlay &ui, world &world, sound &sound)
         : _window(&window), _camera(&camera), _character(&ch),
           _state(&state), _ui(&ui), _world(&world), _sound(&sound) {}
 
@@ -64,23 +63,23 @@ class controls
     {
         return _camera;
     }
-    game::character *get_character()
+    character *get_character()
     {
         return _character;
     }
-    game::sound *get_sound()
+    sound *get_sound()
     {
         return _sound;
     }
-    game::state *get_state()
+    state *get_state()
     {
         return _state;
     }
-    game::ui_overlay *get_ui()
+    ui_overlay *get_ui()
     {
         return _ui;
     }
-    game::world *get_world()
+    world *get_world()
     {
         return _world;
     }
@@ -90,9 +89,13 @@ class controls
     }
     void register_control_callbacks()
     {
+        // Get the player skill beam string
+        skills &skill = _world->get_player().get_skills();
+        const std::string &beam_str = skill.get_beam_string();
+
         // Enable the console and set default message
         _ui->enable_console();
-        _ui->set_console_string(_state->get_skill_state().get_beam_string());
+        _ui->set_console_string(beam_str);
 
         // Get access to the keyboard
         auto &keyboard = _window->get_keyboard();
@@ -117,7 +120,6 @@ class controls
         keyboard.add(min::window::key_code::F4);
         keyboard.add(min::window::key_code::ESCAPE);
         keyboard.add(min::window::key_code::KEYQ);
-        keyboard.add(min::window::key_code::KEYR);
         keyboard.add(min::window::key_code::KEYW);
         keyboard.add(min::window::key_code::KEYS);
         keyboard.add(min::window::key_code::KEYA);
@@ -153,9 +155,6 @@ class controls
 
         // Register callback function Q
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::toggle_edit_mode, (void *)this);
-
-        // Register callback function R
-        keyboard.register_keydown(min::window::key_code::KEYR, controls::toggle_ai_mode, (void *)this);
 
         // Register callback function W
         keyboard.register_keydown_per_frame(min::window::key_code::KEYW, controls::forward, (void *)this);
@@ -228,7 +227,7 @@ class controls
     static void toggle_text(void *ptr, double step)
     {
         // Cast to ui pointer type and toggle draw
-        game::ui_overlay *const ui = reinterpret_cast<game::ui_overlay *>(ptr);
+        ui_overlay *const ui = reinterpret_cast<ui_overlay *>(ptr);
 
         // Enable / Disable drawing debug text
         ui->toggle_debug_text();
@@ -236,7 +235,7 @@ class controls
     static void music_down(void *ptr, double step)
     {
         // Get the sound pointer
-        game::sound *const sound = reinterpret_cast<game::sound *>(ptr);
+        sound *const sound = reinterpret_cast<game::sound *>(ptr);
 
         // Decrease the music gain
         sound->bg_gain_down();
@@ -244,7 +243,7 @@ class controls
     static void music_up(void *ptr, double step)
     {
         // Get the sound pointer
-        game::sound *const sound = reinterpret_cast<game::sound *>(ptr);
+        sound *const sound = reinterpret_cast<game::sound *>(ptr);
 
         // Increase the music gain
         sound->bg_gain_up();
@@ -253,9 +252,9 @@ class controls
     {
         // Get the state, text, window and ui pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
-        game::state *const state = control->get_state();
+        state *const state = control->get_state();
         min::window *const win = control->get_window();
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
 
         // Toggle the game pause
         const bool mode = state->toggle_game_pause();
@@ -293,9 +292,8 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the world and state pointers
-        game::world *const world = control->get_world();
-        game::state *const state = control->get_state();
-        skill_state &skill = state->get_skill_state();
+        world *const world = control->get_world();
+        skills &skill = world->get_player().get_skills();
 
         // toggle edit mode
         const bool mode = world->toggle_edit_mode();
@@ -306,34 +304,12 @@ class controls
         // reset scale
         world->reset_scale();
     }
-    static void toggle_ai_mode(void *ptr, double step)
-    {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the world, state, and window pointers
-        game::world *const world = control->get_world();
-        game::state *const state = control->get_state();
-
-        // toggle edit mode
-        const bool mode = world->toggle_ai_mode();
-
-        // set the game mode caption
-        if (mode)
-        {
-            state->set_game_mode("MODE: AI PATH");
-        }
-        else
-        {
-            state->set_game_mode("MODE: PLAY");
-        }
-    }
     static void forward(void *ptr, double step)
     {
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
         min::camera<float> *const camera = control->get_camera();
-        game::world *const world = control->get_world();
+        world *const world = control->get_world();
 
         // Move the character
         const min::vec3<float> &direction = camera->get_forward();
@@ -344,7 +320,7 @@ class controls
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
         min::camera<float> *const camera = control->get_camera();
-        game::world *const world = control->get_world();
+        world *const world = control->get_world();
 
         // Move the character
         const min::vec3<float> &right = camera->get_frustum().get_right();
@@ -355,7 +331,7 @@ class controls
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
         min::camera<float> *const camera = control->get_camera();
-        game::world *const world = control->get_world();
+        world *const world = control->get_world();
 
         // Move the character
         const min::vec3<float> &right = camera->get_frustum().get_right();
@@ -366,7 +342,7 @@ class controls
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
         min::camera<float> *const camera = control->get_camera();
-        game::world *const world = control->get_world();
+        world *const world = control->get_world();
 
         // Move the character
         const min::vec3<float> &direction = camera->get_forward();
@@ -374,8 +350,8 @@ class controls
     }
     void key_down(const size_t index, const std::function<void(void)> &f)
     {
-        // Get the skill_state pointer
-        skill_state &skill = _state->get_skill_state();
+        // Get the skills pointer
+        skills &skill = _world->get_player().get_skills();
 
         // If gun is active
         if (!skill.is_locked() && skill.is_gun_active())
@@ -404,11 +380,11 @@ class controls
     }
     static void key1_down(void *ptr, double step)
     {
-        // Get the skill_state pointer
+        // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        game::state *const state = control->get_state();
-        skill_state &skill = state->get_skill_state();
-        game::ui_overlay *const ui = control->get_ui();
+        world *const world = control->get_world();
+        skills &skill = world->get_player().get_skills();
+        ui_overlay *const ui = control->get_ui();
 
         // Switch to beam weapon type
         const auto f = [&skill, ui]() {
@@ -422,11 +398,11 @@ class controls
     }
     static void key2_down(void *ptr, double step)
     {
-        // Get the skill_state pointer
+        // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        game::state *const state = control->get_state();
-        skill_state &skill = state->get_skill_state();
-        game::ui_overlay *const ui = control->get_ui();
+        world *const world = control->get_world();
+        skills &skill = world->get_player().get_skills();
+        ui_overlay *const ui = control->get_ui();
 
         // Switch to missile weapon type
         const auto f = [&skill, ui]() {
@@ -440,11 +416,11 @@ class controls
     }
     static void key3_down(void *ptr, double step)
     {
-        // Get the skill_state pointer
+        // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        game::state *const state = control->get_state();
-        skill_state &skill = state->get_skill_state();
-        game::ui_overlay *const ui = control->get_ui();
+        world *const world = control->get_world();
+        skills &skill = world->get_player().get_skills();
+        ui_overlay *const ui = control->get_ui();
 
         // Switch to grapple weapon type
         const auto f = [&skill, ui]() {
@@ -458,11 +434,11 @@ class controls
     }
     static void key4_down(void *ptr, double step)
     {
-        // Get the skill_state pointer
+        // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        game::state *const state = control->get_state();
-        skill_state &skill = state->get_skill_state();
-        game::ui_overlay *const ui = control->get_ui();
+        world *const world = control->get_world();
+        skills &skill = world->get_player().get_skills();
+        ui_overlay *const ui = control->get_ui();
 
         // Switch to jet weapon type
         const auto f = [&skill, ui]() {
@@ -476,11 +452,11 @@ class controls
     }
     static void key5_down(void *ptr, double step)
     {
-        // Get the skill_state pointer
+        // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        game::state *const state = control->get_state();
-        skill_state &skill = state->get_skill_state();
-        game::ui_overlay *const ui = control->get_ui();
+        world *const world = control->get_world();
+        skills &skill = world->get_player().get_skills();
+        ui_overlay *const ui = control->get_ui();
 
         // Switch to scan weapon type
         const auto f = [&skill, ui]() {
@@ -516,7 +492,7 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the ui pointer
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
         ui->set_key_up(0);
     }
     static void key2_up(void *ptr, double step)
@@ -525,7 +501,7 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the ui pointer
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
         ui->set_key_up(1);
     }
     static void key3_up(void *ptr, double step)
@@ -534,7 +510,7 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the ui pointer
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
         ui->set_key_up(2);
     }
     static void key4_up(void *ptr, double step)
@@ -543,7 +519,7 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the ui pointer
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
         ui->set_key_up(3);
     }
     static void key5_up(void *ptr, double step)
@@ -552,7 +528,7 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the ui pointer
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
         ui->set_key_up(4);
     }
     static void key6_up(void *ptr, double step)
@@ -561,7 +537,7 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the ui pointer
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
         ui->set_key_up(5);
     }
     static void key7_up(void *ptr, double step)
@@ -570,7 +546,7 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the ui pointer
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
         ui->set_key_up(6);
     }
     static void key8_up(void *ptr, double step)
@@ -579,13 +555,13 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the ui pointer
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
         ui->set_key_up(7);
     }
     static void add_x(void *ptr, double step)
     {
         // Cast to world pointer type
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world *const world = reinterpret_cast<game::world *>(ptr);
 
         // Increase x scale
         world->set_scale_x(1);
@@ -593,7 +569,7 @@ class controls
     static void add_y(void *ptr, double step)
     {
         // Cast to world pointer type
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world *const world = reinterpret_cast<game::world *>(ptr);
 
         // Increase x scale
         world->set_scale_y(1);
@@ -601,7 +577,7 @@ class controls
     static void add_z(void *ptr, double step)
     {
         // Cast to world pointer type
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world *const world = reinterpret_cast<game::world *>(ptr);
 
         // Increase x scale
         world->set_scale_z(1);
@@ -612,7 +588,7 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the world pointer
-        game::world *const world = control->get_world();
+        world *const world = control->get_world();
 
         // Reset scale
         world->reset_scale();
@@ -624,14 +600,15 @@ class controls
 
         // Get the ALL the pointers
         min::camera<float> *const cam = control->get_camera();
-        game::character *const character = control->get_character();
-        game::state *const state = control->get_state();
-        skill_state &skill = state->get_skill_state();
-        game::world *const world = control->get_world();
-        game::sound *const sound = control->get_sound();
+        character *const character = control->get_character();
+        state *const state = control->get_state();
+        world *const world = control->get_world();
+        player &play = world->get_player();
+        skills &skill = play.get_skills();
+        sound *const sound = control->get_sound();
 
         // Are we dead?
-        const bool dead = state->is_dead();
+        const bool dead = play.is_dead();
         if (dead)
         {
             // Signal for game to respawn
@@ -695,6 +672,9 @@ class controls
             }
             else if (skill.is_jetpack_mode())
             {
+                // Turn on the jets
+                world->get_player().set_jet(true);
+
                 // Play the jet sound
                 sound->play_jet();
 
@@ -715,15 +695,15 @@ class controls
 
         // Get the ALL the pointers
         min::camera<float> *const cam = control->get_camera();
-        game::character *const character = control->get_character();
-        game::state *const state = control->get_state();
-        skill_state &skill = state->get_skill_state();
-        game::ui_overlay *const ui = control->get_ui();
-        game::world *const world = control->get_world();
-        game::sound *const sound = control->get_sound();
+        character *const character = control->get_character();
+        ui_overlay *const ui = control->get_ui();
+        world *const world = control->get_world();
+        player &play = world->get_player();
+        skills &skill = play.get_skills();
+        sound *const sound = control->get_sound();
 
         // Are we dead?
-        const bool dead = state->is_dead();
+        const bool dead = play.is_dead();
         if (dead && !skill.is_locked())
         {
             // return early
@@ -853,6 +833,9 @@ class controls
                 }
                 else if (skill.is_jetpack_mode())
                 {
+                    // Turn off the jets
+                    world->get_player().set_jet(false);
+
                     // Stop the jet sound
                     sound->stop_jet();
 
@@ -881,11 +864,12 @@ class controls
 
         // Get the camera and state pointers
         min::camera<float> *const cam = control->get_camera();
-        game::state *const state = control->get_state();
-        game::world *const world = control->get_world();
+        state *const state = control->get_state();
+        world *const world = control->get_world();
+        player &play = world->get_player();
 
         // Are we dead?
-        const bool dead = state->is_dead();
+        const bool dead = play.is_dead();
         if (dead)
         {
             // Signal for game to respawn
@@ -916,11 +900,13 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the state and skill pointers
-        game::state *const state = control->get_state();
-        skill_state &skill = state->get_skill_state();
+        state *const state = control->get_state();
+        world *const world = control->get_world();
+        player &play = world->get_player();
+        skills &skill = play.get_skills();
 
         // Are we dead?
-        const bool dead = state->is_dead();
+        const bool dead = play.is_dead();
         if (dead && !skill.is_locked())
         {
             // return early
@@ -933,7 +919,7 @@ class controls
     static void jump(void *ptr, double step)
     {
         // Get the world pointer
-        game::world *const world = reinterpret_cast<game::world *>(ptr);
+        world *const world = reinterpret_cast<game::world *>(ptr);
         world->get_player().jump();
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
@@ -943,7 +929,7 @@ class controls
 
         // Get the camera and text pointer
         min::camera<float> *const camera = control->get_camera();
-        game::ui_overlay *const ui = control->get_ui();
+        ui_overlay *const ui = control->get_ui();
 
         // Get camera frustum
         auto &f = camera->get_frustum();
@@ -958,15 +944,16 @@ class controls
     }
     inline void update_energy_regen(const float dt)
     {
-        // Regen some health
-        if (!_state->is_dead())
+        // Regen some healthhealth
+        player &player = _world->get_player();
+        if (!player.is_dead())
         {
             // Rate is units / second
-            _state->add_health(_health_regen * dt);
+            player.add_health(_health_regen * dt);
         }
 
         // Regen energy
-        skill_state &skill = _state->get_skill_state();
+        skills &skill = _world->get_player().get_skills();
         if (!skill.is_locked())
         {
             // Rate is units / second
@@ -974,23 +961,21 @@ class controls
         }
 
         // Update the ui health bar
-        _ui->set_health(_state->get_health_percent());
+        _ui->set_health(player.get_health_percent());
 
         // Update the ui energy bar
         _ui->set_energy(skill.get_energy_percent());
     }
-    inline void update_skill_state()
+    inline void update_skills()
     {
+        player &player = _world->get_player();
+        skills &skill = player.get_skills();
+
         // Check if in jetpack mode
-        game::skill_state &skill = _state->get_skill_state();
         if (skill.is_jetpack_mode() && skill.is_locked())
         {
-            const bool consumed = skill.will_consume(_jet_cost);
-            if (consumed)
-            {
-                _world->get_player().jetpack();
-            }
-            else
+            const bool active = player.is_jet();
+            if (!active)
             {
                 // Stop the jet sound
                 _sound->stop_jet();
@@ -1009,7 +994,8 @@ class controls
     inline void update_ui()
     {
         // Check cooldown state and update ui
-        if (_state->get_skill_state().check_cooldown())
+        skills &skill = _world->get_player().get_skills();
+        if (skill.check_cooldown())
         {
             _ui->set_target_cursor();
         }
@@ -1026,8 +1012,8 @@ class controls
         // Update ui
         update_ui();
 
-        // Update skill_state
-        update_skill_state();
+        // Update skills
+        update_skills();
     }
 };
 }

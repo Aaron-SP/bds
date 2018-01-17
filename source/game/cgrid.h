@@ -720,7 +720,7 @@ class cgrid
         // Run the function
         cubic_grid(start, offset, length, f);
     }
-    inline void create_mob_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
+    inline void create_drone_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();

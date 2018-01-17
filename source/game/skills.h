@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __SKILL_STATE__
-#define __SKILL_STATE__
+#ifndef __SKILLS__
+#define __SKILLS__
 
 #include <array>
 #include <chrono>
@@ -27,7 +27,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-class skill_state
+class skills
 {
   private:
     static constexpr float _max_energy = 100.0;
@@ -103,7 +103,7 @@ class skill_state
     }
 
   public:
-    skill_state()
+    skills()
         : _mode(skill_mode::beam), _energy(0.0),
           _gun_active(true), _locked(false), _shoot_cooldown(false), _charging(false)
     {

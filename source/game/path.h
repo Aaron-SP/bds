@@ -50,8 +50,8 @@ class path_data
     }
 
   public:
-    path_data(const min::vec3<float> &s, const min::vec3<float> &d)
-        : _destination(d), _position(s), _remain(0.0)
+    path_data(const min::vec3<float> &p, const min::vec3<float> &d)
+        : _destination(d), _position(p), _remain(0.0)
     {
         // Update direction
         update_direction();

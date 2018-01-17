@@ -15,46 +15,24 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __AI_PATH__
-#define __AI_PATH__
+#ifndef __DROPS__
+#define __DROPS__
 
-#include <algorithm>
-#include <game/cgrid.h>
-#include <game/path.h>
-#include <min/intersect.h>
+#include <min/aabbox.h>
+#include <min/grid.h>
+#include <min/physics.h>
 #include <min/vec3.h>
 
 namespace game
 {
-
-class ai_path
+class drops
 {
   private:
-    static constexpr float _step_size = 1.0;
-    path _path;
-    min::vec3<float> _step;
+    min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_simulation;
 
   public:
-    ai_path() {}
-    inline min::vec3<float> &calculate(const cgrid &grid, const path_data &data)
-    {
-        // Get path properties
-        const min::vec3<float> step = _path.step(grid, data);
-
-        // Calculate step direction and length
-        _step = step * _step_size;
-
-        // return step
-        return _step;
-    }
-    inline const path &get_path() const
-    {
-        return _path;
-    }
-    inline const min::vec3<float> &step() const
-    {
-        return _step;
-    }
+    drops(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim)
+        : _simulation(sim) {}
 };
 }
 

@@ -21,7 +21,6 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/character.h>
 #include <game/file.h>
 #include <game/load_state.h>
-#include <game/skill_state.h>
 
 namespace game
 {
@@ -29,7 +28,6 @@ class state
 {
   private:
     static constexpr unsigned _frame_average = 4;
-    static constexpr float _health_cap = 100.0;
     min::camera<float> _camera;
     min::quat<float> _q;
     min::mat4<float> _model;
@@ -37,15 +35,12 @@ class state
     float _y[_frame_average];
     unsigned _frame_count;
     load_state _load;
-    skill_state _skill;
     std::string _mode;
     min::vec3<float> _target;
-    float _health;
     bool _fix_target;
     bool _pause_mode;
     bool _pause_lock;
     bool _user_input;
-    bool _dead;
     bool _respawn;
 
     inline void load_camera()
@@ -131,10 +126,10 @@ class state
   public:
     state()
         : _x{}, _y{}, _frame_count{},
-          _mode("MODE: PLAY"), _health(_health_cap),
+          _mode("MODE: PLAY"),
           _fix_target(false), _pause_mode(false),
           _pause_lock(false), _user_input(true),
-          _dead(false), _respawn(false)
+          _respawn(false)
     {
         // Load camera
         load_camera();
@@ -145,27 +140,6 @@ class state
     inline void abort_tracking()
     {
         _fix_target = false;
-    }
-    inline void add_health(float health)
-    {
-        if (_health < _health_cap)
-        {
-            _health += health;
-
-            // Cap health at health_cap;
-            if (_health > _health_cap)
-            {
-                _health = _health_cap;
-            }
-        }
-    }
-    inline void consume_health(float health)
-    {
-        _health -= health;
-        if (_health <= 0.0)
-        {
-            _dead = true;
-        }
     }
     inline min::camera<float> &get_camera()
     {
@@ -183,21 +157,9 @@ class state
     {
         return _pause_mode || _pause_lock;
     }
-    inline float get_health() const
-    {
-        return _health;
-    }
-    inline float get_health_percent() const
-    {
-        return _health / _health_cap;
-    }
     inline const load_state &get_load_state() const
     {
         return _load;
-    }
-    inline skill_state &get_skill_state()
-    {
-        return _skill;
     }
     inline const min::mat4<float> &get_model_matrix() const
     {
@@ -211,10 +173,6 @@ class state
     {
         return _user_input;
     }
-    inline bool is_dead() const
-    {
-        return _dead;
-    }
     inline bool is_respawn() const
     {
         return _respawn;
@@ -226,14 +184,7 @@ class state
     inline void respawn()
     {
         // Reset flags
-        _dead = false;
         _respawn = false;
-
-        // Reset health
-        _health = _health_cap;
-
-        // Reset energy
-        _skill.set_energy(0.0);
 
         // Reload camera settings
         set_camera(_load.get_default_spawn(), _load.get_default_look());
@@ -269,10 +220,6 @@ class state
 
         // Update rotation quaternion
         _q = update_model_rotation();
-    }
-    inline void set_dead(const bool flag)
-    {
-        _dead = flag;
     }
     inline void set_game_mode(const std::string &mode)
     {
@@ -313,7 +260,7 @@ class state
         // Force paused
         return this->get_game_pause();
     }
-    void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h, const double step)
+    void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h)
     {
         // Calculate position to move camera to
         const min::vec3<float> move = p + min::vec3<float>(0.0, 0.5, 0.0);

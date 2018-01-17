@@ -20,8 +20,8 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cmath>
 #include <cstdint>
-#include <game/ai_path.h>
 #include <game/cgrid.h>
+#include <game/drones.h>
 #include <game/load_state.h>
 #include <game/particle.h>
 #include <game/player.h>
@@ -44,6 +44,8 @@ namespace game
 class world
 {
   private:
+    static constexpr float _damping = 0.1;
+    static constexpr float _time_step = 1.0 / 180.0;
     static constexpr float _grav_mag = 10.0;
     static constexpr size_t _pre_max_scale = 5;
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
@@ -57,7 +59,6 @@ class world
     sound *_sound;
     std::vector<size_t> _view_chunks;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _player_col_cells;
-    std::vector<min::aabbox<float, min::vec3>> _mob_col_cells;
 
     // Physics stuff
     min::vec3<float> _gravity;
@@ -71,21 +72,14 @@ class world
     min::vec3<int> _preview_offset;
     min::vec3<float> _preview;
     min::vec3<unsigned> _scale;
-    bool _ai_mode;
     bool _edit_mode;
 
     // Skybox
     sky _sky;
 
-    // Pathing
-    ai_path _ai_path;
-    min::vec3<float> _dest;
-
-    // Mob instances
+    // Static instances for drones and drops
     static_instance _instance;
-    size_t _mob_start;
-
-    // Missiles
+    drones _drones;
     projectile _projectile;
 
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
@@ -150,9 +144,11 @@ class world
 
             // If block is lava, play exploding sound
             // Prefer stereo if close to the explosion
+            float power = 1000.0;
             if (in_range && value == 21)
             {
                 // Play explode sound
+                power = 5000.0;
                 _sound->play_explode_stereo(point);
             }
             else if (value == 21)
@@ -164,7 +160,7 @@ class world
             // If explode hasn't been flagged yet
             if (!_player.is_exploded() && in_range)
             {
-                _player.explode(direction, value);
+                _player.explode(direction, power, value);
             }
         }
     }
@@ -189,9 +185,6 @@ class world
         // Reserve space for collision cells
         _player_col_cells.reserve(36);
 
-        // Reserve space for collision cells
-        _mob_col_cells.reserve(27);
-
         // Reserve space for view chunks
         _view_chunks.reserve(view_chunk_size * view_chunk_size * view_chunk_size);
     }
@@ -212,57 +205,22 @@ class world
             }
         }
     }
-    inline void update_world_physics(const float dt)
+    inline void update_world_physics(const size_t steps)
     {
-        // Solve the AI path finding if toggled
-        if (_ai_mode)
-        {
-            const size_t mob_size = _instance.cube_size();
-            for (size_t i = 0; i < mob_size; i++)
-            {
-                // Get mob position, mob index offset taken care of
-                const min::vec3<float> &mob_p = mob_position(i);
-
-                // Create path data
-                path_data data(mob_p, _dest);
-
-                // Calculate step
-                _ai_path.calculate(_grid, data);
-
-                // mob index offset taken care of
-                mob_path(_ai_path, data, i);
-            }
-        }
-
-        // Calculate the timestep independent from frame rate, goal = 0.0016667
-        const float fps = 1.0 / dt;
-        const unsigned steps = std::ceil(dt / 0.0016667);
-        const float time_step = dt / steps;
-
-        // Calculate the damping coefficent
-        float base_damp = 11.0;
-        if (_player.is_hooked())
-        {
-            base_damp = 2.0;
-        }
-        else if (_player.is_airborn())
-        {
-            base_damp = 6.0;
-        }
-
-        // Damping coefficient
-        const float damping = base_damp * (1.0 - std::exp(-0.0013 * fps * fps));
-        const float friction = -20.0 / steps;
+        // Friction Coefficient
+        const float friction = -10.0 / steps;
 
         // Solve the physics simulation
         const min::vec3<float> &p = _player.position();
+
+        // Send drones after the player
+        _drones.set_destination(p);
+
+        // Solve all physics timesteps
         for (size_t i = 0; i < steps; i++)
         {
             // Get all cells that could collide
             _grid.create_player_collision_cells(_player_col_cells, p);
-
-            // Update the player class
-            _player.update_position(friction);
 
             // Solve static collisions
             bool player_land = false;
@@ -298,37 +256,21 @@ class world
                 }
             }
 
+            // Update the player class
+            _player.update_frame(friction);
+
             // Update the player landing condition
             _player.update_land(player_land);
 
-            // Do mob collisions
-            const size_t mob_size = _instance.cube_size();
-            for (size_t i = 0; i < mob_size; i++)
-            {
-                // Get mob position, mob index offset taken care of
-                const min::vec3<float> &mob_p = mob_position(i);
-
-                // Get all cells that could collide
-                _grid.create_mob_collision_cells(_mob_col_cells, mob_p);
-
-                // Solve static collisions
-                for (const auto &cell : _mob_col_cells)
-                {
-                    _simulation.collide(_mob_start + i, cell);
-                }
-            }
+            // Update drones on this frame
+            _drones.update_frame(_grid, _time_step);
 
             // Solve all collisions
-            _simulation.solve(time_step, damping);
+            _simulation.solve(_time_step, _damping);
         }
 
-        // Update mob positions
-        const size_t mob_size = _instance.cube_size();
-        for (size_t i = 0; i < mob_size; i++)
-        {
-            const min::body<float, min::vec3> &mob_body = _simulation.get_body(_mob_start + i);
-            _instance.update_cube_position(mob_body.get_position(), i);
-        }
+        // Update the drones
+        _drones.update(_grid);
 
         // On missile collision remove block
         const auto on_collide = [this](const min::vec3<float> &point,
@@ -342,7 +284,7 @@ class world
         };
 
         // Update any missiles
-        _projectile.update(steps / 50.0, on_collide);
+        _projectile.update(steps * 0.0666, on_collide);
     }
 
   public:
@@ -359,12 +301,10 @@ class world
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
           _scale(1, 1, 1),
-          _ai_mode(false),
           _edit_mode(false),
           _sky(uniforms, grid_size),
-          _dest(state.get_spawn()),
           _instance(uniforms),
-          _mob_start(1),
+          _drones(&_simulation, &_instance, state.get_spawn()),
           _projectile(particles, &_instance, s)
     {
         // Set the collision elasticity of the physics simulation
@@ -386,23 +326,6 @@ class world
 
         // Add to grid
         _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
-    }
-    inline size_t add_mob(const min::vec3<float> &p)
-    {
-        // Create a mob
-        const size_t mob_id = _instance.add_cube(p);
-
-        // Add to physics simulation
-        const min::aabbox<float, min::vec3> box = _instance.box_cube(mob_id);
-        const size_t mob_phys_id = _simulation.add_body(box, 10.0);
-
-        // Get the physics body for editing
-        min::body<float, min::vec3> &body = _simulation.get_body(mob_phys_id);
-
-        // Set this body to be unrotatable
-        body.set_no_rotate();
-
-        return mob_id;
     }
     void draw(game::uniforms &uniforms) const
     {
@@ -475,10 +398,6 @@ class world
     {
         return explode_block(r, _scale, f, size);
     }
-    inline bool get_ai_mode()
-    {
-        return _ai_mode;
-    }
     inline uint8_t get_atlas_id() const
     {
         return _grid.get_atlas();
@@ -502,6 +421,14 @@ class world
     const player &get_player() const
     {
         return _player;
+    }
+    drones &get_drones()
+    {
+        return _drones;
+    }
+    const drones &get_drones() const
+    {
+        return _drones;
     }
     inline const min::vec3<float> &get_preview_position()
     {
@@ -534,45 +461,14 @@ class world
         // Launch a missile on this ray
         _projectile.launch_missile(r, _grid, _ray_max_dist);
     }
-    inline void mob_path(const ai_path &path, const path_data &data, const size_t mob_index)
-    {
-        // Get the character rigid body
-        min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
-
-        // Get remaining distance
-        const float remain = data.get_remain();
-
-        // Calculate speed slowing down as approaching goal
-        const float speed = 2.75 * ((remain - 3.0) / (remain + 3.0) + 1.1);
-
-        // Calculate the next step
-        const min::vec3<float> &step = path.step() * speed;
-
-        // Add velocity to the body
-        body.set_linear_velocity(step);
-    }
-    inline const min::vec3<float> &mob_position(const size_t mob_index) const
-    {
-        const min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
-
-        // Return the character position
-        return body.get_position();
-    }
-    inline void mob_warp(const min::vec3<float> &p, const size_t mob_index)
-    {
-        min::body<float, min::vec3> &body = _simulation.get_body(_mob_start + mob_index);
-
-        // Warp character to new position
-        body.set_position(p);
-    }
     inline void reset_explode()
     {
         _player.reset_explode();
     }
     inline void respawn(const min::vec3<float> p)
     {
-        // Reset explosion data
-        reset_explode();
+        // Respawn player
+        _player.respawn();
 
         // Set character position
         _player.warp(p);
@@ -616,11 +512,6 @@ class world
             // Regenerate the preview mesh
             generate_preview();
         }
-    }
-    inline void set_destination(const min::vec3<float> &dest)
-    {
-        // Set destination point
-        _dest = dest;
     }
     void set_scale_x(unsigned dx)
     {
@@ -688,20 +579,15 @@ class world
         // return if we hit something
         return value >= 0;
     }
-    inline bool toggle_ai_mode()
-    {
-        // Toggle flag and return result
-        return (_ai_mode = !_ai_mode);
-    }
     inline bool toggle_edit_mode()
     {
         // Toggle flag and return result
         return (_edit_mode = !_edit_mode);
     }
-    void update(min::camera<float> &cam, const float dt)
+    void update(min::camera<float> &cam, const size_t steps)
     {
         // Update the physics and AI in world
-        update_world_physics(dt);
+        update_world_physics(steps);
 
         // Get player position
         const min::vec3<float> &p = _player.position();
