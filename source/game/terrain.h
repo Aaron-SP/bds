@@ -21,6 +21,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/terrain_vertex.h>
 
 #ifndef USE_GS_RENDER
+#include <game/geometry.h>
 #include <game/work_queue.h>
 #endif
 
@@ -173,49 +174,7 @@ class terrain
     min::mesh<float, uint32_t> _parent;
 
     static constexpr GLenum RENDER_TYPE = GL_TRIANGLES;
-    static inline std::array<min::vec2<float>, 24> create_uvs(const int8_t atlas_id)
-    {
-        //Create UV's for the box
-        std::array<min::vec2<float>, 24> uvs{
-            min::vec2<float>(1.0, 0.0),
-            min::vec2<float>(0.0, 1.0),
-            min::vec2<float>(0.0, 0.0),
-            min::vec2<float>(1.0, 0.0),
-            min::vec2<float>(0.0, 1.0),
-            min::vec2<float>(0.0, 0.0),
-            min::vec2<float>(1.0, 0.0),
-            min::vec2<float>(0.0, 1.0),
-            min::vec2<float>(0.0, 0.0),
-            min::vec2<float>(1.0, 0.0),
-            min::vec2<float>(0.0, 1.0),
-            min::vec2<float>(0.0, 0.0),
-            min::vec2<float>(0.0, 0.0),
-            min::vec2<float>(1.0, 1.0),
-            min::vec2<float>(0.0, 1.0),
-            min::vec2<float>(1.0, 0.0),
-            min::vec2<float>(0.0, 1.0),
-            min::vec2<float>(0.0, 0.0),
-            min::vec2<float>(1.0, 1.0),
-            min::vec2<float>(1.0, 1.0),
-            min::vec2<float>(1.0, 1.0),
-            min::vec2<float>(1.0, 1.0),
-            min::vec2<float>(1.0, 0.0),
-            min::vec2<float>(1.0, 1.0)};
 
-        // Calculate grid index
-        const size_t col = atlas_id % 8;
-        const size_t row = atlas_id / 8;
-        const float x_offset = 0.001 + 0.125 * col;
-        const float y_offset = 0.001 + (1.0 - 0.125 * (row + 1));
-
-        for (auto &uv : uvs)
-        {
-            uv *= 0.124;
-            uv.x(uv.x() + x_offset);
-            uv.y(uv.y() + y_offset);
-        }
-        return uvs;
-    }
     static inline min::aabbox<float, min::vec3> create_box(const min::vec3<float> &center)
     {
         // Create box at center
@@ -234,121 +193,27 @@ class terrain
         const size_t vertex_start = 24 * cell;
         const size_t index_start = 36 * cell;
 
-        // Append vertices at index location
-        {
-            // Create bounding box of cell and get box dimensions
-            const min::vec3<float> p = min::vec3<float>(unpack.x(), unpack.y(), unpack.z());
-            const min::aabbox<float, min::vec3> b = create_box(p);
-            const min::vec3<float> &min = b.get_min();
-            const min::vec3<float> &max = b.get_max();
+        // Create bounding box of cell and get box dimensions
+        const min::vec3<float> p = min::vec3<float>(unpack.x(), unpack.y(), unpack.z());
+        const min::aabbox<float, min::vec3> b = create_box(p);
+        const min::vec3<float> &min = b.get_min();
+        const min::vec3<float> &max = b.get_max();
 
-            // Calculate vertex start position
-            size_t v = vertex_start;
-            _parent.vertex[v++] = min::vec4<float>(min.x(), min.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), min.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), min.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), max.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), max.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), max.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), max.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), min.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), min.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), max.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), min.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), min.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), min.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), max.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), min.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), min.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), max.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), max.y(), max.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), min.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), max.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(min.x(), max.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), max.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), max.y(), min.z(), 1.0);
-            _parent.vertex[v++] = min::vec4<float>(max.x(), min.y(), max.z(), 1.0);
-        }
+        // Calculate block vertices
+        block_vertex(_parent.vertex, vertex_start, min, max);
 
-        // Append uv coordinates at index location
-        {
-            const int8_t atlas_id = static_cast<int8_t>(unpack.w());
-            const std::array<min::vec2<float>, 24> uvs = create_uvs(atlas_id);
-            for (size_t i = 0; i < 24; i++)
-            {
-                _parent.uv[i + vertex_start] = uvs[i];
-            }
-        }
+        // Calculate block uv's
+        block_uv(_parent.uv, vertex_start);
 
-        // Append indices at index location
-        {
-            size_t in = index_start;
-            _parent.index[in++] = vertex_start;
-            _parent.index[in++] = 1 + vertex_start;
-            _parent.index[in++] = 2 + vertex_start;
-            _parent.index[in++] = 3 + vertex_start;
-            _parent.index[in++] = 4 + vertex_start;
-            _parent.index[in++] = 5 + vertex_start;
-            _parent.index[in++] = 6 + vertex_start;
-            _parent.index[in++] = 7 + vertex_start;
-            _parent.index[in++] = 8 + vertex_start;
-            _parent.index[in++] = 9 + vertex_start;
-            _parent.index[in++] = 10 + vertex_start;
-            _parent.index[in++] = 11 + vertex_start;
-            _parent.index[in++] = 12 + vertex_start;
-            _parent.index[in++] = 13 + vertex_start;
-            _parent.index[in++] = 14 + vertex_start;
-            _parent.index[in++] = 15 + vertex_start;
-            _parent.index[in++] = 16 + vertex_start;
-            _parent.index[in++] = 17 + vertex_start;
-            _parent.index[in++] = vertex_start;
-            _parent.index[in++] = 18 + vertex_start;
-            _parent.index[in++] = 1 + vertex_start;
-            _parent.index[in++] = 3 + vertex_start;
-            _parent.index[in++] = 19 + vertex_start;
-            _parent.index[in++] = 4 + vertex_start;
-            _parent.index[in++] = 6 + vertex_start;
-            _parent.index[in++] = 20 + vertex_start;
-            _parent.index[in++] = 7 + vertex_start;
-            _parent.index[in++] = 9 + vertex_start;
-            _parent.index[in++] = 21 + vertex_start;
-            _parent.index[in++] = 10 + vertex_start;
-            _parent.index[in++] = 12 + vertex_start;
-            _parent.index[in++] = 22 + vertex_start;
-            _parent.index[in++] = 13 + vertex_start;
-            _parent.index[in++] = 15 + vertex_start;
-            _parent.index[in++] = 23 + vertex_start;
-            _parent.index[in++] = 16 + vertex_start;
-        }
+        // Scale uv's based off atlas id
+        const int8_t atlas_id = static_cast<int8_t>(unpack.w());
+        block_uv_scale(_parent.uv, vertex_start, atlas_id);
 
-        // Append normals at index location
-        {
-            size_t n = vertex_start;
-            _parent.normal[n++] = min::vec3<float>(0.0, -1.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, -1.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, -1.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 1.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 1.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 1.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(-1.0, 0.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(-1.0, 0.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(-1.0, 0.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 0.0, -1.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 0.0, -1.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 0.0, -1.0);
-            _parent.normal[n++] = min::vec3<float>(1.0, 0.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(1.0, 0.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(1.0, 0.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 0.0, 1.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 0.0, 1.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 0.0, 1.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, -1.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 1.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(-1.0, 0.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 0.0, -1.0);
-            _parent.normal[n++] = min::vec3<float>(1.0, 0.0, 0.0);
-            _parent.normal[n++] = min::vec3<float>(0.0, 0.0, 1.0);
-        }
+        // Calculate block normals
+        block_normal(_parent.normal, vertex_start);
+
+        // Calculate block indices
+        block_index(_parent.index, index_start, vertex_start);
     }
     inline void allocate_mesh_buffer(const std::vector<min::vec4<float>> &cell_buffer)
     {

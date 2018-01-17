@@ -186,6 +186,9 @@ class fractex
 
         // Update cursor position for tracking
         center_cursor();
+
+        // Delete the mem-file data
+        game::memory_map::memory.clear();
     }
     ~fractex()
     {
