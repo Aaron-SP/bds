@@ -32,6 +32,8 @@ class skills
   private:
     static constexpr float _max_energy = 100.0;
     static constexpr size_t _scan_id_count = 30;
+    static constexpr float _miss_cd = 500.0;
+    static constexpr float _beam_cd = 500.0;
     enum skill_mode
     {
         jetpack,
@@ -216,7 +218,7 @@ class skills
     }
     inline bool is_beam_charged() const
     {
-        return is_beam_mode() && _locked && get_charge_time() > 1000.0;
+        return is_beam_mode() && _locked && get_charge_time() > _beam_cd;
     }
     inline bool is_gun_active() const
     {
@@ -295,7 +297,7 @@ class skills
         if (_shoot_cooldown)
         {
             const double dt = get_cool_time();
-            if (dt > 2000.0)
+            if (dt > _miss_cd)
             {
                 _shoot_cooldown = !_shoot_cooldown;
             }

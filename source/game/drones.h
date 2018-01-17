@@ -200,7 +200,7 @@ class drones
 
             // Update the instance matrix
             const size_t inst_id = _drones[i].inst_id();
-            _inst->update_cube_position(p, inst_id);
+            _inst->update_cube_position(inst_id, p);
         }
     }
 };

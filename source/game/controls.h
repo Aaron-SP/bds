@@ -39,7 +39,7 @@ class controls
     static constexpr float _block_cost = 10.0;
     static constexpr float _beam_cost = 10.0;
     static constexpr float _beam_charge_cost = 20.0;
-    static constexpr float _missile_cost = 40.0;
+    static constexpr float _missile_cost = 20.0;
     static constexpr float _grapple_cost = 10.0;
     static constexpr float _health_regen = 5.0;
     static constexpr float _energy_regen = 10.0;
@@ -819,13 +819,15 @@ class controls
                     if (consumed)
                     {
                         // Launch a missile
-                        world->launch_missile(r);
+                        bool launched = world->launch_missile(r);
+                        if (launched)
+                        {
+                            // Activate shoot animation
+                            character->set_animation_shoot();
 
-                        // Activate shoot animation
-                        character->set_animation_shoot();
-
-                        // Start gun cooldown timer
-                        skill.start_cooldown();
+                            // Start gun cooldown timer
+                            skill.start_cooldown();
+                        }
                     }
 
                     // Unlock the gun if missile mode

@@ -38,6 +38,9 @@ namespace game
 class static_instance
 {
   private:
+    static constexpr size_t _CUBE_LIMIT = 10;
+    static constexpr size_t _MISS_LIMIT = 10;
+
     min::shader _vertex;
     min::shader _fragment;
     min::program _prog;
@@ -164,7 +167,7 @@ class static_instance
     size_t add_cube(const min::vec3<float> &p)
     {
         // Check for buffer overflow
-        if (_cube_mat.size() == 10)
+        if (_cube_mat.size() == _CUBE_LIMIT)
         {
             throw std::runtime_error("static_instance: must change default cube count");
         }
@@ -178,7 +181,7 @@ class static_instance
     size_t add_missile(const min::vec3<float> &p)
     {
         // Check for buffer overflow
-        if (_miss_mat.size() == 10)
+        if (_miss_mat.size() == _MISS_LIMIT)
         {
             throw std::runtime_error("static_instance: must change default missile count");
         }
@@ -189,7 +192,12 @@ class static_instance
         // return mob id
         return _miss_mat.size() - 1;
     }
-    void clear_missile()
+    void clear_missile(const size_t index)
+    {
+        // Erase matrix at iterator
+        _miss_mat.erase(_miss_mat.begin() + index);
+    }
+    void clear_missiles()
     {
         _miss_mat.clear();
     }
@@ -259,27 +267,35 @@ class static_instance
     {
         return _miss_mat;
     }
+    bool cube_full() const
+    {
+        return _cube_mat.size() == _CUBE_LIMIT;
+    }
     size_t cube_size() const
     {
         return _cube_mat.size();
+    }
+    bool missile_full() const
+    {
+        return _miss_mat.size() == _MISS_LIMIT;
     }
     size_t missile_size() const
     {
         return _miss_mat.size();
     }
-    void update_cube_position(const min::vec3<float> &p, const size_t index)
+    void update_cube_position(const size_t index, const min::vec3<float> &p)
     {
         _cube_mat[index].set_translation(p);
     }
-    void update_cube_rotation(const min::quat<float> &r, const size_t index)
+    void update_cube_rotation(const size_t index, const min::quat<float> &r)
     {
         _cube_mat[index].set_rotation(r);
     }
-    void update_missile_position(const min::vec3<float> &p, const size_t index)
+    void update_missile_position(const size_t index, const min::vec3<float> &p)
     {
         _miss_mat[index].set_translation(p);
     }
-    void update_missile_rotation(const min::quat<float> &r, const size_t index)
+    void update_missile_rotation(const size_t index, const min::quat<float> &r)
     {
         _miss_mat[index].set_rotation(r);
     }

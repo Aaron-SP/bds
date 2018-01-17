@@ -1,0 +1,320 @@
+/* Copyright [2013-2018] [Aaron Springstroh, Minimal Graphics Library]
+
+This file is part of the Fractex.
+
+Fractex is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Fractex is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
+*/
+#ifndef __PROJECTILE__
+#define __PROJECTILE__
+
+#include <functional>
+#include <game/particle.h>
+#include <game/sound.h>
+#include <game/static_instance.h>
+#include <vector>
+
+namespace game
+{
+
+class missile
+{
+  private:
+    min::ray<float, min::vec3> _ray;
+    min::sample<float, min::vec3> _traj;
+    size_t _inst_id;
+    size_t _key;
+    int8_t _value;
+    bool _launch;
+
+  public:
+    missile(const min::ray<float, min::vec3> &r, const min::vec3<float> &point, const float weight, const size_t inst, const size_t key, const int8_t value)
+        : _ray(r), _traj(r.get_origin(), point, weight),
+          _inst_id(inst), _key(key), _value(value), _launch(true) {}
+
+    void dec_inst()
+    {
+        _inst_id--;
+    }
+    size_t inst_id() const
+    {
+        return _inst_id;
+    }
+    const min::vec3<float> &dest() const
+    {
+        return _traj.get_dest();
+    }
+    bool done() const
+    {
+        return _traj.done();
+    }
+    size_t key() const
+    {
+        return _key;
+    }
+    bool launched() const
+    {
+        return _launch;
+    }
+    void launch()
+    {
+        _launch = true;
+    }
+    void kill()
+    {
+        _launch = false;
+    }
+    min::vec3<float> interpolate(const float dt)
+    {
+        return _traj.weight_interpolate(dt);
+    }
+    bool hit() const
+    {
+        return _value >= 0;
+    }
+    const min::ray<float, min::vec3> &ray() const
+    {
+        return _ray;
+    }
+    int8_t value() const
+    {
+        return _value;
+    }
+};
+
+class projectiles
+{
+  private:
+    static constexpr size_t _miss_size = 1;
+    static constexpr size_t _miss_max_dist = 100;
+
+    static_instance *_inst;
+    particle *_particles;
+    sound *_sound;
+    min::vec3<unsigned> _scale;
+    std::vector<missile> _miss;
+
+    static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
+    {
+        const min::vec3<float> offset(scale.x() / 2, scale.y() / 2, scale.z() / 2);
+        const min::vec3<float> center = p - offset;
+
+        // return center position
+        return center;
+    }
+    inline bool launch(const cgrid &grid, const min::ray<float, min::vec3> &r)
+    {
+        // Get missile id
+        const size_t id = _inst->add_missile(r.get_origin());
+
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        int8_t value;
+        size_t key;
+        min::vec3<float> traced;
+        const bool valid = grid.ray_trace_last_key(r, _miss_max_dist, traced, key, value);
+        if (!valid)
+        {
+            return false;
+        }
+
+        // Calculate trajectory distance, set missile trajectory
+        const float weight = 1.0 / (traced - r.get_origin()).magnitude();
+
+        // Create new missile
+        _miss.push_back(missile(r, traced, weight, id, key, value));
+
+        // Create quaternion from Y axis to facing direction
+        const min::quat<float> q(min::vec3<float>::up(), r.get_direction());
+
+        // Update the missile rotation
+        _inst->update_missile_rotation(id, q);
+
+        // Set the launch particle attributes
+        set_launch_particles(_miss.back());
+
+        // Play the launch sound
+        _sound->play_miss_launch(r.get_origin());
+
+        // Return that we launched a missile
+        return true;
+    }
+    inline bool relaunch(const cgrid &grid, const size_t index)
+    {
+        // Create a new ray along old ray direction
+        const min::vec3<float> &origin = _miss[index].dest();
+        min::vec3<float> to = origin + _miss[index].ray().get_direction();
+        min::ray<float, min::vec3> r(origin, to);
+
+        // Get missile id
+        const size_t id = _miss[index].inst_id();
+
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        int8_t value;
+        size_t key;
+        min::vec3<float> traced;
+        const bool valid = grid.ray_trace_last_key(r, _miss_max_dist, traced, key, value);
+        if (!valid)
+        {
+            return false;
+        }
+
+        // Calculate trajectory distance, set missile trajectory
+        const float weight = 1.0 / (traced - r.get_origin()).magnitude();
+
+        // Create missile at index
+        _miss[index] = missile(r, traced, weight, id, key, value);
+
+        // Create quaternion from Y axis to facing direction
+        const min::quat<float> q(min::vec3<float>::up(), r.get_direction());
+
+        // Update the missile rotation
+        _inst->update_missile_rotation(id, q);
+
+        // Return that we launched a missile
+        return true;
+    }
+    inline void remove(const size_t index)
+    {
+        // Clear missiles at index
+        _inst->clear_missile(index);
+        _miss.erase(_miss.begin() + index);
+
+        // Adjust the remaining missile indices
+        const size_t size = _miss.size();
+        for (size_t i = index; i < size; i++)
+        {
+            _miss[i].dec_inst();
+        }
+    }
+    inline void set_launch_particles(const missile &m)
+    {
+        // Add particle effects along ray
+        const min::ray<float, min::vec3> &ray = m.ray();
+        const min::vec3<float> &p = ray.get_origin();
+        const min::vec3<float> dir = ray.get_direction() * -10.0;
+
+        // Load particles at
+        _particles->load_emit_launch(p, dir, 86400.0, 20.0);
+    }
+
+  public:
+    projectiles(particle *const particles, static_instance *const inst, sound *const s)
+        : _inst(inst), _particles(particles), _sound(s), _scale(3, 3, 3) {}
+
+    inline bool launch_missile(const cgrid &grid, const min::ray<float, min::vec3> &r)
+    {
+        // Are all missiles being used?
+        if (_inst->missile_full())
+        {
+            return false;
+        }
+
+        return launch(grid, r);
+    }
+    inline void draw(game::uniforms &uniforms) const
+    {
+        // Draw launch particles
+        _particles->draw_emit_launch(uniforms);
+    }
+    inline void update(const cgrid &grid, const float speed,
+                       const std::function<void(
+                           const min::vec3<float> &point,
+                           const min::vec3<float> &direction,
+                           const min::vec3<unsigned> &scale,
+                           const size_t value)> &f = nullptr)
+    {
+        // Update each missile
+        size_t size = _miss.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            // Get the missile
+            missile &m = _miss[i];
+
+            // If missile is launched
+            if (m.launched())
+            {
+                // Get the atlas of target block, if hit a block remove it
+                if (m.done())
+                {
+                    // Test for race condition on grid cell
+                    const bool hit = m.hit();
+                    if (hit)
+                    {
+                        // Test if we need to relaunch missile
+                        if (grid.ray_trace_key(m.key()) < 0)
+                        {
+                            // Relaunch the missile
+                            const bool success = relaunch(grid, i);
+                            if (success)
+                            {
+                                // Continue processing other missiles
+                                continue;
+                            }
+                        }
+                    }
+
+                    // Missile hit target
+                    m.kill();
+
+                    // Clear all missiles
+                    remove(i);
+
+                    // Adjust the size and current index
+                    size--;
+                    i--;
+
+                    // Stop playing particles
+                    _particles->abort_launch();
+
+                    // Stop playing launch sound
+                    _sound->stop_miss_launch();
+
+                    // If we hit a block remove it
+                    if (hit)
+                    {
+                        // Invoke the function callback if provided
+                        if (f)
+                        {
+                            // Get direction for particle spray
+                            const min::vec3<float> dir = m.ray().get_direction() * -1.0;
+
+                            // Center the explosion point of missile explosion
+                            const min::vec3<float> center = center_radius(m.dest(), _scale);
+
+                            // Call function callback
+                            f(center, dir, _scale, m.value());
+                        }
+                    }
+                }
+                else
+                {
+                    // Interpolate missile location
+                    const min::vec3<float> point = m.interpolate(speed);
+
+                    // Update missile position
+                    _inst->update_missile_position(m.inst_id(), point);
+
+                    // Set particle position slightly behind the rocket
+                    const min::vec3<float> offset = point - m.ray().get_direction() * 0.25;
+                    _particles->set_launch_position(offset);
+
+                    // Update the launch sound position
+                    _sound->update_miss_launch(point);
+                }
+            }
+        }
+    }
+};
+}
+
+#endif

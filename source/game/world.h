@@ -25,7 +25,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/load_state.h>
 #include <game/particle.h>
 #include <game/player.h>
-#include <game/projectile.h>
+#include <game/projectiles.h>
 #include <game/sky.h>
 #include <game/sound.h>
 #include <game/static_instance.h>
@@ -80,7 +80,7 @@ class world
     // Static instances for drones and drops
     static_instance _instance;
     drones _drones;
-    projectile _projectile;
+    projectiles _projectile;
 
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {
@@ -284,7 +284,7 @@ class world
         };
 
         // Update any missiles
-        _projectile.update(steps * 0.0666, on_collide);
+        _projectile.update(_grid, steps * 0.0666, on_collide);
     }
 
   public:
@@ -456,10 +456,10 @@ class world
         // Return that we are  not hooked
         return false;
     }
-    inline void launch_missile(const min::ray<float, min::vec3> &r)
+    inline bool launch_missile(const min::ray<float, min::vec3> &r)
     {
         // Launch a missile on this ray
-        _projectile.launch_missile(r, _grid, _ray_max_dist);
+        return _projectile.launch_missile(_grid, r);
     }
     inline void reset_explode()
     {

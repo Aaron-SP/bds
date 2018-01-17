@@ -790,6 +790,24 @@ class cgrid
     {
         return _world;
     }
+    inline int8_t ray_trace_key(const size_t key) const
+    {
+        return _grid[key];
+    }
+    inline bool ray_trace_last_key(const min::ray<float, min::vec3> &r, const size_t length, min::vec3<float> &point, size_t &key, int8_t &value) const
+    {
+        // Trace a ray and return the last key
+        size_t prev_key;
+        const bool is_valid = ray_trace(r, length, prev_key, key, value);
+        if (is_valid)
+        {
+            // Return the snapped point
+            point = grid_cell_center(key);
+        }
+
+        // Return if valid
+        return is_valid;
+    }
     inline min::vec3<float> ray_trace_last(const min::ray<float, min::vec3> &r, const size_t length, int8_t &value) const
     {
         // Trace a ray and return the last key
