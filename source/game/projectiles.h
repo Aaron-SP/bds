@@ -33,14 +33,19 @@ class missile
     min::ray<float, min::vec3> _ray;
     min::sample<float, min::vec3> _traj;
     size_t _inst_id;
+    size_t _part_id;
+    size_t _sound_id;
     size_t _key;
     int8_t _value;
     bool _launch;
 
   public:
-    missile(const min::ray<float, min::vec3> &r, const min::vec3<float> &point, const float weight, const size_t inst, const size_t key, const int8_t value)
+    missile(const min::ray<float, min::vec3> &r, const min::vec3<float> &point, const float weight,
+            const size_t inst, const size_t part, const size_t sound,
+            const size_t key, const int8_t value)
         : _ray(r), _traj(r.get_origin(), point, weight),
-          _inst_id(inst), _key(key), _value(value), _launch(true) {}
+          _inst_id(inst), _part_id(part), _sound_id(sound),
+          _key(key), _value(value), _launch(true) {}
 
     void dec_inst()
     {
@@ -50,6 +55,14 @@ class missile
     {
         return _inst_id;
     }
+    size_t part_id() const
+    {
+        return _part_id;
+    }
+    size_t sound_id() const
+    {
+        return _sound_id;
+    }
     const min::vec3<float> &dest() const
     {
         return _traj.get_dest();
@@ -58,29 +71,29 @@ class missile
     {
         return _traj.done();
     }
-    size_t key() const
+    bool hit() const
     {
-        return _key;
-    }
-    bool launched() const
-    {
-        return _launch;
-    }
-    void launch()
-    {
-        _launch = true;
-    }
-    void kill()
-    {
-        _launch = false;
+        return _value >= 0;
     }
     min::vec3<float> interpolate(const float dt)
     {
         return _traj.weight_interpolate(dt);
     }
-    bool hit() const
+    size_t key() const
     {
-        return _value >= 0;
+        return _key;
+    }
+    void kill()
+    {
+        _launch = false;
+    }
+    void launch()
+    {
+        _launch = true;
+    }
+    bool launched() const
+    {
+        return _launch;
     }
     const min::ray<float, min::vec3> &ray() const
     {
@@ -99,7 +112,7 @@ class projectiles
     static constexpr size_t _miss_max_dist = 100;
 
     static_instance *_inst;
-    particle *_particles;
+    particle *_part;
     sound *_sound;
     min::vec3<unsigned> _scale;
     std::vector<missile> _miss;
@@ -114,8 +127,14 @@ class projectiles
     }
     inline bool launch(const cgrid &grid, const min::ray<float, min::vec3> &r)
     {
-        // Get missile id
-        const size_t id = _inst->add_missile(r.get_origin());
+        // Get instance id
+        const size_t inst_id = _inst->add_missile(r.get_origin());
+
+        // Get particle id
+        const size_t part_id = _part->get_idle_miss_launch_id();
+
+        // Get sound id
+        const size_t sound_id = _sound->get_idle_miss_launch_id();
 
         // Trace a ray to the destination point to find placement position, return point is snapped
         int8_t value;
@@ -131,32 +150,38 @@ class projectiles
         const float weight = 1.0 / (traced - r.get_origin()).magnitude();
 
         // Create new missile
-        _miss.push_back(missile(r, traced, weight, id, key, value));
+        _miss.push_back(missile(r, traced, weight, inst_id, part_id, sound_id, key, value));
 
         // Create quaternion from Y axis to facing direction
         const min::quat<float> q(min::vec3<float>::up(), r.get_direction());
 
         // Update the missile rotation
-        _inst->update_missile_rotation(id, q);
+        _inst->update_missile_rotation(inst_id, q);
 
         // Set the launch particle attributes
-        set_launch_particles(_miss.back());
+        set_part(part_id, _miss.back());
 
         // Play the launch sound
-        _sound->play_miss_launch(r.get_origin());
+        _sound->play_miss_launch(sound_id, r.get_origin());
 
         // Return that we launched a missile
         return true;
     }
-    inline bool relaunch(const cgrid &grid, const size_t index)
+    inline bool relaunch(const cgrid &grid, missile &m)
     {
         // Create a new ray along old ray direction
-        const min::vec3<float> &origin = _miss[index].dest();
-        min::vec3<float> to = origin + _miss[index].ray().get_direction();
+        const min::vec3<float> &origin = m.dest();
+        min::vec3<float> to = origin + m.ray().get_direction();
         min::ray<float, min::vec3> r(origin, to);
 
-        // Get missile id
-        const size_t id = _miss[index].inst_id();
+        // Get instance id
+        const size_t inst_id = m.inst_id();
+
+        // Get particle id
+        const size_t part_id = m.part_id();
+
+        // Get sound id
+        const size_t sound_id = m.sound_id();
 
         // Trace a ray to the destination point to find placement position, return point is snapped
         int8_t value;
@@ -172,13 +197,13 @@ class projectiles
         const float weight = 1.0 / (traced - r.get_origin()).magnitude();
 
         // Create missile at index
-        _miss[index] = missile(r, traced, weight, id, key, value);
+        m = missile(r, traced, weight, inst_id, part_id, sound_id, key, value);
 
         // Create quaternion from Y axis to facing direction
         const min::quat<float> q(min::vec3<float>::up(), r.get_direction());
 
         // Update the missile rotation
-        _inst->update_missile_rotation(id, q);
+        _inst->update_missile_rotation(inst_id, q);
 
         // Return that we launched a missile
         return true;
@@ -196,20 +221,20 @@ class projectiles
             _miss[i].dec_inst();
         }
     }
-    inline void set_launch_particles(const missile &m)
+    inline void set_part(const size_t part_id, const missile &m)
     {
-        // Add particle effects along ray
+        // Set particle settings
         const min::ray<float, min::vec3> &ray = m.ray();
         const min::vec3<float> &p = ray.get_origin();
         const min::vec3<float> dir = ray.get_direction() * -10.0;
 
-        // Load particles at
-        _particles->load_emit_launch(p, dir, 86400.0, 20.0);
+        // Load particles at id for 86400 seconds = 1 day :)
+        _part->load_miss_launch(part_id, p, dir, 86400.0, 40.0);
     }
 
   public:
     projectiles(particle *const particles, static_instance *const inst, sound *const s)
-        : _inst(inst), _particles(particles), _sound(s), _scale(3, 3, 3) {}
+        : _inst(inst), _part(particles), _sound(s), _scale(3, 3, 3) {}
 
     inline bool launch_missile(const cgrid &grid, const min::ray<float, min::vec3> &r)
     {
@@ -224,7 +249,7 @@ class projectiles
     inline void draw(game::uniforms &uniforms) const
     {
         // Draw launch particles
-        _particles->draw_emit_launch(uniforms);
+        _part->draw_miss_launch(uniforms);
     }
     inline void update(const cgrid &grid, const float speed,
                        const std::function<void(
@@ -254,7 +279,7 @@ class projectiles
                         if (grid.ray_trace_key(m.key()) < 0)
                         {
                             // Relaunch the missile
-                            const bool success = relaunch(grid, i);
+                            const bool success = relaunch(grid, m);
                             if (success)
                             {
                                 // Continue processing other missiles
@@ -266,18 +291,11 @@ class projectiles
                     // Missile hit target
                     m.kill();
 
-                    // Clear all missiles
-                    remove(i);
-
-                    // Adjust the size and current index
-                    size--;
-                    i--;
-
                     // Stop playing particles
-                    _particles->abort_launch();
+                    _part->abort_miss_launch(m.part_id());
 
                     // Stop playing launch sound
-                    _sound->stop_miss_launch();
+                    _sound->stop_miss_launch(m.sound_id());
 
                     // If we hit a block remove it
                     if (hit)
@@ -295,6 +313,13 @@ class projectiles
                             f(center, dir, _scale, m.value());
                         }
                     }
+
+                    // Clear all missiles
+                    remove(i);
+
+                    // Adjust the size and current index
+                    size--;
+                    i--;
                 }
                 else
                 {
@@ -306,10 +331,10 @@ class projectiles
 
                     // Set particle position slightly behind the rocket
                     const min::vec3<float> offset = point - m.ray().get_direction() * 0.25;
-                    _particles->set_launch_position(offset);
+                    _part->set_miss_launch_position(m.part_id(), offset);
 
                     // Update the launch sound position
-                    _sound->update_miss_launch(point);
+                    _sound->update_miss_launch(m.sound_id(), point);
                 }
             }
         }

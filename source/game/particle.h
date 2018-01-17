@@ -29,9 +29,59 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
+class miss_emit
+{
+  private:
+    min::emitter_buffer<float, GL_FLOAT> _emit;
+    float _time;
+    min::vec4<float> _ref;
+
+  public:
+    miss_emit() : _emit(min::vec3<float>(), 25, 4, 0.0625, 0.125, 0.5), _time(-1) {}
+    void abort()
+    {
+        _time = -1;
+    }
+    min::emitter_buffer<float, GL_FLOAT> &emit()
+    {
+        return _emit;
+    }
+    const min::emitter_buffer<float, GL_FLOAT> &emit() const
+    {
+        return _emit;
+    }
+    void time_dec(const float dt)
+    {
+        _time -= dt;
+    }
+    float time() const
+    {
+        return _time;
+    }
+    void set_time(const float time)
+    {
+        _time = time;
+    }
+    const min::vec4<float> &ref() const
+    {
+        return _ref;
+    }
+    void set_ref(const min::vec3<float> &ref)
+    {
+        _ref.x(ref.x());
+        _ref.y(ref.y());
+        _ref.z(ref.z());
+    }
+    void w(const float w)
+    {
+        _ref.w(w);
+    }
+};
+
 class particle
 {
   private:
+    static constexpr size_t _miss_limit = 10;
     static constexpr size_t _static_count = 1000;
     static constexpr float _inv_static_count = 1.0 / _static_count;
 
@@ -48,18 +98,18 @@ class particle
     // Particle stuff
     min::emitter_buffer<float, GL_FLOAT> _emit;
     min::emitter_buffer<float, GL_FLOAT> _static;
+    std::vector<miss_emit> _miss;
+    size_t _miss_old;
     int _attract_index;
 
     // Control
     float _charge_time;
     float _explode_time;
-    float _launch_time;
     float _line_time;
 
     // Cached camera settings
     min::vec4<float> _charge_ref;
     min::vec4<float> _explode_ref;
-    min::vec4<float> _launch_ref;
     min::vec4<float> _line_ref;
     min::vec3<float> _line_pos;
     min::vec3<float> _velocity;
@@ -78,6 +128,14 @@ class particle
 
         // Draw the particles
         _emit.draw();
+    }
+    inline void draw_miss(const size_t index, const game::uniforms &uniforms) const
+    {
+        // Bind VAO
+        _miss[index].emit().bind();
+
+        // Draw the particles
+        _miss[index].emit().draw();
     }
     inline void draw_static(const game::uniforms &uniforms) const
     {
@@ -103,6 +161,19 @@ class particle
 
         // Reset the particle animation
         _emit.reset();
+    }
+    inline void load_miss(const size_t index, const min::vec3<float> &p, const min::vec3<float> &wind)
+    {
+        min::emitter_buffer<float, GL_FLOAT> &emit = _miss[index].emit();
+
+        // Update the start position
+        emit.set_position(p);
+
+        // Reset the wind vector
+        emit.set_wind(wind);
+
+        // Reset the particle animation
+        emit.reset();
     }
     inline void load_textures()
     {
@@ -139,12 +210,6 @@ class particle
         _charge_ref.y(ref.y());
         _charge_ref.z(ref.z());
     }
-    inline void set_launch_ref(const min::vec3<float> &ref)
-    {
-        _launch_ref.x(ref.x());
-        _launch_ref.y(ref.y());
-        _launch_ref.z(ref.z());
-    }
     inline void set_explode_ref(const min::vec3<float> &ref, const float size)
     {
         _explode_ref = min::vec4<float>(ref, size);
@@ -163,10 +228,10 @@ class particle
           _prog(_vertex, _fragment),
           _emit(min::vec3<float>(), 200, 5, 0.0625, 0.125, 0.5),
           _static(min::vec3<float>(), _static_count, 1, 0.10, 5.0, 10.0),
+          _miss(_miss_limit), _miss_old(0),
           _attract_index(-1),
           _charge_time(-1),
           _explode_time(-1),
-          _launch_time(-1),
           _line_time(-1)
     {
         // Load textures
@@ -174,6 +239,13 @@ class particle
 
         // Load program index
         load_program_index(uniforms);
+
+        // Load all missile particle systems
+        for (size_t i = 0; i < _miss_limit; i++)
+        {
+            _miss[i].emit().set_speed(min::vec3<float>(0.0, 0.0, 0.0));
+            _miss[i].emit().set_gravity(min::vec3<float>(0.0, 0.0, 0.0));
+        }
 
         // Set the particle gravity for charge
         _emit.set_gravity(min::vec3<float>(0.0, 0.0, 0.0));
@@ -191,10 +263,9 @@ class particle
         // Abort particle animation
         _explode_time = -1.0;
     }
-    inline void abort_launch()
+    inline void abort_miss_launch(const size_t index)
     {
-        // Abort particle animation
-        _launch_time = -1.0;
+        _miss[index].abort();
     }
     inline void abort_line()
     {
@@ -213,16 +284,22 @@ class particle
             draw_emit(uniforms);
         }
     }
-    inline void draw_emit_launch(const game::uniforms &uniforms) const
+    inline void draw_miss_launch(const game::uniforms &uniforms) const
     {
-        // Draw launch
-        if (_launch_time > 0.0)
-        {
-            // Set the launch reference point
-            set_reference(_launch_ref);
+        // Bind this texture for drawing missiles
+        _tbuffer.bind(_dds_id, 0);
 
-            // Draw on emit buffer
-            draw_emit(uniforms);
+        // Draw all miss launch
+        for (size_t i = 0; i < _miss_limit; i++)
+        {
+            if (_miss[i].time() > 0.0)
+            {
+                // Set the launch reference point
+                set_reference(_miss[i].ref());
+
+                // Draw on emit buffer
+                draw_miss(i, uniforms);
+            }
         }
     }
     inline void draw_static_explode(const game::uniforms &uniforms) const
@@ -249,11 +326,32 @@ class particle
             draw_static(uniforms);
         }
     }
+    inline size_t get_idle_miss_launch_id()
+    {
+        // Output id
+        size_t id = 0;
+
+        // Scan for unused particle system
+        for (size_t i = 0; i < _miss_limit; i++)
+        {
+            // Start at the oldest index
+            const size_t index = (_miss_old %= _miss_limit)++;
+
+            // If index is unused
+            if (_miss[index].time() < 0.0)
+            {
+                // Assign id for use
+                id = index;
+
+                // Break out since found
+                break;
+            }
+        }
+
+        return id;
+    }
     inline void load_emit_charge(const min::camera<float> &cam, const float time, const float size)
     {
-        // Abort launching
-        abort_launch();
-
         // Add time to the clock
         _charge_time = time;
 
@@ -269,23 +367,16 @@ class particle
             _attract_index = _emit.attractor_add(min::vec3<float>(0.0, 0.0, 0.0), 1.0);
         }
     }
-    inline void load_emit_launch(const min::vec3<float> &p, const min::vec3<float> &wind, const float time, const float size)
+    inline void load_miss_launch(const size_t index, const min::vec3<float> &p, const min::vec3<float> &wind, const float time, const float size)
     {
-        // Abort charging
-        abort_charge();
-
         // Add time to the clock
-        _launch_time = time;
+        _miss[index].set_time(time);
 
         // Set the launch particle size
-        _launch_ref.w(size);
+        _miss[index].w(size);
 
         // Load into emit buffer
-        load_emit(p, min::vec3<float>(0.0, 0.0, 0.0), wind);
-
-        // Delete any attractor
-        _attract_index = -1;
-        _emit.attractor_clear();
+        load_miss(index, p, wind);
     }
     inline void load_static_explode(const min::vec3<float> &p, const min::vec3<float> &direction, const float time, const float size)
     {
@@ -325,20 +416,20 @@ class particle
     {
         _velocity = velocity;
     }
-    inline void set_launch_position(const min::vec3<float> &p)
+    inline void set_miss_launch_position(const size_t index, const min::vec3<float> &p)
     {
         // Update launch position
-        _emit.set_position(p);
+        _miss[index].emit().set_position(p);
 
         // Set the reference position
-        set_launch_ref(p);
+        _miss[index].set_ref(p);
     }
     void update(min::camera<float> &cam, const double dt)
     {
         // Unbind the last VAO to prevent scrambling buffers
         _static.unbind();
 
-        // Update charge or launch
+        // Update charge
         if (_charge_time > 0.0)
         {
             // Remove some of the time
@@ -366,16 +457,21 @@ class particle
             // Upload data to GPU
             _emit.upload();
         }
-        else if (_launch_time > 0.0)
+
+        // Update miss launch
+        for (size_t i = 0; i < _miss_limit; i++)
         {
-            // Remove some of the time
-            _launch_time -= dt;
+            if (_miss[i].time() > 0.0)
+            {
+                // Remove some of the time
+                _miss[i].time_dec(dt);
 
-            // Update the particle positions
-            _emit.step(dt);
+                // Update the particle positions
+                _miss[i].emit().step(dt);
 
-            // Upload data to GPU
-            _emit.upload();
+                // Upload data to GPU
+                _miss[i].emit().upload();
+            }
         }
 
         // Update explode

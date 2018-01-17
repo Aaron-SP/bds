@@ -117,8 +117,10 @@ class sound_info
 class sound
 {
   private:
+    static constexpr size_t _bg_sounds = 2;
     static constexpr size_t _max_delay = 120;
-    static constexpr size_t _max_sounds = 7;
+    static constexpr size_t _max_sounds = 19;
+    static constexpr size_t _miss_limit = 10;
     static constexpr float _land_threshold = 3.0;
     static constexpr float _max_speed = 10.0;
     static constexpr float _fade_speed = 0.1;
@@ -165,6 +167,8 @@ class sound
     min::sound_buffer _buffer;
     std::vector<sound_info> _si;
     std::vector<size_t> _music;
+    std::vector<size_t> _miss;
+    size_t _miss_old;
     std::uniform_int_distribution<size_t> _int_dist;
     std::uniform_real_distribution<double> _real_dist;
     std::mt19937 _gen;
@@ -209,13 +213,13 @@ class sound
     {
         return _si[8];
     }
-    inline sound_info &miss_launch_info()
+    inline sound_info &shot_info()
     {
         return _si[9];
     }
-    inline sound_info &shot_info()
+    inline sound_info &miss_launch_info(const size_t index)
     {
-        return _si[10];
+        return _si[10 + index];
     }
     inline void load_explosion_settings(const size_t s)
     {
@@ -252,7 +256,7 @@ class sound
     }
     inline void load_ogg_sound(const min::ogg &sound, const float gain, const float fade_speed = _fade_speed)
     {
-        // Load a WAVE file into buffer
+        // Load a OGG file into buffer
         const size_t b = _buffer.add_ogg_pcm(sound);
 
         // Load the sound into the sound buffer
@@ -267,15 +271,11 @@ class sound
         const min::ogg sound2(ogg_file2);
 
         // Create music buffers
-        const size_t b1 = _buffer.add_ogg_pcm(sound1);
-        const size_t b2 = _buffer.add_ogg_pcm(sound2);
-
-        // Store music buffer indices
-        _music.push_back(b1);
-        _music.push_back(b2);
+        _music[0] = _buffer.add_ogg_pcm(sound1);
+        _music[1] = _buffer.add_ogg_pcm(sound2);
 
         // Load the first sound into the sound buffer
-        load_sound(b1, _bg_gain, _bg_fade);
+        load_sound(_music[0], _bg_gain, _bg_fade);
     }
     inline void load_charge_sound()
     {
@@ -368,16 +368,34 @@ class sound
         // Load a WAVE file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/jet_m.ogg");
         const min::ogg sound(ogg);
-        load_ogg_sound(sound, _miss_launch_gain, _miss_launch_fade);
 
-        // Get the sound source
-        const size_t s = miss_launch_info().source();
+        // Load a OGG file into buffer
+        const size_t b = _buffer.add_ogg_pcm(sound);
 
-        // Load explosion settings
-        load_explosion_settings(s);
+        // Get the gains and fades for this sound
+        const float gain = _miss_launch_gain;
+        const float fade = _miss_launch_fade;
 
-        // Set the audio to loop
-        _buffer.set_source_loop(s, true);
+        // Create many sources
+        for (size_t i = 0; i < _miss_limit; i++)
+        {
+            _miss[i] = _buffer.add_source();
+
+            // Adjust the gain
+            _buffer.set_source_gain(_miss[i], gain);
+
+            // Load explosion settings
+            load_explosion_settings(_miss[i]);
+
+            // Set the audio to loop
+            _buffer.set_source_loop(_miss[i], true);
+
+            // Bind source to sound data
+            _buffer.bind(b, _miss[i]);
+
+            // Create a new sound info
+            _si.emplace_back(b, _miss[i], gain, fade);
+        }
     }
     inline void load_shot_sound()
     {
@@ -418,7 +436,9 @@ class sound
 
   public:
     sound()
-        : _int_dist(0, 1), _real_dist(0, _max_delay), _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
+        : _music(_bg_sounds), _miss(_miss_limit), _miss_old(0),
+          _int_dist(0, 1), _real_dist(0, _max_delay),
+          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
           _delay(0.0), _start{}, _waiting(false), _enable_bg(false)
     {
         // Reserve memory for sources and buffers
@@ -451,11 +471,11 @@ class sound
         // Load missile explode sound into buffer
         load_miss_ex_sound();
 
-        // Load missile launch sound into buffer
-        load_miss_launch_sound();
-
         // Load shot sound into buffer
         load_shot_sound();
+
+        // Load missile launch sound into buffer
+        load_miss_launch_sound();
 
         // Set the buffer distance model
         _buffer.set_distance_model(AL_INVERSE_DISTANCE_CLAMPED);
@@ -479,6 +499,30 @@ class sound
 
         // Reset the gain
         _buffer.set_source_gain(si.source(), si.gain());
+    }
+    inline size_t get_idle_miss_launch_id()
+    {
+        // Output id
+        size_t id = 0;
+
+        // Scan for unused particle system
+        for (size_t i = 0; i < _miss_limit; i++)
+        {
+            // Start at the oldest index
+            const size_t index = (_miss_old %= _miss_limit)++;
+
+            // If index is unused
+            if (!miss_launch_info(index).playing())
+            {
+                // Assign id for use
+                id = index;
+
+                // Break out since found
+                break;
+            }
+        }
+
+        return id;
     }
     inline void play_bg(const bool flag)
     {
@@ -609,9 +653,9 @@ class sound
         // Play the sound
         _buffer.play_async(s);
     }
-    inline void play_miss_launch(const min::vec3<float> &p)
+    inline void play_miss_launch(const size_t index, const min::vec3<float> &p)
     {
-        sound_info &si = miss_launch_info();
+        sound_info &si = miss_launch_info(index);
 
         // Set the fade and play flags
         si.set_fade_out(false);
@@ -628,16 +672,16 @@ class sound
         // Play the sound asynchronously at full gain
         _buffer.play_async(s);
     }
-    inline void stop_miss_launch()
+    inline void stop_miss_launch(const size_t index)
     {
-        sound_info &si = miss_launch_info();
+        sound_info &si = miss_launch_info(index);
 
         // Turn on fading
         si.set_fade_out(true);
     }
-    inline void update_miss_launch(const min::vec3<float> &p)
+    inline void update_miss_launch(const size_t index, const min::vec3<float> &p)
     {
-        sound_info &si = miss_launch_info();
+        sound_info &si = miss_launch_info(index);
 
         // Set the sound position
         _buffer.set_source_position(si.source(), p);
