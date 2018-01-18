@@ -155,7 +155,7 @@ class fractex
 
         // Update drone and missile matrices
         const game::static_instance &instance = _world.get_instances();
-        _uniforms.update_drones(instance.get_cube_matrices());
+        _uniforms.update_drones(instance.get_drone_matrices());
         _uniforms.update_missiles(instance.get_missile_matrices());
 
         // Update md5 model bones

@@ -38,7 +38,7 @@ namespace game
 class static_instance
 {
   private:
-    static constexpr size_t _CUBE_LIMIT = 10;
+    static constexpr size_t _DRONE_LIMIT = 10;
     static constexpr size_t _MISS_LIMIT = 10;
 
     min::shader _vertex;
@@ -49,36 +49,36 @@ class static_instance
     // Buffers for model data and textures
     min::vertex_buffer<float, uint16_t, min::static_vertex, GL_FLOAT, GL_UNSIGNED_SHORT> _buffer;
     min::texture_buffer _texture_buffer;
-    GLuint _cube_tid;
+    GLuint _drone_tid;
     GLuint _miss_tid;
 
     // Bounding box for instance model
-    min::aabbox<float, min::vec3> _cube_box;
+    min::aabbox<float, min::vec3> _drone_box;
     min::aabbox<float, min::vec3> _miss_box;
 
     // Positions of each instance
-    std::vector<min::mat4<float>> _cube_mat;
+    std::vector<min::mat4<float>> _drone_mat;
     std::vector<min::mat4<float>> _miss_mat;
 
     // Indices for each mesh
-    size_t _cube_index;
+    size_t _drone_index;
     size_t _miss_index;
 
-    inline void load_cube_model()
+    inline void load_drone_model()
     {
-        // Load cube data from binary mesh file
-        min::mesh<float, uint16_t> cube_mesh("companion");
-        const min::mem_file &cube_file = memory_map::memory.get_file("data/models/cube.bmesh");
-        cube_mesh.from_file(cube_file);
+        // Load drone data from binary mesh file
+        min::mesh<float, uint16_t> drone_mesh("companion");
+        const min::mem_file &drone_file = memory_map::memory.get_file("data/models/drone.bmesh");
+        drone_mesh.from_file(drone_file);
 
         // Create bounding box from mesh data
-        const min::aabbox<float, min::vec4> cube_box(cube_mesh.vertex);
+        const min::aabbox<float, min::vec4> drone_box(drone_mesh.vertex);
 
         // Convert from vec4 to vec3
-        _cube_box = min::aabbox<float, min::vec3>(cube_box.get_min(), cube_box.get_max());
+        _drone_box = min::aabbox<float, min::vec3>(drone_box.get_min(), drone_box.get_max());
 
         // Add mesh and update buffers
-        _cube_index = _buffer.add_mesh(cube_mesh);
+        _drone_index = _buffer.add_mesh(drone_mesh);
     }
     inline void load_missile_model()
     {
@@ -99,8 +99,8 @@ class static_instance
 
     inline void load_models()
     {
-        // Load cube data
-        load_cube_model();
+        // Load drone data
+        load_drone_model();
 
         // Load missile data
         load_missile_model();
@@ -125,12 +125,12 @@ class static_instance
     }
     inline void load_textures()
     {
-        // Load cube textures
-        const min::mem_file &cube_file = memory_map::memory.get_file("data/texture/cube.dds");
-        const min::dds cube = min::dds(cube_file);
+        // Load drone textures
+        const min::mem_file &drone_file = memory_map::memory.get_file("data/texture/drone.dds");
+        const min::dds drone = min::dds(drone_file);
 
         // Load dds into texture buffer
-        _cube_tid = _texture_buffer.add_dds_texture(cube);
+        _drone_tid = _texture_buffer.add_dds_texture(drone);
 
         // Load missile textures
         const min::mem_file &miss_file = memory_map::memory.get_file("data/texture/missile.dds");
@@ -164,19 +164,19 @@ class static_instance
         // Load program index
         load_program_index(uniforms);
     }
-    size_t add_cube(const min::vec3<float> &p)
+    size_t add_drone(const min::vec3<float> &p)
     {
         // Check for buffer overflow
-        if (_cube_mat.size() == _CUBE_LIMIT)
+        if (_drone_mat.size() == _DRONE_LIMIT)
         {
-            throw std::runtime_error("static_instance: must change default cube count");
+            throw std::runtime_error("static_instance: must change default drone count");
         }
 
         // Push back location
-        _cube_mat.push_back(p);
+        _drone_mat.push_back(p);
 
         // return mob id
-        return _cube_mat.size() - 1;
+        return _drone_mat.size() - 1;
     }
     size_t add_missile(const min::vec3<float> &p)
     {
@@ -201,13 +201,13 @@ class static_instance
     {
         _miss_mat.clear();
     }
-    min::aabbox<float, min::vec3> box_cube(const size_t index) const
+    min::aabbox<float, min::vec3> box_drone(const size_t index) const
     {
         // Create box for this mob
-        min::aabbox<float, min::vec3> box(_cube_box);
+        min::aabbox<float, min::vec3> box(_drone_box);
 
         // Move box to mob position
-        box.set_position(_cube_mat[index].get_translation());
+        box.set_position(_drone_mat[index].get_translation());
 
         // Return this box for collisions
         return box;
@@ -231,18 +231,18 @@ class static_instance
         // Change program to instance shaders
         _prog.use();
 
-        // Draw cubes
-        if (_cube_mat.size() > 0)
+        // Draw drones
+        if (_drone_mat.size() > 0)
         {
             // Bind this texture for drawing on channel '0'
-            _texture_buffer.bind(_cube_tid, 0);
+            _texture_buffer.bind(_drone_tid, 0);
 
-            // Set the start index for cubes
+            // Set the start index for drones
             set_start_index(45);
 
             // Draw mob instances
-            const size_t size = _cube_mat.size();
-            _buffer.draw_many(GL_TRIANGLES, _cube_index, size);
+            const size_t size = _drone_mat.size();
+            _buffer.draw_many(GL_TRIANGLES, _drone_index, size);
         }
 
         // Draw missiles
@@ -259,21 +259,21 @@ class static_instance
             _buffer.draw_many(GL_TRIANGLES, _miss_index, size);
         }
     }
-    const std::vector<min::mat4<float>> &get_cube_matrices() const
+    const std::vector<min::mat4<float>> &get_drone_matrices() const
     {
-        return _cube_mat;
+        return _drone_mat;
     }
     const std::vector<min::mat4<float>> &get_missile_matrices() const
     {
         return _miss_mat;
     }
-    bool cube_full() const
+    bool drone_full() const
     {
-        return _cube_mat.size() == _CUBE_LIMIT;
+        return _drone_mat.size() == _DRONE_LIMIT;
     }
-    size_t cube_size() const
+    size_t drone_size() const
     {
-        return _cube_mat.size();
+        return _drone_mat.size();
     }
     bool missile_full() const
     {
@@ -283,13 +283,13 @@ class static_instance
     {
         return _miss_mat.size();
     }
-    void update_cube_position(const size_t index, const min::vec3<float> &p)
+    void update_drone_position(const size_t index, const min::vec3<float> &p)
     {
-        _cube_mat[index].set_translation(p);
+        _drone_mat[index].set_translation(p);
     }
-    void update_cube_rotation(const size_t index, const min::quat<float> &r)
+    void update_drone_rotation(const size_t index, const min::quat<float> &r)
     {
-        _cube_mat[index].set_rotation(r);
+        _drone_mat[index].set_rotation(r);
     }
     void update_missile_position(const size_t index, const min::vec3<float> &p)
     {

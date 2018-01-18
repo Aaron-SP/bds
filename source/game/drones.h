@@ -120,10 +120,10 @@ class drones
     inline size_t add(const min::vec3<float> &p)
     {
         // Create a drone
-        const size_t inst_id = _inst->add_cube(p);
+        const size_t inst_id = _inst->add_drone(p);
 
         // Add to physics simulation
-        const min::aabbox<float, min::vec3> box = _inst->box_cube(inst_id);
+        const min::aabbox<float, min::vec3> box = _inst->box_drone(inst_id);
         const size_t body_id = _sim->add_body(box, 10.0);
 
         // Get the physics body for editing
@@ -132,7 +132,7 @@ class drones
         // Set this body to be unrotatable
         body.set_no_rotate();
 
-        // Add path and path data for cube
+        // Add path and path data for drone
         _drones.emplace_back(body_id, inst_id, p, _dest);
 
         // Return the drone index
@@ -200,7 +200,7 @@ class drones
 
             // Update the instance matrix
             const size_t inst_id = _drones[i].inst_id();
-            _inst->update_cube_position(inst_id, p);
+            _inst->update_drone_position(inst_id, p);
         }
     }
 };
