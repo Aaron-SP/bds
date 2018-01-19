@@ -156,6 +156,7 @@ class fractex
         // Update drone and missile matrices
         const game::static_instance &instance = _world.get_instances();
         _uniforms.update_drones(instance.get_drone_matrices());
+        _uniforms.update_drops(instance.get_drop_matrices());
         _uniforms.update_missiles(instance.get_missile_matrices());
 
         // Update md5 model bones
@@ -227,7 +228,7 @@ class fractex
         // Update the mouse cursor to center
         center_cursor();
     }
-    void draw(const size_t phys_steps, const float dt)
+    void draw(const float dt)
     {
         // Get player physics body position
         const min::vec3<float> &p = _world.get_player().position();
@@ -245,7 +246,7 @@ class fractex
             _state.update(p, c, _win.get_width(), _win.get_height());
 
             // Update the world state
-            _world.update(camera, phys_steps);
+            _world.update(camera, dt);
 
             // Update the sound listener properties
             _sound.update(camera, _world.get_player().velocity());

@@ -42,13 +42,11 @@ inline void show_title(fractex &game, min::loop_sync &sync, const size_t frames)
 
 inline void show_game(fractex &game, min::loop_sync &sync, const size_t frames, const bool resize)
 {
-    double frame_time = 0.0;
-
     // Register the game callbacks
     game.disable_title_screen(resize);
 
     // Calculate number of physics steps per frame
-    const size_t phys_steps = std::ceil(180.0 / frames);
+    double frame_time = 0.0;
 
     // User can close with Q or use window manager
     while (!game.is_closed())
@@ -65,7 +63,7 @@ inline void show_game(fractex &game, min::loop_sync &sync, const size_t frames, 
             game.clear_background();
 
             // Draw the model
-            game.draw(phys_steps, frame_time);
+            game.draw(frame_time);
 
             // Update the window after draw command
             game.update_window();

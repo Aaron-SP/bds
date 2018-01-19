@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __STATIC_INSTANCE__
 #define __STATIC_INSTANCE__
 
+#include <game/geometry.h>
 #include <game/memory_map.h>
 #include <game/uniforms.h>
 #include <min/aabbox.h>
@@ -39,6 +40,7 @@ class static_instance
 {
   private:
     static constexpr size_t _DRONE_LIMIT = 10;
+    static constexpr size_t _DROP_LIMIT = 10;
     static constexpr size_t _MISS_LIMIT = 10;
 
     min::shader _vertex;
@@ -50,24 +52,28 @@ class static_instance
     min::vertex_buffer<float, uint16_t, min::static_vertex, GL_FLOAT, GL_UNSIGNED_SHORT> _buffer;
     min::texture_buffer _texture_buffer;
     GLuint _drone_tid;
+    GLuint _drop_tid;
     GLuint _miss_tid;
 
     // Bounding box for instance model
     min::aabbox<float, min::vec3> _drone_box;
+    min::aabbox<float, min::vec3> _drop_box;
     min::aabbox<float, min::vec3> _miss_box;
 
     // Positions of each instance
     std::vector<min::mat4<float>> _drone_mat;
+    std::vector<min::mat4<float>> _drop_mat;
     std::vector<min::mat4<float>> _miss_mat;
 
     // Indices for each mesh
     size_t _drone_index;
+    size_t _drop_index;
     size_t _miss_index;
 
     inline void load_drone_model()
     {
         // Load drone data from binary mesh file
-        min::mesh<float, uint16_t> drone_mesh("companion");
+        min::mesh<float, uint16_t> drone_mesh("drone");
         const min::mem_file &drone_file = memory_map::memory.get_file("data/models/drone.bmesh");
         drone_mesh.from_file(drone_file);
 
@@ -79,6 +85,45 @@ class static_instance
 
         // Add mesh and update buffers
         _drone_index = _buffer.add_mesh(drone_mesh);
+    }
+    inline void load_drop_model()
+    {
+        // Load drop data from geometry functions
+        min::mesh<float, uint16_t> drop_mesh("drop");
+
+        // Define the box min and max
+        const min::vec3<float> min(-0.25, -0.25, -0.25);
+        const min::vec3<float> max(0.25, 0.25, 0.25);
+
+        // Allocate mesh space
+        drop_mesh.vertex.resize(24);
+        drop_mesh.uv.resize(24);
+        drop_mesh.normal.resize(24);
+        drop_mesh.index.resize(36);
+
+        // Calculate block vertices
+        block_vertex(drop_mesh.vertex, 0, min, max);
+
+        // Calculate block uv's
+        block_uv(drop_mesh.uv, 0);
+
+        // Calculate block normals
+        block_normal(drop_mesh.normal, 0);
+
+        // Calculate block indices
+        block_index<uint16_t>(drop_mesh.index, 0, 0);
+
+        // Calculate tangents
+        drop_mesh.calculate_tangents();
+
+        // Create bounding box from mesh data
+        const min::aabbox<float, min::vec4> drop_box(drop_mesh.vertex);
+
+        // Convert from vec4 to vec3
+        _drop_box = min::aabbox<float, min::vec3>(min, max);
+
+        // Add mesh and update buffers
+        _drop_index = _buffer.add_mesh(drop_mesh);
     }
     inline void load_missile_model()
     {
@@ -96,11 +141,13 @@ class static_instance
         // Add mesh and update buffers
         _miss_index = _buffer.add_mesh(miss_mesh);
     }
-
     inline void load_models()
     {
         // Load drone data
         load_drone_model();
+
+        // Load drop data
+        load_drop_model();
 
         // Load missile data
         load_missile_model();
@@ -132,6 +179,13 @@ class static_instance
         // Load dds into texture buffer
         _drone_tid = _texture_buffer.add_dds_texture(drone);
 
+        // Load drop textures
+        const min::mem_file &drop_file = memory_map::memory.get_file("data/texture/atlas.dds");
+        const min::dds drop = min::dds(drop_file);
+
+        // Load dds into texture buffer
+        _drop_tid = _texture_buffer.add_dds_texture(drop);
+
         // Load missile textures
         const min::mem_file &miss_file = memory_map::memory.get_file("data/texture/missile.dds");
         const min::dds missile = min::dds(miss_file);
@@ -139,7 +193,7 @@ class static_instance
         // Load dds into texture buffer
         _miss_tid = _texture_buffer.add_dds_texture(missile);
     }
-    void set_start_index(const GLint start_index) const
+    inline void set_start_index(const GLint start_index) const
     {
         // Set the sampler active texture
         glUniform1i(_index_location, start_index);
@@ -164,7 +218,7 @@ class static_instance
         // Load program index
         load_program_index(uniforms);
     }
-    size_t add_drone(const min::vec3<float> &p)
+    inline size_t add_drone(const min::vec3<float> &p)
     {
         // Check for buffer overflow
         if (_drone_mat.size() == _DRONE_LIMIT)
@@ -178,7 +232,33 @@ class static_instance
         // return mob id
         return _drone_mat.size() - 1;
     }
-    size_t add_missile(const min::vec3<float> &p)
+    inline size_t add_drop(const min::vec3<float> &p, const int8_t atlas)
+    {
+        // Check for buffer overflow
+        if (_drop_mat.size() == _DROP_LIMIT)
+        {
+            throw std::runtime_error("static_instance: must change default drop count");
+        }
+
+        // Push back location
+        _drop_mat.push_back(p);
+
+        // Pack the matrix with the atlas id
+        _drop_mat.back().w(atlas + 2.1);
+
+        // return mob id
+        return _drop_mat.size() - 1;
+    }
+    inline void clear_drop(const size_t index)
+    {
+        // Erase matrix at iterator
+        _drop_mat.erase(_drop_mat.begin() + index);
+    }
+    inline void clear_drops()
+    {
+        _drop_mat.clear();
+    }
+    inline size_t add_missile(const min::vec3<float> &p)
     {
         // Check for buffer overflow
         if (_miss_mat.size() == _MISS_LIMIT)
@@ -192,16 +272,16 @@ class static_instance
         // return mob id
         return _miss_mat.size() - 1;
     }
-    void clear_missile(const size_t index)
+    inline void clear_missile(const size_t index)
     {
         // Erase matrix at iterator
         _miss_mat.erase(_miss_mat.begin() + index);
     }
-    void clear_missiles()
+    inline void clear_missiles()
     {
         _miss_mat.clear();
     }
-    min::aabbox<float, min::vec3> box_drone(const size_t index) const
+    inline min::aabbox<float, min::vec3> box_drone(const size_t index) const
     {
         // Create box for this mob
         min::aabbox<float, min::vec3> box(_drone_box);
@@ -212,7 +292,18 @@ class static_instance
         // Return this box for collisions
         return box;
     }
-    min::aabbox<float, min::vec3> box_missile(const size_t index) const
+    inline min::aabbox<float, min::vec3> box_drop(const size_t index) const
+    {
+        // Create box for this mob
+        min::aabbox<float, min::vec3> box(_drop_box);
+
+        // Move box to mob position
+        box.set_position(_drop_mat[index].get_translation());
+
+        // Return this box for collisions
+        return box;
+    }
+    inline min::aabbox<float, min::vec3> box_missile(const size_t index) const
     {
         // Create box for this mob
         min::aabbox<float, min::vec3> box(_miss_box);
@@ -245,6 +336,20 @@ class static_instance
             _buffer.draw_many(GL_TRIANGLES, _drone_index, size);
         }
 
+        // Draw drops
+        if (_drop_mat.size() > 0)
+        {
+            // Bind this texture for drawing on channel '0'
+            _texture_buffer.bind(_drop_tid, 0);
+
+            // Set the start index for drops
+            set_start_index(55);
+
+            // Draw mob instances
+            const size_t size = _drop_mat.size();
+            _buffer.draw_many(GL_TRIANGLES, _drop_index, size);
+        }
+
         // Draw missiles
         if (_miss_mat.size() > 0)
         {
@@ -252,50 +357,70 @@ class static_instance
             _texture_buffer.bind(_miss_tid, 0);
 
             // Set the start index for missiles
-            set_start_index(55);
+            set_start_index(65);
 
             // Draw missile instances
             const size_t size = _miss_mat.size();
             _buffer.draw_many(GL_TRIANGLES, _miss_index, size);
         }
     }
-    const std::vector<min::mat4<float>> &get_drone_matrices() const
+    inline const std::vector<min::mat4<float>> &get_drone_matrices() const
     {
         return _drone_mat;
     }
-    const std::vector<min::mat4<float>> &get_missile_matrices() const
+    inline const std::vector<min::mat4<float>> &get_drop_matrices() const
+    {
+        return _drop_mat;
+    }
+    inline const std::vector<min::mat4<float>> &get_missile_matrices() const
     {
         return _miss_mat;
     }
-    bool drone_full() const
+    inline bool drone_full() const
     {
         return _drone_mat.size() == _DRONE_LIMIT;
     }
-    size_t drone_size() const
+    inline size_t drone_size() const
     {
         return _drone_mat.size();
     }
-    bool missile_full() const
+    inline bool drop_full() const
+    {
+        return _drop_mat.size() == _DROP_LIMIT;
+    }
+    inline size_t drop_size() const
+    {
+        return _drop_mat.size();
+    }
+    inline bool missile_full() const
     {
         return _miss_mat.size() == _MISS_LIMIT;
     }
-    size_t missile_size() const
+    inline size_t missile_size() const
     {
         return _miss_mat.size();
     }
-    void update_drone_position(const size_t index, const min::vec3<float> &p)
+    inline void update_drone_position(const size_t index, const min::vec3<float> &p)
     {
         _drone_mat[index].set_translation(p);
     }
-    void update_drone_rotation(const size_t index, const min::quat<float> &r)
+    inline void update_drone_rotation(const size_t index, const min::quat<float> &r)
     {
         _drone_mat[index].set_rotation(r);
     }
-    void update_missile_position(const size_t index, const min::vec3<float> &p)
+    inline void update_drop_position(const size_t index, const min::vec3<float> &p)
+    {
+        _drop_mat[index].set_translation(p);
+    }
+    inline void update_drop_rotation(const size_t index, const min::quat<float> &r)
+    {
+        _drop_mat[index].set_rotation(r);
+    }
+    inline void update_missile_position(const size_t index, const min::vec3<float> &p)
     {
         _miss_mat[index].set_translation(p);
     }
-    void update_missile_rotation(const size_t index, const min::quat<float> &r)
+    inline void update_missile_rotation(const size_t index, const min::quat<float> &r)
     {
         _miss_mat[index].set_rotation(r);
     }

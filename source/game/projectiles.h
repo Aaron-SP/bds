@@ -47,59 +47,59 @@ class missile
           _inst_id(inst), _part_id(part), _sound_id(sound),
           _key(key), _value(value), _launch(true) {}
 
-    void dec_inst()
+    inline void dec_inst()
     {
         _inst_id--;
     }
-    size_t inst_id() const
+    inline size_t inst_id() const
     {
         return _inst_id;
     }
-    size_t part_id() const
+    inline size_t part_id() const
     {
         return _part_id;
     }
-    size_t sound_id() const
+    inline size_t sound_id() const
     {
         return _sound_id;
     }
-    const min::vec3<float> &dest() const
+    inline const min::vec3<float> &dest() const
     {
         return _traj.get_dest();
     }
-    bool done() const
+    inline bool done() const
     {
         return _traj.done();
     }
-    bool hit() const
+    inline bool hit() const
     {
         return _value >= 0;
     }
-    min::vec3<float> interpolate(const float dt)
+    inline min::vec3<float> interpolate(const float dt)
     {
         return _traj.weight_interpolate(dt);
     }
-    size_t key() const
+    inline size_t key() const
     {
         return _key;
     }
-    void kill()
+    inline void kill()
     {
         _launch = false;
     }
-    void launch()
+    inline void launch()
     {
         _launch = true;
     }
-    bool launched() const
+    inline bool launched() const
     {
         return _launch;
     }
-    const min::ray<float, min::vec3> &ray() const
+    inline const min::ray<float, min::vec3> &ray() const
     {
         return _ray;
     }
-    int8_t value() const
+    inline int8_t value() const
     {
         return _value;
     }
@@ -211,7 +211,7 @@ class projectiles
     inline void remove(const size_t index)
     {
         // Clear missiles at index
-        _inst->clear_missile(index);
+        _inst->clear_missile(_miss[index].inst_id());
         _miss.erase(_miss.begin() + index);
 
         // Adjust the remaining missile indices

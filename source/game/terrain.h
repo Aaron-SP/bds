@@ -213,7 +213,7 @@ class terrain
         block_normal(_parent.normal, vertex_start);
 
         // Calculate block indices
-        block_index(_parent.index, index_start, vertex_start);
+        block_index<uint32_t>(_parent.index, index_start, vertex_start);
     }
     inline void allocate_mesh_buffer(const std::vector<min::vec4<float>> &cell_buffer)
     {

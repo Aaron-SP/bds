@@ -22,6 +22,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdint>
 #include <game/cgrid.h>
 #include <game/drones.h>
+#include <game/drops.h>
 #include <game/load_state.h>
 #include <game/particle.h>
 #include <game/player.h>
@@ -33,7 +34,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/uniforms.h>
 #include <min/camera.h>
 #include <min/grid.h>
-#include <min/physics.h>
+#include <min/physics_nt.h>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -44,6 +45,7 @@ namespace game
 class world
 {
   private:
+    static constexpr float _body_size = 21;
     static constexpr float _damping = 0.1;
     static constexpr float _time_step = 1.0 / 180.0;
     static constexpr float _grav_mag = 10.0;
@@ -58,7 +60,6 @@ class world
     particle *_particles;
     sound *_sound;
     std::vector<size_t> _view_chunks;
-    std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _player_col_cells;
 
     // Physics stuff
     min::vec3<float> _gravity;
@@ -80,6 +81,7 @@ class world
     // Static instances for drones and drops
     static_instance _instance;
     drones _drones;
+    drops _drops;
     projectiles _projectile;
 
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
@@ -92,17 +94,13 @@ class world
     }
     inline size_t character_load(const load_state &state)
     {
-        // Create a hitbox for character world collisions
-        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
-        const min::vec3<float> &position = state.get_spawn();
-        const min::aabbox<float, min::vec3> box(position - half_extent, position + half_extent);
+        const min::vec3<float> &p = state.get_spawn();
 
         // Create the physics body
-        _char_id = _simulation.add_body(box, 10.0);
-        _simulation.get_body(_char_id).set_no_rotate();
+        _char_id = _simulation.add_body(cgrid::player_box(p), 10.0);
 
         // Update recent chunk
-        _grid.update_current_chunk(position);
+        _grid.update_current_chunk(p);
 
         // If this the first time we load
         if (!state.is_loaded())
@@ -111,7 +109,7 @@ class world
             _scale = min::vec3<unsigned>(3, 3, 3);
 
             // Snap to grid
-            const min::vec3<float> snapped = cgrid::snap(position);
+            const min::vec3<float> snapped = cgrid::snap(p);
 
             // Remove geometry around player, requires position snapped to grid and calculated direction vector
             _grid.set_geometry(snapped, _scale, _preview_offset, -1);
@@ -130,6 +128,9 @@ class world
         // If we removed geometry, play particles
         if (removed > 0)
         {
+            // Add a drop
+            _drops.add(point, direction, value);
+
             // Add particle effects
             _particles->load_static_explode(point, direction, 5.0, size);
 
@@ -178,15 +179,39 @@ class world
     }
     inline void reserve_memory(const size_t view_chunk_size)
     {
+        // Reserve space in the simulation
+        _simulation.reserve(_body_size);
+
         // Reserve space in the preview mesh
         _terr_mesh.vertex.reserve(_pre_max_vol);
         _terr_mesh.index.reserve(_pre_max_vol);
 
-        // Reserve space for collision cells
-        _player_col_cells.reserve(36);
-
         // Reserve space for view chunks
         _view_chunks.reserve(view_chunk_size * view_chunk_size * view_chunk_size);
+    }
+    inline void set_collision_callbacks()
+    {
+        // Player collision callback
+        const auto f = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
+
+            // Get other body id, b1 is player body
+            const size_t id = b2.get_id();
+
+            switch (id)
+            {
+            case 1:
+                // Player collided with a drone
+                _player.drone_collide(b2.get_position());
+                break;
+            case 2:
+                break;
+            default:
+                break;
+            }
+        };
+
+        // Register player collision callback
+        _simulation.register_callback(_char_id, f);
     }
     inline void update_all_chunks()
     {
@@ -205,13 +230,30 @@ class world
             }
         }
     }
-    inline void update_world_physics(const size_t steps)
+    inline void update_world_physics(const float dt)
     {
         // Friction Coefficient
+        const size_t steps = std::round(dt / _time_step);
         const float friction = -10.0 / steps;
 
         // Solve the physics simulation
         const min::vec3<float> &p = _player.position();
+
+        // Explosion callback
+        const auto ex = [this, p](const std::pair<min::aabbox<float, min::vec3>, int8_t> &cell) {
+
+            // Check for exploding mines
+            if (cell.second == 21)
+            {
+                // Calculate position and direction
+                const min::vec3<unsigned> radius(3, 3, 3);
+                const min::vec3<float> box_center = center_radius(cell.first.get_center(), radius);
+                const min::vec3<float> dir = (p - box_center).normalize();
+
+                // Explode the block with radius
+                explode_block(box_center, dir, radius, cell.second, 100.0);
+            }
+        };
 
         // Send drones after the player
         _drones.set_destination(p);
@@ -219,58 +261,24 @@ class world
         // Solve all physics timesteps
         for (size_t i = 0; i < steps; i++)
         {
-            // Get all cells that could collide
-            _grid.create_player_collision_cells(_player_col_cells, p);
-
-            // Solve static collisions
-            bool player_land = false;
-            for (const auto &cell : _player_col_cells)
-            {
-                // Did we collide with block?
-                const bool collide = _simulation.collide(_char_id, cell.first);
-
-                // Detect if player has landed
-                if (collide)
-                {
-                    const min::vec3<float> center = cell.first.get_center();
-                    if (center.y() < p.y())
-                    {
-                        player_land = true;
-                    }
-                }
-
-                // If we collided with cell
-                if (collide && !_player.is_exploded())
-                {
-                    // Check for exploding mines
-                    if (cell.second == 21)
-                    {
-                        // Calculate position and direction
-                        const min::vec3<unsigned> radius(3, 3, 3);
-                        const min::vec3<float> box_center = center_radius(cell.first.get_center(), radius);
-                        const min::vec3<float> dir = (p - box_center).normalize();
-
-                        // Explode the block with radius
-                        explode_block(box_center, dir, radius, cell.second, 100.0);
-                    }
-                }
-            }
-
-            // Update the player class
-            _player.update_frame(friction);
-
-            // Update the player landing condition
-            _player.update_land(player_land);
+            // Update the player on this frame
+            _player.update_frame(_grid, friction, ex);
 
             // Update drones on this frame
             _drones.update_frame(_grid, _time_step);
+
+            // Update drops on this frame
+            _drops.update_frame(_grid, _time_step);
 
             // Solve all collisions
             _simulation.solve(_time_step, _damping);
         }
 
-        // Update the drones
+        // Update the drones positions
         _drones.update(_grid);
+
+        // Update the drones positions
+        _drops.update(_grid);
 
         // On missile collision remove block
         const auto on_collide = [this](const min::vec3<float> &point,
@@ -305,10 +313,14 @@ class world
           _sky(uniforms, grid_size),
           _instance(uniforms),
           _drones(&_simulation, &_instance, state.get_spawn()),
+          _drops(&_simulation, &_instance),
           _projectile(particles, &_instance, s)
     {
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);
+
+        // Set collision callbacks
+        set_collision_callbacks();
 
         // Load the uniform buffer with program we will use
         uniforms.set_program(_terrain.get_program());
@@ -360,8 +372,8 @@ class world
         // Draw projectiles
         _projectile.draw(uniforms);
     }
-    inline int8_t explode_block(const min::ray<float, min::vec3> &r, const min::vec3<unsigned> &scale,
-                                const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
+    int8_t explode_block(const min::ray<float, min::vec3> &r, const min::vec3<unsigned> &scale,
+                         const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
         int8_t value = -2;
@@ -414,21 +426,25 @@ class world
     {
         return _instance;
     }
-    player &get_player()
+    inline player &get_player()
     {
         return _player;
     }
-    const player &get_player() const
+    inline const player &get_player() const
     {
         return _player;
     }
-    drones &get_drones()
+    inline drones &get_drones()
     {
         return _drones;
     }
-    const drones &get_drones() const
+    inline const drones &get_drones() const
     {
         return _drones;
+    }
+    inline const drops &get_drops() const
+    {
+        return _drops;
     }
     inline const min::vec3<float> &get_preview_position()
     {
@@ -493,7 +509,7 @@ class world
             _preview_offset = _cached_offset;
         }
     }
-    int8_t scan_block(const min::ray<float, min::vec3> &r)
+    inline int8_t scan_block(const min::ray<float, min::vec3> &r)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
         int8_t value = -2;
@@ -513,7 +529,7 @@ class world
             generate_preview();
         }
     }
-    void set_scale_x(unsigned dx)
+    inline void set_scale_x(unsigned dx)
     {
         // Only applicable in edit mode
         if (_edit_mode)
@@ -532,7 +548,7 @@ class world
             }
         }
     }
-    void set_scale_y(unsigned dy)
+    inline void set_scale_y(unsigned dy)
     {
         // Only applicable in edit mode
         if (_edit_mode)
@@ -551,7 +567,7 @@ class world
             }
         }
     }
-    void set_scale_z(unsigned dz)
+    inline void set_scale_z(unsigned dz)
     {
         // Only applicable in edit mode
         if (_edit_mode)
@@ -570,7 +586,7 @@ class world
             }
         }
     }
-    bool target_block(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
+    inline bool target_block(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
     {
         // Trace a ray to the destination point to find placement position, return point is snapped
         int8_t value = -2;
@@ -584,10 +600,10 @@ class world
         // Toggle flag and return result
         return (_edit_mode = !_edit_mode);
     }
-    void update(min::camera<float> &cam, const size_t steps)
+    void update(min::camera<float> &cam, const float dt)
     {
         // Update the physics and AI in world
-        update_world_physics(steps);
+        update_world_physics(dt);
 
         // Get player position
         const min::vec3<float> &p = _player.position();

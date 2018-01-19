@@ -23,7 +23,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/static_instance.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
-#include <min/physics.h>
+#include <min/physics_nt.h>
 #include <min/vec3.h>
 #include <vector>
 
@@ -111,7 +111,7 @@ class drones
         // Reserve memory for collision cells
         reserve_memory();
 
-        // Add ten drones
+        // Add some drones
         for (size_t i = 0; i < _drone_size; i++)
         {
             add(dest);
@@ -124,13 +124,7 @@ class drones
 
         // Add to physics simulation
         const min::aabbox<float, min::vec3> box = _inst->box_drone(inst_id);
-        const size_t body_id = _sim->add_body(box, 10.0);
-
-        // Get the physics body for editing
-        min::body<float, min::vec3> &body = _sim->get_body(body_id);
-
-        // Set this body to be unrotatable
-        body.set_no_rotate();
+        const size_t body_id = _sim->add_body(box, 10.0, 1);
 
         // Add path and path data for drone
         _drones.emplace_back(body_id, inst_id, p, _dest);
@@ -167,7 +161,7 @@ class drones
         for (size_t i = 0; i < size; i++)
         {
             // Get all cells that could collide
-            grid.create_drone_collision_cells(_col_cells, position(i));
+            grid.drone_collision_cells(_col_cells, position(i));
 
             // Solve static collisions
             const size_t body = _drones[i].body_id();

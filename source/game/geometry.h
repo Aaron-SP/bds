@@ -129,8 +129,12 @@ inline void block_normal(std::vector<min::vec3<float>> &normal, size_t i)
     normal[i++] = min::vec3<float>(0.0, 0.0, 1.0);
 }
 
-inline void block_index(std::vector<uint32_t> &index, size_t i, const size_t vertex_start)
+template <class T>
+inline void block_index(std::vector<T> &index, size_t i, const T vertex_start)
 {
+    // Make sure index is unsigned type
+    static_assert(std::is_unsigned<T>::value, "geometry: block_index(): template parameter must be unsigned");
+
     index[i++] = vertex_start;
     index[i++] = 1 + vertex_start;
     index[i++] = 2 + vertex_start;

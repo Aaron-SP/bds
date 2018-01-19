@@ -45,6 +45,7 @@ class cgrid
     std::vector<bool> _chunk_update;
     std::vector<size_t> _chunk_update_keys;
     std::vector<size_t> _sort_copy;
+    mutable std::vector<size_t> _overlap;
     size_t _recent_chunk;
     size_t _view_chunk_size;
     size_t _view_half_width;
@@ -136,15 +137,6 @@ class cgrid
                 }
             }
         }
-    }
-    static inline min::aabbox<float, min::vec3> create_box(const min::vec3<float> &center)
-    {
-        // Create box at center
-        const min::vec3<float> min = center - min::vec3<float>(0.5, 0.5, 0.5);
-        const min::vec3<float> max = center + min::vec3<float>(0.5, 0.5, 0.5);
-
-        // return the box
-        return min::aabbox<float, min::vec3>(min, max);
     }
     inline min::aabbox<float, min::vec3> create_chunk_box(const min::vec3<float> &chunk_start) const
     {
@@ -653,6 +645,38 @@ class cgrid
         // Save the world state in file
         world_save();
     }
+    static inline min::aabbox<float, min::vec3> grid_box(const min::vec3<float> &p)
+    {
+        // Create box at center
+        const min::vec3<float> half_extent(0.5, 0.5, 0.5);
+
+        // Return the box
+        return min::aabbox<float, min::vec3>(p - half_extent, p + half_extent);
+    }
+    static inline min::aabbox<float, min::vec3> drone_box(const min::vec3<float> &p)
+    {
+        // Create box at center
+        const min::vec3<float> half_extent(0.5, 0.5, 0.5);
+
+        // Return the box
+        return min::aabbox<float, min::vec3>(p - half_extent, p + half_extent);
+    }
+    static inline min::aabbox<float, min::vec3> drop_box(const min::vec3<float> &p)
+    {
+        // Create box at center
+        const min::vec3<float> half_extent(0.25, 0.25, 0.25);
+
+        // Return the box
+        return min::aabbox<float, min::vec3>(p - half_extent, p + half_extent);
+    }
+    static inline min::aabbox<float, min::vec3> player_box(const min::vec3<float> &p)
+    {
+        // Create box at center
+        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
+
+        // Return the box
+        return min::aabbox<float, min::vec3>(p - half_extent, p + half_extent);
+    }
     static inline min::vec3<float> snap(const min::vec3<float> &point)
     {
         const float x = point.x();
@@ -692,57 +716,108 @@ class cgrid
         // Run the function
         cubic_grid(start, offset, length, f);
     }
-    inline void create_player_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
+    inline void drone_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
 
-        // Get cubic function properties
-        // Use player snap to get correct y coordinate
-        const min::vec3<float> start = snap_player(center) - min::vec3<float>(1.0, 1.5, 1.0);
-        const min::vec3<int> offset(1, 1, 1);
-        const min::vec3<unsigned> length(3, 4, 3);
+        // Check if position is valid
+        const bool valid = inside(center);
+        if (valid)
+        {
+            // Create box at this point
+            const min::aabbox<float, min::vec3> box = drone_box(center);
 
-        // Create cubic function, for each cell in cubic space
-        const auto f = [this, &out](const size_t key) {
+            // Get all overlapping cells
+            min::vec3<float>::grid_overlap(_overlap, _world.get_min(), _cell_extent, _grid_scale, box.get_min(), box.get_max());
 
-            // Check if valid and if the cell is not empty
-            if (_grid[key] != -1)
+            // Create boxes of all overlapping cells
+            const size_t size = _overlap.size();
+            for (size_t i = 0; i < size; i++)
             {
-                // Create box at this point
-                const min::aabbox<float, min::vec3> box = create_box(grid_cell_center(key));
+                // Get the cell key
+                const size_t key = _overlap[i];
 
-                // Add box and grid value to
-                out.emplace_back(box, _grid[key]);
+                // Check if valid and if the cell is not empty
+                if (_grid[key] != -1)
+                {
+                    // Create box at this point
+                    const min::aabbox<float, min::vec3> grid = grid_box(grid_cell_center(key));
+
+                    // Add box and grid value to
+                    out.emplace_back(grid);
+                }
             }
-        };
-
-        // Run the function
-        cubic_grid(start, offset, length, f);
+        }
     }
-    inline void create_drone_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
+    inline void drop_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
 
-        // Get cubic function properties
-        const min::vec3<float> start = snap(center) - min::vec3<float>(1.0, 1.0, 1.0);
-        const min::vec3<int> offset(1, 1, 1);
-        const min::vec3<unsigned> length(3, 3, 3);
+        // Check if position is valid
+        const bool valid = inside(center);
+        if (valid)
+        {
 
-        // Create cubic function, for each cell in cubic space
-        const auto f = [this, &out](const size_t key) {
+            // Create box at this point
+            const min::aabbox<float, min::vec3> box = drop_box(center);
 
-            // Check if valid and if the cell is not empty
-            if (_grid[key] != -1)
+            // Get all overlapping cells
+            min::vec3<float>::grid_overlap(_overlap, _world.get_min(), _cell_extent, _grid_scale, box.get_min(), box.get_max());
+
+            // Create boxes of all overlapping cells
+            const size_t size = _overlap.size();
+            for (size_t i = 0; i < size; i++)
             {
-                // Create box at this point
-                out.push_back(create_box(grid_cell_center(key)));
-            }
-        };
+                // Get the cell key
+                const size_t key = _overlap[i];
 
-        // Run the function
-        cubic_grid(start, offset, length, f);
+                // Check if valid and if the cell is not empty
+                if (_grid[key] != -1)
+                {
+                    // Create box at this point
+                    const min::aabbox<float, min::vec3> grid = grid_box(grid_cell_center(key));
+
+                    // Add box and grid value to
+                    out.emplace_back(grid);
+                }
+            }
+        }
+    }
+    inline void player_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
+    {
+        // Surrounding cells
+        out.clear();
+
+        // Check if position is valid
+        const bool valid = inside(center);
+        if (valid)
+        {
+            // Create box at this point
+            const min::aabbox<float, min::vec3> box = player_box(center);
+
+            // Get all overlapping cells
+            min::vec3<float>::grid_overlap(_overlap, _world.get_min(), _cell_extent, _grid_scale, box.get_min(), box.get_max());
+
+            // Create boxes of all overlapping cells
+            const size_t size = _overlap.size();
+            for (size_t i = 0; i < size; i++)
+            {
+                // Get the cell key
+                const size_t key = _overlap[i];
+
+                // Check if valid and if the cell is not empty
+                if (_grid[key] != -1)
+                {
+                    // Create box at this point
+                    const min::aabbox<float, min::vec3> grid = grid_box(grid_cell_center(key));
+
+                    // Add box and grid value to
+                    out.emplace_back(grid, _grid[key]);
+                }
+            }
+        }
     }
     inline int8_t get_atlas() const
     {

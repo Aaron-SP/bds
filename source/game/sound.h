@@ -46,15 +46,15 @@ class sound_info
     sound_info(const size_t b, const size_t s, const float gain, const float fade_speed)
         : _b(b), _s(s), _max_gain(gain), _fade_speed(fade_speed), _gain(gain), _fade_in(false), _fade_out(false), _play(false) {}
 
-    float max_gain() const
+    inline float max_gain() const
     {
         return _max_gain;
     }
-    size_t buffer() const
+    inline size_t buffer() const
     {
         return _b;
     }
-    float fade()
+    inline float fade()
     {
         // Change gain by constant factor
         if (_fade_out)
@@ -76,39 +76,39 @@ class sound_info
 
         return _gain;
     }
-    bool fade_in() const
+    inline bool fade_in() const
     {
         return _fade_in;
     }
-    bool fade_out() const
+    inline bool fade_out() const
     {
         return _fade_out;
     }
-    float gain() const
+    inline float gain() const
     {
         return _gain;
     }
-    bool playing() const
+    inline bool playing() const
     {
         return _play;
     }
-    void set_fade_in(const bool flag)
+    inline void set_fade_in(const bool flag)
     {
         _fade_in = flag;
     }
-    void set_fade_out(const bool flag)
+    inline void set_fade_out(const bool flag)
     {
         _fade_out = flag;
     }
-    void set_gain(const float gain)
+    inline void set_gain(const float gain)
     {
         _gain = gain;
     }
-    void set_play(const bool flag)
+    inline void set_play(const bool flag)
     {
         _play = flag;
     }
-    size_t source() const
+    inline size_t source() const
     {
         return _s;
     }
