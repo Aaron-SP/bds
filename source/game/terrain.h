@@ -199,7 +199,7 @@ class terrain
     GLint _mat_loc;
     min::light<float> _light1;
     min::light<float> _light2;
-    const size_t _size;
+    size_t _size;
 
     inline void allocate_mesh_buffer(const std::vector<min::vec4<float>> &cell_buffer)
     {
@@ -214,29 +214,19 @@ class terrain
         // Calculate buffer size limits
         const size_t max_size = min::uniform_buffer<float>::get_max_buffer_size();
         const size_t size = chunk_size * chunk_size * chunk_size;
-        const size_t def_size = _largest_chunk_size;
 
         // Alert user that we need a big enough uniform size to continue
         std::cout << "terrain : Asking for cells in chunk of: " + std::to_string(size) << std::endl;
         std::cout << "terrain : Max uniform buffer size is: " + std::to_string(max_size) << std::endl;
-        std::cout << "terrain : Largest chunk size for this mode is: " + std::to_string(def_size) << std::endl;
 
         // Check if uniform buffer size is not large enough
         if (size > max_size)
         {
             throw std::runtime_error("terrain: maximum uniform buffer size is too small for specified chunk size");
         }
-        else if (size > def_size)
-        {
-            throw std::runtime_error("terrain: asked for chunk size larger than largest chunk size");
-        }
-        else if (def_size > max_size)
-        {
-            throw std::runtime_error("terrain: maximum uniform buffer size is too small for default chunk size");
-        }
 
         // Size is big enough for 32 chunk size
-        return def_size;
+        return size;
     }
     inline void load_box_model()
     {
@@ -345,12 +335,81 @@ class terrain
         // Pack the matrix with the atlas id
         _mat[cell].w(atlas + 2.1);
     }
+    inline min::mem_file &set_uniform_size(min::mem_file &file, const size_t chunk_size)
+    {
+        // Get the GPU buffer size
+        _size = get_buffer_size(chunk_size);
+
+        // Abort flag
+        bool found = false;
+
+        // Find size repeating zeros in the file
+        const size_t file_size = file.size();
+        for (size_t i = 0; i < file_size; i++)
+        {
+            if (file[i] == '0')
+            {
+                size_t count = 1;
+                const size_t start = i;
+                while (file[++i] == '0')
+                {
+                    count++;
+                }
+
+                // Found the size to overwrite
+                if (count == 6)
+                {
+                    // String of digits
+                    const std::string dig_str = std::to_string(_size);
+                    if (dig_str.size() > 6)
+                    {
+                        throw std::runtime_error("terrain: chunk size larger than six digits");
+                    }
+                    else
+                    {
+                        // Write the digits to the vertex shader
+                        const size_t dig_end = start + 5;
+                        const size_t str_size = dig_str.size();
+                        const size_t str_end = str_size - 1;
+
+                        // Overwrite the digits
+                        for (size_t i = 0; i < str_size; i++)
+                        {
+                            // Write from the end to the beginning in reverse order
+                            file[dig_end - i] = dig_str[str_end - i];
+                        }
+
+                        // Write spaces for the remaing zeroes
+                        for (size_t i = str_size; i < 6; i++)
+                        {
+                            file[dig_end - i] = ' ';
+                        }
+
+                        // Mission accomplished, let's go home
+                        found = true;
+
+                        // Work done so break out
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Did we write the size correctly?
+        if (!found)
+        {
+            throw std::runtime_error("terrain: couldn't find six digit string in 'data/shader/terrain_inst.vertex'");
+        }
+
+        // Return the edited file
+        return file;
+    }
 
   public:
     terrain(const game::uniforms &uniforms, const size_t chunks, const size_t chunk_size)
-        : _tv(memory_map::memory.get_file("data/shader/terrain_inst.vertex"), GL_VERTEX_SHADER),
+        : _tv(set_uniform_size(memory_map::memory.get_file("data/shader/terrain_inst.vertex"), chunk_size), GL_VERTEX_SHADER),
           _tf(memory_map::memory.get_file("data/shader/terrain_inst.fragment"), GL_FRAGMENT_SHADER),
-          _program(_tv, _tf), _gb(), _ub(chunks + 1), _size(get_buffer_size(chunk_size))
+          _program(_tv, _tf), _gb(), _ub(chunks + 1)
     {
         // Load box model
         load_box_model();
