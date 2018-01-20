@@ -216,7 +216,7 @@ class world
     inline void update_all_chunks()
     {
         // For all chunk meshes
-        const size_t size = _grid.get_chunk_size();
+        const size_t size = _grid.get_chunks();
         for (size_t i = 0; i < size; i++)
         {
             // If the chunk needs updating
@@ -299,7 +299,7 @@ class world
     world(const load_state &state, particle *const particles, sound *const s, const game::uniforms &uniforms,
           const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
         : _grid(chunk_size, grid_size, view_chunk_size),
-          _terrain(_grid.get_chunk_size()),
+          _terrain(uniforms, _grid.get_chunks(), chunk_size),
           _particles(particles),
           _sound(s),
           _gravity(0.0, -_grav_mag, 0.0),
@@ -322,9 +322,6 @@ class world
         // Set collision callbacks
         set_collision_callbacks();
 
-        // Load the uniform buffer with program we will use
-        uniforms.set_program(_terrain.get_program());
-
         // Reserve space for used vectors
         reserve_memory(view_chunk_size);
 
@@ -345,19 +342,13 @@ class world
         _terrain.bind();
 
         // Draw the world geometry
-        _terrain.draw_terrain(_view_chunks);
+        _terrain.draw_terrain(uniforms, _view_chunks);
 
         // Only draw if toggled
         if (_edit_mode)
         {
-            // Set uniforms to light1
-            uniforms.set_light2();
-
             // Draw the placemark
-            _terrain.draw_placemark();
-
-            // Set uniforms to light1
-            uniforms.set_light1();
+            _terrain.draw_placemark(uniforms);
         }
 
         // Draw the sky, uses geometry VAO -- HACK!
@@ -446,9 +437,9 @@ class world
     {
         return _drops;
     }
-    inline const min::vec3<float> &get_preview_position()
+    inline const min::mat4<float> get_preview_matrix() const
     {
-        return _preview;
+        return min::mat4<float>(_preview);
     }
     bool hook_set(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
     {
@@ -613,6 +604,11 @@ class world
 
         // Get surrounding chunks for drawing
         _grid.get_view_chunks(cam, _view_chunks);
+
+// Only used for instance rendering
+#ifdef USE_INST_RENDER
+        _terrain.update_matrices(cam.get_pv_matrix(), get_preview_matrix());
+#endif
 
         // For all chunk meshes
         for (const auto &i : _view_chunks)

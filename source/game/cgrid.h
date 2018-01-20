@@ -831,7 +831,7 @@ class cgrid
     {
         return _chunks[key];
     }
-    inline size_t get_chunk_size() const
+    inline size_t get_chunks() const
     {
         return _chunks.size();
     }

@@ -500,6 +500,10 @@ class sound
         // Reset the gain
         _buffer.set_source_gain(si.source(), si.gain());
     }
+    inline bool check_error() const
+    {
+        return _buffer.check_error();
+    }
     inline size_t get_idle_miss_launch_id()
     {
         // Output id

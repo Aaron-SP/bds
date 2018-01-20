@@ -41,7 +41,6 @@ namespace game
 class terrain
 {
   private:
-    // Opengl stuff
     min::shader _tv;
     min::shader _tg;
     min::shader _tf;
@@ -51,21 +50,13 @@ class terrain
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
 
-    static constexpr GLenum RENDER_TYPE = GL_POINTS;
     inline void generate_indices(min::mesh<float, uint32_t> &mesh)
     {
         // Generate indices
         mesh.index.resize(mesh.vertex.size());
         std::iota(mesh.index.begin(), mesh.index.end(), 0);
     }
-
-  public:
-    terrain(const size_t chunks)
-        : _tv(memory_map::memory.get_file("data/shader/terrain_gs.vertex"), GL_VERTEX_SHADER),
-          _tg(memory_map::memory.get_file("data/shader/terrain_gs.geometry"), GL_GEOMETRY_SHADER),
-          _tf(memory_map::memory.get_file("data/shader/terrain_gs.fragment"), GL_FRAGMENT_SHADER),
-          _program({_tv.id(), _tg.id(), _tf.id()}),
-          _gb(chunks)
+    inline void load_texture()
     {
         // Load texture
         const min::mem_file &atlas = memory_map::memory.get_file("data/texture/atlas.dds");
@@ -74,23 +65,64 @@ class terrain
         // Load texture buffer
         _dds_id = _tbuffer.add_dds_texture(tex);
     }
+    inline void reserve_memory(const size_t chunks, const size_t chunk_size)
+    {
+        // Reserve maximum number of cells in a chunk
+        const size_t cells = chunk_size * chunk_size * chunk_size;
+        const size_t vertex = 24 * cells;
+        const size_t index = 36 * cells;
+
+        // Reserve vertex buffer memory for geometry
+        for (size_t i = 0; i < chunks; i++)
+        {
+            _gb.set_buffer(i);
+            _gb.reserve(vertex, index, 1);
+        }
+
+        // Reserve vertex buffer memory for preview
+        _pb.reserve(vertex, index, 1);
+    }
+
+  public:
+    terrain(const game::uniforms &uniforms, const size_t chunks, const size_t chunk_size)
+        : _tv(memory_map::memory.get_file("data/shader/terrain_gs.vertex"), GL_VERTEX_SHADER),
+          _tg(memory_map::memory.get_file("data/shader/terrain_gs.geometry"), GL_GEOMETRY_SHADER),
+          _tf(memory_map::memory.get_file("data/shader/terrain_gs.fragment"), GL_FRAGMENT_SHADER),
+          _program({_tv.id(), _tg.id(), _tf.id()}),
+          _gb(chunks)
+    {
+        // Load texture
+        load_texture();
+
+        // Reserve memory based on chunk scale
+        reserve_memory(chunks, chunk_size);
+
+        // Load the uniform buffer with program we will use
+        uniforms.set_program(_program);
+    }
     inline void bind() const
     {
-        // Bind the terrain texture for drawing
-        _tbuffer.bind(_dds_id, 0);
-
         // Use the terrain program for drawing
         _program.use();
+
+        // Bind the terrain texture for drawing
+        _tbuffer.bind(_dds_id, 0);
     }
-    inline void draw_placemark() const
+    inline void draw_placemark(game::uniforms &uniforms) const
     {
+        // Set uniforms to light2
+        uniforms.set_light2();
+
         // Bind VAO
         _pb.bind();
 
         // Draw placemarker
-        _pb.draw_all(RENDER_TYPE);
+        _pb.draw_all(GL_POINTS);
+
+        // Set uniforms to light1
+        uniforms.set_light1();
     }
-    inline void draw_terrain(const std::vector<size_t> &index) const
+    inline void draw_terrain(game::uniforms &uniforms, const std::vector<size_t> &index) const
     {
         // For all chunk meshes
         for (const auto &i : index)
@@ -99,12 +131,8 @@ class terrain
             _gb.bind_buffer(i);
 
             // Draw graph-mesh
-            _gb.draw_all(RENDER_TYPE);
+            _gb.draw_all(GL_POINTS);
         }
-    }
-    inline const min::program &get_program() const
-    {
-        return _program;
     }
     inline void upload_geometry(const size_t index, min::mesh<float, uint32_t> &child)
     {
@@ -153,17 +181,315 @@ class terrain
     }
 };
 
+#elif USE_INST_RENDER
+
+class terrain
+{
+  private:
+    static constexpr size_t _largest_chunk_size = 32768;
+    min::shader _tv;
+    min::shader _tf;
+    min::program _program;
+    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
+    std::vector<min::uniform_buffer<float>> _ub;
+    std::vector<min::mat4<float>> _mat;
+    min::texture_buffer _tbuffer;
+    GLuint _dds_id;
+    min::mat4<float> _uni_mat[2];
+    GLint _mat_loc;
+    min::light<float> _light1;
+    min::light<float> _light2;
+    const size_t _size;
+
+    inline void allocate_mesh_buffer(const std::vector<min::vec4<float>> &cell_buffer)
+    {
+        // Resize the parent mesh from cell size
+        const size_t size = cell_buffer.size();
+
+        // One matrix for each block
+        _mat.resize(size);
+    }
+    static inline size_t get_buffer_size(const size_t chunk_size)
+    {
+        // Calculate buffer size limits
+        const size_t max_size = min::uniform_buffer<float>::get_max_buffer_size();
+        const size_t size = chunk_size * chunk_size * chunk_size;
+        const size_t def_size = _largest_chunk_size;
+
+        // Alert user that we need a big enough uniform size to continue
+        std::cout << "terrain : Asking for cells in chunk of: " + std::to_string(size) << std::endl;
+        std::cout << "terrain : Max uniform buffer size is: " + std::to_string(max_size) << std::endl;
+        std::cout << "terrain : Largest chunk size for this mode is: " + std::to_string(def_size) << std::endl;
+
+        // Check if uniform buffer size is not large enough
+        if (size > max_size)
+        {
+            throw std::runtime_error("terrain: maximum uniform buffer size is too small for specified chunk size");
+        }
+        else if (size > def_size)
+        {
+            throw std::runtime_error("terrain: asked for chunk size larger than largest chunk size");
+        }
+        else if (def_size > max_size)
+        {
+            throw std::runtime_error("terrain: maximum uniform buffer size is too small for default chunk size");
+        }
+
+        // Size is big enough for 32 chunk size
+        return def_size;
+    }
+    inline void load_box_model()
+    {
+        // Load drop data from geometry functions
+        min::mesh<float, uint32_t> box_mesh("terrain");
+
+        // Define the box min and max
+        const min::vec3<float> min(-0.5, -0.5, -0.5);
+        const min::vec3<float> max(0.5, 0.5, 0.5);
+
+        // Allocate mesh space
+        box_mesh.vertex.resize(24);
+        box_mesh.uv.resize(24);
+        box_mesh.normal.resize(24);
+        box_mesh.index.resize(36);
+
+        // Calculate block vertices
+        block_vertex(box_mesh.vertex, 0, min, max);
+
+        // Calculate block uv's
+        block_uv(box_mesh.uv, 0);
+
+        // Calculate block normals
+        block_normal(box_mesh.normal, 0);
+
+        // Calculate block indices
+        block_index<uint32_t>(box_mesh.index, 0, 0);
+
+        // Add mesh and update buffers
+        _gb.add_mesh(box_mesh);
+
+        // Unbind the last VAO to prevent scrambling buffers
+        _gb.unbind();
+
+        // Upload mesh to buffers
+        _gb.upload();
+    }
+    inline void load_lights()
+    {
+        // Change light alpha for placemark
+        const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
+        const min::vec4<float> pos1(0.0, 100.0, 0.0, 1.0);
+        const min::vec4<float> pow1(0.3, 0.7, 0.0, 1.0);
+        const min::vec4<float> pow2(0.3, 0.7, 0.0, 0.50);
+        _light1 = min::light<float>(col1, pos1, pow1);
+        _light2 = min::light<float>(col1, pos1, pow2);
+    }
+    inline void load_texture()
+    {
+        // Load texture
+        const min::mem_file &atlas = memory_map::memory.get_file("data/texture/atlas.dds");
+        min::dds tex(atlas);
+
+        // Load texture buffer
+        _dds_id = _tbuffer.add_dds_texture(tex);
+    }
+    inline void load_uniform_buffers(const size_t chunks)
+    {
+        // Load all uniform buffers for each chunk
+        for (size_t i = 0; i < chunks; i++)
+        {
+            _ub[i].defer_construct(1, _size);
+            _ub[i].add_light(_light1);
+            _ub[i].update_lights();
+        }
+
+        // Load uniform buffers for preview
+        _ub[chunks].defer_construct(1, _size);
+        _ub[chunks].add_light(_light2);
+        _ub[chunks].update_lights();
+    }
+    inline void reserve_memory(const size_t chunks, const size_t chunk_size)
+    {
+        // Reserve maximum number of cells in a chunk
+        const size_t vertex = 24;
+        const size_t index = 36;
+
+        // Reserve vertex buffer memory for geometry
+        _gb.reserve(vertex, index, 1);
+
+        // Reserve uniform buffer memory
+        const size_t cells = chunk_size * chunk_size * chunk_size;
+        const size_t buffers = chunks + 1;
+        for (size_t i = 0; i < buffers; i++)
+        {
+            _ub[i].reserve_matrix(cells);
+        }
+
+        // Reserve maximum size of chunk
+        _mat.reserve(cells);
+    }
+    inline void set_cell(const size_t cell, std::vector<min::vec4<float>> &cell_buffer)
+    {
+        // Unpack the point and the atlas
+        const min::vec4<float> &unpack = cell_buffer[cell];
+
+        // Create bounding box of cell and get box dimensions
+        const min::vec3<float> p = min::vec3<float>(unpack.x(), unpack.y(), unpack.z());
+
+        // Scale uv's based off atlas id
+        const int8_t atlas = static_cast<int8_t>(unpack.w());
+
+        // Push back location
+        _mat[cell].set_translation(p);
+
+        // Pack the matrix with the atlas id
+        _mat[cell].w(atlas + 2.1);
+    }
+
+  public:
+    terrain(const game::uniforms &uniforms, const size_t chunks, const size_t chunk_size)
+        : _tv(memory_map::memory.get_file("data/shader/terrain_inst.vertex"), GL_VERTEX_SHADER),
+          _tf(memory_map::memory.get_file("data/shader/terrain_inst.fragment"), GL_FRAGMENT_SHADER),
+          _program(_tv, _tf), _gb(), _ub(chunks + 1), _size(get_buffer_size(chunk_size))
+    {
+        // Load box model
+        load_box_model();
+
+        // Load lights
+        load_lights();
+
+        // Load texture
+        load_texture();
+
+        // Load uniform buffers
+        load_uniform_buffers(chunks);
+
+        // Reserve memory based on chunk scale
+        reserve_memory(chunks, chunk_size);
+
+        // Get the mat_loc from the program
+        _mat_loc = glGetUniformLocation(_program.id(), "uni_mat");
+        if (_mat_loc == -1)
+        {
+            throw std::runtime_error("terrain: could not find uniform 'uni_mat' in shader");
+        }
+
+        // Load the binding points in program
+        _ub.back().set_program(_program);
+    }
+    inline void bind() const
+    {
+        // Use the terrain program for drawing
+        _program.use();
+
+        // Update matrix uniform data
+        const float *data = reinterpret_cast<const float *>(&_uni_mat[0]);
+        glUniformMatrix4fv(_mat_loc, 2, GL_FALSE, data);
+
+        // Bind the terrain texture for drawing
+        _tbuffer.bind(_dds_id, 0);
+    }
+    inline void draw_placemark(game::uniforms &uniforms) const
+    {
+        // Bind VAO
+        _gb.bind();
+
+        // Bind uniform buffer for preview
+        _ub.back().bind();
+
+        // Draw placemarker
+        const size_t draw_size = _ub.back().matrix_size();
+        _gb.draw_many(GL_TRIANGLES, 0, draw_size);
+
+        // Rebind main uniform buffer
+        uniforms.bind();
+    }
+    inline void draw_terrain(game::uniforms &uniforms, const std::vector<size_t> &index) const
+    {
+        // Bind VAO
+        _gb.bind();
+
+        // For all chunk meshes
+        for (const auto &i : index)
+        {
+            // Bind uniform buffer for this chunk
+            _ub[i].bind();
+
+            // Draw graph-mesh
+            const size_t draw_size = _ub[i].matrix_size();
+            _gb.draw_many(GL_TRIANGLES, 0, draw_size);
+        }
+
+        // Rebind main uniform buffer
+        uniforms.bind();
+    }
+    inline void update_matrices(const min::mat4<float> &pv, const min::mat4<float> &preview)
+    {
+        // Update PV matrix
+        _uni_mat[0] = pv;
+
+        // Update preview matrix
+        _uni_mat[1] = preview;
+    }
+    inline void upload_geometry(const size_t index, min::mesh<float, uint32_t> &child)
+    {
+        // Convert cells to mesh in parallel
+        const size_t size = child.vertex.size();
+        if (size > 0)
+        {
+            // Reserve space in parent mesh
+            allocate_mesh_buffer(child.vertex);
+
+            // Parallelize on generating cells
+            const auto work = [this, &child](const size_t i) {
+                set_cell(i, child.vertex);
+            };
+
+            // Convert cells to mesh in parallel
+            work_queue::worker.run(work, 0, size);
+
+            // Clear the uniform matrix buffer
+            _ub[index].clear_matrix();
+
+            // Update block matrices
+            _ub[index].insert_matrix(_mat);
+
+            // Update the uniform buffer
+            _ub[index].update_matrix();
+        }
+    }
+    inline void upload_preview(min::mesh<float, uint32_t> &terrain)
+    {
+        // Only add if contains cells
+        const size_t size = terrain.vertex.size();
+        if (size > 0)
+        {
+            // Reserve space in parent mesh
+            allocate_mesh_buffer(terrain.vertex);
+
+            // Convert cells to mesh in parallel
+            for (size_t i = 0; i < size; i++)
+            {
+                set_cell(i, terrain.vertex);
+            }
+
+            // Clear the uniform matrix buffer
+            _ub.back().clear_matrix();
+
+            // Update block matrices
+            _ub.back().insert_matrix(_mat);
+
+            // Update the uniform buffer
+            _ub.back().update_matrix();
+        }
+    }
+};
+
 #else
 
 class terrain
 {
   private:
-    // About 6MB vertex and 4MB index; 8*8*8*7*7*7 = 175616 cells
-    static constexpr size_t _cell_size = 175616;
-    static constexpr size_t _reserve_size = 24 * _cell_size;
-    static constexpr size_t _index_reserve_size = 36 * _cell_size;
-
-    // Opengl stuff
     min::shader _tv;
     min::shader _tf;
     min::program _program;
@@ -173,8 +499,21 @@ class terrain
     GLuint _dds_id;
     min::mesh<float, uint32_t> _parent;
 
-    static constexpr GLenum RENDER_TYPE = GL_TRIANGLES;
+    inline void allocate_mesh_buffer(const std::vector<min::vec4<float>> &cell_buffer)
+    {
+        // Resize the parent mesh from cell size
+        const size_t size = cell_buffer.size();
 
+        // Vertex sizes
+        const size_t size24 = size * 24;
+        _parent.vertex.resize(size24);
+        _parent.uv.resize(size24);
+        _parent.normal.resize(size24);
+
+        // Index sizes
+        const size_t size36 = size * 36;
+        _parent.index.resize(size36);
+    }
     static inline min::aabbox<float, min::vec3> create_box(const min::vec3<float> &center)
     {
         // Create box at center
@@ -183,6 +522,38 @@ class terrain
 
         // return the box
         return min::aabbox<float, min::vec3>(min, max);
+    }
+    inline void load_texture()
+    {
+        // Load texture
+        const min::mem_file &atlas = memory_map::memory.get_file("data/texture/atlas.dds");
+        min::dds tex(atlas);
+
+        // Load texture buffer
+        _dds_id = _tbuffer.add_dds_texture(tex);
+    }
+    inline void reserve_memory(const size_t chunks, const size_t chunk_size)
+    {
+        // Reserve maximum number of cells in a chunk
+        const size_t cells = chunk_size * chunk_size * chunk_size;
+        const size_t vertex = 24 * cells;
+        const size_t index = 36 * cells;
+
+        // Reserve maximum size of chunk
+        _parent.vertex.reserve(vertex);
+        _parent.uv.reserve(vertex);
+        _parent.normal.reserve(vertex);
+        _parent.index.reserve(index);
+
+        // Reserve vertex buffer memory for geometry
+        for (size_t i = 0; i < chunks; i++)
+        {
+            _gb.set_buffer(i);
+            _gb.reserve(vertex, index, 1);
+        }
+
+        // Reserve vertex buffer memory for preview
+        _pb.reserve(vertex, index, 1);
     }
     inline void set_cell(const size_t cell, std::vector<min::vec4<float>> &cell_buffer)
     {
@@ -215,59 +586,46 @@ class terrain
         // Calculate block indices
         block_index<uint32_t>(_parent.index, index_start, vertex_start);
     }
-    inline void allocate_mesh_buffer(const std::vector<min::vec4<float>> &cell_buffer)
-    {
-        // Resize the parent mesh from cell size
-        const size_t size = cell_buffer.size();
-
-        // Vertex sizes
-        const size_t size24 = size * 24;
-        _parent.vertex.resize(size24);
-        _parent.uv.resize(size24);
-        _parent.normal.resize(size24);
-
-        // Index sizes
-        const size_t size36 = size * 36;
-        _parent.index.resize(size36);
-    }
 
   public:
-    terrain(const size_t chunks)
+    terrain(const game::uniforms &uniforms, const size_t chunks, const size_t chunk_size)
         : _tv(memory_map::memory.get_file("data/shader/terrain.vertex"), GL_VERTEX_SHADER),
           _tf(memory_map::memory.get_file("data/shader/terrain.fragment"), GL_FRAGMENT_SHADER),
           _program(_tv, _tf),
           _gb(chunks), _parent("parent")
     {
         // Load texture
-        const min::mem_file &atlas = memory_map::memory.get_file("data/texture/atlas.dds");
-        min::dds tex(atlas);
+        load_texture();
 
-        // Load texture buffer
-        _dds_id = _tbuffer.add_dds_texture(tex);
+        // Reserve memory based on chunk scale
+        reserve_memory(chunks, chunk_size);
 
-        // Reserve space for merging
-        _parent.vertex.reserve(_reserve_size);
-        _parent.index.reserve(_index_reserve_size);
-        _parent.uv.reserve(_reserve_size);
-        _parent.normal.reserve(_reserve_size);
+        // Load the uniform buffer with program we will use
+        uniforms.set_program(_program);
     }
     inline void bind() const
     {
-        // Bind the terrain texture for drawing
-        _tbuffer.bind(_dds_id, 0);
-
         // Use the terrain program for drawing
         _program.use();
+
+        // Bind the terrain texture for drawing
+        _tbuffer.bind(_dds_id, 0);
     }
-    inline void draw_placemark() const
+    inline void draw_placemark(game::uniforms &uniforms) const
     {
+        // Set uniforms to light2
+        uniforms.set_light2();
+
         // Bind VAO
         _pb.bind();
 
         // Draw placemarker
-        _pb.draw_all(RENDER_TYPE);
+        _pb.draw_all(GL_TRIANGLES);
+
+        // Set uniforms to light1
+        uniforms.set_light1();
     }
-    inline void draw_terrain(const std::vector<size_t> &index) const
+    inline void draw_terrain(game::uniforms &uniforms, const std::vector<size_t> &index) const
     {
         // For all chunk meshes
         for (const auto &i : index)
@@ -276,12 +634,8 @@ class terrain
             _gb.bind_buffer(i);
 
             // Draw graph-mesh
-            _gb.draw_all(RENDER_TYPE);
+            _gb.draw_all(GL_TRIANGLES);
         }
-    }
-    inline const min::program &get_program() const
-    {
-        return _program;
     }
     inline void upload_geometry(const size_t index, min::mesh<float, uint32_t> &child)
     {
@@ -322,13 +676,13 @@ class terrain
         _pb.clear();
 
         // Only add if contains cells
-        if (terrain.vertex.size() > 0)
+        const size_t size = terrain.vertex.size();
+        if (size > 0)
         {
             // Reserve space in parent mesh
             allocate_mesh_buffer(terrain.vertex);
 
             // Convert cells to mesh in parallel
-            const size_t size = terrain.vertex.size();
             for (size_t i = 0; i < size; i++)
             {
                 set_cell(i, terrain.vertex);

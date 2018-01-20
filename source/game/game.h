@@ -145,7 +145,7 @@ class fractex
         _uniforms.update_camera(camera);
 
         // Update world preview matrix
-        _uniforms.update_preview(_world.get_preview_position());
+        _uniforms.update_preview(_world.get_preview_matrix());
 
         // Update md5 model matrix
         _uniforms.update_md5_model(_state.get_model_matrix());
@@ -199,6 +199,14 @@ class fractex
     void blink_console_message()
     {
         _ui.toggle_console();
+    }
+    bool check_gl_error() const
+    {
+        return min::check_gl_error();
+    }
+    bool check_al_error() const
+    {
+        return _sound.check_error();
     }
     void clear_background() const
     {
