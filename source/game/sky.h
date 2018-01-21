@@ -39,7 +39,7 @@ class sky
     GLuint _dds_id;
 
   public:
-    sky(const game::uniforms &uniforms, const float extent)
+    sky(const game::uniforms &uniforms)
         : _sv(memory_map::memory.get_file("data/shader/sky.vertex"), GL_VERTEX_SHADER),
           _sf(memory_map::memory.get_file("data/shader/sky.fragment"), GL_FRAGMENT_SHADER),
           _prog(_sv, _sf)

@@ -101,12 +101,15 @@ class cgrid_generator
         // Convert cells to mesh in parallel
         work_queue::worker.run(work, 0, grid.size());
     }
-    void generate(std::vector<int8_t> &grid, const size_t scale, const size_t floor_height,
+    void generate(std::vector<int8_t> &grid, const size_t scale,
                   const std::function<size_t(const std::tuple<size_t, size_t, size_t> &)> &grid_key_unpack,
                   const std::function<min::vec3<float>(const size_t)> &grid_cell_center)
     {
         // Wake up the threads for processing
         work_queue::worker.wake();
+
+        // 1 / 4 of the bottom half of the grid is filled
+        const size_t floor_height = std::ceil(scale * 0.0625);
 
         // Random numbers between 0 and 5, including both
         std::uniform_int_distribution<int8_t> dist(0, 5);
@@ -146,7 +149,10 @@ class cgrid_generator
 
         // Simulates growing
         kernel::brownian_grow grow(scale);
-        for (size_t i = floor_height; i < 110; i++)
+
+        // Highest point is height * 2
+        const size_t height = std::ceil(scale * 0.85);
+        for (size_t i = floor_height; i < height; i++)
         {
             grow.set_height(i);
             grow.generate(work_queue::worker, grid, _copy, _density, _seed, _length);

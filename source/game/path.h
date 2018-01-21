@@ -238,7 +238,7 @@ class path
     {
         _path.clear();
     }
-    const min::vec3<float> step(const cgrid &grid, const path_data &data)
+    const min::vec3<float> step(cgrid &grid, const path_data &data)
     {
         // Get data points
         const min::vec3<float> &p = data.get_position();

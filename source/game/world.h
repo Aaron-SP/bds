@@ -64,7 +64,6 @@ class world
     // Physics stuff
     min::vec3<float> _gravity;
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
-    player _player;
     size_t _char_id;
 
     // Player control stuff
@@ -74,6 +73,9 @@ class world
     min::vec3<float> _preview;
     min::vec3<unsigned> _scale;
     bool _edit_mode;
+
+    // Player
+    player _player;
 
     // Skybox
     sky _sky;
@@ -94,30 +96,28 @@ class world
     }
     inline size_t character_load(const load_state &state)
     {
+        // Get spawn point
         const min::vec3<float> &p = state.get_spawn();
 
+        // Snap position to grid
+        const min::vec3<float> snapped = cgrid::snap(p);
+
         // Create the physics body
-        _char_id = _simulation.add_body(cgrid::player_box(p), 10.0);
+        _char_id = _simulation.add_body(cgrid::player_box(snapped), 10.0);
 
         // Update recent chunk
-        _grid.update_current_chunk(p);
+        _grid.update_current_chunk(snapped);
 
-        // If this the first time we load
-        if (!state.is_loaded())
-        {
-            // Set scale to 3x3x3
-            _scale = min::vec3<unsigned>(3, 3, 3);
+        // Set scale to 3x3x3
+        _scale = min::vec3<unsigned>(3, 3, 3);
 
-            // Snap to grid
-            const min::vec3<float> snapped = cgrid::snap(p);
+        // Remove geometry around player, requires position snapped to grid and calculated direction vector
+        _grid.set_geometry(snapped, _scale, _preview_offset, -1);
 
-            // Remove geometry around player, requires position snapped to grid and calculated direction vector
-            _grid.set_geometry(snapped, _scale, _preview_offset, -1);
+        // Reset scale to default value
+        _scale = min::vec3<unsigned>(1, 1, 1);
 
-            // Reset scale to default value
-            _scale = min::vec3<unsigned>(1, 1, 1);
-        }
-
+        // Return the character body id
         return _char_id;
     }
     inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
@@ -304,13 +304,13 @@ class world
           _sound(s),
           _gravity(0.0, -_grav_mag, 0.0),
           _simulation(_grid.get_world(), _gravity),
-          _player(&_simulation, character_load(state)),
           _terr_mesh("atlas"),
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
           _scale(1, 1, 1),
           _edit_mode(false),
-          _sky(uniforms, grid_size),
+          _player(&_simulation, character_load(state)),
+          _sky(uniforms),
           _instance(uniforms),
           _drones(&_simulation, &_instance, state.get_spawn()),
           _drops(&_simulation, &_instance),
@@ -477,8 +477,8 @@ class world
         // Respawn player
         _player.respawn();
 
-        // Set character position
-        _player.warp(p);
+        // Set character position snapped to grid
+        _player.warp(cgrid::snap(p));
 
         // Zero out character velocity
         _player.velocity(min::vec3<float>());

@@ -19,6 +19,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #define __THREAD_MAP__
 
 #include <functional>
+#include <stdexcept>
 #include <thread>
 #include <vector>
 

@@ -21,6 +21,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #include <cmath>
 #include <random>
+#include <stdexcept>
 #include <vector>
 
 namespace game

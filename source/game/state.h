@@ -82,7 +82,7 @@ class state
         // Return the transformed model rotation
         return rotzx * roty;
     }
-    inline void load_state_file()
+    inline void load_state_file(const size_t grid_size)
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
@@ -111,12 +111,12 @@ class state
             const min::vec3<float> look(lx, ly, lz);
 
             // Load the starting state
-            _load = load_state(look, p);
+            _load = load_state(look, p, grid_size);
         }
         else
         {
             // Load the starting state
-            _load = load_state();
+            _load = load_state(grid_size);
         }
 
         // Load camera settings
@@ -124,8 +124,9 @@ class state
     }
 
   public:
-    state()
+    state(const size_t grid_size)
         : _x{}, _y{}, _frame_count{},
+          _load(grid_size),
           _mode("MODE: PLAY"),
           _fix_target(false), _pause_mode(false),
           _pause_lock(false), _user_input(true),
@@ -135,7 +136,7 @@ class state
         load_camera();
 
         // Load state
-        load_state_file();
+        load_state_file(grid_size);
     }
     inline void abort_tracking()
     {

@@ -32,6 +32,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/texture_buffer.h>
 #include <min/vertex_buffer.h>
 #include <numeric>
+#include <stdexcept>
 
 namespace game
 {

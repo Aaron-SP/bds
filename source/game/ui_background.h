@@ -26,6 +26,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/shader.h>
 #include <min/texture_buffer.h>
 #include <min/vertex_buffer.h>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 

@@ -22,6 +22,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/mesh.h>
 #include <min/vec4.h>
 #include <min/window.h>
+#include <stdexcept>
 
 #ifndef USE_GS_RENDER
 #include <game/work_queue.h>

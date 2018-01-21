@@ -25,6 +25,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/emitter_buffer.h>
 #include <min/mat4.h>
 #include <min/texture_buffer.h>
+#include <stdexcept>
 
 namespace game
 {

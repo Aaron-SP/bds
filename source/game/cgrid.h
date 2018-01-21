@@ -28,6 +28,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/ray.h>
 #include <min/serial.h>
 #include <min/utility.h>
+#include <stdexcept>
 
 namespace game
 {
@@ -35,9 +36,13 @@ namespace game
 class cgrid
 {
   private:
-    static constexpr size_t _floor_height = 8;
+    constexpr static size_t _search_limit = 20;
     size_t _grid_scale;
     std::vector<int8_t> _grid;
+    std::vector<int8_t> _visit;
+    std::vector<std::pair<size_t, float>> _neighbors;
+    std::vector<size_t> _path;
+    std::vector<size_t> _stack;
     size_t _chunk_cells;
     size_t _chunk_size;
     size_t _chunk_scale;
@@ -319,7 +324,7 @@ class cgrid
         };
 
         // Generate the cgrid data
-        generator.generate(_grid, _grid_scale, _floor_height, f, g);
+        generator.generate(_grid, _grid_scale, f, g);
     }
     inline float grid_center_square_dist(const size_t key, const min::vec3<float> &point) const
     {
@@ -368,14 +373,14 @@ class cgrid
 
         return is_valid;
     }
-    inline std::vector<size_t> search(const min::vec3<float> &start, const min::vec3<float> &stop) const
+    inline void reserve_memory()
     {
-        // Create path from start to stop
-        std::vector<size_t> path;
-
-        // Reserve 20 nodes in path
-        path.reserve(20);
-
+        _path.reserve(20);
+        _neighbors.reserve(6);
+        _stack.reserve(100);
+    }
+    inline void search(const min::vec3<float> &start, const min::vec3<float> &stop)
+    {
         // Get grid keys
         bool is_valid = true;
         const size_t start_key = grid_key_safe(start, is_valid);
@@ -384,47 +389,45 @@ class cgrid
         // If points are not in grid
         if (!is_valid)
         {
-            return path;
+            return;
         }
 
-        // Create integer visit flag grid
-        std::vector<int8_t> visit(_grid.size(), -1);
+        // Reset the visited flag
+        std::fill(_visit.begin(), _visit.end(), -1);
 
-        // Create a stack for storing nodes in DFS
-        std::vector<size_t> stack;
+        // Clear the old neighbors
+        _neighbors.clear();
 
-        // Flood fill 6 way DFS search
-        std::vector<std::pair<size_t, float>> neighbors;
-        neighbors.reserve(6);
+        // Clear the old path
+        _path.clear();
+
+        // Clear the old stack
+        _stack.clear();
 
         // If we need to search
         if (start_key != stop_key)
         {
-            // Get component wise keys
-            const std::tuple<size_t, size_t, size_t> stop_comp = grid_key_unpack(stop_key);
-
             // Push the start_key on the stack
-            stack.push_back(start_key);
+            _stack.push_back(start_key);
+
+            // Flag that we pushed this key
+            _visit[start_key] = 1;
 
             // Iteratively Search for a path
-            while (!stack.empty())
+            while (!_stack.empty())
             {
-                const bool found = search_next(visit, path, stack, neighbors, stop_comp, stop_key, stop);
+                const bool found = search_next(stop, stop_key);
                 if (found)
                 {
                     break;
                 }
             }
         }
-
-        // Return the path
-        return path;
     }
-    inline void search_neighbors(std::vector<std::pair<size_t, float>> &neighbors, const std::tuple<size_t, size_t, size_t> &comp,
-                                 const std::tuple<size_t, size_t, size_t> &stop_comp, const min::vec3<float> &stop) const
+    inline void search_neighbors(const std::tuple<size_t, size_t, size_t> &comp, const min::vec3<float> &stop)
     {
         // Clear neighbors buffer
-        neighbors.clear();
+        _neighbors.clear();
 
         // Unpack start_key to components
         const size_t x = std::get<0>(comp);
@@ -436,108 +439,110 @@ class cgrid
         if (x != 0)
         {
             const size_t nxk = min::vec3<float>::grid_key(std::make_tuple(x - 1, y, z), _grid_scale);
-            neighbors.push_back({nxk, grid_center_square_dist(nxk, stop)});
+            _neighbors.push_back({nxk, grid_center_square_dist(nxk, stop)});
         }
 
         // Check against upper x grid dimensions
         if (x != edge)
         {
             const size_t pxk = min::vec3<float>::grid_key(std::make_tuple(x + 1, y, z), _grid_scale);
-            neighbors.push_back({pxk, grid_center_square_dist(pxk, stop)});
+            _neighbors.push_back({pxk, grid_center_square_dist(pxk, stop)});
         }
 
         // Check against lower y grid dimensions
         if (y != 0)
         {
             const size_t nyk = min::vec3<float>::grid_key(std::make_tuple(x, y - 1, z), _grid_scale);
-            neighbors.push_back({nyk, grid_center_square_dist(nyk, stop)});
+            _neighbors.push_back({nyk, grid_center_square_dist(nyk, stop)});
         }
 
         // Check against upper y grid dimensions
         if (y != edge)
         {
             const size_t pyk = min::vec3<float>::grid_key(std::make_tuple(x, y + 1, z), _grid_scale);
-            neighbors.push_back({pyk, grid_center_square_dist(pyk, stop)});
+            _neighbors.push_back({pyk, grid_center_square_dist(pyk, stop)});
         }
 
         // Check against lower z grid dimensions
         if (z != 0)
         {
             const size_t nzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z - 1), _grid_scale);
-            neighbors.push_back({nzk, grid_center_square_dist(nzk, stop)});
+            _neighbors.push_back({nzk, grid_center_square_dist(nzk, stop)});
         }
 
         // Check against upper z grid dimensions
         if (z != edge)
         {
             const size_t pzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z + 1), _grid_scale);
-            neighbors.push_back({pzk, grid_center_square_dist(pzk, stop)});
+            _neighbors.push_back({pzk, grid_center_square_dist(pzk, stop)});
         }
 
         // lambda function to create sorted array indices based on distance
-        std::sort(neighbors.begin(), neighbors.end(), [](const std::pair<size_t, float> &a, const std::pair<size_t, float> &b) {
+        std::sort(_neighbors.begin(), _neighbors.end(), [](const std::pair<size_t, float> &a, const std::pair<size_t, float> &b) {
             return a.second > b.second;
         });
     }
-    inline bool search_next(
-        std::vector<int8_t> &visit, std::vector<size_t> &path,
-        std::vector<size_t> &stack, std::vector<std::pair<size_t, float>> &neighbors,
-        const std::tuple<size_t, size_t, size_t> &stop_comp, const size_t stop_key, const min::vec3<float> &stop) const
+    inline bool search_next(const min::vec3<float> &stop, const size_t stop_key)
     {
+        // Check if stack is empty to avoid stomping the stack
+        if (_stack.size() == 0)
+        {
+            return true;
+        }
+        else if (_path.size() > _search_limit)
+        {
+            return true;
+        }
+
         // Get element on top of stack
-        const size_t key = stack.back();
+        const size_t key = _stack.back();
 
         // Check if we made it to the mother lands!
         if (key == stop_key)
         {
             // Store end point of path
-            path.push_back(key);
+            _path.push_back(key);
+
+            // Stop searching
             return true;
         }
-
-        // If we haven't seen this node yet, we are traversing
-        if (visit[key] == -1)
+        else if (_visit[key] == 1)
         {
-            path.push_back(key);
-        }
+            // If we haven't seen this node yet, we are traversing
+            _path.push_back(key);
 
-        // If we already visited this node, we are unwinding
-        if (visit[key] == 0)
-        {
-            // pop stack
-            stack.pop_back();
-
-            // pop path
-            path.pop_back();
-
-            // terminate
-            return false;
-        }
-
-        // If we haven't visited this cell yet, and the next cell isn't a wall or visited
-        if (visit[key] == -1)
-        {
             // Visit this node
-            visit[key] = 0;
+            _visit[key] = 0;
 
             // Search along the gradient until we hit a wall
             const std::tuple<size_t, size_t, size_t> comp = grid_key_unpack(key);
 
             // Search all neighboring cells
-            search_neighbors(neighbors, comp, stop_comp, stop);
+            search_neighbors(comp, stop);
 
-            for (const auto &n : neighbors)
+            for (const auto &n : _neighbors)
             {
                 // If we haven't visited the neighbor cell, and it isn't a wall
-                if (visit[n.first] == -1 && _grid[n.first] == -1)
+                if (_visit[n.first] == -1 && _grid[n.first] == -1)
                 {
+                    // Flag that we pushed this key to prevent duplicates on stack
+                    _visit[n.first] = 1;
+
                     // Calculate distance to destination
-                    stack.push_back(n.first);
+                    _stack.push_back(n.first);
                 }
             }
         }
+        else if (_visit[key] == 0)
+        {
+            // If we already visited this node, we must be unwinding so pop stack
+            _stack.pop_back();
 
-        // We failed to find a path :(
+            // Every time we visit we push so we must pop here
+            _path.pop_back();
+        }
+
+        // Keepp looking for a path
         return false;
     }
     inline void world_load()
@@ -601,6 +606,7 @@ class cgrid
     cgrid(const size_t chunk_size, const size_t grid_scale, const size_t view_chunk_size)
         : _grid_scale(grid_scale * 2),
           _grid(_grid_scale * _grid_scale * _grid_scale, -1),
+          _visit(_grid.size(), -1),
           _chunk_cells(chunk_size * chunk_size * chunk_size),
           _chunk_size(chunk_size),
           _chunk_scale(_grid_scale / _chunk_size),
@@ -639,6 +645,9 @@ class cgrid
 
         // Add starting blocks to simulation
         world_load();
+
+        // Reserve memory
+        reserve_memory();
     }
     ~cgrid()
     {
@@ -912,19 +921,19 @@ class cgrid
         // return ray start point since it is not in the grid
         return r.get_origin();
     }
-    inline void path(std::vector<min::vec3<float>> &out, const min::vec3<float> &start, const min::vec3<float> &stop) const
+    inline void path(std::vector<min::vec3<float>> &out, const min::vec3<float> &start, const min::vec3<float> &stop)
     {
-        // Try to find a path between points
-        const std::vector<size_t> path = search(start, stop);
-        const size_t size = path.size();
-
         // Convert keys to points
         out.clear();
 
-        // For all keys
+        // Try to find a path between points
+        search(start, stop);
+
+        // For all keys in path
+        const size_t size = _path.size();
         for (size_t i = 0; i < size; i++)
         {
-            out.push_back(grid_cell_center(path[i]));
+            out.push_back(grid_cell_center(_path[i]));
         }
     }
     inline void set_boundary_chunk(const size_t key)

@@ -83,7 +83,7 @@ class drones
         // Calculate speed slowing down as approaching goal
         return 2.75 * ((remain - 3.0) / (remain + 3.0) + 1.1);
     }
-    inline void path(const cgrid &grid, const size_t index)
+    inline void path(cgrid &grid, const size_t index)
     {
         // Get the drone
         drone &d = _drones[index];
@@ -171,7 +171,7 @@ class drones
             }
         }
     }
-    inline void update(const cgrid &grid)
+    inline void update(cgrid &grid)
     {
         // Get number of drones created
         const size_t size = _drones.size();

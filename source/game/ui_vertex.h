@@ -23,6 +23,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/vec2.h>
 #include <min/vec4.h>
 #include <min/window.h>
+#include <stdexcept>
 
 namespace game
 {

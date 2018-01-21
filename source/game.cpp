@@ -193,6 +193,23 @@ int main(int argc, char *argv[])
             }
         }
 
+        // Do some sanity checks on values
+        if (grid < 4)
+        {
+            std::cout << "fractex: '-grid' must be atleast 4" << std::endl;
+            return 0;
+        }
+        else if (chunk < 2)
+        {
+            std::cout << "fractex: '-chunk' must be atleast 2" << std::endl;
+            return 0;
+        }
+        else if (view < 3)
+        {
+            std::cout << "fractex: '-view' must be atleast 3" << std::endl;
+            return 0;
+        }
+
         // Run the game
         run(frames, chunk, grid, view, width, height, resize);
     }

@@ -177,7 +177,7 @@ class fractex
           _ui(_uniforms, _win.get_width(), _win.get_height()),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
-          _state(),
+          _state(grid),
           _world(_state.get_load_state(), &_particles, &_sound, _uniforms, chunk, grid, view),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
           _title(_state.get_camera(), _ui, _win)

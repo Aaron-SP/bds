@@ -31,6 +31,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/vec3.h>
 #include <min/vertex_buffer.h>
 #include <min/wavefront.h>
+#include <stdexcept>
 #include <vector>
 
 namespace game

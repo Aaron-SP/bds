@@ -28,7 +28,7 @@ bool test_path()
     bool out = true;
 
     // Load the graph mesh with 128 pixel tile size
-    const game::cgrid grid(8, 64, 7);
+    game::cgrid grid(8, 64, 7);
 
     // Search points
     const min::vec3<float> start(0.5, 36.0, -0.5);
