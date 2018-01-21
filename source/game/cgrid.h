@@ -959,43 +959,46 @@ class cgrid
             return (x * _chunk_scale * _chunk_scale) + (y * _chunk_scale) + (z);
         };
 
-        // Grid top edge
-        const size_t t_edge = _chunk_size - 1;
+        // Chunk top edge
+        const size_t c_edge = _chunk_size - 1;
+
+        // World top edge
+        const size_t w_edge = _grid_scale - 1;
 
         // Check x axis boundary
         if (rgx == 0 && gx != 0)
         {
             const size_t ckey = to_chunk_key(cx - 1, cy, cz);
-            this->_chunk_update_keys.push_back(ckey);
+            _chunk_update_keys.push_back(ckey);
         }
-        else if (rgx % t_edge == 0 && gx != t_edge)
+        else if (rgx % c_edge == 0 && gx != w_edge)
         {
             const size_t ckey = to_chunk_key(cx + 1, cy, cz);
-            this->_chunk_update_keys.push_back(ckey);
+            _chunk_update_keys.push_back(ckey);
         }
 
         // Check y axis boundary
         if (rgy == 0 && gy != 0)
         {
             const size_t ckey = to_chunk_key(cx, cy - 1, cz);
-            this->_chunk_update_keys.push_back(ckey);
+            _chunk_update_keys.push_back(ckey);
         }
-        else if (rgy % t_edge == 0 && gy != t_edge)
+        else if (rgy % c_edge == 0 && gy != w_edge)
         {
             const size_t ckey = to_chunk_key(cx, cy + 1, cz);
-            this->_chunk_update_keys.push_back(ckey);
+            _chunk_update_keys.push_back(ckey);
         }
 
         // Check z axis boundary
         if (rgz == 0 && gz != 0)
         {
             const size_t ckey = to_chunk_key(cx, cy, cz - 1);
-            this->_chunk_update_keys.push_back(ckey);
+            _chunk_update_keys.push_back(ckey);
         }
-        else if (rgz % t_edge == 0 && gz != t_edge)
+        else if (rgz % c_edge == 0 && gz != w_edge)
         {
             const size_t ckey = to_chunk_key(cx, cy, cz + 1);
-            this->_chunk_update_keys.push_back(ckey);
+            _chunk_update_keys.push_back(ckey);
         }
     }
     unsigned set_geometry(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const min::vec3<int> &offset, const int8_t atlas_id)
@@ -1011,8 +1014,11 @@ class cgrid
         const min::vec3<float> &start = point;
         const min::vec3<unsigned> &length = scale;
 
+        // This the start point inside the grid?
+        const bool in = inside(start);
+
         // If we are removing blocks, add boundary cells for update
-        if (atlas_id == -1 && inside(start))
+        if (atlas_id == -1 && in)
         {
             // Create cubic function, for each cell in cubic space
             const auto f = [this, &out, atlas_id](const size_t key) {
@@ -1039,7 +1045,7 @@ class cgrid
             // Run the function
             cubic_grid(start, offset, length, f);
         }
-        else
+        else if(in)
         {
             // Create cubic function, for each cell in cubic space
             const auto f = [this, &out, atlas_id](const size_t key) {
