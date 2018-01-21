@@ -44,7 +44,7 @@ class terrain
     min::shader _tv;
     min::shader _tg;
     min::shader _tf;
-    min::program _program;
+    min::program _prog;
     min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
     min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     min::texture_buffer _tbuffer;
@@ -88,7 +88,7 @@ class terrain
         : _tv(memory_map::memory.get_file("data/shader/terrain_gs.vertex"), GL_VERTEX_SHADER),
           _tg(memory_map::memory.get_file("data/shader/terrain_gs.geometry"), GL_GEOMETRY_SHADER),
           _tf(memory_map::memory.get_file("data/shader/terrain_gs.fragment"), GL_FRAGMENT_SHADER),
-          _program({_tv.id(), _tg.id(), _tf.id()}),
+          _prog({_tv.id(), _tg.id(), _tf.id()}),
           _gb(chunks)
     {
         // Load texture
@@ -98,12 +98,13 @@ class terrain
         reserve_memory(chunks, chunk_size);
 
         // Load the uniform buffer with program we will use
-        uniforms.set_program(_program);
+        uniforms.set_program_lights(_prog);
+        uniforms.set_program_matrix(_prog);
     }
     inline void bind() const
     {
         // Use the terrain program for drawing
-        _program.use();
+        _prog.use();
 
         // Bind the terrain texture for drawing
         _tbuffer.bind(_dds_id, 0);
@@ -189,13 +190,13 @@ class terrain
     static constexpr size_t _largest_chunk_size = 32768;
     min::shader _tv;
     min::shader _tf;
-    min::program _program;
+    min::program _prog;
     min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     std::vector<min::uniform_buffer<float>> _ub;
-    std::vector<min::mat4<float>> _mat;
+    std::vector<min::vec4<float>> _vec;
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
-    min::mat4<float> _uni_mat[2];
+    min::mat4<float> _mat[2];
     GLint _mat_loc;
     min::light<float> _light1;
     min::light<float> _light2;
@@ -207,7 +208,7 @@ class terrain
         const size_t size = cell_buffer.size();
 
         // One matrix for each block
-        _mat.resize(size);
+        _vec.resize(size);
     }
     static inline size_t get_buffer_size(const size_t chunk_size)
     {
@@ -288,13 +289,13 @@ class terrain
         // Load all uniform buffers for each chunk
         for (size_t i = 0; i < chunks; i++)
         {
-            _ub[i].defer_construct(1, _size);
+            _ub[i].defer_construct(1, 0, _size);
             _ub[i].add_light(_light1);
             _ub[i].update_lights();
         }
 
         // Load uniform buffers for preview
-        _ub[chunks].defer_construct(1, _size);
+        _ub[chunks].defer_construct(1, 0, _size);
         _ub[chunks].add_light(_light2);
         _ub[chunks].update_lights();
     }
@@ -312,11 +313,11 @@ class terrain
         const size_t buffers = chunks + 1;
         for (size_t i = 0; i < buffers; i++)
         {
-            _ub[i].reserve_matrix(cells);
+            _ub[i].reserve_vector(cells);
         }
 
         // Reserve maximum size of chunk
-        _mat.reserve(cells);
+        _vec.reserve(cells);
     }
     inline void set_cell(const size_t cell, std::vector<min::vec4<float>> &cell_buffer)
     {
@@ -329,11 +330,8 @@ class terrain
         // Scale uv's based off atlas id
         const int8_t atlas = static_cast<int8_t>(unpack.w());
 
-        // Push back location
-        _mat[cell].set_translation(p);
-
-        // Pack the matrix with the atlas id
-        _mat[cell].w(atlas + 2.1);
+        // Push back location and atlas in w
+        _vec[cell] = min::vec4<float>(p.x(), p.y(), p.z(), atlas + 2.1);
     }
     inline min::mem_file &set_uniform_size(min::mem_file &file, const size_t chunk_size)
     {
@@ -409,7 +407,7 @@ class terrain
     terrain(const game::uniforms &uniforms, const size_t chunks, const size_t chunk_size)
         : _tv(set_uniform_size(memory_map::memory.get_file("data/shader/terrain_inst.vertex"), chunk_size), GL_VERTEX_SHADER),
           _tf(memory_map::memory.get_file("data/shader/terrain_inst.fragment"), GL_FRAGMENT_SHADER),
-          _program(_tv, _tf), _gb(), _ub(chunks + 1)
+          _prog(_tv, _tf), _gb(), _ub(chunks + 1)
     {
         // Load box model
         load_box_model();
@@ -427,22 +425,23 @@ class terrain
         reserve_memory(chunks, chunk_size);
 
         // Get the mat_loc from the program
-        _mat_loc = glGetUniformLocation(_program.id(), "uni_mat");
+        _mat_loc = glGetUniformLocation(_prog.id(), "_mat");
         if (_mat_loc == -1)
         {
-            throw std::runtime_error("terrain: could not find uniform 'uni_mat' in shader");
+            throw std::runtime_error("terrain: could not find uniform '_mat' in shader");
         }
 
         // Load the binding points in program
-        _ub.back().set_program(_program);
+        _ub.back().set_program_lights(_prog);
+        _ub.back().set_program_vector(_prog);
     }
     inline void bind() const
     {
         // Use the terrain program for drawing
-        _program.use();
+        _prog.use();
 
         // Update matrix uniform data
-        const float *data = reinterpret_cast<const float *>(&_uni_mat[0]);
+        const float *data = reinterpret_cast<const float *>(&_mat[0]);
         glUniformMatrix4fv(_mat_loc, 2, GL_FALSE, data);
 
         // Bind the terrain texture for drawing
@@ -457,7 +456,7 @@ class terrain
         _ub.back().bind();
 
         // Draw placemarker
-        const size_t draw_size = _ub.back().matrix_size();
+        const size_t draw_size = _ub.back().vector_size();
         _gb.draw_many(GL_TRIANGLES, 0, draw_size);
 
         // Rebind main uniform buffer
@@ -475,7 +474,7 @@ class terrain
             _ub[i].bind();
 
             // Draw graph-mesh
-            const size_t draw_size = _ub[i].matrix_size();
+            const size_t draw_size = _ub[i].vector_size();
             _gb.draw_many(GL_TRIANGLES, 0, draw_size);
         }
 
@@ -485,10 +484,10 @@ class terrain
     inline void update_matrices(const min::mat4<float> &pv, const min::mat4<float> &preview)
     {
         // Update PV matrix
-        _uni_mat[0] = pv;
+        _mat[0] = pv;
 
         // Update preview matrix
-        _uni_mat[1] = preview;
+        _mat[1] = preview;
     }
     inline void upload_geometry(const size_t index, min::mesh<float, uint32_t> &child)
     {
@@ -507,14 +506,14 @@ class terrain
             // Convert cells to mesh in parallel
             work_queue::worker.run(work, 0, size);
 
-            // Clear the uniform matrix buffer
-            _ub[index].clear_matrix();
+            // Clear the uniform vector buffer
+            _ub[index].clear_vector();
 
             // Update block matrices
-            _ub[index].insert_matrix(_mat);
+            _ub[index].insert_vector(_vec);
 
             // Update the uniform buffer
-            _ub[index].update_matrix();
+            _ub[index].update_vector();
         }
     }
     inline void upload_preview(min::mesh<float, uint32_t> &terrain)
@@ -532,14 +531,14 @@ class terrain
                 set_cell(i, terrain.vertex);
             }
 
-            // Clear the uniform matrix buffer
-            _ub.back().clear_matrix();
+            // Clear the uniform vector buffer
+            _ub.back().clear_vector();
 
             // Update block matrices
-            _ub.back().insert_matrix(_mat);
+            _ub.back().insert_vector(_vec);
 
             // Update the uniform buffer
-            _ub.back().update_matrix();
+            _ub.back().update_vector();
         }
     }
 };
@@ -551,7 +550,7 @@ class terrain
   private:
     min::shader _tv;
     min::shader _tf;
-    min::program _program;
+    min::program _prog;
     min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
     min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     min::texture_buffer _tbuffer;
@@ -650,7 +649,7 @@ class terrain
     terrain(const game::uniforms &uniforms, const size_t chunks, const size_t chunk_size)
         : _tv(memory_map::memory.get_file("data/shader/terrain.vertex"), GL_VERTEX_SHADER),
           _tf(memory_map::memory.get_file("data/shader/terrain.fragment"), GL_FRAGMENT_SHADER),
-          _program(_tv, _tf),
+          _prog(_tv, _tf),
           _gb(chunks), _parent("parent")
     {
         // Load texture
@@ -660,12 +659,13 @@ class terrain
         reserve_memory(chunks, chunk_size);
 
         // Load the uniform buffer with program we will use
-        uniforms.set_program(_program);
+        uniforms.set_program_lights(_prog);
+        uniforms.set_program_matrix(_prog);
     }
     inline void bind() const
     {
         // Use the terrain program for drawing
-        _program.use();
+        _prog.use();
 
         // Bind the terrain texture for drawing
         _tbuffer.bind(_dds_id, 0);

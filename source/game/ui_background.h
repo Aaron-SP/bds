@@ -543,7 +543,7 @@ class ui_background
         reserve_memory();
 
         // Load the uniform buffer with program we will use
-        uniforms.set_program_matrix_only(_prog);
+        uniforms.set_program_matrix(_prog);
 
         // Add 15 ui rectangles
         for (size_t i = 0; i < _menu_offset; i++)

@@ -113,7 +113,7 @@ class uniforms
     }
 
   public:
-    uniforms() : _ub(1, 175)
+    uniforms() : _ub(1, 175, 0)
     {
         // Load the number of used uniforms into the buffer
         load_uniforms(20, 10, 10, 10, 100);
@@ -122,20 +122,24 @@ class uniforms
     {
         _ub.bind();
     }
-    void set_program(const min::program &p) const
+    inline void set_program_lights(const min::program &p) const
     {
-        _ub.set_program(p);
+        _ub.set_program_lights(p);
     }
-    void set_program_matrix_only(const min::program &p) const
+    inline void set_program_matrix(const min::program &p) const
     {
-        _ub.set_program_matrix_only(p);
+        _ub.set_program_matrix(p);
     }
-    void set_light1()
+    inline void set_program_vector(const min::program &p) const
+    {
+        _ub.set_program_vector(p);
+    }
+    inline void set_light1()
     {
         _ub.set_light(_light1, _light);
         _ub.update_lights();
     }
-    void set_light2()
+    inline void set_light2()
     {
         _ub.set_light(_light2, _light);
         _ub.update_lights();

@@ -32,7 +32,7 @@ class sky
     // OpenGL stuff
     min::shader _sv;
     min::shader _sf;
-    min::program _sky_program;
+    min::program _prog;
 
     // Texture stuff
     min::texture_buffer _tbuffer;
@@ -42,10 +42,11 @@ class sky
     sky(const game::uniforms &uniforms, const float extent)
         : _sv(memory_map::memory.get_file("data/shader/sky.vertex"), GL_VERTEX_SHADER),
           _sf(memory_map::memory.get_file("data/shader/sky.fragment"), GL_FRAGMENT_SHADER),
-          _sky_program(_sv, _sf)
+          _prog(_sv, _sf)
     {
         // Let this program use this uniform buffer
-        uniforms.set_program(_sky_program);
+        uniforms.set_program_lights(_prog);
+        uniforms.set_program_matrix(_prog);
 
         // Load texture
         const min::mem_file &sky = memory_map::memory.get_file("data/texture/sky.dds");
@@ -60,7 +61,7 @@ class sky
         _tbuffer.bind(_dds_id, 0);
 
         // Use the sky program
-        _sky_program.use();
+        _prog.use();
 
         // Draw texture to background
         glDrawArrays(GL_TRIANGLES, 0, 36);

@@ -194,7 +194,8 @@ class particle
         }
 
         // Load the uniform buffer with program we will use
-        uniforms.set_program(_prog);
+        uniforms.set_program_lights(_prog);
+        uniforms.set_program_matrix(_prog);
     }
     inline void set_reference(const min::vec4<float> &ref) const
     {

@@ -129,7 +129,8 @@ class character
         load_textures();
 
         // Load the uniform buffer with the program we will use
-        uniforms.set_program(_prog);
+        uniforms.set_program_lights(_prog);
+        uniforms.set_program_matrix(_prog);
     }
     inline void abort_animation_grapple()
     {
