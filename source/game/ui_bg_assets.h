@@ -108,23 +108,6 @@ class ui_bg_assets
     bool _draw_console;
     bool _draw_title;
 
-    inline size_t add_rect()
-    {
-        // Check for buffer overflow
-        if (_v.size() == 20)
-        {
-            throw std::runtime_error("ui_bg_assets: must change default ui count");
-        }
-
-        // Add matrix to the matrix buffer
-        _v.emplace_back();
-
-        // Add uv matrix to buffer
-        _uv.emplace_back();
-
-        // return the index
-        return _v.size() - 1;
-    }
     inline void set_uv(const size_t index, const min::vec4<float> &coord, const float alpha)
     {
         // Add uv matrix to buffer
@@ -199,29 +182,14 @@ class ui_bg_assets
         // Return toolbar position
         return min::vec2<float>(_center_w + offset, _tool_height);
     }
-    inline void reserve_memory()
-    {
-        // Reserve space for number of menu items
-        _v.reserve(_max_size);
-        _uv.reserve(_max_size);
-    }
 
   public:
     ui_bg_assets(const uint16_t width, const uint16_t height)
-        : _width(width), _height(height),
+        : _v(_max_size), _uv(_max_size),
+          _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
           _energy(0.0), _health(1.0), _cursor_angle(0.0),
-          _draw_menu(false), _draw_console(false), _draw_title(true)
-    {
-        // Reserve memory
-        reserve_memory();
-
-        // Add 18 ui rectangles
-        for (size_t i = 0; i < _max_size; i++)
-        {
-            add_rect();
-        }
-    }
+          _draw_menu(false), _draw_console(false), _draw_title(true) {}
     inline bool get_draw_console() const
     {
         return _draw_console;
@@ -282,7 +250,7 @@ class ui_bg_assets
         const min::vec4<float> pause_coord(_x_dead_uv, _y_dead_uv, _s_menu_uv_x, _s_menu_uv_y);
 
         // Load rect at position
-        set_rect(2, p, scale, pause_coord);
+        set_rect_reset(2, p, scale, pause_coord);
     }
     inline void load_menu_pause()
     {
@@ -291,7 +259,7 @@ class ui_bg_assets
         const min::vec4<float> pause_coord(_x_pause_uv, _y_pause_uv, _s_menu_uv_x, _s_menu_uv_y);
 
         // Load rect at position
-        set_rect(2, p, scale, pause_coord);
+        set_rect_reset(2, p, scale, pause_coord);
     }
     inline void load_cursor_fps()
     {
