@@ -92,7 +92,7 @@ class ui_bg_assets
     static constexpr float _health_start = _tool_start - _tool_space - 4.0;
     static constexpr float _y_console = 100.0;
 
-    // Index stuff
+    // Rect Instance stuff
     std::vector<min::mat3<float>> _v;
     std::vector<min::mat3<float>> _uv;
 
@@ -127,9 +127,11 @@ class ui_bg_assets
         const float size_x = scale.x() * sx;
         const float size_y = scale.y() * sy;
 
+        // Convert to screen coordinates
         const float ox = p.x() * sx - 1.0;
         const float oy = p.y() * sy - 1.0;
 
+        // Return screen coordinates and sizes
         return std::make_pair(min::vec2<float>(ox, oy), min::vec2<float>(size_x, size_y));
     }
     inline void set_rect(const size_t index, const min::vec2<float> &p,
@@ -190,6 +192,7 @@ class ui_bg_assets
           _center_w(width / 2), _center_h(height / 2),
           _energy(0.0), _health(1.0), _cursor_angle(0.0),
           _draw_menu(false), _draw_console(false), _draw_title(true) {}
+
     inline bool get_draw_console() const
     {
         return _draw_console;
@@ -205,10 +208,6 @@ class ui_bg_assets
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
         return _v;
-    }
-    inline size_t get_title_offset() const
-    {
-        return 1;
     }
     inline const std::vector<min::mat3<float>> &get_uv() const
     {
