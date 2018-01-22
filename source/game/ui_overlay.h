@@ -61,6 +61,10 @@ class ui_overlay
     {
         return _bg.get_uv();
     }
+    inline void reset_menu()
+    {
+        _bg.reset_menu();
+    }
     inline void respawn()
     {
         _bg.respawn();
@@ -72,6 +76,22 @@ class ui_overlay
 
         // Upload changes to the buffer
         _text.upload();
+    }
+    inline void set_cursor_reload()
+    {
+        _bg.set_cursor_reload();
+    }
+    inline void set_cursor_target()
+    {
+        _bg.set_cursor_target();
+    }
+    inline void set_draw_title(const bool flag)
+    {
+        _bg.set_draw_title(flag);
+    }
+    inline void set_draw_text_ui(const bool flag)
+    {
+        _text.set_draw_ui(flag);
     }
     inline void set_energy(const float energy)
     {
@@ -93,18 +113,6 @@ class ui_overlay
     {
         _bg.set_key_up(index);
     }
-    inline void set_draw_menu(const bool flag)
-    {
-        _bg.set_draw_menu(flag);
-    }
-    inline void set_draw_text_ui(const bool flag)
-    {
-        _text.set_draw_ui(flag);
-    }
-    inline void set_draw_title(const bool flag)
-    {
-        _bg.set_draw_title(flag);
-    }
     inline void set_menu_dead()
     {
         _bg.set_menu_dead();
@@ -113,10 +121,6 @@ class ui_overlay
     {
         _bg.set_menu_pause();
     }
-    inline void set_reload_cursor()
-    {
-        _bg.set_reload_cursor();
-    }
     inline void set_screen(const float width, const float height)
     {
         // Set bg screen dimensions
@@ -124,10 +128,6 @@ class ui_overlay
 
         // Set text screen dimensions
         _text.set_screen(width, height);
-    }
-    inline void set_target_cursor()
-    {
-        _bg.set_target_cursor();
     }
     inline void toggle_console()
     {

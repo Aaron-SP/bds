@@ -63,9 +63,6 @@ class fractex
         // Set menu for dead
         _ui.set_menu_dead();
 
-        // Show menu
-        _ui.set_draw_menu(true);
-
         // Disable the keyboard
         auto &keyboard = _win.get_keyboard();
         keyboard.disable();

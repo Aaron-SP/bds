@@ -269,7 +269,7 @@ class controls
             state->set_game_mode("MODE: PAUSE");
 
             // Turn on the menu
-            ui->set_draw_menu(true);
+            ui->set_menu_pause();
         }
         else
         {
@@ -280,7 +280,7 @@ class controls
             state->set_game_mode("MODE: PLAY");
 
             // Turn off the menu
-            ui->set_draw_menu(false);
+            ui->reset_menu();
         }
 
         // Center cursor in middle of window
@@ -999,11 +999,11 @@ class controls
         skills &skill = _world->get_player().get_skills();
         if (skill.check_cooldown())
         {
-            _ui->set_target_cursor();
+            _ui->set_cursor_target();
         }
         else
         {
-            _ui->set_reload_cursor();
+            _ui->set_cursor_reload();
         }
     }
     void update(const float dt)

@@ -71,15 +71,6 @@ class ui_bg
         // Draw the first thing in the buffer, title screen
         _vb.draw_many(GL_TRIANGLES, _mesh_id, 1);
     }
-    inline void draw_ui() const
-    {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_ui_id, 0);
-
-        // Draw the ui elements before the menu
-        const size_t menu_offset = _assets.get_menu_offset();
-        _vb.draw_many(GL_TRIANGLES, _mesh_id, menu_offset);
-    }
     inline void load_base_rect()
     {
         // Cached parent mesh
@@ -163,7 +154,7 @@ class ui_bg
         }
 
         // Add FPS cursor
-        _assets.load_fps_cursor();
+        _assets.load_cursor_fps();
 
         // Add health meter
         _assets.load_energy_meter();
@@ -207,13 +198,9 @@ class ui_bg
         {
             draw_title();
         }
-        else if (_assets.get_draw_menu())
-        {
-            draw_all();
-        }
         else
         {
-            draw_ui();
+            draw_all();
         }
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
@@ -224,13 +211,53 @@ class ui_bg
     {
         return _assets.get_uv();
     }
+    inline void reset_menu()
+    {
+        // Turn off drawing the menu
+        _assets.set_draw_menu(false);
+
+        // Set the cursor to fps
+        _assets.load_cursor_fps();
+    }
     inline void respawn()
     {
-        // Reset menu
-        set_menu_pause();
-
         // Turn off showing menu
-        _assets.set_draw_menu(false);
+        reset_menu();
+    }
+    inline void set_cursor_reload()
+    {
+        if (!_assets.get_draw_menu())
+        {
+            _assets.load_cursor_reload();
+        }
+    }
+    inline void set_cursor_target()
+    {
+        if (!_assets.get_draw_menu())
+        {
+            _assets.load_cursor_fps();
+        }
+    }
+    inline void set_draw_console(const bool flag)
+    {
+        _assets.set_draw_console(flag);
+
+        // Reload console data
+        _assets.load_console_bg();
+    }
+    inline void set_draw_title(const bool flag)
+    {
+        _assets.set_draw_title(flag);
+
+        // Set the overlay
+        if (_assets.get_draw_title())
+        {
+            _assets.load_title_overlay();
+        }
+        else
+        {
+            _assets.load_health_overlay();
+        }
     }
     inline void set_energy(const float energy)
     {
@@ -282,42 +309,21 @@ class ui_bg
             return _assets.load_scan_icon(index);
         }
     }
-    inline void set_draw_console(const bool flag)
-    {
-        _assets.set_draw_console(flag);
-
-        // Reload console data
-        _assets.load_console_bg();
-    }
-    inline void set_draw_title(const bool flag)
-    {
-        _assets.set_draw_title(flag);
-
-        // Set the overlay
-        if (_assets.get_draw_title())
-        {
-            _assets.load_title_overlay();
-        }
-        else
-        {
-            _assets.load_health_overlay();
-        }
-    }
-    inline void set_draw_menu(const bool flag)
-    {
-        _assets.set_draw_menu(flag);
-    }
     inline void set_menu_dead()
     {
+        // Draw the menu
+        _assets.set_draw_menu(true);
+
+        // Show the dead menu
         _assets.load_menu_dead();
     }
     inline void set_menu_pause()
     {
+        // Draw the menu
+        _assets.set_draw_menu(true);
+
+        // Show the pause menu
         _assets.load_menu_pause();
-    }
-    inline void set_reload_cursor()
-    {
-        _assets.load_reload_cursor();
     }
     inline void set_screen(const float width, const float height)
     {
@@ -327,10 +333,7 @@ class ui_bg
         // Reposition all ui on the screen
         position_ui();
     }
-    inline void set_target_cursor()
-    {
-        _assets.load_fps_cursor();
-    }
+
     inline void toggle_draw_console()
     {
         _assets.toggle_draw_console();

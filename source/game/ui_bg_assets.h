@@ -101,7 +101,6 @@ class ui_bg_assets
     size_t _height;
     size_t _center_w;
     size_t _center_h;
-    size_t _menu_offset;
     float _energy;
     float _health;
     float _cursor_angle;
@@ -210,7 +209,7 @@ class ui_bg_assets
   public:
     ui_bg_assets(const uint16_t width, const uint16_t height)
         : _width(width), _height(height),
-          _center_w(width / 2), _center_h(height / 2), _menu_offset(_max_size),
+          _center_w(width / 2), _center_h(height / 2),
           _energy(0.0), _health(1.0), _cursor_angle(0.0),
           _draw_menu(false), _draw_console(false), _draw_title(true)
     {
@@ -218,13 +217,7 @@ class ui_bg_assets
         reserve_memory();
 
         // Add 18 ui rectangles
-        for (size_t i = 0; i < _menu_offset; i++)
-        {
-            add_rect();
-        }
-
-        // Add 1 menu rectangle
-        for (size_t i = 0; i < 1; i++)
+        for (size_t i = 0; i < _max_size; i++)
         {
             add_rect();
         }
@@ -240,10 +233,6 @@ class ui_bg_assets
     inline bool get_draw_title() const
     {
         return _draw_title;
-    }
-    inline size_t get_menu_offset() const
-    {
-        return _menu_offset;
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
@@ -286,52 +275,34 @@ class ui_bg_assets
         const float alpha = (_draw_console) ? 0.5 : 0.0;
         set_rect(1, p, scale, black_coord, alpha);
     }
-    inline void load_background_black(const size_t index)
+    inline void load_menu_dead()
     {
-        const min::vec2<float> p = toolbar_position(index);
-        const min::vec2<float> scale(_s_bg, _s_bg);
-        const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
+        const min::vec2<float> p(_center_w, _center_h);
+        const min::vec2<float> scale(_s_menu_x, _s_menu_y);
+        const min::vec4<float> pause_coord(_x_dead_uv, _y_dead_uv, _s_menu_uv_x, _s_menu_uv_y);
 
         // Load rect at position
-        set_rect(index + 2, p, scale, black_coord);
+        set_rect(2, p, scale, pause_coord);
     }
-    inline void load_background_red(const size_t index)
+    inline void load_menu_pause()
     {
-        const min::vec2<float> p = toolbar_position(index);
-        const min::vec2<float> scale(_s_bg, _s_bg);
-        const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
+        const min::vec2<float> p(_center_w, _center_h);
+        const min::vec2<float> scale(_s_menu_x, _s_menu_y);
+        const min::vec4<float> pause_coord(_x_pause_uv, _y_pause_uv, _s_menu_uv_x, _s_menu_uv_y);
 
         // Load rect at position
-        set_rect(index + 2, p, scale, red_coord);
+        set_rect(2, p, scale, pause_coord);
     }
-    inline void load_background_yellow(const size_t index)
-    {
-        const min::vec2<float> p = toolbar_position(index);
-        const min::vec2<float> scale(_s_bg, _s_bg);
-        const min::vec4<float> yellow_coord(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv);
-
-        // Load rect at position
-        set_rect(index + 2, p, scale, yellow_coord);
-    }
-    inline void load_background_white(const size_t index)
-    {
-        const min::vec2<float> p = toolbar_position(index);
-        const min::vec2<float> scale(_s_bg, _s_bg);
-        const min::vec4<float> white_coord(_x_white_uv, _y_white_uv, _s_uv, _s_uv);
-
-        // Load rect at position
-        set_rect(index + 2, p, scale, white_coord);
-    }
-    inline void load_fps_cursor()
+    inline void load_cursor_fps()
     {
         const min::vec2<float> p(_center_w, _center_h);
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> fps_coord(_x_cursor_uv, _y_cursor_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect_reset(10, p, scale, fps_coord);
+        set_rect_reset(2, p, scale, fps_coord);
     }
-    inline void load_reload_cursor()
+    inline void load_cursor_reload()
     {
         const min::vec2<float> p(_center_w, _center_h);
         const min::vec2<float> scale(_s_fg, _s_fg);
@@ -345,7 +316,7 @@ class ui_bg_assets
         }
 
         // Load rect at position
-        set_rect_rot(10, p, scale, reload_coord, _cursor_angle);
+        set_rect_rot(2, p, scale, reload_coord, _cursor_angle);
     }
     inline void load_energy_meter()
     {
@@ -356,7 +327,7 @@ class ui_bg_assets
         const min::vec4<float> blue_coord(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(11, p, scale, blue_coord);
+        set_rect(3, p, scale, blue_coord);
     }
     inline void load_health_meter()
     {
@@ -367,7 +338,43 @@ class ui_bg_assets
         const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(12, p, scale, red_coord);
+        set_rect(4, p, scale, red_coord);
+    }
+    inline void load_background_black(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale(_s_bg, _s_bg);
+        const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index + 5, p, scale, black_coord);
+    }
+    inline void load_background_red(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale(_s_bg, _s_bg);
+        const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index + 5, p, scale, red_coord);
+    }
+    inline void load_background_yellow(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale(_s_bg, _s_bg);
+        const min::vec4<float> yellow_coord(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index + 5, p, scale, yellow_coord);
+    }
+    inline void load_background_white(const size_t index)
+    {
+        const min::vec2<float> p = toolbar_position(index);
+        const min::vec2<float> scale(_s_bg, _s_bg);
+        const min::vec4<float> white_coord(_x_white_uv, _y_white_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index + 5, p, scale, white_coord);
     }
     inline void load_beam_icon(const size_t index)
     {
@@ -413,24 +420,6 @@ class ui_bg_assets
 
         // Load rect at position
         set_rect(17, p, scale, beam_coord);
-    }
-    inline void load_menu_dead()
-    {
-        const min::vec2<float> p(_center_w, _center_h);
-        const min::vec2<float> scale(_s_menu_x, _s_menu_y);
-        const min::vec4<float> pause_coord(_x_dead_uv, _y_dead_uv, _s_menu_uv_x, _s_menu_uv_y);
-
-        // Load rect at position
-        set_rect(_menu_offset, p, scale, pause_coord);
-    }
-    inline void load_menu_pause()
-    {
-        const min::vec2<float> p(_center_w, _center_h);
-        const min::vec2<float> scale(_s_menu_x, _s_menu_y);
-        const min::vec4<float> pause_coord(_x_pause_uv, _y_pause_uv, _s_menu_uv_x, _s_menu_uv_y);
-
-        // Load rect at position
-        set_rect(_menu_offset, p, scale, pause_coord);
     }
     inline void set_draw_console(const bool flag)
     {
