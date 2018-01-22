@@ -15,17 +15,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _UI_BACKGROUND__
-#define _UI_BACKGROUND__
+#ifndef _UI_BACKGROUND_ASSETS__
+#define _UI_BACKGROUND_ASSETS__
 
-#include <game/memory_map.h>
-#include <game/ui_vertex.h>
-#include <game/uniforms.h>
-#include <min/dds.h>
-#include <min/program.h>
-#include <min/shader.h>
-#include <min/texture_buffer.h>
-#include <min/vertex_buffer.h>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -33,7 +25,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-class ui_background
+class ui_bg_assets
 {
   private:
     // Backgrounds
@@ -100,28 +92,15 @@ class ui_background
     static constexpr float _health_start = _tool_start - _tool_space - 4.0;
     static constexpr float _y_console = 100.0;
 
-    // OpenGL stuff
-    min::shader _vertex;
-    min::shader _fragment;
-    min::program _prog;
-
-    // Buffer for holding ui and texture
-    min::vertex_buffer<float, uint32_t, game::ui_vertex, GL_FLOAT, GL_UNSIGNED_INT> _vb;
-    min::texture_buffer _tbuffer;
-
     // Index stuff
     std::vector<min::mat3<float>> _v;
     std::vector<min::mat3<float>> _uv;
-    GLuint _title_id;
-    GLuint _ui_id;
 
     // Screen properties
     size_t _width;
     size_t _height;
     size_t _center_w;
     size_t _center_h;
-    size_t _index;
-    size_t _selected;
     size_t _menu_offset;
     float _energy;
     float _health;
@@ -135,7 +114,7 @@ class ui_background
         // Check for buffer overflow
         if (_v.size() == 20)
         {
-            throw std::runtime_error("ui_background: must change default ui count");
+            throw std::runtime_error("ui_bg_assets: must change default ui count");
         }
 
         // Add matrix to the matrix buffer
@@ -146,30 +125,6 @@ class ui_background
 
         // return the index
         return _v.size() - 1;
-    }
-    inline void draw_all() const
-    {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_ui_id, 0);
-
-        // Draw the ui elements
-        _vb.draw_many(GL_TRIANGLES, _index, _v.size());
-    }
-    inline void draw_title() const
-    {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_title_id, 0);
-
-        // Draw the title screen
-        _vb.draw_many(GL_TRIANGLES, _index, 1);
-    }
-    inline void draw_ui() const
-    {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_ui_id, 0);
-
-        // Draw the ui elements
-        _vb.draw_many(GL_TRIANGLES, _index, _menu_offset);
     }
     inline void set_uv(const size_t index, const min::vec4<float> &coord, const float alpha)
     {
@@ -245,68 +200,62 @@ class ui_background
         // Return toolbar position
         return min::vec2<float>(_center_w + offset, _tool_height);
     }
-    inline void load_base_rect()
+    inline void reserve_memory()
     {
-        // Cached parent mesh
-        min::mesh<float, uint32_t> rect("ui");
-
-        // Append vertices
-        rect.vertex.insert(
-            rect.vertex.end(),
-            std::initializer_list<min::vec4<float>>{
-                min::vec4<float>(-0.5, -0.5, 1.0, 1.0),
-                min::vec4<float>(-0.5, 0.5, 1.0, 1.0),
-                min::vec4<float>(0.5, -0.5, 1.0, 1.0),
-                min::vec4<float>(0.5, 0.5, 1.0, 1.0)});
-
-        //Create UV's for the box
-        std::array<min::vec2<float>, 4> uvs{
-            min::vec2<float>(0.0, 0.0),
-            min::vec2<float>(0.0, 1.0),
-            min::vec2<float>(1.0, 0.0),
-            min::vec2<float>(1.0, 1.0)};
-
-        // Append uv coordinates
-        rect.uv.insert(rect.uv.end(), uvs.begin(), uvs.end());
-
-        // Create indices
-        std::array<uint32_t, 6> indices{
-            0, 1, 2,
-            2, 1, 3};
-
-        // Append indices
-        rect.index.insert(rect.index.end(), indices.begin(), indices.end());
-
-        // Add rect mesh to the buffer
-        _index = _vb.add_mesh(rect);
-
-        // Unbind the last VAO to prevent scrambling buffers
-        _vb.unbind();
-
-        // Upload the text glyphs to the GPU
-        _vb.upload();
+        // Reserve space for number of menu items
+        _v.reserve(_max_size);
+        _uv.reserve(_max_size);
     }
-    inline void load_texture()
+
+  public:
+    ui_bg_assets(const uint16_t width, const uint16_t height)
+        : _width(width), _height(height),
+          _center_w(width / 2), _center_h(height / 2), _menu_offset(_max_size),
+          _energy(0.0), _health(1.0), _cursor_angle(0.0),
+          _draw_menu(false), _draw_console(false), _draw_title(true)
     {
-        // Load the UI texture
-        {
-            // Load texture
-            const min::mem_file &ui = memory_map::memory.get_file("data/texture/ui.dds");
-            const min::dds tex(ui);
+        // Reserve memory
+        reserve_memory();
 
-            // Load texture into texture buffer
-            _ui_id = _tbuffer.add_dds_texture(tex);
+        // Add 18 ui rectangles
+        for (size_t i = 0; i < _menu_offset; i++)
+        {
+            add_rect();
         }
 
-        // Load the title screen texture
+        // Add 1 menu rectangle
+        for (size_t i = 0; i < 1; i++)
         {
-            // Load texture
-            const min::mem_file &title = memory_map::memory.get_file("data/texture/title.dds");
-            const min::dds tex(title);
-
-            // Load texture into texture buffer
-            _title_id = _tbuffer.add_dds_texture(tex);
+            add_rect();
         }
+    }
+    inline bool get_draw_console() const
+    {
+        return _draw_console;
+    }
+    inline bool get_draw_menu() const
+    {
+        return _draw_menu;
+    }
+    inline bool get_draw_title() const
+    {
+        return _draw_title;
+    }
+    inline size_t get_menu_offset() const
+    {
+        return _menu_offset;
+    }
+    inline const std::vector<min::mat3<float>> &get_scale() const
+    {
+        return _v;
+    }
+    inline size_t get_title_offset() const
+    {
+        return 1;
+    }
+    inline const std::vector<min::mat3<float>> &get_uv() const
+    {
+        return _uv;
     }
     inline void load_title_overlay()
     {
@@ -483,121 +432,17 @@ class ui_background
         // Load rect at position
         set_rect(_menu_offset, p, scale, pause_coord);
     }
-    inline void position_ui()
+    inline void set_draw_console(const bool flag)
     {
-        if (_draw_title)
-        {
-            load_title_overlay();
-        }
-        else
-        {
-            // Add health overlay
-            load_health_overlay();
-        }
-
-        // Add console background
-        load_console_bg();
-
-        // Add 8 black rectangles along bottom
-        for (size_t i = 0; i < 8; i++)
-        {
-            set_key_up(i);
-        }
-
-        // Add FPS cursor
-        load_fps_cursor();
-
-        // Add health meter
-        load_energy_meter();
-
-        // Add health meter
-        load_health_meter();
-
-        // Load pause text
-        load_menu_pause();
+        _draw_console = flag;
     }
-    inline void reserve_memory()
+    inline void set_draw_menu(const bool flag)
     {
-        // Reserve space for number of menu items
-        _v.reserve(_max_size);
-        _uv.reserve(_max_size);
+        _draw_menu = flag;
     }
-
-  public:
-    ui_background(const game::uniforms &uniforms, const uint16_t width, const uint16_t height)
-        : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
-          _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
-          _prog(_vertex, _fragment),
-          _width(width), _height(height),
-          _center_w(width / 2), _center_h(height / 2),
-          _index(0), _selected(0), _menu_offset(_max_size),
-          _energy(0.0), _health(1.0), _cursor_angle(0.0),
-          _draw_menu(false), _draw_console(false), _draw_title(true)
+    inline void set_draw_title(const bool flag)
     {
-        // Create the instance rectangle
-        load_base_rect();
-
-        // Load texture
-        load_texture();
-
-        // Reserve memory
-        reserve_memory();
-
-        // Load the uniform buffer with program we will use
-        uniforms.set_program_matrix(_prog);
-
-        // Add 15 ui rectangles
-        for (size_t i = 0; i < _menu_offset; i++)
-        {
-            add_rect();
-        }
-
-        // Add 1 menu rectangle
-        for (size_t i = 0; i < 1; i++)
-        {
-            add_rect();
-        }
-
-        // Reposition all ui on the screen
-        position_ui();
-    }
-    inline void draw(game::uniforms &uniforms) const
-    {
-        // Bind the text_buffer vao
-        _vb.bind();
-
-        // Bind the ui program
-        _prog.use();
-
-        // If we are drawing the title screen
-        if (_draw_title)
-        {
-            draw_title();
-        }
-        else if (_draw_menu)
-        {
-            draw_all();
-        }
-        else
-        {
-            draw_ui();
-        }
-    }
-    inline const std::vector<min::mat3<float>> &get_scale() const
-    {
-        return _v;
-    }
-    inline const std::vector<min::mat3<float>> &get_uv() const
-    {
-        return _uv;
-    }
-    inline void respawn()
-    {
-        // Reset menu
-        set_menu_pause();
-
-        // Turn off showing menu
-        _draw_menu = false;
+        _draw_title = flag;
     }
     inline void set_energy(const float energy)
     {
@@ -618,85 +463,6 @@ class ui_background
         // Set the size of the health bar
         load_health_meter();
     }
-    inline void set_key_down(const size_t index)
-    {
-        // Set unselected color to black
-        load_background_black(_selected);
-
-        // Set selected index
-        _selected = index;
-
-        // Set selected color to white
-        load_background_white(index);
-    }
-    inline void set_key_down_fail(const size_t index)
-    {
-        load_background_red(index);
-    }
-    inline void set_key_up(const size_t index)
-    {
-        // Set correct background if selected
-        if (index == _selected)
-        {
-            load_background_yellow(index);
-        }
-        else
-        {
-            load_background_black(index);
-        }
-
-        // Draw key overlay
-        switch (index)
-        {
-        case 0:
-            return load_beam_icon(index);
-        case 1:
-            return load_missile_icon(index);
-        case 2:
-            return load_grapple_icon(index);
-        case 3:
-            return load_jet_icon(index);
-        case 4:
-            return load_scan_icon(index);
-        }
-    }
-    inline void set_draw_console(const bool flag)
-    {
-        _draw_console = flag;
-
-        // Reload console data
-        load_console_bg();
-    }
-    inline void set_draw_title(const bool flag)
-    {
-        _draw_title = flag;
-
-        // Set the overlay
-        if (_draw_title)
-        {
-            load_title_overlay();
-        }
-        else
-        {
-            load_health_overlay();
-        }
-    }
-    inline void set_draw_menu(const bool flag)
-    {
-        _draw_menu = flag;
-    }
-    inline void set_menu_dead()
-    {
-        load_menu_dead();
-    }
-    inline void set_menu_pause()
-    {
-        load_menu_pause();
-    }
-    inline void set_reload_cursor()
-    {
-        load_reload_cursor();
-    }
     inline void set_screen(const float width, const float height)
     {
         // Update the screen dimensions
@@ -706,20 +472,14 @@ class ui_background
         // Update screen center
         _center_w = _width / 2;
         _center_h = _height / 2;
-
-        // Reposition all ui on the screen
-        position_ui();
     }
-    inline void set_target_cursor()
+    inline size_t size() const
     {
-        load_fps_cursor();
+        return _v.size();
     }
     inline void toggle_draw_console()
     {
         _draw_console = !_draw_console;
-
-        // Reload console data
-        load_console_bg();
     }
 };
 }

@@ -214,12 +214,12 @@ class terrain
     static inline size_t get_buffer_size(const size_t chunk_size)
     {
         // Calculate buffer size limits
-        const size_t max_size = min::uniform_buffer<float>::get_max_buffer_size();
+        const size_t max_size = min::uniform_buffer<float>::get_max_buffer_size() / sizeof(min::vec4<float>);
         const size_t size = chunk_size * chunk_size * chunk_size;
 
         // Alert user that we need a big enough uniform size to continue
         std::cout << "terrain : Asking for cells in chunk of: " + std::to_string(size) << std::endl;
-        std::cout << "terrain : Max uniform buffer size is: " + std::to_string(max_size) << std::endl;
+        std::cout << "terrain : Max uniform buffer cells is: " + std::to_string(max_size) << std::endl;
 
         // Check if uniform buffer size is not large enough
         if (size > max_size)

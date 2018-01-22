@@ -19,7 +19,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #define _UI_OVERLAY__
 
 #include <game/text.h>
-#include <game/ui_background.h>
+#include <game/ui_bg.h>
 
 namespace game
 {
@@ -28,7 +28,7 @@ class ui_overlay
 {
   private:
     text _text;
-    ui_background _bg;
+    ui_bg _bg;
 
   public:
     ui_overlay(const game::uniforms &uniforms, const uint16_t width, const uint16_t height)

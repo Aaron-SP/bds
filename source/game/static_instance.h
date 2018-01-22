@@ -410,6 +410,10 @@ class static_instance
     {
         _drone_mat[index].set_rotation(r);
     }
+    inline void update_drop_atlas(const size_t index, const int8_t atlas)
+    {
+        _drop_mat[index].w(atlas + 2.1);
+    }
     inline void update_drop_position(const size_t index, const min::vec3<float> &p)
     {
         _drop_mat[index].set_translation(p);

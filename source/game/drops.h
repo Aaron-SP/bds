@@ -112,6 +112,7 @@ class drops
 
             // Update body position
             _inst->update_drop_position(inst_id, p);
+            _inst->update_drop_atlas(inst_id, atlas);
             body.set_position(p);
 
             // Recreate drop
