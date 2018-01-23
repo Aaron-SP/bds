@@ -331,7 +331,7 @@ class static_instance
             _texture_buffer.bind(_drone_tid, 0);
 
             // Set the start index for drones
-            set_start_index(45);
+            set_start_index(145);
 
             // Draw mob instances
             const size_t size = _drone_mat.size();
@@ -345,7 +345,7 @@ class static_instance
             _texture_buffer.bind(_drop_tid, 0);
 
             // Set the start index for drops
-            set_start_index(55);
+            set_start_index(155);
 
             // Draw mob instances
             const size_t size = _drop_mat.size();
@@ -359,7 +359,7 @@ class static_instance
             _texture_buffer.bind(_miss_tid, 0);
 
             // Set the start index for missiles
-            set_start_index(65);
+            set_start_index(165);
 
             // Draw missile instances
             const size_t size = _miss_mat.size();

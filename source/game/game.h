@@ -49,11 +49,11 @@ class fractex
 
     min::window _win;
     game::uniforms _uniforms;
-    game::ui_overlay _ui;
     game::particle _particles;
     game::character _character;
     game::state _state;
     game::world _world;
+    game::ui_overlay _ui;
     game::controls _controls;
     game::title _title;
     game::sound _sound;
@@ -171,11 +171,11 @@ class fractex
     fractex(const size_t chunk, const size_t grid, const size_t view, const size_t width, const size_t height)
         : _win("Fractex", width, height, _gl_major, _gl_minor),
           _uniforms(),
-          _ui(_uniforms, _win.get_width(), _win.get_height()),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
           _state(grid),
           _world(_state.get_load_state(), &_particles, &_sound, _uniforms, chunk, grid, view),
+          _ui(_uniforms, &_world.get_player().get_inventory(), _win.get_width(), _win.get_height()),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
           _title(_state.get_camera(), _ui, _win)
     {
@@ -278,6 +278,9 @@ class fractex
 
             // Update control class
             _controls.update(dt);
+
+            // Update the UI class
+            _ui.update(_world.get_player().get_inventory());
         }
 
         // Update all uniforms
@@ -348,8 +351,8 @@ class fractex
         const float health = player.get_health();
         const float energy = skills.get_energy();
 
-        // Update all text and upload it
-        _ui.update(p, f, mode, health, energy, fps, idle);
+        // Update the ui overlay
+        _ui.update_text(p, f, mode, health, energy, fps, idle);
     }
     void update_window()
     {

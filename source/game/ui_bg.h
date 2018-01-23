@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _UI_BACKGROUND__
 #define _UI_BACKGROUND__
 
+#include <game/inventory.h>
 #include <game/memory_map.h>
 #include <game/ui_bg_assets.h>
 #include <game/ui_vertex.h>
@@ -53,6 +54,7 @@ class ui_bg
 
     // Background assets
     ui_bg_assets _assets;
+    const inventory *const _inv;
 
     inline void draw_all() const
     {
@@ -70,6 +72,15 @@ class ui_bg
 
         // Draw the first thing in the buffer, title screen
         _vb.draw_many(GL_TRIANGLES, _mesh_id, 1);
+    }
+    inline void draw_ui() const
+    {
+        // Bind the ui texture for drawing
+        _tbuffer.bind(_ui_id, 0);
+
+        // Draw the base ui elements
+        const size_t size = _assets.ui_size();
+        _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
     }
     inline void load_base_rect()
     {
@@ -140,37 +151,50 @@ class ui_bg
         }
         else
         {
-            // Add health overlay
+            // Load health overlay
             _assets.load_health_overlay();
         }
 
-        // Add console background
+        // Load console background
         _assets.load_console_bg();
 
-        // Add 8 black rectangles along bottom
-        for (size_t i = 0; i < 8; i++)
+        if (_assets.get_draw_dead())
         {
-            set_key_up(i);
+            // Load dead message
+            _assets.load_menu_dead();
+        }
+        else if (_assets.get_draw_pause())
+        {
+            // Load pause message
+            _assets.load_menu_pause();
+        }
+        else if (_assets.get_draw_reload())
+        {
+            // Load reload cursor
+            _assets.load_cursor_reload();
+        }
+        else
+        {
+            // Load FPS cursor
+            _assets.load_cursor_fps();
         }
 
-        // Add FPS cursor
-        _assets.load_cursor_fps();
-
-        // Add health meter
+        // Load health meter
         _assets.load_energy_meter();
 
-        // Add health meter
+        // Load health meter
         _assets.load_health_meter();
 
-        // Load pause text
-        _assets.load_menu_pause();
+        // Load the inventory
+        update_inventory();
     }
 
   public:
-    ui_bg(const game::uniforms &uniforms, const uint16_t width, const uint16_t height)
+    ui_bg(const game::uniforms &uniforms, const inventory *const inv, const uint16_t width, const uint16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
-          _prog(_vertex, _fragment), _mesh_id(0), _selected(0), _assets(width, height)
+          _prog(_vertex, _fragment), _mesh_id(0), _selected(0),
+          _assets(width, height), _inv(inv)
     {
         // Create the instance rectangle
         load_base_rect();
@@ -198,9 +222,15 @@ class ui_bg
         {
             draw_title();
         }
+        else if (_assets.get_draw_ex())
+        {
+            // Draw extended ui?
+            draw_all();
+        }
         else
         {
-            draw_all();
+            // Draw only basic ui
+            draw_ui();
         }
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
@@ -213,8 +243,8 @@ class ui_bg
     }
     inline void reset_menu()
     {
-        // Turn off drawing the menu
-        _assets.set_draw_menu(false);
+        // Turn off drawing the dead or pause
+        _assets.set_draw_fps();
 
         // Set the cursor to fps
         _assets.load_cursor_fps();
@@ -228,6 +258,7 @@ class ui_bg
     {
         if (!_assets.get_draw_menu())
         {
+            _assets.set_draw_reload();
             _assets.load_cursor_reload();
         }
     }
@@ -235,6 +266,7 @@ class ui_bg
     {
         if (!_assets.get_draw_menu())
         {
+            _assets.set_draw_fps();
             _assets.load_cursor_fps();
         }
     }
@@ -269,50 +301,53 @@ class ui_bg
     }
     inline void set_key_down(const size_t index)
     {
-        // Set unselected color to black
-        _assets.load_background_black(_selected);
+        // Set previous unselected color to black
+        const min::vec2<float> prev = _assets.toolbar_position(0, _selected);
+
+        // Offset this index for a ui key
+        const size_t select_key = _assets.bg_index(_selected);
+        _assets.load_background_black(select_key, prev);
 
         // Set selected index
         _selected = index;
 
-        // Set selected color to white
-        _assets.load_background_white(index);
+        // Set activated index color to white
+        const min::vec2<float> active = _assets.toolbar_position(0, index);
+
+        // Offset this index for a ui key
+        const size_t active_key = _assets.bg_index(index);
+        _assets.load_background_white(active_key, active);
     }
     inline void set_key_down_fail(const size_t index)
     {
-        _assets.load_background_red(index);
+        const min::vec2<float> p = _assets.toolbar_position(0, index);
+
+        // Offset this index for a ui key
+        const size_t index_key = _assets.bg_index(index);
+        _assets.load_background_red(index_key, p);
     }
     inline void set_key_up(const size_t index)
     {
+        // Calculate ui element position
+        const min::vec2<float> p = _assets.toolbar_position(0, index);
+
+        // Offset this index for a ui key
+        const size_t index_key = _assets.bg_index(index);
+
         // Set correct background if selected
         if (index == _selected)
         {
-            _assets.load_background_yellow(index);
+            _assets.load_background_yellow(index_key, p);
         }
         else
         {
-            _assets.load_background_black(index);
-        }
-
-        // Draw key overlay
-        switch (index)
-        {
-        case 0:
-            return _assets.load_beam_icon(index);
-        case 1:
-            return _assets.load_missile_icon(index);
-        case 2:
-            return _assets.load_grapple_icon(index);
-        case 3:
-            return _assets.load_jet_icon(index);
-        case 4:
-            return _assets.load_scan_icon(index);
+            _assets.load_background_black(index_key, p);
         }
     }
     inline void set_menu_dead()
     {
         // Draw the menu
-        _assets.set_draw_menu(true);
+        _assets.set_draw_dead();
 
         // Show the dead menu
         _assets.load_menu_dead();
@@ -320,7 +355,7 @@ class ui_bg
     inline void set_menu_pause()
     {
         // Draw the menu
-        _assets.set_draw_menu(true);
+        _assets.set_draw_pause();
 
         // Show the pause menu
         _assets.load_menu_pause();
@@ -333,13 +368,97 @@ class ui_bg
         // Reposition all ui on the screen
         position_ui();
     }
-
     inline void toggle_draw_console()
     {
         _assets.toggle_draw_console();
 
         // Reload console data
         _assets.load_console_bg();
+    }
+    inline void toggle_draw_ex()
+    {
+        _assets.toggle_draw_ex();
+    }
+    inline void set_inventory(const size_t index, const uint8_t id, const min::vec2<float> &p)
+    {
+        // Draw key icon overlay
+        switch (id)
+        {
+        case 0:
+            return _assets.load_background_black(index, p);
+        case 1:
+            return _assets.load_beam_icon(index, p);
+        case 2:
+            return _assets.load_missile_icon(index, p);
+        case 3:
+            return _assets.load_grapple_icon(index, p);
+        case 4:
+            return _assets.load_jet_icon(index, p);
+        case 5:
+            return _assets.load_scan_icon(index, p);
+        default:
+            return _assets.load_background_black(index, p);
+        }
+    }
+    inline void update_inventory()
+    {
+        // Update all bg icons
+        for (size_t i = 0; i < 8; i++)
+        {
+            // Offset this index for a ui bg
+            const size_t index_key = _assets.bg_index(i);
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(0, i % 8);
+
+            // Update the black bg icon
+            _assets.load_background_black(index_key, p);
+        }
+
+        // Update all key icons
+        for (size_t i = 0; i < 8; i++)
+        {
+            // Offset this index for a ui key
+            const size_t index_key = _assets.key_index(i);
+
+            // Get the inventory id
+            const uint8_t id = (*_inv)[i].id();
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(0, i % 8);
+
+            // Update the icon
+            set_inventory(index_key, id, p);
+        }
+
+        // Update all bg inventory icons
+        for (size_t i = 0; i < 24; i++)
+        {
+            // Offset this index for a ui bg
+            const size_t index_key = _assets.bg_inv_index(i);
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(2 + (i / 8), i % 8);
+
+            // Update the black bg icon
+            _assets.load_background_black(index_key, p);
+        }
+
+        // Update all inventory icons
+        for (size_t i = 0; i < 24; i++)
+        {
+            // Offset this index for a ui key
+            const size_t index_key = _assets.inv_index(i);
+
+            // Get the inventory id
+            const uint8_t id = (*_inv)[i + 8].id();
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(2 + (i / 8), i % 8);
+
+            // Update the icon
+            set_inventory(index_key, id, p);
+        }
     }
 };
 }

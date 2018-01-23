@@ -18,8 +18,9 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _UI_OVERLAY__
 #define _UI_OVERLAY__
 
-#include <game/text.h>
+#include <game/inventory.h>
 #include <game/ui_bg.h>
+#include <game/ui_text.h>
 
 namespace game
 {
@@ -27,15 +28,15 @@ namespace game
 class ui_overlay
 {
   private:
-    text _text;
+    ui_text _text;
     ui_bg _bg;
 
   public:
-    ui_overlay(const game::uniforms &uniforms, const uint16_t width, const uint16_t height)
+    ui_overlay(const uniforms &uniforms, const inventory *const inv, const uint16_t width, const uint16_t height)
         : _text(28, width, height),
-          _bg(uniforms, width, height) {}
+          _bg(uniforms, inv, width, height) {}
 
-    inline void draw(game::uniforms &uniforms) const
+    inline void draw(uniforms &uniforms) const
     {
         // Draw background ui
         _bg.draw(uniforms);
@@ -134,12 +135,28 @@ class ui_overlay
         _text.toggle_draw_console();
         _bg.toggle_draw_console();
     }
+    inline void toggle_extend()
+    {
+        _bg.toggle_draw_ex();
+    }
     inline void toggle_debug_text()
     {
         _text.toggle_draw_debug();
     }
-    void update(const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
-                const float health, const float energy, const double fps, const double idle)
+    void update(inventory &inv)
+    {
+        // Update the inventory matrices if dirty
+        if (inv.dirty())
+        {
+            // Update the bg inventory
+            _bg.update_inventory();
+
+            // Flag that we clean updated the inventory state
+            inv.clean();
+        }
+    }
+    void update_text(const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
+                     const float health, const float energy, const double fps, const double idle)
     {
         // Update all text and upload it
         _text.update_debug_text(p, f, mode, health, energy, fps, idle);

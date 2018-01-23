@@ -500,15 +500,6 @@ class world
             _preview_offset = _cached_offset;
         }
     }
-    inline int8_t scan_block(const min::ray<float, min::vec3> &r)
-    {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        int8_t value = -2;
-        _grid.ray_trace_last(r, _ray_max_dist, value);
-
-        // return the block id
-        return value;
-    }
     inline void set_atlas_id(const int8_t id)
     {
         // Only applicable in edit mode
@@ -519,6 +510,20 @@ class world
             // Regenerate the preview mesh
             generate_preview();
         }
+    }
+    inline int8_t scan_block(const min::ray<float, min::vec3> &r)
+    {
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        int8_t value = -2;
+        _grid.ray_trace_last(r, _ray_max_dist, value);
+
+        // return the block id
+        return value;
+    }
+    inline void set_edit_mode(const bool flag)
+    {
+        // Toggle flag and return result
+        _edit_mode = flag;
     }
     inline void set_scale_x(unsigned dx)
     {
@@ -585,11 +590,6 @@ class world
 
         // return if we hit something
         return value >= 0;
-    }
-    inline bool toggle_edit_mode()
-    {
-        // Toggle flag and return result
-        return (_edit_mode = !_edit_mode);
     }
     void update(min::camera<float> &cam, const float dt)
     {

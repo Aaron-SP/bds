@@ -21,7 +21,6 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <functional>
 #include <game/sound.h>
 #include <game/state.h>
-#include <game/text.h>
 #include <game/ui_overlay.h>
 #include <game/world.h>
 #include <iostream>
@@ -119,12 +118,12 @@ class controls
         keyboard.add(min::window::key_code::F3);
         keyboard.add(min::window::key_code::F4);
         keyboard.add(min::window::key_code::ESCAPE);
-        keyboard.add(min::window::key_code::KEYQ);
         keyboard.add(min::window::key_code::KEYW);
         keyboard.add(min::window::key_code::KEYS);
         keyboard.add(min::window::key_code::KEYA);
         keyboard.add(min::window::key_code::KEYD);
         keyboard.add(min::window::key_code::KEYE);
+        keyboard.add(min::window::key_code::KEYI);
         keyboard.add(min::window::key_code::KEYZ);
         keyboard.add(min::window::key_code::KEYX);
         keyboard.add(min::window::key_code::KEYC);
@@ -153,9 +152,6 @@ class controls
         // Register callback function ESCAPE
         keyboard.register_keydown(min::window::key_code::ESCAPE, controls::toggle_pause, (void *)this);
 
-        // Register callback function Q
-        keyboard.register_keydown(min::window::key_code::KEYQ, controls::toggle_edit_mode, (void *)this);
-
         // Register callback function W
         keyboard.register_keydown_per_frame(min::window::key_code::KEYW, controls::forward, (void *)this);
 
@@ -170,6 +166,9 @@ class controls
 
         // Register callback function E
         keyboard.register_keydown(min::window::key_code::KEYE, controls::reset, (void *)this);
+
+        // Register callback function I
+        keyboard.register_keydown(min::window::key_code::KEYI, controls::ui_extend, (void *)this);
 
         // Register callback function Z
         keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
@@ -286,24 +285,6 @@ class controls
         // Center cursor in middle of window
         win->set_cursor(win->get_width() / 2, win->get_height() / 2);
     }
-    static void toggle_edit_mode(void *ptr, double step)
-    {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the world and state pointers
-        world *const world = control->get_world();
-        skills &skill = world->get_player().get_skills();
-
-        // toggle edit mode
-        const bool mode = world->toggle_edit_mode();
-
-        // toggle fire mode if not in edit mode
-        skill.set_gun_active(!mode);
-
-        // reset scale
-        world->reset_scale();
-    }
     static void forward(void *ptr, double step)
     {
         // Get the camera and world pointers
@@ -348,10 +329,32 @@ class controls
         const min::vec3<float> &direction = camera->get_forward();
         world->get_player().move(direction * -1.0);
     }
-    void key_down(const size_t index, const std::function<void(void)> &f)
+    void key_down(const size_t index)
     {
         // Get the skills pointer
         skills &skill = _world->get_player().get_skills();
+
+        // Lookup key in inventory
+        const inventory &inv = _world->get_player().get_inventory();
+        const size_t id = inv[index].id();
+
+        // Determine if we need to go to edit or skill mode
+        if (id > 5)
+        {
+            // Enable edit mode
+            _world->set_edit_mode(true);
+
+            // Disable fire mode
+            skill.set_gun_active(false);
+        }
+        else if (id != 0)
+        {
+            // Disable edit mode
+            _world->set_edit_mode(false);
+
+            // Enable fire mode
+            skill.set_gun_active(true);
+        }
 
         // If gun is active
         if (!skill.is_locked() && skill.is_gun_active())
@@ -362,15 +365,54 @@ class controls
             // Play selection sound
             _sound->play_click();
 
-            // Do something
-            if (f)
+            // Do action for specific ID
+            switch (id)
             {
-                f();
+            case 0:
+                // Do nothing
+                break;
+            case 1:
+                // Load beam
+                _ui->set_console_string(skill.get_beam_string());
+                skill.set_beam_mode();
+                break;
+            case 2:
+                // Load missile
+                _ui->set_console_string(skill.get_missile_string());
+                skill.set_missile_mode();
+                break;
+            case 3:
+                // Load grapple
+                _ui->set_console_string(skill.get_grapple_string());
+                skill.set_grapple_mode();
+                break;
+            case 4:
+                // Load jet
+                _ui->set_console_string(skill.get_jet_string());
+                skill.set_jetpack_mode();
+                break;
+            case 5:
+                // Load scan
+                _ui->set_console_string(skill.get_scan_string());
+                skill.set_scan_mode();
+                break;
+            default:
+                break;
             }
         }
-        else if (_world->get_edit_mode())
+        else if (!skill.is_locked() && _world->get_edit_mode())
         {
-            _world->set_atlas_id(index);
+            // Modify ui toolbar
+            _ui->set_key_down(index);
+
+            // Play selection sound
+            _sound->play_click();
+
+            // Reset scale
+            _world->reset_scale();
+
+            // Set atlas id
+            _world->set_atlas_id(id);
         }
         else
         {
@@ -382,109 +424,49 @@ class controls
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        world *const world = control->get_world();
-        skills &skill = world->get_player().get_skills();
-        ui_overlay *const ui = control->get_ui();
-
-        // Switch to beam weapon type
-        const auto f = [&skill, ui]() {
-
-            // Load beam string in console
-            ui->set_console_string(skill.get_beam_string());
-            skill.set_beam_mode();
-        };
-
-        control->key_down(0, f);
+        control->key_down(0);
     }
     static void key2_down(void *ptr, double step)
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        world *const world = control->get_world();
-        skills &skill = world->get_player().get_skills();
-        ui_overlay *const ui = control->get_ui();
-
-        // Switch to missile weapon type
-        const auto f = [&skill, ui]() {
-
-            // Load missile string in console
-            ui->set_console_string(skill.get_missile_string());
-            skill.set_missile_mode();
-        };
-
-        control->key_down(1, f);
+        control->key_down(1);
     }
     static void key3_down(void *ptr, double step)
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        world *const world = control->get_world();
-        skills &skill = world->get_player().get_skills();
-        ui_overlay *const ui = control->get_ui();
-
-        // Switch to grapple weapon type
-        const auto f = [&skill, ui]() {
-
-            // Load grapple string in console
-            ui->set_console_string(skill.get_grapple_string());
-            skill.set_grapple_mode();
-        };
-
-        control->key_down(2, f);
+        control->key_down(2);
     }
     static void key4_down(void *ptr, double step)
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        world *const world = control->get_world();
-        skills &skill = world->get_player().get_skills();
-        ui_overlay *const ui = control->get_ui();
-
-        // Switch to jet weapon type
-        const auto f = [&skill, ui]() {
-
-            // Load jet string in console
-            ui->set_console_string(skill.get_jet_string());
-            skill.set_jetpack_mode();
-        };
-
-        control->key_down(3, f);
+        control->key_down(3);
     }
     static void key5_down(void *ptr, double step)
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        world *const world = control->get_world();
-        skills &skill = world->get_player().get_skills();
-        ui_overlay *const ui = control->get_ui();
-
-        // Switch to scan weapon type
-        const auto f = [&skill, ui]() {
-
-            // Load scan string in console
-            ui->set_console_string(skill.get_scan_string());
-            skill.set_scan_mode();
-        };
-
-        control->key_down(4, f);
+        control->key_down(4);
     }
     static void key6_down(void *ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        control->key_down(5, nullptr);
+        control->key_down(5);
     }
     static void key7_down(void *ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        control->key_down(6, nullptr);
+        control->key_down(6);
     }
     static void key8_down(void *ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        control->key_down(7, nullptr);
+        control->key_down(7);
     }
     static void key1_up(void *ptr, double step)
     {
@@ -592,6 +574,17 @@ class controls
 
         // Reset scale
         world->reset_scale();
+    }
+    static void ui_extend(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the ui pointer
+        ui_overlay *const ui = control->get_ui();
+
+        // Toggle draw inventory
+        ui->toggle_extend();
     }
     static void left_click_down(void *ptr, const uint16_t x, const uint16_t y)
     {

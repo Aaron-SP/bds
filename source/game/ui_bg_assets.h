@@ -29,7 +29,7 @@ class ui_bg_assets
 {
   private:
     // Backgrounds
-    static constexpr size_t _max_size = 18;
+    static constexpr size_t _max_size = 69;
     static constexpr float _x_cursor_uv = 4.0 / 512.0;
     static constexpr float _y_cursor_uv = 4.0 / 512.0;
     static constexpr float _x_black_uv = 40.0 / 512.0;
@@ -92,6 +92,9 @@ class ui_bg_assets
     static constexpr float _health_start = _tool_start - _tool_space - 4.0;
     static constexpr float _y_console = 100.0;
 
+    // Inventory stuff
+    static constexpr size_t _max_slots = 32;
+
     // Rect Instance stuff
     std::vector<min::mat3<float>> _v;
     std::vector<min::mat3<float>> _uv;
@@ -104,8 +107,9 @@ class ui_bg_assets
     float _energy;
     float _health;
     float _cursor_angle;
-    bool _draw_menu;
     bool _draw_console;
+    bool _draw_ex;
+    uint8_t _draw_menu;
     bool _draw_title;
 
     inline void set_uv(const size_t index, const min::vec4<float> &coord, const float alpha)
@@ -176,14 +180,6 @@ class ui_bg_assets
         // Set uv coordinates
         set_uv(index, coord, alpha);
     }
-    inline min::vec2<float> toolbar_position(const size_t index)
-    {
-        // Calculate offset from center for this toolbar element
-        const float offset = _tool_start + index * _tool_space;
-
-        // Return toolbar position
-        return min::vec2<float>(_center_w + offset, _tool_height);
-    }
 
   public:
     ui_bg_assets(const uint16_t width, const uint16_t height)
@@ -191,15 +187,31 @@ class ui_bg_assets
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
           _energy(0.0), _health(1.0), _cursor_angle(0.0),
-          _draw_menu(false), _draw_console(false), _draw_title(true) {}
+          _draw_console(false), _draw_ex(false), _draw_menu(0), _draw_title(true) {}
 
     inline bool get_draw_console() const
     {
         return _draw_console;
     }
+    inline bool get_draw_dead() const
+    {
+        return _draw_menu == 2;
+    }
+    inline bool get_draw_ex() const
+    {
+        return _draw_ex;
+    }
     inline bool get_draw_menu() const
     {
-        return _draw_menu;
+        return _draw_menu >= 2;
+    }
+    inline bool get_draw_pause() const
+    {
+        return _draw_menu == 3;
+    }
+    inline bool get_draw_reload() const
+    {
+        return _draw_menu == 1;
     }
     inline bool get_draw_title() const
     {
@@ -212,6 +224,26 @@ class ui_bg_assets
     inline const std::vector<min::mat3<float>> &get_uv() const
     {
         return _uv;
+    }
+    inline static constexpr size_t inv_count()
+    {
+        return _max_slots;
+    }
+    inline static constexpr size_t bg_index(const size_t index)
+    {
+        return index + 5;
+    }
+    inline static constexpr size_t key_index(const size_t index)
+    {
+        return index + 13;
+    }
+    inline static constexpr size_t bg_inv_index(const size_t index)
+    {
+        return index + 21;
+    }
+    inline static constexpr size_t inv_index(const size_t index)
+    {
+        return index + 45;
     }
     inline void load_title_overlay()
     {
@@ -307,94 +339,97 @@ class ui_bg_assets
         // Load rect at position
         set_rect(4, p, scale, red_coord);
     }
-    inline void load_background_black(const size_t index)
+    inline void load_background_black(const size_t index, const min::vec2<float> &p)
     {
-        const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(index + 5, p, scale, black_coord);
+        set_rect(index, p, scale, black_coord);
     }
-    inline void load_background_red(const size_t index)
+    inline void load_background_red(const size_t index, const min::vec2<float> &p)
     {
-        const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(index + 5, p, scale, red_coord);
+        set_rect(index, p, scale, red_coord);
     }
-    inline void load_background_yellow(const size_t index)
+    inline void load_background_yellow(const size_t index, const min::vec2<float> &p)
     {
-        const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> yellow_coord(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(index + 5, p, scale, yellow_coord);
+        set_rect(index, p, scale, yellow_coord);
     }
-    inline void load_background_white(const size_t index)
+    inline void load_background_white(const size_t index, const min::vec2<float> &p)
     {
-        const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> white_coord(_x_white_uv, _y_white_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(index + 5, p, scale, white_coord);
+        set_rect(index, p, scale, white_coord);
     }
-    inline void load_beam_icon(const size_t index)
+    inline void load_beam_icon(const size_t index, const min::vec2<float> &p)
     {
-        const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> beam_coord(_x_beam_uv, _y_beam_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(13, p, scale, beam_coord);
+        set_rect(index, p, scale, beam_coord);
     }
-    inline void load_missile_icon(const size_t index)
+    inline void load_missile_icon(const size_t index, const min::vec2<float> &p)
     {
-        const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> miss_coord(_x_miss_uv, _y_miss_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(14, p, scale, miss_coord);
+        set_rect(index, p, scale, miss_coord);
     }
-    inline void load_grapple_icon(const size_t index)
+    inline void load_grapple_icon(const size_t index, const min::vec2<float> &p)
     {
-        const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> grap_coord(_x_grap_uv, _y_grap_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(15, p, scale, grap_coord);
+        set_rect(index, p, scale, grap_coord);
     }
-    inline void load_jet_icon(const size_t index)
+    inline void load_jet_icon(const size_t index, const min::vec2<float> &p)
     {
-        const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> jet_coord(_x_jet_uv, _y_jet_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(16, p, scale, jet_coord);
+        set_rect(index, p, scale, jet_coord);
     }
-    inline void load_scan_icon(const size_t index)
+    inline void load_scan_icon(const size_t index, const min::vec2<float> &p)
     {
-        const min::vec2<float> p = toolbar_position(index);
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> beam_coord(_x_scan_uv, _y_scan_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(17, p, scale, beam_coord);
+        set_rect(index, p, scale, beam_coord);
     }
     inline void set_draw_console(const bool flag)
     {
         _draw_console = flag;
     }
-    inline void set_draw_menu(const bool flag)
+    inline void set_draw_dead()
     {
-        _draw_menu = flag;
+        _draw_menu = 2;
+    }
+    inline void set_draw_fps()
+    {
+        _draw_menu = 0;
+    }
+    inline void set_draw_pause()
+    {
+        _draw_menu = 3;
+    }
+    inline void set_draw_reload()
+    {
+        _draw_menu = 1;
     }
     inline void set_draw_title(const bool flag)
     {
@@ -436,6 +471,23 @@ class ui_bg_assets
     inline void toggle_draw_console()
     {
         _draw_console = !_draw_console;
+    }
+    inline void toggle_draw_ex()
+    {
+        _draw_ex = !_draw_ex;
+    }
+    inline min::vec2<float> toolbar_position(const size_t row, const size_t col) const
+    {
+        // Calculate offset from center for this toolbar element
+        const float x = (_center_w + _tool_start) + (col * _tool_space);
+        const float y = _tool_height + (row * _tool_space);
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
+    }
+    inline static constexpr size_t ui_size()
+    {
+        return 21;
     }
 };
 }

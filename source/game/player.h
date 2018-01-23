@@ -18,6 +18,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __PLAYER__
 #define __PLAYER__
 
+#include <game/inventory.h>
 #include <game/skills.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
@@ -37,6 +38,7 @@ class player
 
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
+    inventory _inv;
     min::vec3<float> _hook;
     min::vec3<float> _land_vel;
     float _hook_length;
@@ -281,6 +283,14 @@ class player
     inline float get_health_percent() const
     {
         return _health / _health_cap;
+    }
+    inline inventory &get_inventory()
+    {
+        return _inv;
+    }
+    inline const inventory &get_inventory() const
+    {
+        return _inv;
     }
     void hook_abort()
     {
