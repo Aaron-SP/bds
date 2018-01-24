@@ -99,17 +99,6 @@ The '-width' and '-height' flag changes the default window dimensions.
 
 ### PLAYER USAGE INSTRUCTIONS:
 
-#### Title Screen
-
-![Alt text](pictures/intro.png)
-
-#### Pre-Texture Update
-
-![Alt text](pictures/spawn.png)
-
-#### Texture Update
-![Alt text](pictures/up1.png)
-
 1. Keys [WASD]: forward/left/back/right
 2. Key [Q]: switch between block edit mode and power suit mode
 3. Keys [ZXC]: scale unit block (block edit mode)
