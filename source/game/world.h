@@ -52,7 +52,7 @@ class world
     static constexpr size_t _pre_max_scale = 5;
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
     static constexpr size_t _ray_max_dist = 100;
-    static constexpr float _explosion_radius = 4.0;
+    static constexpr float _explode_scale = 0.9;
 
     // Terrain stuff
     cgrid _grid;
@@ -138,14 +138,20 @@ class world
             const min::vec3<float> &p = _player.position();
 
             // Calculate distance from explosion center
-            const float d = (point - p).magnitude();
+            const float dist = (point - p).magnitude();
+
+            // Calculate the size of the explosion
+            const float explode_size = scale.dot(scale);
+
+            // Calculate the explosion radius
+            const float explode_radius = _explode_scale * std::sqrt(explode_size);
 
             // Check if character is too close to the explosion
-            const bool in_range = d < _explosion_radius;
+            const bool in_range = dist < explode_radius;
 
             // If block is lava, play exploding sound
             // Prefer stereo if close to the explosion
-            float power = 1000.0;
+            float power = 666.6 * explode_radius;
             if (in_range && value == 21)
             {
                 // Play explode sound
@@ -161,7 +167,7 @@ class world
             // If explode hasn't been flagged yet
             if (!_player.is_exploded() && in_range)
             {
-                _player.explode(direction, power, value);
+                _player.explode(direction, dist, explode_size, power, value);
             }
         }
     }
@@ -197,16 +203,31 @@ class world
             // Get other body id, b1 is player body
             const size_t id = b2.get_id();
 
-            switch (id)
+            if (id == 1)
             {
-            case 1:
                 // Player collided with a drone
                 _player.drone_collide(b2.get_position());
-                break;
-            case 2:
-                break;
-            default:
-                break;
+            }
+            else if (id == 2)
+            {
+                // Get the drop index from the body
+                const size_t index = b2.get_data().index;
+
+                // Get the player inventory
+                inventory &inv = _player.get_inventory();
+
+                // Get the atlas id from the drop
+                const uint8_t inv_id = inv.id_from_atlas(_drops.atlas(index));
+
+                // Add drop to inventory
+                uint8_t count = 1;
+                inv.add(inv_id, count);
+
+                // If we picked it up
+                if (count == 0)
+                {
+                    _drops.remove(index);
+                }
             }
         };
 
@@ -401,7 +422,7 @@ class world
     {
         return explode_block(r, _scale, f, size);
     }
-    inline uint8_t get_atlas_id() const
+    inline int8_t get_atlas_id() const
     {
         return _grid.get_atlas();
     }
@@ -467,10 +488,6 @@ class world
     {
         // Launch a missile on this ray
         return _projectile.launch_missile(_grid, r);
-    }
-    inline void reset_explode()
-    {
-        _player.reset_explode();
     }
     inline void respawn(const min::vec3<float> p)
     {
@@ -598,6 +615,9 @@ class world
 
         // Get player position
         const min::vec3<float> &p = _player.position();
+
+        // Reset explosion state
+        _player.reset_explode();
 
         // Detect if we crossed a chunk boundary
         _grid.update_current_chunk(p);

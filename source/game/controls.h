@@ -35,7 +35,6 @@ namespace game
 class controls
 {
   private:
-    static constexpr float _block_cost = 10.0;
     static constexpr float _beam_cost = 10.0;
     static constexpr float _beam_charge_cost = 20.0;
     static constexpr float _missile_cost = 20.0;
@@ -336,10 +335,13 @@ class controls
 
         // Lookup key in inventory
         const inventory &inv = _world->get_player().get_inventory();
-        const size_t id = inv[index].id();
+        const uint8_t id = inv[index].id();
+
+        // Is the gun locked?
+        const bool locked = skill.is_locked();
 
         // Determine if we need to go to edit or skill mode
-        if (id > 5)
+        if (!locked && id >= 9)
         {
             // Enable edit mode
             _world->set_edit_mode(true);
@@ -347,7 +349,7 @@ class controls
             // Disable fire mode
             skill.set_gun_active(false);
         }
-        else if (id != 0)
+        else if (!locked && id != 0)
         {
             // Disable edit mode
             _world->set_edit_mode(false);
@@ -357,7 +359,7 @@ class controls
         }
 
         // If gun is active
-        if (!skill.is_locked() && skill.is_gun_active())
+        if (!locked && skill.is_gun_active())
         {
             // Modify ui toolbar
             _ui->set_key_down(index);
@@ -400,7 +402,7 @@ class controls
                 break;
             }
         }
-        else if (!skill.is_locked() && _world->get_edit_mode())
+        else if (!locked && _world->get_edit_mode())
         {
             // Modify ui toolbar
             _ui->set_key_down(index);
@@ -412,7 +414,7 @@ class controls
             _world->reset_scale();
 
             // Set atlas id
-            _world->set_atlas_id(id);
+            _world->set_atlas_id(inv.id_to_atlas(id));
         }
         else
         {
@@ -692,6 +694,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
         world *const world = control->get_world();
         player &play = world->get_player();
+        inventory &inv = play.get_inventory();
         skills &skill = play.get_skills();
         sound *const sound = control->get_sound();
 
@@ -714,8 +717,12 @@ class controls
         const bool mode = world->get_edit_mode();
         if (mode)
         {
+            // Get the active atlas id
+            const uint8_t inv_id = inv.id_from_atlas(world->get_atlas_id());
+
             // Try to consume energy to create this resource
-            const bool consumed = skill.will_consume(_block_cost);
+            uint8_t count = 1;
+            const bool consumed = inv.consume(inv_id, count);
             if (consumed)
             {
                 // Calculate new point to add
@@ -726,6 +733,16 @@ class controls
 
                 // Add block to world
                 world->add_block(r);
+
+                // If remaining count is zero disable edit mode
+                if (count == 0)
+                {
+                    // Disable edit mode
+                    world->set_edit_mode(false);
+
+                    // Enable fire mode
+                    skill.set_gun_active(true);
+                }
             }
         }
         else if (skill.is_gun_active())

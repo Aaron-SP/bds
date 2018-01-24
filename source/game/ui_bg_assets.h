@@ -29,44 +29,50 @@ class ui_bg_assets
 {
   private:
     // Backgrounds
+    static constexpr float _image_size = 512.0;
     static constexpr size_t _max_size = 69;
-    static constexpr float _x_cursor_uv = 4.0 / 512.0;
-    static constexpr float _y_cursor_uv = 4.0 / 512.0;
-    static constexpr float _x_black_uv = 40.0 / 512.0;
-    static constexpr float _y_black_uv = 4.0 / 512.0;
-    static constexpr float _x_yellow_uv = 76.0 / 512.0;
-    static constexpr float _y_yellow_uv = 4.0 / 512.0;
-    static constexpr float _x_red_uv = 112.0 / 512.0;
-    static constexpr float _y_red_uv = 4.0 / 512.0;
-    static constexpr float _x_blue_uv = 148.0 / 512.0;
-    static constexpr float _y_blue_uv = 4.0 / 512.0;
-    static constexpr float _x_white_uv = 184.0 / 512.0;
-    static constexpr float _y_white_uv = 4.0 / 512.0;
+    static constexpr float _next_icon = 36.0 / _image_size;
+    static constexpr float _x_cursor_uv = 4.0 / _image_size;
+    static constexpr float _y_cursor_uv = 4.0 / _image_size;
+    static constexpr float _x_black_uv = 40.0 / _image_size;
+    static constexpr float _y_black_uv = 4.0 / _image_size;
+    static constexpr float _x_yellow_uv = 76.0 / _image_size;
+    static constexpr float _y_yellow_uv = 4.0 / _image_size;
+    static constexpr float _x_red_uv = 112.0 / _image_size;
+    static constexpr float _y_red_uv = 4.0 / _image_size;
+    static constexpr float _x_blue_uv = 148.0 / _image_size;
+    static constexpr float _y_blue_uv = 4.0 / _image_size;
+    static constexpr float _x_white_uv = 184.0 / _image_size;
+    static constexpr float _y_white_uv = 4.0 / _image_size;
 
     // Icons
-    static constexpr float _x_reload_uv = 4.0 / 512.0;
-    static constexpr float _y_reload_uv = 40.0 / 512.0;
-    static constexpr float _x_beam_uv = 40.0 / 512.0;
-    static constexpr float _y_beam_uv = 40.0 / 512.0;
-    static constexpr float _x_miss_uv = 76.0 / 512.0;
-    static constexpr float _y_miss_uv = 40.0 / 512.0;
-    static constexpr float _x_grap_uv = 112.0 / 512.0;
-    static constexpr float _y_grap_uv = 40.0 / 512.0;
-    static constexpr float _x_jet_uv = 148.0 / 512.0;
-    static constexpr float _y_jet_uv = 40.0 / 512.0;
-    static constexpr float _x_scan_uv = 184.0 / 512.0;
-    static constexpr float _y_scan_uv = 40.0 / 512.0;
+    static constexpr float _x_reload_uv = 4.0 / _image_size;
+    static constexpr float _y_reload_uv = 40.0 / _image_size;
+    static constexpr float _x_beam_uv = 40.0 / _image_size;
+    static constexpr float _y_beam_uv = 40.0 / _image_size;
+    static constexpr float _x_miss_uv = 76.0 / _image_size;
+    static constexpr float _y_miss_uv = 40.0 / _image_size;
+    static constexpr float _x_grap_uv = 112.0 / _image_size;
+    static constexpr float _y_grap_uv = 40.0 / _image_size;
+    static constexpr float _x_jet_uv = 148.0 / _image_size;
+    static constexpr float _y_jet_uv = 40.0 / _image_size;
+    static constexpr float _x_scan_uv = 184.0 / _image_size;
+    static constexpr float _y_scan_uv = 40.0 / _image_size;
+
+    // Cubes
+    static constexpr float _x_cube_uv = 4.0 / _image_size;
+    static constexpr float _y_cube_uv = 76.0 / _image_size;
 
     // Menu text
-    static constexpr float _x_dead_uv = 4.0 / 512.0;
-    static constexpr float _y_dead_uv = 384.0 / 512.0;
-    static constexpr float _x_pause_uv = 4.0 / 512.0;
-    static constexpr float _y_pause_uv = 256.0 / 512.0;
+    static constexpr float _x_dead_uv = 4.0 / _image_size;
+    static constexpr float _y_dead_uv = 384.0 / _image_size;
+    static constexpr float _x_pause_uv = 4.0 / _image_size;
+    static constexpr float _y_pause_uv = 256.0 / _image_size;
 
     // Scale sizes
     static constexpr float _s_bg = 40.0;
     static constexpr float _s_fg = 32.0;
-    static constexpr float _s_uv = 32.0 / 512.0;
+    static constexpr float _s_uv = 32.0 / _image_size;
     static constexpr float _s_red_x = 32.0;
     static constexpr float _s_red_y = 96.0;
     static constexpr float _s_blue_x = 32.0;
@@ -75,8 +81,8 @@ class ui_bg_assets
     // Menu sizes
     static constexpr float _s_menu_x = 504.0;
     static constexpr float _s_menu_y = 124.0;
-    static constexpr float _s_menu_uv_x = 504.0 / 512.0;
-    static constexpr float _s_menu_uv_y = 124.0 / 512.0;
+    static constexpr float _s_menu_uv_x = 504.0 / _image_size;
+    static constexpr float _s_menu_uv_y = 124.0 / _image_size;
 
     // Console sizes
     static constexpr float _s_console_x = 400.0;
@@ -379,13 +385,19 @@ class ui_bg_assets
         // Load rect at position
         set_rect(index, p, scale, beam_coord);
     }
-    inline void load_missile_icon(const size_t index, const min::vec2<float> &p)
+    inline void load_cube_icon(const size_t index, const int8_t atlas_id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec4<float> miss_coord(_x_miss_uv, _y_miss_uv, _s_uv, _s_uv);
+
+        // Calculate the start of cube uv in grid
+        const float x = _x_cube_uv + (atlas_id % 8) * _next_icon;
+        const float y = _y_cube_uv + (atlas_id / 8) * _next_icon;
+
+        // Calculate cube uv coordinates
+        const min::vec4<float> beam_coord(x, y, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(index, p, scale, miss_coord);
+        set_rect(index, p, scale, beam_coord);
     }
     inline void load_grapple_icon(const size_t index, const min::vec2<float> &p)
     {
@@ -402,6 +414,14 @@ class ui_bg_assets
 
         // Load rect at position
         set_rect(index, p, scale, jet_coord);
+    }
+    inline void load_missile_icon(const size_t index, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> miss_coord(_x_miss_uv, _y_miss_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(index, p, scale, miss_coord);
     }
     inline void load_scan_icon(const size_t index, const min::vec2<float> &p)
     {

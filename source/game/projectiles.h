@@ -314,7 +314,7 @@ class projectiles
                         }
                     }
 
-                    // Clear all missiles
+                    // Clear this missiles
                     remove(i);
 
                     // Adjust the size and current index

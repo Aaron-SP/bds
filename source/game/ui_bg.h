@@ -379,10 +379,10 @@ class ui_bg
     {
         _assets.toggle_draw_ex();
     }
-    inline void set_inventory(const size_t index, const uint8_t id, const min::vec2<float> &p)
+    inline void set_inventory(const size_t index, const uint8_t inv_id, const min::vec2<float> &p)
     {
         // Draw key icon overlay
-        switch (id)
+        switch (inv_id)
         {
         case 0:
             return _assets.load_background_black(index, p);
@@ -396,8 +396,14 @@ class ui_bg
             return _assets.load_jet_icon(index, p);
         case 5:
             return _assets.load_scan_icon(index, p);
+        case 6:
+            break;
+        case 7:
+            break;
+        case 8:
+            break;
         default:
-            return _assets.load_background_black(index, p);
+            return _assets.load_cube_icon(index, _inv->id_to_atlas(inv_id), p);
         }
     }
     inline void update_inventory()

@@ -238,16 +238,29 @@ class player
         // Add a kick force
         //force(dir * 1000.0);
     }
-    inline void explode(const min::vec3<float> &direction, const float factor, const int8_t value)
+    inline void explode(const min::vec3<float> &direction, const float dist, const float size, const float power, const int8_t value)
     {
-        // Signal explode signal
-        _exploded = true;
-
         // Record what we hit
         _explode_id = value;
 
-        // Apply force to the player body
-        force(direction * factor);
+        // If we haven't been exploded take damage
+        if (!_exploded)
+        {
+            if (_explode_id == 21)
+            {
+                consume_health(90.0);
+            }
+            else
+            {
+                consume_health(size * 4.0 / dist);
+            }
+
+            // Signal explode signal
+            _exploded = true;
+
+            // Apply force to the player body
+            force(direction * power);
+        }
     }
     inline void force(const min::vec3<float> &f)
     {
@@ -392,6 +405,9 @@ class player
 
         // Reset health
         _health = _health_cap;
+
+        // Reset inventory
+        _inv.respawn();
     }
     inline void set_hook(const min::vec3<float> &hook, const float hook_length)
     {

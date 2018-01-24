@@ -47,6 +47,10 @@ class item
         _id = 0;
         _count = 0;
     }
+    inline void empty()
+    {
+        _id = 0;
+    }
     inline uint8_t id() const
     {
         return _id;
@@ -57,7 +61,7 @@ class item
         const uint16_t sum = _count + count;
 
         // Calculate left over items
-        count = sum % 255;
+        count = (sum / 255) * (sum % 255);
 
         // Set the stack item count
         _count = sum - count;
@@ -73,7 +77,11 @@ class inventory
 
   public:
     inventory()
-        : _inv(_max_slots), _dirty(false) {}
+        : _inv(_max_slots), _dirty(false)
+    {
+        // Add a default beam
+        _inv[0] = item(1, 1);
+    }
     inline const item &operator[](const size_t index) const
     {
         return _inv[index];
@@ -90,6 +98,9 @@ class inventory
 
                 // Flag dirty
                 _dirty = true;
+
+                // Signal that we picked it up
+                count = 0;
 
                 // Return added
                 return true;
@@ -118,15 +129,25 @@ class inventory
     {
         _dirty = false;
     }
-    inline bool consume(const uint8_t id, const uint8_t count)
+    inline bool consume(const uint8_t id, uint8_t &count)
     {
         // Search for item to consume
         for (auto &it : _inv)
         {
-            // If this slot empty?
+            // Is this the item I want?
             if (it.id() == id && it.count() >= count)
             {
+                // Consume the inventory count
                 it.consume(count);
+
+                // Set the remaining count
+                count = it.count();
+
+                // If count is zero set empty ID
+                if (it.count() == 0)
+                {
+                    it.empty();
+                }
 
                 // Flag dirty
                 _dirty = true;
@@ -146,6 +167,26 @@ class inventory
     inline void drop(const size_t index)
     {
         _inv[index].drop();
+
+        // Flag dirty
+        _dirty = true;
+    }
+    inline static constexpr int8_t id_to_atlas(const uint8_t id)
+    {
+        // Convert inventory id to cube atlas
+        return id - 9;
+    }
+    inline static constexpr uint8_t id_from_atlas(const int8_t id)
+    {
+        // Convert from atlas to inventory id
+        return id + 9;
+    }
+    inline void respawn()
+    {
+        std::fill(_inv.begin(), _inv.end(), item());
+
+        // Add a default beam
+        _inv[0] = item(1, 1);
 
         // Flag dirty
         _dirty = true;

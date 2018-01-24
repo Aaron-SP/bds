@@ -104,23 +104,8 @@ class fractex
     {
         game::player &player = _world.get_player();
 
-        // Check if we exploded
-        if (!player.is_dead())
-        {
-            if (player.is_exploded())
-            {
-                const int8_t ex_id = _world.get_player().get_explode_id();
-                if (ex_id == 21)
-                {
-                    player.consume_health(90.0);
-                }
-                else
-                {
-                    player.consume_health(10.0);
-                }
-            }
-        }
-        else if (_state.is_respawn())
+        // Check if we need to respawn
+        if (_state.is_respawn())
         {
             // Respawn
             respawn();
@@ -129,9 +114,6 @@ class fractex
         {
             die();
         }
-
-        // Reset the explosion flag
-        _world.reset_explode();
     }
     inline void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
