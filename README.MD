@@ -1,4 +1,4 @@
-# Fractex
+# Beyond Dying Skies
 ## Repository for the Minimal Graphics Library Fractal Explorer
 
 Verify a bin directory exists before compiling with the makefile. 
