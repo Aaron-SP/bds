@@ -1,6 +1,24 @@
+/* Copyright [2013-2018] [Aaron Springstroh, Minimal Graphics Library]
+
+This file is part of the Beyond Dying Skies.
+
+Beyond Dying Skies is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+Beyond Dying Skies is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <game/game.h>
 
-inline void show_title(fractex &game, min::loop_sync &sync, const size_t frames)
+inline void show_title(bds &game, min::loop_sync &sync, const size_t frames)
 {
     double frame_time = 0.0;
 
@@ -40,7 +58,7 @@ inline void show_title(fractex &game, min::loop_sync &sync, const size_t frames)
     }
 }
 
-inline void show_game(fractex &game, min::loop_sync &sync, const size_t frames, const bool resize)
+inline void show_game(bds &game, min::loop_sync &sync, const size_t frames, const bool resize)
 {
     // Register the game callbacks
     game.disable_title_screen(resize);
@@ -99,7 +117,7 @@ void run(const size_t frames, const size_t chunk, const size_t grid,
          const size_t view, const size_t width, const size_t height, const bool resize)
 {
     // Load window shaders and program, enable shader program
-    fractex game(chunk, grid, view, width, height);
+    bds game(chunk, grid, view, width, height);
 
     // Setup controller to run at 60 frames per second
     min::loop_sync sync(frames, 0.25, 0.25, 0.25);
@@ -122,7 +140,7 @@ void parse_uint(char *str, size_t &out)
     catch (const std::exception &ex)
     {
         // Print parsing exception message
-        std::cout << "fractex: couldn't parse input: '"
+        std::cout << "bds: couldn't parse input: '"
                   << str << "', expected integral type" << std::endl;
     }
 }
@@ -188,7 +206,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                std::cout << "fractex: unknown flag '"
+                std::cout << "bds: unknown flag '"
                           << input << "'\"" << std::endl;
             }
         }
@@ -196,17 +214,17 @@ int main(int argc, char *argv[])
         // Do some sanity checks on values
         if (grid < 4)
         {
-            std::cout << "fractex: '-grid' must be atleast 4" << std::endl;
+            std::cout << "bds: '-grid' must be atleast 4" << std::endl;
             return 0;
         }
         else if (chunk < 2)
         {
-            std::cout << "fractex: '-chunk' must be atleast 2" << std::endl;
+            std::cout << "bds: '-chunk' must be atleast 2" << std::endl;
             return 0;
         }
         else if (view < 3)
         {
-            std::cout << "fractex: '-view' must be atleast 3" << std::endl;
+            std::cout << "bds: '-view' must be atleast 3" << std::endl;
             return 0;
         }
 

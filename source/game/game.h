@@ -1,19 +1,19 @@
 /* Copyright [2013-2018] [Aaron Springstroh, Minimal Graphics Library]
 
-This file is part of the Fractex.
+This file is part of the Beyond Dying Skies.
 
-Fractex is free software: you can redistribute it and/or modify
+Beyond Dying Skies is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-Fractex is distributed in the hope that it will be useful,
+Beyond Dying Skies is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
+along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
 #ifndef __GAME_HEADER__
 #define __GAME_HEADER__
@@ -36,7 +36,7 @@ along with Fractex.  If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <utility>
 
-class fractex
+class bds
 {
   private:
 #ifdef MGL_VB43
@@ -150,8 +150,8 @@ class fractex
 
   public:
     // Load window shaders and program
-    fractex(const size_t chunk, const size_t grid, const size_t view, const size_t width, const size_t height)
-        : _win("Fractex", width, height, _gl_major, _gl_minor),
+    bds(const size_t chunk, const size_t grid, const size_t view, const size_t width, const size_t height)
+        : _win("Beyond Dying Skies Official", width, height, _gl_major, _gl_minor),
           _uniforms(),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
@@ -170,7 +170,7 @@ class fractex
         // Delete the mem-file data
         game::memory_map::memory.clear();
     }
-    ~fractex()
+    ~bds()
     {
         // Save game data to file
         _state.save_state_file(_world.get_player().position());

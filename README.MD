@@ -84,9 +84,31 @@ The '-view' flag is an optional parameter for controlling how many chunks are vi
 The '-width' and '-height' flag changes the default window dimensions.
 - Example: 'bin/game -width 1600 -height 900' will created a window width of 1600 pixels and height of 900 pixels.
 
+### SCREENSHOTS!
+
+#### Title Screen
+
+![Alt text](pictures/intro.png)
+
+#### Pre-Texture Update
+
+![Alt text](pictures/spawn.png)
+
+#### Texture Update
+![Alt text](pictures/up1.png)
 
 ### PLAYER USAGE INSTRUCTIONS:
+
+#### Title Screen
+
+![Alt text](pictures/intro.png)
+
+#### Pre-Texture Update
+
 ![Alt text](pictures/spawn.png)
+
+#### Texture Update
+![Alt text](pictures/up1.png)
 
 1. Keys [WASD]: forward/left/back/right
 2. Key [Q]: switch between block edit mode and power suit mode
