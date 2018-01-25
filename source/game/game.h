@@ -82,24 +82,6 @@ class bds
         auto &keyboard = _win.get_keyboard();
         keyboard.enable();
     }
-    inline std::pair<unsigned, unsigned> user_input()
-    {
-        const game::player &player = _world.get_player();
-        if (_state.get_user_input() && !player.is_dead())
-        {
-            // Get the cursor coordinates
-            const auto c = _win.get_cursor();
-
-            // Reset cursor position
-            center_cursor();
-
-            // return the mouse coordinates
-            return c;
-        }
-
-        // return no mouse movement
-        return std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
-    }
     inline void update_die_respawn()
     {
         game::player &player = _world.get_player();
@@ -218,7 +200,7 @@ class bds
     void draw(const float dt)
     {
         // Get player physics body position
-        const min::vec3<float> &p = _world.get_player().position();
+        game::player &player = _world.get_player();
 
         bool update = false;
         min::camera<float> &camera = _state.get_camera();
@@ -226,31 +208,33 @@ class bds
         // If game is not paused update game state
         if (!_state.get_pause())
         {
-            // get user input
-            const auto c = user_input();
+            if (!_state.get_user_input() && !player.is_dead())
+            {
+                // Get the cursor coordinates
+                const auto c = _win.get_cursor();
 
-            // Must update state properties, camera before drawing world
-            _state.update(p, c, _win.get_width(), _win.get_height());
+                // Reset cursor position
+                center_cursor();
+
+                // Must update state properties, camera before drawing world
+                _state.update(player.position(), c, _win.get_width(), _win.get_height());
+            }
 
             // Update the world state
             _world.update(camera, dt);
-
-            // Update the sound listener properties
-            _sound.update(camera, _world.get_player().velocity());
 
             // Check if we died
             update_die_respawn();
 
             // Update the particle system
-            const min::vec3<float> &v = _world.get_player().velocity();
-            _particles.set_velocity(v);
+            _particles.set_velocity(player.velocity());
             _particles.update(camera, dt);
 
             // Update the player walk sound if moving and not falling
-            if (_world.get_player().has_landed())
+            if (player.has_landed())
             {
                 // Volume is proportional to square y velocity
-                const min::vec3<float> &lv = _world.get_player().land_velocity();
+                const min::vec3<float> &lv = player.land_velocity();
                 const float speed = std::abs(lv.y());
                 _sound.play_land(speed);
             }
@@ -262,8 +246,12 @@ class bds
             _controls.update(dt);
 
             // Update the UI class
-            _ui.update(_world.get_player().get_inventory());
+            _ui.update(player.get_inventory());
         }
+
+        // Update the sound listener properties
+        const min::vec3<float> &v = player.velocity();
+        _sound.update(camera, v);
 
         // Update all uniforms
         update_uniforms(camera, update);
@@ -272,7 +260,7 @@ class bds
         _world.draw(_uniforms);
 
         // Draw the character if fire mode activated
-        const game::skills &skill = _world.get_player().get_skills();
+        const game::skills &skill = player.get_skills();
         if (skill.is_gun_active())
         {
             _character.draw(_uniforms);
@@ -327,7 +315,7 @@ class bds
         // Update player position debug text
         const game::player &player = _world.get_player();
         const game::skills &skills = player.get_skills();
-        const min::vec3<float> &p = _world.get_player().position();
+        const min::vec3<float> &p = player.position();
         const min::vec3<float> &f = _state.get_camera().get_forward();
         const std::string &mode = _state.get_game_mode();
         const float health = player.get_health();

@@ -38,9 +38,9 @@ class state
     std::string _mode;
     min::vec3<float> _target;
     bool _fix_target;
-    bool _pause_mode;
-    bool _user_input;
+    bool _pause;
     bool _respawn;
+    bool _user_input;
 
     inline void load_camera()
     {
@@ -127,8 +127,8 @@ class state
         : _x{}, _y{}, _frame_count{},
           _load(grid_size),
           _mode("MODE: PLAY"),
-          _fix_target(false), _pause_mode(false),
-          _user_input(true), _respawn(false)
+          _fix_target(false), _pause(false),
+          _respawn(false), _user_input(false)
     {
         // Load camera
         load_camera();
@@ -166,7 +166,7 @@ class state
     }
     inline bool get_pause() const
     {
-        return _pause_mode;
+        return _pause;
     }
     inline bool get_user_input() const
     {
@@ -222,7 +222,7 @@ class state
     }
     inline void set_pause(const bool mode)
     {
-        _pause_mode = mode;
+        _pause = mode;
     }
     inline void set_respawn(const bool flag)
     {
@@ -242,7 +242,11 @@ class state
     }
     inline bool toggle_pause()
     {
-        return _pause_mode = !_pause_mode;
+        return _pause = !_pause;
+    }
+    inline bool toggle_user_input()
+    {
+        return _user_input = !_user_input;
     }
     void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h)
     {

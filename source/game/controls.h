@@ -51,9 +51,8 @@ class controls
     sound *_sound;
 
   public:
-    controls(min::window &window, min::camera<float> &camera,
-             character &ch, state &state,
-             ui_overlay &ui, world &world, sound &sound)
+    controls(min::window &window, min::camera<float> &camera, character &ch,
+             state &state, ui_overlay &ui, world &world, sound &sound)
         : _window(&window), _camera(&camera), _character(&ch),
           _state(&state), _ui(&ui), _world(&world), _sound(&sound) {}
 
@@ -581,12 +580,27 @@ class controls
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+        min::window *const win = control->get_window();
 
         // Get the ui pointer
         ui_overlay *const ui = control->get_ui();
 
         // Toggle draw inventory
         ui->toggle_extend();
+
+        // Toggle user input
+        const bool input = state->toggle_user_input();
+
+        // Center cursor when changing user state
+        const uint16_t w = win->get_width();
+        const uint16_t h = win->get_height();
+
+        // Center cursor in middle of window
+        win->set_cursor(w / 2, h / 2);
+
+        // Hide or show the cursor
+        win->display_cursor(input);
     }
     static void left_click_down(void *ptr, const uint16_t x, const uint16_t y)
     {
@@ -601,6 +615,14 @@ class controls
         player &play = world->get_player();
         skills &skill = play.get_skills();
         sound *const sound = control->get_sound();
+
+        // Does user have control of cursor?
+        const bool input = state->get_user_input();
+        const bool pause = state->get_pause();
+        if (input || pause)
+        {
+            return;
+        }
 
         // Are we dead?
         const bool dead = play.is_dead();
@@ -691,19 +713,25 @@ class controls
         // Get the ALL the pointers
         min::camera<float> *const cam = control->get_camera();
         character *const character = control->get_character();
-        ui_overlay *const ui = control->get_ui();
         world *const world = control->get_world();
         player &play = world->get_player();
         inventory &inv = play.get_inventory();
         skills &skill = play.get_skills();
+        state *const state = control->get_state();
         sound *const sound = control->get_sound();
+        ui_overlay *const ui = control->get_ui();
 
-        // Are we dead?
-        const bool dead = play.is_dead();
-        if (dead && !skill.is_locked())
+        // Do we need to release skill lock
+        if (!skill.is_locked())
         {
-            // return early
-            return;
+            // Does user have control of cursor?
+            const bool input = state->get_user_input();
+            const bool pause = state->get_pause();
+            const bool dead = play.is_dead();
+            if (input || pause || dead)
+            {
+                return;
+            }
         }
 
         // Create explode callback to play sound
@@ -880,6 +908,14 @@ class controls
         world *const world = control->get_world();
         player &play = world->get_player();
 
+        // Does user have control of cursor?
+        const bool input = state->get_user_input();
+        const bool pause = state->get_pause();
+        if (input || pause)
+        {
+            return;
+        }
+
         // Are we dead?
         const bool dead = play.is_dead();
         if (dead)
@@ -911,19 +947,8 @@ class controls
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
 
-        // Get the state and skill pointers
+        // Get the state pointer
         state *const state = control->get_state();
-        world *const world = control->get_world();
-        player &play = world->get_player();
-        skills &skill = play.get_skills();
-
-        // Are we dead?
-        const bool dead = play.is_dead();
-        if (dead && !skill.is_locked())
-        {
-            // return early
-            return;
-        }
 
         // Stop camera tracking
         state->abort_tracking();
