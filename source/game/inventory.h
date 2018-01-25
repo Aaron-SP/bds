@@ -73,12 +73,15 @@ class inventory
   private:
     static constexpr size_t _max_slots = 32;
     std::vector<item> _inv;
-    bool _dirty;
+    std::vector<size_t> _update;
 
   public:
     inventory()
-        : _inv(_max_slots), _dirty(false)
+        : _inv(_max_slots)
     {
+        // Reserve memory for update buffer
+        _update.reserve(_max_slots);
+
         // Add a default beam
         _inv[0] = item(1, 1);
     }
@@ -89,15 +92,19 @@ class inventory
     inline bool add(const uint8_t id, uint8_t &count)
     {
         // Search for item of same id in slots
-        for (auto &it : _inv)
+        const size_t size = _inv.size();
+        for (size_t i = 0; i < size; i++)
         {
+            // Get the current item
+            item &it = _inv[i];
+
             // If this slot empty?
             if (it.id() == 0)
             {
                 it = item(id, count);
 
-                // Flag dirty
-                _dirty = true;
+                // Store update index
+                _update.push_back(i);
 
                 // Signal that we picked it up
                 count = 0;
@@ -110,8 +117,8 @@ class inventory
                 // Try to stack the item
                 it.stack(count);
 
-                // Flag dirty
-                _dirty = true;
+                // Store update index
+                _update.push_back(i);
 
                 // If fully stacked early break
                 if (count == 0)
@@ -127,13 +134,17 @@ class inventory
     }
     inline void clean()
     {
-        _dirty = false;
+        _update.clear();
     }
     inline bool consume(const uint8_t id, uint8_t &count)
     {
-        // Search for item to consume
-        for (auto &it : _inv)
+        // Search for item of same id in slots
+        const size_t size = _inv.size();
+        for (size_t i = 0; i < size; i++)
         {
+            // Get the current item
+            item &it = _inv[i];
+
             // Is this the item I want?
             if (it.id() == id && it.count() >= count)
             {
@@ -149,8 +160,8 @@ class inventory
                     it.empty();
                 }
 
-                // Flag dirty
-                _dirty = true;
+                // Store update index
+                _update.push_back(i);
 
                 // Return that we consumed the resource
                 return true;
@@ -162,14 +173,18 @@ class inventory
     }
     inline bool dirty() const
     {
-        return _dirty;
+        return _update.size() > 0;
     }
     inline void drop(const size_t index)
     {
         _inv[index].drop();
 
-        // Flag dirty
-        _dirty = true;
+        // Store update index
+        _update.push_back(index);
+    }
+    const std::vector<size_t> &get_updates() const
+    {
+        return _update;
     }
     inline static constexpr int8_t id_to_atlas(const uint8_t id)
     {
@@ -188,8 +203,9 @@ class inventory
         // Add a default beam
         _inv[0] = item(1, 1);
 
-        // Flag dirty
-        _dirty = true;
+        // Flag all dirty
+        _update.resize(_inv.size());
+        std::iota(_update.begin(), _update.end(), 0);
     }
     inline void swap(const size_t one, const size_t two)
     {
@@ -198,8 +214,9 @@ class inventory
         _inv[one] = _inv[two];
         _inv[two] = swap;
 
-        // Flag dirty
-        _dirty = true;
+        // Store update index
+        _update.push_back(one);
+        _update.push_back(two);
     }
 };
 }

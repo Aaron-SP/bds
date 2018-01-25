@@ -18,6 +18,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _UI_BACKGROUND_ASSETS__
 #define _UI_BACKGROUND_ASSETS__
 
+#include <min/aabbox.h>
+#include <min/vec2.h>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -77,6 +79,9 @@ class ui_bg_assets
     static constexpr float _s_red_y = 96.0;
     static constexpr float _s_blue_x = 32.0;
     static constexpr float _s_blue_y = 96.0;
+
+    // Inventory pixel scale
+    static constexpr float _s_inv = 16.0;
 
     // Menu sizes
     static constexpr float _s_menu_x = 504.0;
@@ -223,6 +228,14 @@ class ui_bg_assets
     {
         return _draw_title;
     }
+    inline size_t get_width() const
+    {
+        return _width;
+    }
+    inline size_t get_height() const
+    {
+        return _height;
+    }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
         return _v;
@@ -230,6 +243,14 @@ class ui_bg_assets
     inline const std::vector<min::mat3<float>> &get_uv() const
     {
         return _uv;
+    }
+    inline static min::aabbox<float, min::vec2> inv_box(const min::vec2<float> &p)
+    {
+        // Create a box from the screen
+        const min::vec2<float> half(_s_inv, _s_inv);
+
+        // Return the inv_box
+        return min::aabbox<float, min::vec2>(p - half, p + half);
     }
     inline static constexpr size_t inv_count()
     {

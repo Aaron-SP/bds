@@ -62,6 +62,10 @@ class ui_overlay
     {
         return _bg.get_uv();
     }
+    inline bool overlap(const min::vec2<float> &p)
+    {
+        return _bg.overlap(p);
+    }
     inline void reset_menu()
     {
         _bg.reset_menu();
@@ -148,8 +152,15 @@ class ui_overlay
         // Update the inventory matrices if dirty
         if (inv.dirty())
         {
-            // Update the bg inventory
-            _bg.update_inventory();
+            // Get all updated slots
+            const std::vector<size_t> &updates = inv.get_updates();
+
+            // Update all slots
+            for (auto index : updates)
+            {
+                const item &it = inv[index];
+                _bg.update_inv_slot(index, it.id());
+            }
 
             // Flag that we clean updated the inventory state
             inv.clean();

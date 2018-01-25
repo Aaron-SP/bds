@@ -23,10 +23,13 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/ui_bg_assets.h>
 #include <game/ui_vertex.h>
 #include <game/uniforms.h>
+#include <min/aabbox.h>
 #include <min/dds.h>
+#include <min/grid.h>
 #include <min/program.h>
 #include <min/shader.h>
 #include <min/texture_buffer.h>
+#include <min/vec2.h>
 #include <min/vertex_buffer.h>
 
 namespace game
@@ -35,6 +38,8 @@ namespace game
 class ui_bg
 {
   private:
+    static constexpr size_t _rows = 8;
+
     // OpenGL stuff
     min::shader _vertex;
     min::shader _fragment;
@@ -51,10 +56,15 @@ class ui_bg
 
     // Misc
     size_t _selected;
+    size_t _hover;
 
     // Background assets
     ui_bg_assets _assets;
     const inventory *const _inv;
+
+    // Click detection
+    std::vector<min::aabbox<float, min::vec2>> _shapes;
+    min::grid<float, uint16_t, uint16_t, min::vec2, min::aabbox, min::aabbox> _grid;
 
     inline void draw_all() const
     {
@@ -120,6 +130,39 @@ class ui_bg
 
         // Upload the text glyphs to the GPU
         _vb.upload();
+    }
+    inline void load_grid(const float width, const float height)
+    {
+        // Clear the shapes buffer
+        _shapes.clear();
+
+        // First row
+        const size_t rows = _rows;
+        const size_t size = _assets.inv_count() - rows;
+        for (size_t i = 0; i < rows; i++)
+        {
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(0, i % rows);
+
+            // Add shape to buffer
+            _shapes.push_back(_assets.inv_box(p));
+        }
+
+        // Extended rows
+        for (size_t i = 0; i < size; i++)
+        {
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(2 + (i / rows), i % rows);
+
+            // Add shape to buffer
+            _shapes.push_back(_assets.inv_box(p));
+        }
+
+        // Calculate the grid scale
+        const uint16_t scale = width / 24;
+
+        // Insert the shapes into the grid
+        _grid.insert(_shapes, scale);
     }
     inline void load_texture()
     {
@@ -188,19 +231,96 @@ class ui_bg
         // Load the inventory
         update_inventory();
     }
+    inline static min::aabbox<float, min::vec2> screen_box(const uint16_t width, const uint16_t height)
+    {
+        // Create a box from the screen
+        const min::vec2<float> min(0, 0);
+        const min::vec2<float> max(width, height);
+
+        // Return the screen in a 2D box
+        return min::aabbox<float, min::vec2>(min, max);
+    }
+    inline void update_inventory()
+    {
+        // Update all bg icons
+        const size_t rows = _rows;
+        for (size_t i = 0; i < rows; i++)
+        {
+            // Offset this index for a ui bg
+            const size_t index_key = _assets.bg_index(i);
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(0, i % rows);
+
+            // Update the black bg icon
+            _assets.load_background_black(index_key, p);
+        }
+
+        // Update all key icons
+        for (size_t i = 0; i < rows; i++)
+        {
+            // Offset this index for a ui key
+            const size_t index_key = _assets.key_index(i);
+
+            // Get the inventory id
+            const uint8_t id = (*_inv)[i].id();
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(0, i % rows);
+
+            // Update the icon
+            set_inventory(index_key, id, p);
+        }
+
+        // Update all bg inventory icons
+        const size_t size = _assets.inv_count() - rows;
+        for (size_t i = 0; i < size; i++)
+        {
+            // Offset this index for a ui bg
+            const size_t index_key = _assets.bg_inv_index(i);
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(2 + (i / rows), i % rows);
+
+            // Update the black bg icon
+            _assets.load_background_black(index_key, p);
+        }
+
+        // Update all inventory icons
+        for (size_t i = 0; i < size; i++)
+        {
+            // Offset this index for a ui key
+            const size_t index_key = _assets.inv_index(i);
+
+            // Get the inventory id
+            const uint8_t id = (*_inv)[i + rows].id();
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(2 + (i / rows), i % rows);
+
+            // Update the icon
+            set_inventory(index_key, id, p);
+        }
+    }
 
   public:
     ui_bg(const game::uniforms &uniforms, const inventory *const inv, const uint16_t width, const uint16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
-          _prog(_vertex, _fragment), _mesh_id(0), _selected(0),
-          _assets(width, height), _inv(inv)
+          _prog(_vertex, _fragment), _mesh_id(0), _selected(0), _hover(0),
+          _assets(width, height), _inv(inv), _grid(screen_box(width, height))
     {
         // Create the instance rectangle
         load_base_rect();
 
         // Load texture
         load_texture();
+
+        // Reserve shape memory
+        _shapes.reserve(_assets.inv_count());
+
+        // Load the grid inventory boxes
+        load_grid(width, height);
 
         // Load the uniform buffer with program we will use
         uniforms.set_program_matrix(_prog);
@@ -240,6 +360,30 @@ class ui_bg
     inline const std::vector<min::mat3<float>> &get_uv() const
     {
         return _assets.get_uv();
+    }
+    inline bool overlap(const min::vec2<float> &p)
+    {
+        // Bad point
+        if (p.x() > _assets.get_width() || p.y() > _assets.get_height())
+        {
+            return false;
+        }
+
+        // Search for overlapping cells
+        const std::vector<size_t> &map = _grid.get_index_map();
+        const std::vector<uint16_t> &hits = _grid.point_inside(p);
+
+        // Set hover if overlapping
+        for (auto &h : hits)
+        {
+            if (_shapes[map[h]].point_inside(p))
+            {
+                // Highlight the inventory cell
+                set_hover_down(map[h]);
+            }
+        }
+
+        return true;
     }
     inline void reset_menu()
     {
@@ -299,6 +443,67 @@ class ui_bg
     {
         _assets.set_health(health);
     }
+    inline void set_hover_down(const size_t index)
+    {
+        const size_t rows = _rows;
+
+        // Determine if this is extended inventory
+        if (_hover >= 8)
+        {
+            // Offset the index by one row
+            const size_t i = _hover - rows;
+
+            // Offset this index for a ui bg
+            const size_t hover_key = _assets.bg_inv_index(i);
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(2 + (i / rows), i % rows);
+
+            // Update the icon
+            _assets.load_background_black(hover_key, p);
+        }
+        else
+        {
+            // Offset this index for a ui key
+            const size_t hover_key = _assets.bg_index(_hover);
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(0, _hover % rows);
+
+            // Update the icon
+            _assets.load_background_black(hover_key, p);
+        }
+
+        // Set selected index
+        _hover = index;
+
+        // Determine if this is extended inventory
+        if (_hover >= 8)
+        {
+            // Offset the index by one row
+            const size_t i = _hover - rows;
+
+            // Offset this index for a ui bg
+            const size_t hover_key = _assets.bg_inv_index(i);
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(2 + (i / rows), i % rows);
+
+            // Update the icon
+            _assets.load_background_yellow(hover_key, p);
+        }
+        else
+        {
+            // Offset this index for a ui key
+            const size_t hover_key = _assets.bg_index(_hover);
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(0, _hover % rows);
+
+            // Update the icon
+            _assets.load_background_yellow(hover_key, p);
+        }
+    }
     inline void set_key_down(const size_t index)
     {
         // Set previous unselected color to black
@@ -312,10 +517,10 @@ class ui_bg
         _selected = index;
 
         // Set activated index color to white
-        const min::vec2<float> active = _assets.toolbar_position(0, index);
+        const min::vec2<float> active = _assets.toolbar_position(0, _selected);
 
         // Offset this index for a ui key
-        const size_t active_key = _assets.bg_index(index);
+        const size_t active_key = _assets.bg_index(_selected);
         _assets.load_background_white(active_key, active);
     }
     inline void set_key_down_fail(const size_t index)
@@ -367,6 +572,12 @@ class ui_bg
 
         // Reposition all ui on the screen
         position_ui();
+
+        // Resize the screen grid box
+        _grid.resize(screen_box(width, height));
+
+        // Load grid inventory boxes
+        load_grid(width, height);
     }
     inline void toggle_draw_console()
     {
@@ -385,7 +596,7 @@ class ui_bg
         switch (inv_id)
         {
         case 0:
-            return _assets.load_background_black(index, p);
+            return _assets.load_cube_icon(index, 23, p);
         case 1:
             return _assets.load_beam_icon(index, p);
         case 2:
@@ -406,64 +617,35 @@ class ui_bg
             return _assets.load_cube_icon(index, _inv->id_to_atlas(inv_id), p);
         }
     }
-    inline void update_inventory()
+    inline void update_inv_slot(const size_t index, const uint8_t inv_id)
     {
-        // Update all bg icons
-        for (size_t i = 0; i < 8; i++)
+        const size_t rows = _rows;
+
+        // Determine if this is extended inventory
+        if (index >= 8)
         {
+            // Offset the index by one row
+            const size_t i = index - rows;
+
             // Offset this index for a ui bg
-            const size_t index_key = _assets.bg_index(i);
-
-            // Calculate ui element position
-            const min::vec2<float> p = _assets.toolbar_position(0, i % 8);
-
-            // Update the black bg icon
-            _assets.load_background_black(index_key, p);
-        }
-
-        // Update all key icons
-        for (size_t i = 0; i < 8; i++)
-        {
-            // Offset this index for a ui key
-            const size_t index_key = _assets.key_index(i);
-
-            // Get the inventory id
-            const uint8_t id = (*_inv)[i].id();
-
-            // Calculate ui element position
-            const min::vec2<float> p = _assets.toolbar_position(0, i % 8);
-
-            // Update the icon
-            set_inventory(index_key, id, p);
-        }
-
-        // Update all bg inventory icons
-        for (size_t i = 0; i < 24; i++)
-        {
-            // Offset this index for a ui bg
-            const size_t index_key = _assets.bg_inv_index(i);
-
-            // Calculate ui element position
-            const min::vec2<float> p = _assets.toolbar_position(2 + (i / 8), i % 8);
-
-            // Update the black bg icon
-            _assets.load_background_black(index_key, p);
-        }
-
-        // Update all inventory icons
-        for (size_t i = 0; i < 24; i++)
-        {
-            // Offset this index for a ui key
             const size_t index_key = _assets.inv_index(i);
 
-            // Get the inventory id
-            const uint8_t id = (*_inv)[i + 8].id();
-
             // Calculate ui element position
-            const min::vec2<float> p = _assets.toolbar_position(2 + (i / 8), i % 8);
+            const min::vec2<float> p = _assets.toolbar_position(2 + (i / rows), i % rows);
 
             // Update the icon
-            set_inventory(index_key, id, p);
+            set_inventory(index_key, inv_id, p);
+        }
+        else
+        {
+            // Offset this index for a ui key
+            const size_t index_key = _assets.key_index(index);
+
+            // Calculate ui element position
+            const min::vec2<float> p = _assets.toolbar_position(0, index % rows);
+
+            // Update the icon
+            set_inventory(index_key, inv_id, p);
         }
     }
 };

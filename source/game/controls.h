@@ -616,14 +616,6 @@ class controls
         skills &skill = play.get_skills();
         sound *const sound = control->get_sound();
 
-        // Does user have control of cursor?
-        const bool input = state->get_user_input();
-        const bool pause = state->get_pause();
-        if (input || pause)
-        {
-            return;
-        }
-
         // Are we dead?
         const bool dead = play.is_dead();
         if (dead)
@@ -632,6 +624,14 @@ class controls
             state->set_respawn(true);
 
             // return early
+            return;
+        }
+
+        // Does user have control of cursor?
+        const bool input = state->get_user_input();
+        const bool pause = state->get_pause();
+        if (input || pause)
+        {
             return;
         }
 
@@ -908,14 +908,6 @@ class controls
         world *const world = control->get_world();
         player &play = world->get_player();
 
-        // Does user have control of cursor?
-        const bool input = state->get_user_input();
-        const bool pause = state->get_pause();
-        if (input || pause)
-        {
-            return;
-        }
-
         // Are we dead?
         const bool dead = play.is_dead();
         if (dead)
@@ -924,6 +916,14 @@ class controls
             state->set_respawn(true);
 
             // return early
+            return;
+        }
+
+        // Does user have control of cursor?
+        const bool input = state->get_user_input();
+        const bool pause = state->get_pause();
+        if (input || pause)
+        {
             return;
         }
 

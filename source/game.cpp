@@ -58,10 +58,10 @@ inline void show_title(bds &game, min::loop_sync &sync, const size_t frames)
     }
 }
 
-inline void show_game(bds &game, min::loop_sync &sync, const size_t frames, const bool resize)
+inline void show_game(bds &game, min::loop_sync &sync, const size_t frames)
 {
     // Register the game callbacks
-    game.disable_title_screen(resize);
+    game.disable_title_screen();
 
     // Calculate number of physics steps per frame
     double frame_time = 0.0;
@@ -122,11 +122,17 @@ void run(const size_t frames, const size_t chunk, const size_t grid,
     // Setup controller to run at 60 frames per second
     min::loop_sync sync(frames, 0.25, 0.25, 0.25);
 
+    // Maximize the window
+    if (resize)
+    {
+        game.maximize();
+    }
+
     // Show the title screen
     show_title(game, sync, 15);
 
     // Run the game after the title screen
-    show_game(game, sync, frames, resize);
+    show_game(game, sync, frames);
 }
 
 void parse_uint(char *str, size_t &out)

@@ -57,6 +57,7 @@ class bds
     game::controls _controls;
     game::title _title;
     game::sound _sound;
+    std::pair<uint16_t, uint16_t> _cursor;
 
     inline void die()
     {
@@ -176,7 +177,7 @@ class bds
         glClearBufferfv(GL_COLOR, 0, color);
         glClear(GL_DEPTH_BUFFER_BIT);
     }
-    void disable_title_screen(const bool max)
+    void disable_title_screen()
     {
         // Register window callbacks
         _controls.register_control_callbacks();
@@ -187,12 +188,6 @@ class bds
 
         // Turn off cursor
         _win.display_cursor(false);
-
-        // Maximize window?
-        if (max)
-        {
-            _win.maximize();
-        }
 
         // Update the mouse cursor to center
         center_cursor();
@@ -213,11 +208,26 @@ class bds
                 // Get the cursor coordinates
                 const auto c = _win.get_cursor();
 
-                // Reset cursor position
-                center_cursor();
-
                 // Must update state properties, camera before drawing world
                 _state.update(player.position(), c, _win.get_width(), _win.get_height());
+
+                // Reset cursor position
+                center_cursor();
+            }
+            else if (_state.get_user_input())
+            {
+                // Get the cursor coordinates
+                const auto c = _win.get_cursor();
+
+                // Flip the Y value to match screen coordinates
+                const uint16_t height = _win.get_height() - c.second;
+                _ui.overlap(min::vec2<float>(c.first, height));
+
+                // Calculate the center of the screen
+                const auto center = std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
+
+                // Must update state properties, camera before drawing world
+                _state.update(player.position(), center, _win.get_width(), _win.get_height());
             }
 
             // Update the world state
@@ -286,6 +296,10 @@ class bds
     bool is_show_title() const
     {
         return _title.is_show_title();
+    }
+    void maximize() const
+    {
+        _win.maximize();
     }
     void play_music()
     {
