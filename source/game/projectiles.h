@@ -246,7 +246,7 @@ class projectiles
 
         return launch(grid, r);
     }
-    inline void draw(game::uniforms &uniforms) const
+    inline void draw(const uniforms &uniforms) const
     {
         // Draw launch particles
         _part->draw_miss_launch(uniforms);

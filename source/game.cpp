@@ -80,8 +80,11 @@ inline void show_game(bds &game, min::loop_sync &sync, const size_t frames)
             // Clear the background color
             game.clear_background();
 
-            // Draw the model
-            game.draw(frame_time);
+            // Update the scene
+            game.update(frame_time);
+
+            // Draw the scene
+            game.draw();
 
             // Update the window after draw command
             game.update_window();

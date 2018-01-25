@@ -30,7 +30,6 @@ class uniforms
   private:
     min::uniform_buffer<float> _ub;
     min::light<float> _light1;
-    min::light<float> _light2;
 
     size_t _light;
     size_t _proj_view_id;
@@ -52,9 +51,7 @@ class uniforms
         const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
         const min::vec4<float> pos1(0.0, 100.0, 0.0, 1.0);
         const min::vec4<float> pow1(0.3, 0.7, 0.0, 1.0);
-        const min::vec4<float> pow2(0.3, 0.7, 0.0, 0.50);
         _light1 = min::light<float>(col1, pos1, pow1);
-        _light2 = min::light<float>(col1, pos1, pow2);
 
         // Add light to buffer
         _light = _ub.add_light(_light1);
@@ -133,16 +130,6 @@ class uniforms
     inline void set_program_vector(const min::program &p) const
     {
         _ub.set_program_vector(p);
-    }
-    inline void set_light1()
-    {
-        _ub.set_light(_light1, _light);
-        _ub.update_lights();
-    }
-    inline void set_light2()
-    {
-        _ub.set_light(_light2, _light);
-        _ub.update_lights();
     }
     inline void update_matrix_buffer()
     {

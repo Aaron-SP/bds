@@ -56,7 +56,7 @@ class world
 
     // Terrain stuff
     cgrid _grid;
-    game::terrain _terrain;
+    terrain _terrain;
     particle *_particles;
     sound *_sound;
     std::vector<size_t> _view_chunks;
@@ -317,7 +317,7 @@ class world
     }
 
   public:
-    world(const load_state &state, particle *const particles, sound *const s, const game::uniforms &uniforms,
+    world(const load_state &state, particle *const particles, sound *const s, const uniforms &uniforms,
           const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
         : _grid(chunk_size, grid_size, view_chunk_size),
           _terrain(uniforms, _grid.get_chunks(), chunk_size),
@@ -357,7 +357,7 @@ class world
         // Add to grid
         _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
     }
-    void draw(game::uniforms &uniforms) const
+    void draw(const uniforms &uniforms) const
     {
         // Binds textures and uses program
         _terrain.bind();

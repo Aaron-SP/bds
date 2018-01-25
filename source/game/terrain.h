@@ -46,10 +46,11 @@ class terrain
     min::shader _tg;
     min::shader _tf;
     min::program _prog;
-    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
-    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
+    min::vertex_buffer<float, uint32_t, terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
+    min::vertex_buffer<float, uint32_t, terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
+    GLint _pre_loc;
 
     inline void generate_indices(min::mesh<float, uint32_t> &mesh)
     {
@@ -85,7 +86,7 @@ class terrain
     }
 
   public:
-    terrain(const game::uniforms &uniforms, const size_t chunks, const size_t chunk_size)
+    terrain(const uniforms &uniforms, const size_t chunks, const size_t chunk_size)
         : _tv(memory_map::memory.get_file("data/shader/terrain_gs.vertex"), GL_VERTEX_SHADER),
           _tg(memory_map::memory.get_file("data/shader/terrain_gs.geometry"), GL_GEOMETRY_SHADER),
           _tf(memory_map::memory.get_file("data/shader/terrain_gs.fragment"), GL_FRAGMENT_SHADER),
@@ -97,6 +98,13 @@ class terrain
 
         // Reserve memory based on chunk scale
         reserve_memory(chunks, chunk_size);
+
+        // Get the start_index uniform location
+        _pre_loc = glGetUniformLocation(_prog.id(), "preview");
+        if (_pre_loc == -1)
+        {
+            throw std::runtime_error("terrain: could not find uniform 'preview'");
+        }
 
         // Load the uniform buffer with program we will use
         uniforms.set_program_lights(_prog);
@@ -110,27 +118,27 @@ class terrain
         // Bind the terrain texture for drawing
         _tbuffer.bind(_dds_id, 0);
     }
-    inline void draw_placemark(game::uniforms &uniforms) const
+    inline void draw_placemark(const uniforms &uniforms) const
     {
-        // Set uniforms to light2
-        uniforms.set_light2();
-
         // Bind VAO
         _pb.bind();
 
+        // Update to use preview
+        glUniform1i(_pre_loc, 1);
+
         // Draw placemarker
         _pb.draw_all(GL_POINTS);
-
-        // Set uniforms to light1
-        uniforms.set_light1();
     }
-    inline void draw_terrain(game::uniforms &uniforms, const std::vector<size_t> &index) const
+    inline void draw_terrain(const uniforms &uniforms, const std::vector<size_t> &index) const
     {
         // For all chunk meshes
         for (const auto &i : index)
         {
             // Bind VAO
             _gb.bind_buffer(i);
+
+            // Update to use preview
+            glUniform1i(_pre_loc, 0);
 
             // Draw graph-mesh
             _gb.draw_all(GL_POINTS);
@@ -192,12 +200,13 @@ class terrain
     min::shader _tv;
     min::shader _tf;
     min::program _prog;
-    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
+    min::vertex_buffer<float, uint32_t, terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     std::vector<min::uniform_buffer<float>> _ub;
     std::vector<min::vec4<float>> _vec;
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
     min::mat4<float> _mat[2];
+    GLint _pre_loc;
     GLint _mat_loc;
     min::light<float> _light1;
     min::light<float> _light2;
@@ -405,7 +414,7 @@ class terrain
     }
 
   public:
-    terrain(const game::uniforms &uniforms, const size_t chunks, const size_t chunk_size)
+    terrain(const uniforms &uniforms, const size_t chunks, const size_t chunk_size)
         : _tv(set_uniform_size(memory_map::memory.get_file("data/shader/terrain_inst.vertex"), chunk_size), GL_VERTEX_SHADER),
           _tf(memory_map::memory.get_file("data/shader/terrain_inst.fragment"), GL_FRAGMENT_SHADER),
           _prog(_tv, _tf), _gb(), _ub(chunks + 1)
@@ -432,6 +441,13 @@ class terrain
             throw std::runtime_error("terrain: could not find uniform '_mat' in shader");
         }
 
+        // Get the start_index uniform location
+        _pre_loc = glGetUniformLocation(_prog.id(), "preview");
+        if (_pre_loc == -1)
+        {
+            throw std::runtime_error("terrain: could not find uniform 'preview'");
+        }
+
         // Load the binding points in program
         _ub.back().set_program_lights(_prog);
         _ub.back().set_program_vector(_prog);
@@ -448,13 +464,16 @@ class terrain
         // Bind the terrain texture for drawing
         _tbuffer.bind(_dds_id, 0);
     }
-    inline void draw_placemark(game::uniforms &uniforms) const
+    inline void draw_placemark(const uniforms &uniforms) const
     {
         // Bind VAO
         _gb.bind();
 
         // Bind uniform buffer for preview
         _ub.back().bind();
+
+        // Update to use preview
+        glUniform1i(_pre_loc, 1);
 
         // Draw placemarker
         const size_t draw_size = _ub.back().vector_size();
@@ -463,7 +482,7 @@ class terrain
         // Rebind main uniform buffer
         uniforms.bind();
     }
-    inline void draw_terrain(game::uniforms &uniforms, const std::vector<size_t> &index) const
+    inline void draw_terrain(const uniforms &uniforms, const std::vector<size_t> &index) const
     {
         // Bind VAO
         _gb.bind();
@@ -473,6 +492,9 @@ class terrain
         {
             // Bind uniform buffer for this chunk
             _ub[i].bind();
+
+            // Update to use terrain
+            glUniform1i(_pre_loc, 0);
 
             // Draw graph-mesh
             const size_t draw_size = _ub[i].vector_size();
@@ -552,11 +574,12 @@ class terrain
     min::shader _tv;
     min::shader _tf;
     min::program _prog;
-    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
-    min::vertex_buffer<float, uint32_t, game::terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
+    min::vertex_buffer<float, uint32_t, terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
+    min::vertex_buffer<float, uint32_t, terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
     min::mesh<float, uint32_t> _parent;
+    GLint _pre_loc;
 
     inline void allocate_mesh_buffer(const std::vector<min::vec4<float>> &cell_buffer)
     {
@@ -647,7 +670,7 @@ class terrain
     }
 
   public:
-    terrain(const game::uniforms &uniforms, const size_t chunks, const size_t chunk_size)
+    terrain(const uniforms &uniforms, const size_t chunks, const size_t chunk_size)
         : _tv(memory_map::memory.get_file("data/shader/terrain.vertex"), GL_VERTEX_SHADER),
           _tf(memory_map::memory.get_file("data/shader/terrain.fragment"), GL_FRAGMENT_SHADER),
           _prog(_tv, _tf),
@@ -658,6 +681,13 @@ class terrain
 
         // Reserve memory based on chunk scale
         reserve_memory(chunks, chunk_size);
+
+        // Get the start_index uniform location
+        _pre_loc = glGetUniformLocation(_prog.id(), "preview");
+        if (_pre_loc == -1)
+        {
+            throw std::runtime_error("terrain: could not find uniform 'preview'");
+        }
 
         // Load the uniform buffer with program we will use
         uniforms.set_program_lights(_prog);
@@ -671,27 +701,27 @@ class terrain
         // Bind the terrain texture for drawing
         _tbuffer.bind(_dds_id, 0);
     }
-    inline void draw_placemark(game::uniforms &uniforms) const
+    inline void draw_placemark(const uniforms &uniforms) const
     {
-        // Set uniforms to light2
-        uniforms.set_light2();
-
         // Bind VAO
         _pb.bind();
 
+        // Update to use preview
+        glUniform1i(_pre_loc, 1);
+
         // Draw placemarker
         _pb.draw_all(GL_TRIANGLES);
-
-        // Set uniforms to light1
-        uniforms.set_light1();
     }
-    inline void draw_terrain(game::uniforms &uniforms, const std::vector<size_t> &index) const
+    inline void draw_terrain(const uniforms &uniforms, const std::vector<size_t> &index) const
     {
         // For all chunk meshes
         for (const auto &i : index)
         {
             // Bind VAO
             _gb.bind_buffer(i);
+
+            // Update to use preview
+            glUniform1i(_pre_loc, 0);
 
             // Draw graph-mesh
             _gb.draw_all(GL_TRIANGLES);

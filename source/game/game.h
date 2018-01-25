@@ -192,7 +192,61 @@ class bds
         // Update the mouse cursor to center
         center_cursor();
     }
-    void draw(const float dt)
+    void draw() const
+    {
+        // Draw world geometry
+        _world.draw(_uniforms);
+
+        // Draw the character if fire mode activated
+        const game::skills &skill = _world.get_player().get_skills();
+        if (skill.is_gun_active())
+        {
+            _character.draw(_uniforms);
+        }
+
+        // Draw the ui
+        _ui.draw(_uniforms);
+    }
+    void draw_title(const float dt)
+    {
+        min::camera<float> &camera = _state.get_camera();
+
+        // Update all uniforms
+        update_uniforms(camera, false);
+
+        // Draw the ui
+        _ui.draw(_uniforms);
+    }
+    bool is_closed() const
+    {
+        return _win.get_shutdown();
+    }
+    bool is_show_title() const
+    {
+        return _title.is_show_title();
+    }
+    void maximize() const
+    {
+        _win.maximize();
+    }
+    void play_music()
+    {
+        _sound.play_bg(true);
+    }
+    void set_title(const std::string &title)
+    {
+        _win.set_title(title);
+    }
+    void center_cursor()
+    {
+        // Get the screen dimensions
+        const uint16_t w = _win.get_width();
+        const uint16_t h = _win.get_height();
+
+        // Center cursor in middle of window
+        _win.set_cursor(w / 2, h / 2);
+    }
+    void update(const float dt)
     {
         // Get player physics body position
         game::player &player = _world.get_player();
@@ -265,58 +319,6 @@ class bds
 
         // Update all uniforms
         update_uniforms(camera, update);
-
-        // Draw world geometry
-        _world.draw(_uniforms);
-
-        // Draw the character if fire mode activated
-        const game::skills &skill = player.get_skills();
-        if (skill.is_gun_active())
-        {
-            _character.draw(_uniforms);
-        }
-
-        // Draw the ui
-        _ui.draw(_uniforms);
-    }
-    void draw_title(const float dt)
-    {
-        min::camera<float> &camera = _state.get_camera();
-
-        // Update all uniforms
-        update_uniforms(camera, false);
-
-        // Draw the ui
-        _ui.draw(_uniforms);
-    }
-    bool is_closed() const
-    {
-        return _win.get_shutdown();
-    }
-    bool is_show_title() const
-    {
-        return _title.is_show_title();
-    }
-    void maximize() const
-    {
-        _win.maximize();
-    }
-    void play_music()
-    {
-        _sound.play_bg(true);
-    }
-    void set_title(const std::string &title)
-    {
-        _win.set_title(title);
-    }
-    void center_cursor()
-    {
-        // Get the screen dimensions
-        const uint16_t w = _win.get_width();
-        const uint16_t h = _win.get_height();
-
-        // Center cursor in middle of window
-        _win.set_cursor(w / 2, h / 2);
     }
     void update_keyboard(const float dt)
     {

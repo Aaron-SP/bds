@@ -114,7 +114,7 @@ class character
     }
 
   public:
-    character(particle *const particles, const game::uniforms &uniforms)
+    character(particle *const particles, const uniforms &uniforms)
         : _vertex(memory_map::memory.get_file("data/shader/md5.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/md5.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
@@ -148,7 +148,7 @@ class character
         // Abort the particle system
         _particles->abort_charge();
     }
-    inline void draw(const game::uniforms &uniforms)
+    inline void draw(const uniforms &uniforms) const
     {
         // Draw the charge particles
         _particles->draw_emit_charge(uniforms);

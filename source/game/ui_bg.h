@@ -46,7 +46,7 @@ class ui_bg
     min::program _prog;
 
     // Instance buffer stuff
-    min::vertex_buffer<float, uint32_t, game::ui_vertex, GL_FLOAT, GL_UNSIGNED_INT> _vb;
+    min::vertex_buffer<float, uint32_t, ui_vertex, GL_FLOAT, GL_UNSIGNED_INT> _vb;
     size_t _mesh_id;
 
     // Texture stuff
@@ -304,7 +304,7 @@ class ui_bg
     }
 
   public:
-    ui_bg(const game::uniforms &uniforms, const inventory *const inv, const uint16_t width, const uint16_t height)
+    ui_bg(const uniforms &uniforms, const inventory *const inv, const uint16_t width, const uint16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _mesh_id(0), _selected(0), _hover(0),
@@ -329,7 +329,7 @@ class ui_bg
         position_ui();
     }
 
-    inline void draw(game::uniforms &uniforms) const
+    inline void draw(const uniforms &uniforms) const
     {
         // Bind the text_buffer vao
         _vb.bind();

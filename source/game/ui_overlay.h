@@ -36,7 +36,7 @@ class ui_overlay
         : _text(28, width, height),
           _bg(uniforms, inv, width, height) {}
 
-    inline void draw(uniforms &uniforms) const
+    inline void draw(const uniforms &uniforms) const
     {
         // Draw background ui
         _bg.draw(uniforms);
