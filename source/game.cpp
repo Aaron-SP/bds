@@ -158,11 +158,11 @@ int main(int argc, char *argv[])
 {
     try
     {
-        // Default frame count
+        // Default parameters
         size_t frames = 60;
-        size_t chunk = 16;
+        size_t chunk = 8;
         size_t grid = 64;
-        size_t view = 3;
+        size_t view = 5;
         size_t width = 720;
         size_t height = 480;
         bool resize = true;

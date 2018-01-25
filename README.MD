@@ -68,17 +68,17 @@ The '-fps' flag is an optional parameter for controlling the target playback fra
 - Example: 'bin/game -fps 45' will render 45 frames per second.
 
 #### -chunk flag
-The '-chunk' flag is an optional parameter for controlling the size of each chunk. The default is 16 and must be an even divisible factor of the grid size, and greater than or equal to 2.
-- Example: 'bin/game -chunk 32' produce chunks of size 32x32x32.
+The '-chunk' flag is an optional parameter for controlling the size of each chunk. The default is 8 and must be an even divisible factor of the grid size, and greater than or equal to 2. Smaller chunk sizes allow the GPU to drop more terrain fragment calculations due to the early fragment test. High chunk sizes can greater diminish performance on lesser hardware. Chunk sizes too small however can drastically increase the number of draw calls per frame.
+- Example: 'bin/game -chunk 8' produce chunks of size 8 x 8 x 8.
 
 #### -grid flag
-The '-grid' flag is an optional parameter for controlling the half size of world grid. The default is 64 and greater than or equal to 4.
+The '-grid' flag is an optional parameter for controlling the half size of world grid. The default is 64 and must be greater than or equal to 4.
 Any previous saves will be deleted upon resizing the game grid to avoid crashing the game.
-- Example: 'bin/game -grid 72 -chunk 18' produce a grid of size 144x144x144 and chunks of size 18x18x18.
+- Example: 'bin/game -grid 36 -chunk 6' produce a grid of size 72x72x72 and chunks of size 6 x 6 x 6.
 
 #### -view flag
-The '-view' flag is an optional parameter for controlling how many chunks are viewable on the screen. The default is 3 and must be an odd number greater than one.
-- Example: 'bin/game -view 31' will render 15 chunks on each side of the player, (15 * 2) + 1 = 31.
+The '-view' flag is an optional parameter for controlling how many chunks are viewable on the screen. The default is 5 and must be an odd number greater than one.
+- Example: 'bin/game -view 15' will render 15 chunks on each side of the player, (7 * 2) + 1 = 15.
 
 #### -width flag and -height flag
 The '-width' and '-height' flag changes the default window dimensions.
@@ -116,7 +116,7 @@ The '-width' and '-height' flag changes the default window dimensions.
 Lag usually comes in two forms, a CPU bottleneck or a GPU bottleneck. If you are CPU bottlenecked, expect most of your CPU time going to creating terrain memory buffers.
 
 #### CPU Bottleneck
-The MGL_VB43 compile time flag can only be used on OpenGL 4.3 systems, but will reduce the number of OpenGL calls by a factor of 2x. 
+The MGL_VB43 compile time flag can only be used on OpenGL 4.3 systems, but will reduce the number of OpenGL calls by a factor of 2. 
 If your GPU supports OpenGL geometry shaders, the MGL_GS_RENDER compile time flag should alleviate any CPU bottleneck since it removes the need for the CPU to create terrain memory buffers. However this can **increase lag if** your GPU doesn't render geometry shaders efficiently. MGL_INST_RENDER is basically in the same vein as MGL_GS_RENDER and should alleviate most the of terrain processing and memory overhead compared with the default option. This flag requires the CPU to batch matrices instead of entire geometry primitives, so some CPU processing is still required, unlike that of MGL_GS_RENDER which requires no processing at all.
 
 Known CPU bottleneck system configurations include AMD Phenom II x4 965 + Radeon HD 5770. However the MGL_VB43 and MGL_GS_RENDER increase performance to playable status, where previously the game would be unplayable.
@@ -127,6 +127,6 @@ If you are running Linux, consider disabling any desktop compositor that may be 
 #### GPU Bottleneck
 If you have tried all previous steps and failed, you are likely GPU bottlenecked. In this case you are lagging simply because the GPU can not draw all of the pixels on the screen. The most obvious remedy to this problem is to reduce your screen dimensions using the '-width' and '-height' command line flags. 
 
-However you can also try changing the size of the view frustum and chunk size using the '-view' and '-chunk' command line flags. By default the view frustum consists of 27 chunks, 3x3x3. This is actually alot of geometry to render, so we only draw the chunks inside the camera frustum which is on average ~18 (but can be 27 on a world edge). Decreasing the chunk size directly decreases the number of triangles drawn at any one time. The view frustum's lowest value is currently the default at 27 chunks. Increasing the frustum will draw more chunks and thus more geometry. 
+However you can also try changing the size of the view frustum and chunk size using the '-view' and '-chunk' command line flags. By default the view frustum consists of 125 chunks, 5x5x5. This is actually alot of geometry to render, so we only draw the chunks inside the camera frustum which is on average ~35 (but can be 125 on a world edge). Decreasing the chunk size directly decreases the number of triangles drawn at any one time. The view frustum's lowest value is 27 chunks. Increasing the frustum will draw more chunks and thus more geometry. Smaller chunks will allow the GPU to perform more early fragment test optimizations in between draw calls and is the main reason high chunk sizes cause enormous lag.
 
-You can also set the render speed of the game by using the '-fps' command line flag. The default is 60 and if you are lagging you can drop down to 30 without many issues. However, decreasing the frames per second will increase the workload for the physics engine because it is coded to run at 600 times per second independent of the frame count. Thus decreasing the frame count will increase the number of physics iterations per frame. This is only important if you are both CPU and GPU bottlenecked.
+You can also set the render speed of the game by using the '-fps' command line flag. The default is 60 and if you are lagging you can drop down to 30 without many issues. However, decreasing the frames per second will increase the workload for the physics engine because it is coded to run at 180 times per second independent of the frame count. Thus decreasing the frame count will increase the number of physics iterations per frame. This is only important if you are both CPU and GPU bottlenecked.
