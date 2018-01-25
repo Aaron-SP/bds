@@ -39,7 +39,6 @@ class state
     min::vec3<float> _target;
     bool _fix_target;
     bool _pause_mode;
-    bool _pause_lock;
     bool _user_input;
     bool _respawn;
 
@@ -50,37 +49,6 @@ class state
         f.set_far(5000.0);
         f.set_fov(90.0);
         _camera.set_perspective();
-    }
-    inline void update_model_matrix()
-    {
-        const min::vec3<float> &f = _camera.get_forward();
-        const min::vec3<float> &fup = _camera.get_frustum().get_up();
-        const min::vec3<float> &fr = _camera.get_frustum().get_right();
-
-        // Update the md5 model matrix
-        const min::vec3<float> offset = _camera.get_position() + (f - fup + fr) * 0.5;
-        _model = min::mat4<float>(offset, _q);
-    }
-    inline min::quat<float> update_model_rotation() const
-    {
-        const min::vec3<float> &f = _camera.get_forward();
-        const min::vec3<float> &fup = _camera.get_frustum().get_up();
-        const min::vec3<float> &fr = _camera.get_frustum().get_right();
-
-        // Calculate the forward vector
-        min::vec3<float> d(f.x(), 0.0, f.z());
-        d.normalize();
-
-        // Transform the model rotation around shortest arc or Y axis
-        const min::vec3<float> y(0.0, 1.0, 0.0);
-        const min::vec3<float> x(-1.0, 0.0, 0.0);
-        const min::quat<float> roty(x, d, y);
-
-        // Transform the model rotation around shortest arc or RIGHT axis
-        const min::quat<float> rotzx(y, fup, fr);
-
-        // Return the transformed model rotation
-        return rotzx * roty;
     }
     inline void load_state_file(const size_t grid_size)
     {
@@ -122,6 +90,37 @@ class state
         // Load camera settings
         set_camera(_load.get_spawn(), _load.get_look());
     }
+    inline void update_model_matrix()
+    {
+        const min::vec3<float> &f = _camera.get_forward();
+        const min::vec3<float> &fup = _camera.get_frustum().get_up();
+        const min::vec3<float> &fr = _camera.get_frustum().get_right();
+
+        // Update the md5 model matrix
+        const min::vec3<float> offset = _camera.get_position() + (f - fup + fr) * 0.5;
+        _model = min::mat4<float>(offset, _q);
+    }
+    inline min::quat<float> update_model_rotation() const
+    {
+        const min::vec3<float> &f = _camera.get_forward();
+        const min::vec3<float> &fup = _camera.get_frustum().get_up();
+        const min::vec3<float> &fr = _camera.get_frustum().get_right();
+
+        // Calculate the forward vector
+        min::vec3<float> d(f.x(), 0.0, f.z());
+        d.normalize();
+
+        // Transform the model rotation around shortest arc or Y axis
+        const min::vec3<float> y(0.0, 1.0, 0.0);
+        const min::vec3<float> x(-1.0, 0.0, 0.0);
+        const min::quat<float> roty(x, d, y);
+
+        // Transform the model rotation around shortest arc or RIGHT axis
+        const min::quat<float> rotzx(y, fup, fr);
+
+        // Return the transformed model rotation
+        return rotzx * roty;
+    }
 
   public:
     state(const size_t grid_size)
@@ -129,8 +128,7 @@ class state
           _load(grid_size),
           _mode("MODE: PLAY"),
           _fix_target(false), _pause_mode(false),
-          _pause_lock(false), _user_input(true),
-          _respawn(false)
+          _user_input(true), _respawn(false)
     {
         // Load camera
         load_camera();
@@ -150,13 +148,13 @@ class state
     {
         return _camera;
     }
+    inline const min::vec3<float> &get_default_spawn() const
+    {
+        return _load.get_default_spawn();
+    }
     inline const std::string &get_game_mode() const
     {
         return _mode;
-    }
-    inline bool get_game_pause() const
-    {
-        return _pause_mode || _pause_lock;
     }
     inline const load_state &get_load_state() const
     {
@@ -166,9 +164,9 @@ class state
     {
         return _model;
     }
-    inline const min::vec3<float> &get_default_spawn() const
+    inline bool get_pause() const
     {
-        return _load.get_default_spawn();
+        return _pause_mode;
     }
     inline bool get_user_input() const
     {
@@ -177,10 +175,6 @@ class state
     inline bool is_respawn() const
     {
         return _respawn;
-    }
-    inline void pause_lock(const bool lock)
-    {
-        _pause_lock = lock;
     }
     inline void respawn()
     {
@@ -226,13 +220,9 @@ class state
     {
         _mode = mode;
     }
-    inline void set_game_pause(const bool mode)
+    inline void set_pause(const bool mode)
     {
-        // If not locked
-        if (!_pause_lock)
-        {
-            _pause_mode = mode;
-        }
+        _pause_mode = mode;
     }
     inline void set_respawn(const bool flag)
     {
@@ -250,16 +240,9 @@ class state
         // Enable fixed look at
         _fix_target = true;
     }
-    inline bool toggle_game_pause()
+    inline bool toggle_pause()
     {
-        // If not locked
-        if (!_pause_lock)
-        {
-            return (_pause_mode = !_pause_mode);
-        }
-
-        // Force paused
-        return this->get_game_pause();
+        return _pause_mode = !_pause_mode;
     }
     void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h)
     {

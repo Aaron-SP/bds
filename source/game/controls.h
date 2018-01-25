@@ -255,7 +255,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
 
         // Toggle the game pause
-        const bool mode = state->toggle_game_pause();
+        const bool mode = state->toggle_pause();
 
         // set the game mode caption
         if (mode)

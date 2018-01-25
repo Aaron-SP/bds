@@ -224,7 +224,7 @@ class bds
         min::camera<float> &camera = _state.get_camera();
 
         // If game is not paused update game state
-        if (!_state.get_game_pause())
+        if (!_state.get_pause())
         {
             // get user input
             const auto c = user_input();
