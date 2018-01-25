@@ -33,7 +33,7 @@ namespace game
 class ui_text
 {
   private:
-    static constexpr size_t _console_offset = 8;
+    static constexpr size_t _console_offset = 9;
     static constexpr size_t _ui_offset = 10;
     static constexpr size_t _end = 12;
     static constexpr float _y_console = 90.0;
@@ -220,7 +220,7 @@ class ui_text
     }
     void update_debug_text(
         const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
-        const float health, const float energy, const double fps, const double idle)
+        const float health, const float energy, const double fps, const double idle, const size_t chunks)
     {
         // If drawing text mode is on, update text
         if (_draw_debug)
@@ -266,6 +266,13 @@ class ui_text
             // Update FPS and IDLE
             _stream << "IDLE: " << idle;
             update_text(7, _stream.str());
+
+            // Clear and reset the _stream
+            clear_stream();
+
+            // Update FPS and IDLE
+            _stream << "CHUNKS: " << chunks;
+            update_text(8, _stream.str());
 
             // Clear and reset the _stream
             clear_stream();

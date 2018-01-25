@@ -167,10 +167,10 @@ class ui_overlay
         }
     }
     void update_text(const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
-                     const float health, const float energy, const double fps, const double idle)
+                     const float health, const float energy, const double fps, const double idle, const size_t chunks)
     {
         // Update all text and upload it
-        _text.update_debug_text(p, f, mode, health, energy, fps, idle);
+        _text.update_debug_text(p, f, mode, health, energy, fps, idle, chunks);
         _text.update_ui(health, energy);
 
         // Upload the changed text

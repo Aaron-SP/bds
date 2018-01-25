@@ -426,6 +426,10 @@ class world
     {
         return _grid.get_atlas();
     }
+    inline size_t get_chunks_in_view() const
+    {
+        return _view_chunks.size();
+    }
     inline bool get_edit_mode()
     {
         return _edit_mode;

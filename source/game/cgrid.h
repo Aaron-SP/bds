@@ -49,7 +49,9 @@ class cgrid
     std::vector<min::mesh<float, uint32_t>> _chunks;
     std::vector<bool> _chunk_update;
     std::vector<size_t> _chunk_update_keys;
-    std::vector<size_t> _sort_copy;
+    std::vector<size_t> _sort_chunk;
+    std::vector<float> _sort_view;
+    std::vector<size_t> _sort_view_index;
     mutable std::vector<size_t> _overlap;
     size_t _recent_chunk;
     size_t _view_chunk_size;
@@ -378,6 +380,9 @@ class cgrid
         _path.reserve(20);
         _neighbors.reserve(6);
         _stack.reserve(100);
+        _sort_chunk.reserve(27);
+        _sort_view.reserve(27);
+        _sort_view_index.reserve(27);
     }
     inline void search(const min::vec3<float> &start, const min::vec3<float> &stop)
     {
@@ -844,17 +849,21 @@ class cgrid
     {
         return _chunks.size();
     }
-    inline void get_view_chunks(const min::camera<float> &cam, std::vector<size_t> &out) const
+    inline void get_view_chunks(const min::camera<float> &cam, std::vector<size_t> &out)
     {
         out.clear();
+        _sort_chunk.clear();
+
+        // Center of view chunks
+        const min::vec3<float> center = chunk_start(_recent_chunk);
 
         // Get the chunk starting point
-        const min::vec3<float> start = chunk_start(_recent_chunk) - min::vec3<float>(_chunk_size, _chunk_size, _chunk_size) * _view_half_width;
+        const min::vec3<float> start = center - min::vec3<float>(_chunk_size, _chunk_size, _chunk_size) * _view_half_width;
         const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
         const min::vec3<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &out, &cam](const min::vec3<float> &p) {
+        const auto f = [this, &cam](const min::vec3<float> &p) {
 
             // Create chunk bounding box
             const min::aabbox<float, min::vec3> box = create_chunk_box(p);
@@ -863,12 +872,36 @@ class cgrid
             if (min::intersect<float>(cam.get_frustum(), box))
             {
                 const size_t ckey = chunk_key_unsafe(p);
-                out.push_back(ckey);
+                _sort_chunk.push_back(ckey);
             }
         };
 
         // Run the function
         cubic(start, offset, length, f);
+
+        // Resize sort buffer
+        const size_t size = _sort_chunk.size();
+        _sort_view.resize(size);
+        _sort_view_index.resize(size);
+        std::iota(_sort_view_index.begin(), _sort_view_index.end(), 0);
+
+        // Calculate square distances from center of view frustum
+        for (size_t i = 0; i < size; i++)
+        {
+            const min::vec3<float> d = center - chunk_start(out[i]);
+            _sort_view[i] = d.dot(d);
+        }
+
+        // Sort the view indices based on distance from camera to reduce overdraw
+        std::sort(_sort_view_index.begin(), _sort_view_index.end(), [this](const size_t a, const size_t b) {
+            return this->_sort_view[a] < this->_sort_view[b];
+        });
+
+        // Sorted indices based off distance from center of view frustum, ascending order
+        for (const auto index : _sort_view_index)
+        {
+            out.push_back(_sort_chunk[index]);
+        }
     }
     inline const min::aabbox<float, min::vec3> &get_world()
     {
@@ -1045,7 +1078,7 @@ class cgrid
             // Run the function
             cubic_grid(start, offset, length, f);
         }
-        else if(in)
+        else if (in)
         {
             // Create cubic function, for each cell in cubic space
             const auto f = [this, &out, atlas_id](const size_t key) {
@@ -1071,7 +1104,7 @@ class cgrid
         }
 
         // Sort chunk keys using a radix sort
-        min::uint_sort<size_t>(_chunk_update_keys, _sort_copy, [](const size_t i) {
+        min::uint_sort<size_t>(_chunk_update_keys, _sort_chunk, [](const size_t i) {
             return i;
         });
 

@@ -336,9 +336,10 @@ class bds
         const std::string &mode = _state.get_game_mode();
         const float health = player.get_health();
         const float energy = skills.get_energy();
+        const size_t chunks = _world.get_chunks_in_view();
 
         // Update the ui overlay
-        _ui.update_text(p, f, mode, health, energy, fps, idle);
+        _ui.update_text(p, f, mode, health, energy, fps, idle, chunks);
     }
     void update_window()
     {
