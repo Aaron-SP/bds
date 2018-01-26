@@ -47,6 +47,8 @@ class ui_bg_assets
     static constexpr float _y_blue_uv = 4.0 / _image_size;
     static constexpr float _x_white_uv = 184.0 / _image_size;
     static constexpr float _y_white_uv = 4.0 / _image_size;
+    static constexpr float _x_light_blue_uv = 220.0 / _image_size;
+    static constexpr float _y_light_blue_uv = 4.0 / _image_size;
 
     // Icons
     static constexpr float _x_reload_uv = 4.0 / _image_size;
@@ -347,7 +349,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(4, p, scale, red_coord);
     }
-    inline void load_background_black(const inv_id id, const min::vec2<float> &p)
+    inline void load_bg_black(const inv_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
@@ -355,7 +357,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, black_coord);
     }
-    inline void load_background_red(const inv_id id, const min::vec2<float> &p)
+    inline void load_bg_red(const inv_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
@@ -363,7 +365,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, red_coord);
     }
-    inline void load_background_yellow(const inv_id id, const min::vec2<float> &p)
+    inline void load_bg_yellow(const inv_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> yellow_coord(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv);
@@ -371,10 +373,18 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, yellow_coord);
     }
-    inline void load_background_white(const inv_id id, const min::vec2<float> &p)
+    inline void load_bg_white(const inv_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> white_coord(_x_white_uv, _y_white_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, white_coord);
+    }
+    inline void load_bg_light_blue(const inv_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_bg, _s_bg);
+        const min::vec4<float> white_coord(_x_light_blue_uv, _y_light_blue_uv, _s_uv, _s_uv);
 
         // Load rect at position
         set_rect(id.id(), p, scale, white_coord);

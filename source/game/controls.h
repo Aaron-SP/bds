@@ -342,25 +342,25 @@ class controls
         // Determine if we need to go to edit or skill mode
         if (!locked && id >= 9)
         {
+            // Reset scale
+            _world->reset_scale();
+
             // Enable edit mode
             _world->set_edit_mode(true);
 
             // Disable fire mode
             skill.set_gun_active(false);
-
-            // Reset scale
-            _world->reset_scale();
         }
         else if (!locked && id != 0)
         {
+            // Reset scale
+            _world->reset_scale();
+
             // Disable edit mode
             _world->set_edit_mode(false);
 
             // Enable fire mode
             skill.set_gun_active(true);
-
-            // Reset scale
-            _world->reset_scale();
         }
 
         // If gun is active
@@ -633,7 +633,13 @@ class controls
         // Does user have control of cursor?
         const bool input = state->get_user_input();
         const bool pause = state->get_pause();
-        if (input || pause)
+        if (input)
+        {
+            ui_overlay *const ui = control->get_ui();
+            ui->click();
+            return;
+        }
+        else if (pause)
         {
             return;
         }
@@ -768,6 +774,9 @@ class controls
                 // If remaining count is zero disable edit mode
                 if (count == 0)
                 {
+                    // Reset scale
+                    world->reset_scale();
+
                     // Disable edit mode
                     world->set_edit_mode(false);
 

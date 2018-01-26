@@ -36,6 +36,13 @@ class ui_overlay
         : _text(28, width, height),
           _bg(uniforms, inv, width, height) {}
 
+    inline void click()
+    {
+        if (_bg.is_extended())
+        {
+            _bg.click();
+        }
+    }
     inline void draw(const uniforms &uniforms) const
     {
         // Draw background ui
@@ -61,6 +68,10 @@ class ui_overlay
     inline const std::vector<min::mat3<float>> &get_uv() const
     {
         return _bg.get_uv();
+    }
+    inline bool is_extended() const
+    {
+        return _bg.is_extended();
     }
     inline bool overlap(const min::vec2<float> &p)
     {

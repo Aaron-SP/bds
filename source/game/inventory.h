@@ -31,6 +31,14 @@ class inv_id
   public:
     inv_id() : _id(0) {}
     inv_id(const uint8_t id) : _id(id) {}
+    inline bool operator==(const inv_id other) const
+    {
+        return _id == other.id();
+    }
+    inline bool operator!=(const inv_id other) const
+    {
+        return _id != other.id();
+    }
     inline uint8_t id() const
     {
         return _id;
