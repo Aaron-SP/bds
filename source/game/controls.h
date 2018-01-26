@@ -347,6 +347,9 @@ class controls
 
             // Disable fire mode
             skill.set_gun_active(false);
+
+            // Reset scale
+            _world->reset_scale();
         }
         else if (!locked && id != 0)
         {
@@ -355,6 +358,9 @@ class controls
 
             // Enable fire mode
             skill.set_gun_active(true);
+
+            // Reset scale
+            _world->reset_scale();
         }
 
         // If gun is active
@@ -408,9 +414,6 @@ class controls
 
             // Play selection sound
             _sound->play_click();
-
-            // Reset scale
-            _world->reset_scale();
 
             // Set atlas id
             _world->set_atlas_id(inv.id_to_atlas(id));
