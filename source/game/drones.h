@@ -105,17 +105,11 @@ class drones
     }
 
   public:
-    drones(physics *sim, static_instance *inst, const min::vec3<float> &dest)
-        : _sim(sim), _inst(inst), _dest(dest), _disable(false)
+    drones(physics *sim, static_instance *inst)
+        : _sim(sim), _inst(inst), _disable(false)
     {
         // Reserve memory for collision cells
         reserve_memory();
-
-        // Add some drones
-        for (size_t i = 0; i < _drone_size; i++)
-        {
-            add(dest);
-        }
     }
     inline size_t add(const min::vec3<float> &p)
     {

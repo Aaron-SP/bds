@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __WORLD__
 #define __WORLD__
 
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <game/cgrid.h>
@@ -35,6 +36,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/camera.h>
 #include <min/grid.h>
 #include <min/physics_nt.h>
+#include <random>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -85,6 +87,10 @@ class world
     drones _drones;
     drops _drops;
     projectiles _projectile;
+
+    // Random stuff
+    std::uniform_real_distribution<float> _dist;
+    std::mt19937 _gen;
 
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {
@@ -182,6 +188,14 @@ class world
 
         // Upload preview geometry
         _terrain.upload_preview(_terr_mesh);
+    }
+    inline min::vec3<float> random_point()
+    {
+        const float x = _dist(_gen);
+        const float y = _dist(_gen);
+        const float z = _dist(_gen);
+
+        return min::vec3<float>(x, y, z);
     }
     inline void reserve_memory(const size_t view_chunk_size)
     {
@@ -333,9 +347,11 @@ class world
           _player(&_simulation, character_load(state)),
           _sky(uniforms),
           _instance(uniforms),
-          _drones(&_simulation, &_instance, state.get_spawn()),
+          _drones(&_simulation, &_instance),
           _drops(&_simulation, &_instance),
-          _projectile(particles, &_instance, s)
+          _projectile(particles, &_instance, s),
+          _dist((grid_size * -1.0) + 1.0, grid_size - 1.0),
+          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
     {
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);
@@ -348,6 +364,9 @@ class world
 
         // Update chunks
         update_all_chunks();
+
+        // Add a drone at random location
+        _drones.add(random_point());
     }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {
