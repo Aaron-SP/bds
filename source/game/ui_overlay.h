@@ -32,7 +32,7 @@ class ui_overlay
     ui_bg _bg;
 
   public:
-    ui_overlay(const uniforms &uniforms, const inventory *const inv, const uint16_t width, const uint16_t height)
+    ui_overlay(const uniforms &uniforms, inventory *const inv, const uint16_t width, const uint16_t height)
         : _text(28, width, height),
           _bg(uniforms, inv, width, height) {}
 
@@ -158,24 +158,9 @@ class ui_overlay
     {
         _text.toggle_draw_debug();
     }
-    void update(inventory &inv)
+    void update()
     {
-        // Update the inventory matrices if dirty
-        if (inv.dirty())
-        {
-            // Get all updated slots
-            const std::vector<inv_id> &updates = inv.get_updates();
-
-            // Update all slots
-            for (auto i : updates)
-            {
-                const item &it = inv[i.index()];
-                _bg.update_inv_slot(i, it.id());
-            }
-
-            // Flag that we clean updated the inventory state
-            inv.clean();
-        }
+        _bg.update();
     }
     void update_text(const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
                      const float health, const float energy, const double fps, const double idle, const size_t chunks)

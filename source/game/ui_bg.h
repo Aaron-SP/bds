@@ -62,7 +62,7 @@ class ui_bg
 
     // Background assets
     ui_bg_assets _assets;
-    const inventory *const _inv;
+    inventory *const _inv;
 
     // Click detection
     std::vector<min::aabbox<float, min::vec2>> _shapes;
@@ -333,6 +333,33 @@ class ui_bg
             }
         }
     }
+    inline void set_inventory(const inv_id inv, const uint8_t id, const min::vec2<float> &p)
+    {
+        // Draw key icon overlay
+        switch (id)
+        {
+        case 0:
+            return _assets.load_cube_icon(inv, 23, p);
+        case 1:
+            return _assets.load_beam_icon(inv, p);
+        case 2:
+            return _assets.load_missile_icon(inv, p);
+        case 3:
+            return _assets.load_grapple_icon(inv, p);
+        case 4:
+            return _assets.load_jet_icon(inv, p);
+        case 5:
+            return _assets.load_scan_icon(inv, p);
+        case 6:
+            break;
+        case 7:
+            break;
+        case 8:
+            break;
+        default:
+            return _assets.load_cube_icon(inv, _inv->id_to_atlas(id), p);
+        }
+    }
     inline void unselect()
     {
         // Bg key placement
@@ -468,9 +495,29 @@ class ui_bg
         // Select hovered key
         select_hover();
     }
+    inline void update_inv_slot(const inv_id inv, const uint8_t id)
+    {
+        // Determine if this is extended inventory
+        if (inv.id() >= 8)
+        {
+            // Get ui position
+            const min::vec2<float> p = position_ext(inv);
+
+            // Update the icon
+            set_inventory(inv.inv_index(), id, p);
+        }
+        else
+        {
+            // Get ui position
+            const min::vec2<float> p = position(inv);
+
+            // Update the icon
+            set_inventory(inv.key_index(), id, p);
+        }
+    }
 
   public:
-    ui_bg(const uniforms &uniforms, const inventory *const inv, const uint16_t width, const uint16_t height)
+    ui_bg(const uniforms &uniforms, inventory *const inv, const uint16_t width, const uint16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _mesh_id(0),
@@ -780,51 +827,23 @@ class ui_bg
     {
         _assets.toggle_draw_ex();
     }
-    inline void set_inventory(const inv_id inv, const uint8_t id, const min::vec2<float> &p)
+    void update()
     {
-        // Draw key icon overlay
-        switch (id)
+        // Update the inventory matrices if dirty
+        if (_inv->dirty())
         {
-        case 0:
-            return _assets.load_cube_icon(inv, 23, p);
-        case 1:
-            return _assets.load_beam_icon(inv, p);
-        case 2:
-            return _assets.load_missile_icon(inv, p);
-        case 3:
-            return _assets.load_grapple_icon(inv, p);
-        case 4:
-            return _assets.load_jet_icon(inv, p);
-        case 5:
-            return _assets.load_scan_icon(inv, p);
-        case 6:
-            break;
-        case 7:
-            break;
-        case 8:
-            break;
-        default:
-            return _assets.load_cube_icon(inv, _inv->id_to_atlas(id), p);
-        }
-    }
-    inline void update_inv_slot(const inv_id inv, const uint8_t id)
-    {
-        // Determine if this is extended inventory
-        if (inv.id() >= 8)
-        {
-            // Get ui position
-            const min::vec2<float> p = position_ext(inv);
+            // Get all updated slots
+            const std::vector<inv_id> &updates = _inv->get_updates();
 
-            // Update the icon
-            set_inventory(inv.inv_index(), id, p);
-        }
-        else
-        {
-            // Get ui position
-            const min::vec2<float> p = position(inv);
+            // Update all slots
+            for (auto i : updates)
+            {
+                const item &it = (*_inv)[i.index()];
+                update_inv_slot(i, it.id());
+            }
 
-            // Update the icon
-            set_inventory(inv.key_index(), id, p);
+            // Flag that we clean updated the inventory state
+            _inv->clean();
         }
     }
 };

@@ -310,7 +310,7 @@ class bds
             _controls.update(dt);
 
             // Update the UI class
-            _ui.update(player.get_inventory());
+            _ui.update();
         }
 
         // Update the sound listener properties
