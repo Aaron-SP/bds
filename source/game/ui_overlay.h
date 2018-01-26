@@ -126,7 +126,7 @@ class ui_overlay
     {
         _bg.set_menu_pause();
     }
-    inline void set_screen(const float width, const float height)
+    inline void set_screen(const uint16_t width, const uint16_t height)
     {
         // Set bg screen dimensions
         _bg.set_screen(width, height);
@@ -153,13 +153,13 @@ class ui_overlay
         if (inv.dirty())
         {
             // Get all updated slots
-            const std::vector<size_t> &updates = inv.get_updates();
+            const std::vector<inv_id> &updates = inv.get_updates();
 
             // Update all slots
-            for (auto index : updates)
+            for (auto i : updates)
             {
-                const item &it = inv[index];
-                _bg.update_inv_slot(index, it.id());
+                const item &it = inv[i.index()];
+                _bg.update_inv_slot(i, it.id());
             }
 
             // Flag that we clean updated the inventory state

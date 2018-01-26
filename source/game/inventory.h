@@ -23,6 +23,52 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
+class inv_id
+{
+  private:
+    uint8_t _id;
+
+  public:
+    inv_id() : _id(0) {}
+    inv_id(const uint8_t id) : _id(id) {}
+    inline uint8_t id() const
+    {
+        return _id;
+    }
+    inline size_t index() const
+    {
+        return _id;
+    }
+    inline inv_id bg_key_index() const
+    {
+        return inv_id(_id + 5);
+    }
+    inline inv_id key_index() const
+    {
+        return inv_id(_id + 13);
+    }
+    inline inv_id bg_inv_index() const
+    {
+        return inv_id(_id + 13);
+    }
+    inline inv_id inv_index() const
+    {
+        return inv_id(_id + 37);
+    }
+    inline size_t row() const
+    {
+        return 0;
+    }
+    inline size_t ext_row() const
+    {
+        return 1 + (_id / 8);
+    }
+    inline size_t col() const
+    {
+        return _id % 8;
+    }
+};
+
 class item
 {
   private:
@@ -73,7 +119,7 @@ class inventory
   private:
     static constexpr size_t _max_slots = 32;
     std::vector<item> _inv;
-    std::vector<size_t> _update;
+    std::vector<inv_id> _update;
 
   public:
     inventory()
@@ -104,7 +150,7 @@ class inventory
                 it = item(id, count);
 
                 // Store update index
-                _update.push_back(i);
+                _update.emplace_back(i);
 
                 // Signal that we picked it up
                 count = 0;
@@ -118,7 +164,7 @@ class inventory
                 it.stack(count);
 
                 // Store update index
-                _update.push_back(i);
+                _update.emplace_back(i);
 
                 // If fully stacked early break
                 if (count == 0)
@@ -161,7 +207,7 @@ class inventory
                 }
 
                 // Store update index
-                _update.push_back(i);
+                _update.emplace_back(i);
 
                 // Return that we consumed the resource
                 return true;
@@ -180,9 +226,9 @@ class inventory
         _inv[index].drop();
 
         // Store update index
-        _update.push_back(index);
+        _update.emplace_back(index);
     }
-    const std::vector<size_t> &get_updates() const
+    const std::vector<inv_id> &get_updates() const
     {
         return _update;
     }
@@ -207,6 +253,10 @@ class inventory
         _update.resize(_inv.size());
         std::iota(_update.begin(), _update.end(), 0);
     }
+    inline size_t size() const
+    {
+        return _inv.size();
+    }
     inline void swap(const size_t one, const size_t two)
     {
         // Swap items
@@ -215,8 +265,8 @@ class inventory
         _inv[two] = swap;
 
         // Store update index
-        _update.push_back(one);
-        _update.push_back(two);
+        _update.emplace_back(one);
+        _update.emplace_back(two);
     }
 };
 }
