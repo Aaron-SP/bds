@@ -131,14 +131,14 @@ class terrain
     }
     inline void draw_terrain(const uniforms &uniforms, const std::vector<size_t> &index) const
     {
+        // Update to use preview
+        glUniform1i(_pre_loc, 0);
+
         // For all chunk meshes
         for (const auto &i : index)
         {
             // Bind VAO
             _gb.bind_buffer(i);
-
-            // Update to use preview
-            glUniform1i(_pre_loc, 0);
 
             // Draw graph-mesh
             _gb.draw_all(GL_POINTS);
@@ -487,14 +487,14 @@ class terrain
         // Bind VAO
         _gb.bind();
 
+        // Update to use terrain
+        glUniform1i(_pre_loc, 0);
+
         // For all chunk meshes
         for (const auto &i : index)
         {
             // Bind uniform buffer for this chunk
             _ub[i].bind();
-
-            // Update to use terrain
-            glUniform1i(_pre_loc, 0);
 
             // Draw graph-mesh
             const size_t draw_size = _ub[i].vector_size();
@@ -714,14 +714,14 @@ class terrain
     }
     inline void draw_terrain(const uniforms &uniforms, const std::vector<size_t> &index) const
     {
+        // Update to use preview
+        glUniform1i(_pre_loc, 0);
+
         // For all chunk meshes
         for (const auto &i : index)
         {
             // Bind VAO
             _gb.bind_buffer(i);
-
-            // Update to use preview
-            glUniform1i(_pre_loc, 0);
 
             // Draw graph-mesh
             _gb.draw_all(GL_TRIANGLES);
