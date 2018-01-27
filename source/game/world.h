@@ -240,6 +240,10 @@ class world
                 // If we picked it up
                 if (count == 0)
                 {
+                    // Play the pickup sound
+                    _sound->play_pickup();
+
+                    // Remove drop from drop buffer
                     _drops.remove(index);
                 }
             }

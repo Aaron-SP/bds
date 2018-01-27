@@ -18,11 +18,9 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __SKILLS__
 #define __SKILLS__
 
-#include <array>
 #include <chrono>
 #include <game/character.h>
 #include <min/sample.h>
-#include <string>
 
 namespace game
 {
@@ -31,7 +29,6 @@ class skills
 {
   private:
     static constexpr float _max_energy = 100.0;
-    static constexpr size_t _scan_id_count = 30;
     static constexpr float _miss_cd = 500.0;
     static constexpr float _beam_cd = 500.0;
     enum skill_mode
@@ -43,7 +40,6 @@ class skills
         scan
     };
 
-    std::array<std::string, _scan_id_count> _scan_desc;
     skill_mode _mode;
     std::chrono::high_resolution_clock::time_point _charge;
     std::chrono::high_resolution_clock::time_point _cool;
@@ -69,49 +65,12 @@ class skills
         // return time since last sync
         return std::chrono::duration<double, std::milli>(now - _cool).count();
     }
-    inline void load_scan_strings()
-    {
-        // Reserve space for strings
-        _scan_desc[0] = "Dense Grass";
-        _scan_desc[1] = "Grass";
-        _scan_desc[2] = "Fertile Soil";
-        _scan_desc[3] = "Soil";
-        _scan_desc[4] = "Yellow Sand";
-        _scan_desc[5] = "White Sand";
-        _scan_desc[6] = "???";
-        _scan_desc[7] = "???";
-        _scan_desc[8] = "Oak";
-        _scan_desc[9] = "Pine";
-        _scan_desc[10] = "Dark Foliage";
-        _scan_desc[11] = "Light Vegetation";
-        _scan_desc[12] = "Blooming Growth";
-        _scan_desc[13] = "Flowery Growth";
-        _scan_desc[14] = "???";
-        _scan_desc[15] = "???";
-        _scan_desc[16] = "Light Stone";
-        _scan_desc[17] = "Dark Stone";
-        _scan_desc[18] = "Light clay";
-        _scan_desc[19] = "Dark Clay";
-        _scan_desc[20] = "Mossy Stone";
-        _scan_desc[21] = "Unstable Sodium";
-        _scan_desc[22] = "???";
-        _scan_desc[23] = "???";
-        _scan_desc[24] = "Status Unknown";
-        _scan_desc[25] = "Charge Beam";
-        _scan_desc[26] = "Missiles";
-        _scan_desc[27] = "Grapple Hook";
-        _scan_desc[28] = "Jet Pack";
-        _scan_desc[29] = "Pending Scan";
-    }
 
   public:
     skills()
         : _mode(skill_mode::beam), _energy(0.0),
-          _gun_active(true), _locked(false), _shoot_cooldown(false), _charging(false)
-    {
-        // Load the scan strings
-        load_scan_strings();
-    }
+          _gun_active(true), _locked(false), _shoot_cooldown(false), _charging(false) {}
+
     inline void add_energy(const float energy)
     {
         // Absorb this amount of energy if not full
@@ -184,37 +143,6 @@ class skills
     inline float get_energy_percent() const
     {
         return _energy / _max_energy;
-    }
-    inline const std::string &get_scan_desc(const int8_t id)
-    {
-        if (id >= 0 && static_cast<uint8_t>(id) < _scan_id_count)
-        {
-            return _scan_desc[id];
-        }
-        else
-        {
-            return _scan_desc[_scan_id_count - 6];
-        }
-    }
-    inline const std::string &get_beam_string()
-    {
-        return _scan_desc[_scan_id_count - 5];
-    }
-    inline const std::string &get_missile_string()
-    {
-        return _scan_desc[_scan_id_count - 4];
-    }
-    inline const std::string &get_grapple_string()
-    {
-        return _scan_desc[_scan_id_count - 3];
-    }
-    inline const std::string &get_jet_string()
-    {
-        return _scan_desc[_scan_id_count - 2];
-    }
-    inline const std::string &get_scan_string()
-    {
-        return _scan_desc[_scan_id_count - 1];
     }
     inline bool is_beam_charged() const
     {

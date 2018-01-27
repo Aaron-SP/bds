@@ -87,12 +87,11 @@ class controls
     void register_control_callbacks()
     {
         // Get the player skill beam string
-        skills &skill = _world->get_player().get_skills();
-        const std::string &beam_str = skill.get_beam_string();
+        const inventory &inv = _world->get_player().get_inventory();
 
         // Enable the console and set default message
         _ui->enable_console();
-        _ui->set_console_string(beam_str);
+        _ui->set_console_string(inv.get_string(inv[0]));
 
         // Get access to the keyboard
         auto &keyboard = _window->get_keyboard();
@@ -345,11 +344,17 @@ class controls
             // Modify ui toolbar
             _ui->set_key_down(index);
 
+            // Set the console string from item
+            _ui->set_console_string(inv.get_string(inv[index]));
+
             // Determine if we need to go to edit or skill mode
             if (id == 0)
             {
                 // Disable fire mode
                 skill.set_gun_active(false);
+
+                // Disable edit mode
+                _world->set_edit_mode(false);
             }
             else if (id >= 9)
             {
@@ -380,35 +385,25 @@ class controls
                 // Play selection sound
                 _sound->play_click();
 
-                // Do action for specific ID
+                // Set skill mode from ID
                 switch (id)
                 {
                 case 0:
                     // Do nothing
                     break;
                 case 1:
-                    // Load beam
-                    _ui->set_console_string(skill.get_beam_string());
                     skill.set_beam_mode();
                     break;
                 case 2:
-                    // Load missile
-                    _ui->set_console_string(skill.get_missile_string());
                     skill.set_missile_mode();
                     break;
                 case 3:
-                    // Load grapple
-                    _ui->set_console_string(skill.get_grapple_string());
                     skill.set_grapple_mode();
                     break;
                 case 4:
-                    // Load jet
-                    _ui->set_console_string(skill.get_jet_string());
                     skill.set_jetpack_mode();
                     break;
                 case 5:
-                    // Load scan
-                    _ui->set_console_string(skill.get_scan_string());
                     skill.set_scan_mode();
                     break;
                 default:
@@ -900,8 +895,9 @@ class controls
                 else if (skill.is_scan_mode())
                 {
                     // Scan the block on this ray
-                    const int8_t block_id = world->scan_block(r);
-                    const std::string &text = skill.get_scan_desc(block_id);
+                    const int8_t atlas = world->scan_block(r);
+                    const item it(inv.id_from_atlas(atlas), 1);
+                    const std::string &text = inv.get_string(it);
 
                     // Set the console text
                     ui->set_console_string(text);
@@ -976,14 +972,25 @@ class controls
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {
-        // Cast to control pointer
+        // Get the ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the camera and text pointer
-        min::camera<float> *const camera = control->get_camera();
         ui_overlay *const ui = control->get_ui();
 
-        // Get camera frustum
+        // Ignore minimizing window
+        if (width == 0 && height == 0)
+        {
+            // Set ui minimized
+            ui->set_minimized(true);
+
+            // Early return
+            return;
+        }
+
+        // Unset ui minimized
+        ui->set_minimized(false);
+
+        // Get the frustum
+        min::camera<float> *const camera = control->get_camera();
         auto &f = camera->get_frustum();
 
         // Update the aspect ratio

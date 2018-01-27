@@ -80,6 +80,12 @@ class title
     }
     static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
     {
+        // Ignore minimizing window
+        if (width == 0 && height == 0)
+        {
+            return;
+        }
+
         // Cast to title pointer
         title *const t = reinterpret_cast<title *>(ptr);
         min::camera<float> *const camera = t->get_camera();

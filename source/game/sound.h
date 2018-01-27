@@ -119,7 +119,7 @@ class sound
   private:
     static constexpr size_t _bg_sounds = 2;
     static constexpr size_t _max_delay = 120;
-    static constexpr size_t _max_sounds = 19;
+    static constexpr size_t _max_sounds = 20;
     static constexpr size_t _miss_limit = 10;
     static constexpr float _land_threshold = 3.0;
     static constexpr float _max_speed = 10.0;
@@ -145,6 +145,7 @@ class sound
     static constexpr float _jet_gain = 0.5;
     static constexpr float _miss_ex_gain = 0.75;
     static constexpr float _miss_launch_gain = 0.7;
+    static constexpr float _pickup_gain = 0.25;
     static constexpr float _shot_gain = 0.125;
 
     // FADES
@@ -213,13 +214,17 @@ class sound
     {
         return _si[8];
     }
-    inline sound_info &shot_info()
+    inline sound_info &pickup_info()
     {
         return _si[9];
     }
+    inline sound_info &shot_info()
+    {
+        return _si[10];
+    }
     inline sound_info &miss_launch_info(const size_t index)
     {
-        return _si[10 + index];
+        return _si[11 + index];
     }
     inline void load_explosion_settings(const size_t s)
     {
@@ -397,12 +402,19 @@ class sound
             _si.emplace_back(b, _miss[i], gain, fade);
         }
     }
+    inline void load_pickup_sound()
+    {
+        // Load a WAVE file
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/pickup_s.ogg");
+        const min::ogg sound(ogg);
+        load_ogg_sound(sound, _pickup_gain);
+    }
     inline void load_shot_sound()
     {
         // Load a WAVE file
-        const min::mem_file &wave = memory_map::memory.get_file("data/sound/shot_s.wav");
-        const min::wave sound(wave);
-        load_wave_sound(sound, _shot_gain);
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/shot_s.ogg");
+        const min::ogg sound(ogg);
+        load_ogg_sound(sound, _shot_gain);
     }
     inline void random_music()
     {
@@ -470,6 +482,9 @@ class sound
 
         // Load missile explode sound into buffer
         load_miss_ex_sound();
+
+        // Load pickup sound into buffer
+        load_pickup_sound();
 
         // Load shot sound into buffer
         load_shot_sound();
@@ -690,6 +705,10 @@ class sound
         // Set the sound position
         _buffer.set_source_position(si.source(), p);
     }
+    inline void play_pickup()
+    {
+        _buffer.play_async(pickup_info().source());
+    }
     inline void play_shot()
     {
         _buffer.play_async(shot_info().source());
@@ -711,7 +730,7 @@ class sound
         _buffer.set_listener_velocity(vel);
 
         // DO NOT UPDATE STEREO POSITIONS
-        // CLICK == JET == LAND == SHOT == STEREO
+        // CLICK == JET == LAND == PICKUP == SHOT == STEREO
 
         // If music is not disabled
         if (_enable_bg)

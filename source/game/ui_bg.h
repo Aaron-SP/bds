@@ -59,6 +59,7 @@ class ui_bg
     inv_id _select;
     bool _clicking;
     bool _hovering;
+    bool _minimized;
 
     // Background assets
     ui_bg_assets _assets;
@@ -521,7 +522,8 @@ class ui_bg
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _mesh_id(0),
-          _click(0), _hover(0), _select(0), _clicking(false), _hovering(false),
+          _click(0), _hover(0), _select(0),
+          _clicking(false), _hovering(false), _minimized(false),
           _assets(width, height), _inv(inv), _grid(screen_box(width, height))
     {
         // Create the instance rectangle
@@ -578,7 +580,7 @@ class ui_bg
     inline void click()
     {
         // Click on the currently hovered icon
-        if (_hovering)
+        if (_hovering && !_minimized)
         {
             set_click_down(_hover);
         }
@@ -590,7 +592,7 @@ class ui_bg
     inline bool overlap(const min::vec2<float> &p)
     {
         // Is the inventory open?
-        if (is_extended())
+        if (is_extended() && !_minimized)
         {
             // Bad point
             if (!_grid.inside(p))
@@ -806,6 +808,10 @@ class ui_bg
 
         // Show the pause menu
         _assets.load_menu_pause();
+    }
+    inline void set_minimized(const bool flag)
+    {
+        _minimized = flag;
     }
     inline void set_screen(const uint16_t width, const uint16_t height)
     {

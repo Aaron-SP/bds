@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __INVENTORY__
 #define __INVENTORY__
 
+#include <array>
 #include <vector>
 
 namespace game
@@ -130,13 +131,54 @@ class inventory
 {
   private:
     static constexpr size_t _max_slots = 32;
-    std::vector<item> _inv;
+    static constexpr size_t _max_strings = 33;
+    std::array<item, _max_slots> _inv;
+    std::array<std::string, _max_strings> _inv_desc;
     std::vector<inv_id> _update;
 
-  public:
-    inventory()
-        : _inv(_max_slots)
+    inline void load_strings()
     {
+        _inv_desc[0] = "Empty";
+        _inv_desc[1] = "Charge Beam";
+        _inv_desc[2] = "Missiles";
+        _inv_desc[3] = "Grapple Hook";
+        _inv_desc[4] = "Jet Pack";
+        _inv_desc[5] = "Pending Scan";
+        _inv_desc[6] = "Reserved";
+        _inv_desc[7] = "Reserved";
+        _inv_desc[8] = "Reserved";
+        _inv_desc[9] = "Dense Grass";
+        _inv_desc[10] = "Grass";
+        _inv_desc[11] = "Fertile Soil";
+        _inv_desc[12] = "Soil";
+        _inv_desc[13] = "Yellow Sand";
+        _inv_desc[14] = "White Sand";
+        _inv_desc[15] = "???";
+        _inv_desc[16] = "???";
+        _inv_desc[17] = "Oak";
+        _inv_desc[18] = "Pine";
+        _inv_desc[19] = "Dark Foliage";
+        _inv_desc[20] = "Light Vegetation";
+        _inv_desc[21] = "Blooming Growth";
+        _inv_desc[22] = "Flowery Growth";
+        _inv_desc[23] = "???";
+        _inv_desc[24] = "???";
+        _inv_desc[25] = "Light Stone";
+        _inv_desc[26] = "Dark Stone";
+        _inv_desc[27] = "Light clay";
+        _inv_desc[28] = "Dark Clay";
+        _inv_desc[29] = "Mossy Stone";
+        _inv_desc[30] = "Unstable Sodium";
+        _inv_desc[31] = "???";
+        _inv_desc[32] = "???";
+    }
+
+  public:
+    inventory() : _inv{}, _inv_desc{}
+    {
+        // Load inv` strings
+        load_strings();
+
         // Reserve memory for update buffer
         _update.reserve(_max_slots);
 
@@ -240,7 +282,11 @@ class inventory
         // Store update index
         _update.emplace_back(index);
     }
-    const std::vector<inv_id> &get_updates() const
+    inline const std::string &get_string(const item it) const
+    {
+        return _inv_desc[it.id()];
+    }
+    inline const std::vector<inv_id> &get_updates() const
     {
         return _update;
     }

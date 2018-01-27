@@ -129,6 +129,10 @@ class ui_overlay
     {
         _bg.set_key_up(index);
     }
+    inline void set_minimized(const bool flag)
+    {
+        _bg.set_minimized(flag);
+    }
     inline void set_menu_dead()
     {
         _bg.set_menu_dead();
