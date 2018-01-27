@@ -63,6 +63,10 @@ class inv_id
     {
         return inv_id(_id + 37);
     }
+    inline bool is_key() const
+    {
+        return _id < 8;
+    }
     inline size_t row() const
     {
         return 0;

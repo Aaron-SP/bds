@@ -654,14 +654,19 @@ class ui_bg
             // Unset clicking
             _clicking = false;
         }
-        else
+        else if (_clicking)
         {
             // Unselect old click
-            if (_clicking)
-            {
-                unselect_click();
-            }
+            unselect_click();
 
+            // Swap inventory
+            _inv->swap(_click.index(), inv.index());
+
+            // Disable clicking
+            _clicking = false;
+        }
+        else
+        {
             // Set selected index
             _click = inv;
 
@@ -743,7 +748,7 @@ class ui_bg
     }
     inline void set_key_down(const size_t index)
     {
-        // Unselected key
+        // Unselect old key
         unselect();
 
         // Set selected index

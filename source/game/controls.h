@@ -339,84 +339,90 @@ class controls
         // Is the gun locked?
         const bool locked = skill.is_locked();
 
-        // Determine if we need to go to edit or skill mode
-        if (!locked && id >= 9)
-        {
-            // Reset scale
-            _world->reset_scale();
-
-            // Enable edit mode
-            _world->set_edit_mode(true);
-
-            // Disable fire mode
-            skill.set_gun_active(false);
-        }
-        else if (!locked && id != 0)
-        {
-            // Reset scale
-            _world->reset_scale();
-
-            // Disable edit mode
-            _world->set_edit_mode(false);
-
-            // Enable fire mode
-            skill.set_gun_active(true);
-        }
-
-        // If gun is active
-        if (!locked && skill.is_gun_active())
+        // If not locked
+        if (!locked)
         {
             // Modify ui toolbar
             _ui->set_key_down(index);
 
-            // Play selection sound
-            _sound->play_click();
-
-            // Do action for specific ID
-            switch (id)
+            // Determine if we need to go to edit or skill mode
+            if (id == 0)
             {
-            case 0:
-                // Do nothing
-                break;
-            case 1:
-                // Load beam
-                _ui->set_console_string(skill.get_beam_string());
-                skill.set_beam_mode();
-                break;
-            case 2:
-                // Load missile
-                _ui->set_console_string(skill.get_missile_string());
-                skill.set_missile_mode();
-                break;
-            case 3:
-                // Load grapple
-                _ui->set_console_string(skill.get_grapple_string());
-                skill.set_grapple_mode();
-                break;
-            case 4:
-                // Load jet
-                _ui->set_console_string(skill.get_jet_string());
-                skill.set_jetpack_mode();
-                break;
-            case 5:
-                // Load scan
-                _ui->set_console_string(skill.get_scan_string());
-                skill.set_scan_mode();
-                break;
-            default:
-                break;
+                // Disable fire mode
+                skill.set_gun_active(false);
             }
-        }
-        else if (!locked && _world->get_edit_mode())
-        {
-            // Modify ui toolbar
-            _ui->set_key_down(index);
+            else if (id >= 9)
+            {
+                // Reset scale
+                _world->reset_scale();
 
-            // Play selection sound
-            _sound->play_click();
+                // Enable edit mode
+                _world->set_edit_mode(true);
 
-            // Set atlas id
-            _world->set_atlas_id(inv.id_to_atlas(id));
+                // Disable fire mode
+                skill.set_gun_active(false);
+            }
+            else if (id > 0)
+            {
+                // Reset scale
+                _world->reset_scale();
+
+                // Disable edit mode
+                _world->set_edit_mode(false);
+
+                // Enable fire mode
+                skill.set_gun_active(true);
+            }
+
+            // If gun is active
+            if (skill.is_gun_active())
+            {
+                // Play selection sound
+                _sound->play_click();
+
+                // Do action for specific ID
+                switch (id)
+                {
+                case 0:
+                    // Do nothing
+                    break;
+                case 1:
+                    // Load beam
+                    _ui->set_console_string(skill.get_beam_string());
+                    skill.set_beam_mode();
+                    break;
+                case 2:
+                    // Load missile
+                    _ui->set_console_string(skill.get_missile_string());
+                    skill.set_missile_mode();
+                    break;
+                case 3:
+                    // Load grapple
+                    _ui->set_console_string(skill.get_grapple_string());
+                    skill.set_grapple_mode();
+                    break;
+                case 4:
+                    // Load jet
+                    _ui->set_console_string(skill.get_jet_string());
+                    skill.set_jetpack_mode();
+                    break;
+                case 5:
+                    // Load scan
+                    _ui->set_console_string(skill.get_scan_string());
+                    skill.set_scan_mode();
+                    break;
+                default:
+                    break;
+                }
+            }
+            else if (_world->get_edit_mode())
+            {
+                // Play selection sound
+                _sound->play_click();
+
+                // Set atlas id
+                _world->set_atlas_id(inv.id_to_atlas(id));
+            }
         }
         else
         {
@@ -779,9 +785,6 @@ class controls
 
                     // Disable edit mode
                     world->set_edit_mode(false);
-
-                    // Enable fire mode
-                    skill.set_gun_active(true);
                 }
             }
         }
