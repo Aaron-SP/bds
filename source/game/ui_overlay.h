@@ -149,6 +149,14 @@ class ui_overlay
         // Set text screen dimensions
         _text.set_screen(width, height);
     }
+    inline ui_text &text()
+    {
+        return _text;
+    }
+    inline const ui_text &text() const
+    {
+        return _text;
+    }
     inline void toggle_console()
     {
         _text.toggle_draw_console();
@@ -166,11 +174,22 @@ class ui_overlay
     {
         _bg.update();
     }
-    void update_text(const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
+    void update_text(const min::vec3<float> &p, const min::vec3<float> &dir, const std::string &mode,
                      const float health, const float energy, const double fps, const double idle, const size_t chunks)
     {
         // Update all text and upload it
-        _text.update_debug_text(p, f, mode, health, energy, fps, idle, chunks);
+        if (_text.is_draw_debug())
+        {
+            _text.set_debug_position(p);
+            _text.set_debug_direction(dir);
+            _text.set_debug_mode(mode);
+            _text.set_debug_health(health);
+            _text.set_debug_energy(energy);
+            _text.set_debug_fps(fps);
+            _text.set_debug_idle(idle);
+            _text.set_debug_chunks(chunks);
+        }
+
         _text.update_ui(health, energy);
 
         // Upload the changed text

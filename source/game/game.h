@@ -68,6 +68,25 @@ class bds
         auto &keyboard = _win.get_keyboard();
         keyboard.disable();
     }
+    inline void load_gpu_info()
+    {
+        // Get OpenGL implementation info
+        const char *vendor = _win.get_context_string(GL_VENDOR);
+        const char *render = _win.get_context_string(GL_RENDERER);
+        const char *version = _win.get_context_string(GL_VERSION);
+        const char *shading = _win.get_context_string(GL_SHADING_LANGUAGE_VERSION);
+
+        // Print out the OpenGL information that we got
+        std::cout << "OpenGL Vendor: " << vendor << std::endl;
+        std::cout << "OpenGL Renderer: " << render << std::endl;
+        std::cout << "OpenGL Version: " << version << std::endl;
+        std::cout << "OpenGL Shading Version: " << shading << std::endl;
+
+        // Set the debug strings in ui overlay
+        _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
+        _ui.text().set_debug_vendor(vendor);
+        _ui.text().set_debug_renderer(render);
+    }
     inline void respawn()
     {
         // Refresh state
@@ -153,15 +172,8 @@ class bds
         // Delete the mem-file data
         game::memory_map::memory.clear();
 
-        // Get OpenGL implementation info
-        const char *vendor = _win.get_context_string(GL_VENDOR);
-        const char *render = _win.get_context_string(GL_RENDERER);
-        const char *version = _win.get_context_string(GL_VERSION);
-
-        // Print out the OpenGL information that we got
-        std::cout << "OpenGL Vendor: " << vendor << std::endl;
-        std::cout << "OpenGL Renderer: " << render << std::endl;
-        std::cout << "OpenGL Version: " << version << std::endl;
+        // Load gpu information
+        load_gpu_info();
     }
     ~bds()
     {

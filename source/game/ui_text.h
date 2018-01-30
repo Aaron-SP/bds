@@ -33,9 +33,10 @@ namespace game
 class ui_text
 {
   private:
-    static constexpr size_t _console_offset = 9;
-    static constexpr size_t _ui_offset = 10;
-    static constexpr size_t _end = 12;
+    static constexpr size_t _debug_offset = 3;
+    static constexpr size_t _console_offset = _debug_offset + 8;
+    static constexpr size_t _ui_offset = _console_offset + 1;
+    static constexpr size_t _end = _ui_offset + 2;
     static constexpr float _y_console = 90.0;
     static constexpr float _x_console_wrap = 400.0;
     static constexpr float _y_console_wrap = 40.0;
@@ -117,10 +118,12 @@ class ui_text
         _text_buffer.set_screen(width, height);
 
         // Add title text
-        add_text("Beyond Dying Skies: Official Demo", 0, 0);
+        add_text("Title", 0, 0);
+        add_text("Vendor", 0, 0);
+        add_text("Renderer", 0, 0);
 
         // Add 7 text entries
-        for (size_t i = 1; i < _console_offset; i++)
+        for (size_t i = _debug_offset; i < _console_offset; i++)
         {
             add_text("", 0, 0);
         }
@@ -141,7 +144,7 @@ class ui_text
         // Reposition all of the text
         reposition_text(width, height);
     }
-    void draw() const
+    inline void draw() const
     {
         if (_draw_debug && _draw_console && _draw_ui)
         {
@@ -187,6 +190,10 @@ class ui_text
             _text_buffer.draw(_console_offset, _ui_offset - 1);
         }
     }
+    inline bool is_draw_debug() const
+    {
+        return _draw_debug;
+    }
     inline void set_draw_debug(const bool flag)
     {
         _draw_debug = flag;
@@ -210,6 +217,104 @@ class ui_text
         // Upload new text
         upload();
     }
+    inline void set_debug_title(const char *title)
+    {
+        // Clear and reset the stream
+        clear_stream();
+
+        // Title text
+        _stream << title;
+        update_text(0, _stream.str());
+    }
+    inline void set_debug_vendor(const char *vendor)
+    {
+        // Clear and reset the stream
+        clear_stream();
+
+        // Vendor text
+        _stream << vendor;
+        update_text(1, _stream.str());
+    }
+    inline void set_debug_renderer(const char *renderer)
+    {
+        // Clear and reset the stream
+        clear_stream();
+
+        // Renderer text
+        _stream << renderer;
+        update_text(2, _stream.str());
+    }
+    inline void set_debug_position(const min::vec3<float> &p)
+    {
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update player position debug text
+        _stream << std::fixed << std::setprecision(4) << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
+        update_text(_debug_offset, _stream.str());
+    }
+    inline void set_debug_direction(const min::vec3<float> &dir)
+    {
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update player direction debug text
+        _stream << "DIR- X: " << dir.x() << ", Y: " << dir.y() << ", Z: " << dir.z();
+        update_text(_debug_offset + 1, _stream.str());
+    }
+    inline void set_debug_mode(const std::string &mode)
+    {
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update the game mode text
+        update_text(_debug_offset + 2, mode);
+    }
+    inline void set_debug_health(const float health)
+    {
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update the energy text
+        _stream << "HEALTH: " << health;
+        update_text(_debug_offset + 3, _stream.str());
+    }
+    inline void set_debug_energy(const float energy)
+    {
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update the energy text
+        _stream << "ENERGY: " << energy;
+        update_text(_debug_offset + 4, _stream.str());
+    }
+    inline void set_debug_fps(const float fps)
+    {
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update FPS and IDLE
+        _stream << "FPS: " << std::round(fps);
+        update_text(_debug_offset + 5, _stream.str());
+    }
+    inline void set_debug_idle(const double idle)
+    {
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update FPS and IDLE
+        _stream << "IDLE: " << idle;
+        update_text(_debug_offset + 6, _stream.str());
+    }
+    inline void set_debug_chunks(const size_t chunks)
+    {
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update FPS and IDLE
+        _stream << "CHUNKS: " << chunks;
+        update_text(_debug_offset + 7, _stream.str());
+    }
     inline void toggle_draw_console()
     {
         _draw_console = !_draw_console;
@@ -218,83 +323,23 @@ class ui_text
     {
         _draw_debug = !_draw_debug;
     }
-    void update_debug_text(
-        const min::vec3<float> &p, const min::vec3<float> &f, const std::string &mode,
-        const float health, const float energy, const double fps, const double idle, const size_t chunks)
+    inline void update_ui(const float health, const float energy)
     {
-        // If drawing text mode is on, update text
-        if (_draw_debug)
-        {
-            // Update player position debug text
-            _stream << std::fixed << std::setprecision(4) << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
-            update_text(1, _stream.str());
+        // Clear and reset the _stream
+        clear_stream();
 
-            // Clear and reset the _stream
-            clear_stream();
-
-            // Update player direction debug text
-            _stream << "DIR- X: " << f.x() << ", Y: " << f.y() << ", Z: " << f.z();
-            update_text(2, _stream.str());
-
-            // Clear and reset the _stream
-            clear_stream();
-
-            // Update the game mode text
-            update_text(3, mode);
-
-            // Update the energy text
-            _stream << "HEALTH: " << health;
-            update_text(4, _stream.str());
-
-            // Clear and reset the _stream
-            clear_stream();
-
-            // Update the energy text
-            _stream << "ENERGY: " << energy;
-            update_text(5, _stream.str());
-
-            // Clear and reset the _stream
-            clear_stream();
-
-            // Update FPS and IDLE
-            _stream << "FPS: " << std::round(fps);
-            update_text(6, _stream.str());
-
-            // Clear and reset the _stream
-            clear_stream();
-
-            // Update FPS and IDLE
-            _stream << "IDLE: " << idle;
-            update_text(7, _stream.str());
-
-            // Clear and reset the _stream
-            clear_stream();
-
-            // Update FPS and IDLE
-            _stream << "CHUNKS: " << chunks;
-            update_text(8, _stream.str());
-
-            // Clear and reset the _stream
-            clear_stream();
-        }
-    }
-    void update_ui(const float health, const float energy)
-    {
         // Update the energy text
         _stream << static_cast<int>(std::round(health));
-        update_text(_console_offset + 1, _stream.str());
+        update_text(_ui_offset, _stream.str());
 
         // Clear and reset the _stream
         clear_stream();
 
         // Update the energy text
         _stream << static_cast<int>(std::round(energy));
-        update_text(_console_offset + 2, _stream.str());
-
-        // Clear and reset the _stream
-        clear_stream();
+        update_text(_ui_offset + 1, _stream.str());
     }
-    void update_console(const std::string &str)
+    inline void update_console(const std::string &str)
     {
         // Update console text
         update_text(_console_offset, str);
