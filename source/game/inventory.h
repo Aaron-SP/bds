@@ -131,7 +131,7 @@ class inventory
 {
   private:
     static constexpr size_t _max_slots = 32;
-    static constexpr size_t _max_strings = 33;
+    static constexpr size_t _max_strings = 37;
     std::array<item, _max_slots> _inv;
     std::array<std::string, _max_strings> _inv_desc;
     std::vector<inv_id> _update;
@@ -171,6 +171,10 @@ class inventory
         _inv_desc[30] = "Unstable Sodium";
         _inv_desc[31] = "???";
         _inv_desc[32] = "???";
+        _inv_desc[33] = "Red Energy";
+        _inv_desc[34] = "Purple Energy";
+        _inv_desc[35] = "Blue Energy";
+        _inv_desc[36] = "Green Energy";
     }
 
   public:

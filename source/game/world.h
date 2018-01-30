@@ -89,7 +89,8 @@ class world
     projectiles _projectile;
 
     // Random stuff
-    std::uniform_real_distribution<float> _dist;
+    std::uniform_int_distribution<size_t> _drop_dist;
+    std::uniform_real_distribution<float> _grid_dist;
     std::mt19937 _gen;
 
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
@@ -136,6 +137,13 @@ class world
         {
             // Add a drop
             _drops.add(point, direction, value);
+
+            // Randomly drop a powerup
+            const size_t ran_drop = random_drop();
+            if (ran_drop < 4)
+            {
+                _drops.add(point, direction, 24 + ran_drop);
+            }
 
             // Add particle effects
             _particles->load_static_explode(point, direction, 5.0, size);
@@ -189,11 +197,15 @@ class world
         // Upload preview geometry
         _terrain.upload_preview(_terr_mesh);
     }
+    inline size_t random_drop()
+    {
+        return _drop_dist(_gen);
+    }
     inline min::vec3<float> random_point()
     {
-        const float x = _dist(_gen);
-        const float y = _dist(_gen);
-        const float z = _dist(_gen);
+        const float x = _grid_dist(_gen);
+        const float y = _grid_dist(_gen);
+        const float z = _grid_dist(_gen);
 
         return min::vec3<float>(x, y, z);
     }
@@ -354,7 +366,8 @@ class world
           _drones(&_simulation, &_instance),
           _drops(&_simulation, &_instance),
           _projectile(particles, &_instance, s),
-          _dist((grid_size * -1.0) + 1.0, grid_size - 1.0),
+          _drop_dist(0, 20),
+          _grid_dist((grid_size * -1.0) + 1.0, grid_size - 1.0),
           _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
     {
         // Set the collision elasticity of the physics simulation

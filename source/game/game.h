@@ -152,6 +152,16 @@ class bds
 
         // Delete the mem-file data
         game::memory_map::memory.clear();
+
+        // Get OpenGL implementation info
+        const char *vendor = _win.get_context_string(GL_VENDOR);
+        const char *render = _win.get_context_string(GL_RENDERER);
+        const char *version = _win.get_context_string(GL_VERSION);
+
+        // Print out the OpenGL information that we got
+        std::cout << "OpenGL Vendor: " << vendor << std::endl;
+        std::cout << "OpenGL Renderer: " << render << std::endl;
+        std::cout << "OpenGL Version: " << version << std::endl;
     }
     ~bds()
     {
