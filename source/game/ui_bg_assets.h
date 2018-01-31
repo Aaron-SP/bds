@@ -33,7 +33,6 @@ class ui_bg_assets
   private:
     // Backgrounds
     static constexpr float _image_size = 512.0;
-    static constexpr size_t _max_size = 69;
     static constexpr float _next_icon = 36.0 / _image_size;
     static constexpr float _x_cursor_uv = 4.0 / _image_size;
     static constexpr float _y_cursor_uv = 4.0 / _image_size;
@@ -108,6 +107,11 @@ class ui_bg_assets
 
     // Inventory stuff
     static constexpr size_t _max_slots = 32;
+
+    // Number of ui elements, 3 + 2 + 8 + 8 + 24 + 24
+    static constexpr size_t _base_size = 21;
+    static constexpr size_t _extend_size = 69;
+    static constexpr size_t _max_size = _extend_size;
 
     // Rect Instance stuff
     std::vector<min::mat3<float>> _v;
@@ -496,10 +500,6 @@ class ui_bg_assets
         _center_w = _width / 2;
         _center_h = _height / 2;
     }
-    inline size_t size() const
-    {
-        return _v.size();
-    }
     inline void toggle_draw_console()
     {
         _draw_console = !_draw_console;
@@ -517,9 +517,30 @@ class ui_bg_assets
         // Return toolbar position
         return min::vec2<float>(x, y);
     }
+    inline static constexpr size_t opaque_extend_size()
+    {
+        return _extend_size - opaque_start();
+    }
+    inline static constexpr size_t opaque_base_size()
+    {
+        return ui_size() - opaque_start();
+    }
+    inline static constexpr size_t opaque_start()
+    {
+        return 3;
+    }
+    inline static constexpr size_t transparent_start()
+    {
+        return 0;
+    }
+    inline static constexpr size_t transparent_size()
+    {
+        return 3;
+    }
     inline static constexpr size_t ui_size()
     {
-        return 21;
+        // 3 + 2 + 8 + 8
+        return _base_size;
     }
 };
 }

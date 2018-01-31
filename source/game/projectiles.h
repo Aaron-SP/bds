@@ -114,8 +114,8 @@ class projectiles
     static_instance *_inst;
     particle *_part;
     sound *_sound;
-    min::vec3<unsigned> _scale;
     std::vector<missile> _miss;
+    const min::vec3<unsigned> _scale;
 
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {

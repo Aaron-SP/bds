@@ -59,6 +59,24 @@ class bds
     game::sound _sound;
     std::pair<uint16_t, uint16_t> _cursor;
 
+    inline void set_cursor_center()
+    {
+        // Get the screen dimensions
+        const uint16_t w = _win.get_width();
+        const uint16_t h = _win.get_height();
+
+        // Center cursor in middle of window
+        _win.set_cursor(w / 2, h / 2);
+    }
+    inline std::pair<uint16_t, uint16_t> cursor_center() const
+    {
+        // Get the screen dimensions
+        const uint16_t w2 = _win.get_width() / 2;
+        const uint16_t h2 = _win.get_height() / 2;
+
+        // Return screen center
+        return std::make_pair(w2, h2);
+    }
     inline void die()
     {
         // Set menu for dead
@@ -67,6 +85,17 @@ class bds
         // Disable the keyboard
         auto &keyboard = _win.get_keyboard();
         keyboard.disable();
+    }
+    inline std::pair<uint16_t, uint16_t> get_cursor() const
+    {
+        // If player is dead return screen center
+        if (_world.get_player().is_dead())
+        {
+            return cursor_center();
+        }
+
+        // Return cursor position
+        return _win.get_cursor();
     }
     inline void load_gpu_info()
     {
@@ -167,7 +196,7 @@ class bds
         min::settings::initialize();
 
         // Update cursor position for tracking
-        center_cursor();
+        set_cursor_center();
 
         // Delete the mem-file data
         game::memory_map::memory.clear();
@@ -180,26 +209,26 @@ class bds
         // Save game data to file
         _state.save_state_file(_world.get_player().position());
     }
-    void blink_console_message()
+    inline void blink_console_message()
     {
         _ui.toggle_console();
     }
-    bool check_gl_error() const
+    inline bool check_gl_error() const
     {
         return min::check_gl_error();
     }
-    bool check_al_error() const
+    inline bool check_al_error() const
     {
         return _sound.check_error();
     }
-    void clear_background() const
+    inline void clear_background() const
     {
         // blue background
         const float color[] = {0.145, 0.145f, 0.150f, 1.0f};
         glClearBufferfv(GL_COLOR, 0, color);
         glClear(GL_DEPTH_BUFFER_BIT);
     }
-    void disable_title_screen()
+    inline void disable_title_screen()
     {
         // Register window callbacks
         _controls.register_control_callbacks();
@@ -212,9 +241,9 @@ class bds
         _win.display_cursor(false);
 
         // Update the mouse cursor to center
-        center_cursor();
+        set_cursor_center();
     }
-    void draw() const
+    inline void draw() const
     {
         // Draw the opaque ui
         _ui.draw_opaque();
@@ -235,7 +264,7 @@ class bds
         // Draw the transparent ui
         _ui.draw_transparent();
     }
-    void draw_title(const float dt)
+    inline void draw_title(const float dt)
     {
         min::camera<float> &camera = _state.get_camera();
 
@@ -246,38 +275,25 @@ class bds
         _ui.draw_opaque();
         _ui.draw_transparent();
     }
-    bool is_closed() const
+    inline bool is_closed() const
     {
         return _win.get_shutdown();
     }
-    bool is_show_title() const
+    inline bool is_show_title() const
     {
         return _title.is_show_title();
     }
-    void maximize() const
+    inline void maximize() const
     {
         _win.maximize();
     }
-    void play_music()
+    inline void play_music()
     {
         _sound.play_bg(true);
     }
-    void set_title(const std::string &title)
-    {
-        _win.set_title(title);
-    }
-    void center_cursor()
-    {
-        // Get the screen dimensions
-        const uint16_t w = _win.get_width();
-        const uint16_t h = _win.get_height();
-
-        // Center cursor in middle of window
-        _win.set_cursor(w / 2, h / 2);
-    }
     void update(const float dt)
     {
-        // Get player physics body position
+        // Get player object
         game::player &player = _world.get_player();
 
         bool update = false;
@@ -286,16 +302,16 @@ class bds
         // If game is not paused update game state
         if (!_state.get_pause())
         {
-            if (!_state.get_user_input() && !player.is_dead())
+            if (!_state.get_user_input())
             {
                 // Get the cursor coordinates
-                const auto c = _win.get_cursor();
+                const auto c = get_cursor();
 
                 // Must update state properties, camera before drawing world
                 _state.update(player.position(), c, _win.get_width(), _win.get_height());
 
                 // Reset cursor position
-                center_cursor();
+                set_cursor_center();
             }
             else if (_state.get_user_input())
             {
@@ -349,13 +365,13 @@ class bds
         // Update all uniforms
         update_uniforms(camera, update);
     }
-    void update_keyboard(const float dt)
+    inline void update_keyboard(const float dt)
     {
         // Update the keyboard
         auto &keyboard = _win.get_keyboard();
         keyboard.update(dt);
     }
-    void update_text(const double fps, const double idle)
+    inline void update_text(const double fps, const double idle)
     {
         // Update player position debug text
         const game::player &player = _world.get_player();
@@ -370,7 +386,7 @@ class bds
         // Update the ui overlay
         _ui.update_text(p, f, mode, health, energy, fps, idle, chunks);
     }
-    void update_window()
+    inline void update_window()
     {
         // Update and swap buffers
         _win.update();

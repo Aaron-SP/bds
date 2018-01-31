@@ -70,19 +70,33 @@ class ui_bg
     std::vector<min::aabbox<float, min::vec2>> _shapes;
     min::grid<float, uint16_t, uint16_t, min::vec2, min::aabbox, min::aabbox> _grid;
 
-    inline void draw_opaque_all() const
+    inline void draw_opaque_extend() const
     {
         // Bind the ui texture for drawing
         _tbuffer.bind(_ui_id, 0);
 
-        // Skip over the overlay
-        set_start_index(3);
+        // Get the start of the opaque ui
+        const size_t opaque_start = _assets.opaque_start();
+        set_start_index(opaque_start);
 
-        // Draw the all ui elements
-        const size_t size = _assets.size() - 3;
+        // Draw extended ui elements
+        const size_t size = _assets.opaque_extend_size();
         _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
     }
-    inline void draw_opaque_title() const
+    inline void draw_opaque_base() const
+    {
+        // Bind the ui texture for drawing
+        _tbuffer.bind(_ui_id, 0);
+
+        // Get the start of the opaque ui
+        const size_t opaque_start = _assets.opaque_start();
+        set_start_index(opaque_start);
+
+        // Draw base ui elements
+        const size_t size = _assets.opaque_base_size();
+        _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
+    }
+    inline void draw_title() const
     {
         // Bind the ui texture for drawing
         _tbuffer.bind(_title_id, 0);
@@ -90,28 +104,18 @@ class ui_bg
         // Draw the first thing in the buffer, title screen
         _vb.draw_many(GL_TRIANGLES, _mesh_id, 1);
     }
-    inline void draw_opaque_ui() const
-    {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_ui_id, 0);
-
-        // Skip over the overlay
-        set_start_index(3);
-
-        // Draw the base ui elements
-        const size_t size = _assets.ui_size() - 3;
-        _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
-    }
     inline void draw_transparent_ui() const
     {
         // Bind the ui texture for drawing
         _tbuffer.bind(_ui_id, 0);
 
-        // Skip over the overlay
-        set_start_index(0);
+        // Get the start of the transparent ui
+        const size_t trans_start = _assets.transparent_start();
+        set_start_index(trans_start);
 
         // Draw the base ui elements
-        _vb.draw_many(GL_TRIANGLES, _mesh_id, 3);
+        const size_t size = _assets.transparent_size();
+        _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
     }
     inline void load_base_rect()
     {
@@ -590,17 +594,17 @@ class ui_bg
         // If we are drawing the title screen
         if (_assets.get_draw_title())
         {
-            draw_opaque_title();
+            draw_title();
         }
         else if (_assets.get_draw_ex())
         {
             // Draw extended ui?
-            draw_opaque_all();
+            draw_opaque_extend();
         }
         else
         {
-            // Draw only basic ui
-            draw_opaque_ui();
+            // Draw only base ui
+            draw_opaque_base();
         }
     }
     inline void draw_transparent() const

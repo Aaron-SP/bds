@@ -437,11 +437,18 @@ class world
                 f(traced, body);
             }
 
+            // If block is lava override explode scale
+            min::vec3<unsigned> ex_scale = scale;
+            if (value == 21)
+            {
+                ex_scale = min::vec3<unsigned>(3, 3, 3);
+            }
+
             // Remove the block
-            const min::vec3<float> center = center_radius(traced, scale);
+            const min::vec3<float> center = center_radius(traced, ex_scale);
 
             // Explode block
-            explode_block(center, direction, scale, value, size);
+            explode_block(center, direction, ex_scale, value, size);
         }
 
         // return the block atlas id
