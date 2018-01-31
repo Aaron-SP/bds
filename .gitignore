@@ -1,5 +1,4 @@
-game.txt
-test.txt
+*.txt
 .vscode/
 bin/
 bds_data/

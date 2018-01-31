@@ -120,7 +120,6 @@ class controls
         keyboard.add(min::window::key_code::KEYA);
         keyboard.add(min::window::key_code::KEYD);
         keyboard.add(min::window::key_code::KEYE);
-        keyboard.add(min::window::key_code::KEYI);
         keyboard.add(min::window::key_code::KEYZ);
         keyboard.add(min::window::key_code::KEYX);
         keyboard.add(min::window::key_code::KEYC);
@@ -133,6 +132,7 @@ class controls
         keyboard.add(min::window::key_code::KEY7);
         keyboard.add(min::window::key_code::KEY8);
         keyboard.add(min::window::key_code::SPACE);
+        keyboard.add(min::window::key_code::TAB);
 
         // Register callback function F1
         keyboard.register_keydown(min::window::key_code::F1, controls::close_window, (void *)_window);
@@ -163,9 +163,6 @@ class controls
 
         // Register callback function E
         keyboard.register_keydown(min::window::key_code::KEYE, controls::reset, (void *)this);
-
-        // Register callback function I
-        keyboard.register_keydown(min::window::key_code::KEYI, controls::ui_extend, (void *)this);
 
         // Register callback function Z
         keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
@@ -210,6 +207,9 @@ class controls
 
         // Register callback function SPACE
         keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)_world);
+
+        // Register callback function TAB
+        keyboard.register_keydown(min::window::key_code::TAB, controls::ui_extend, (void *)this);
     }
     static void close_window(void *ptr, double step)
     {

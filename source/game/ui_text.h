@@ -122,7 +122,7 @@ class ui_text
         add_text("Vendor", 0, 0);
         add_text("Renderer", 0, 0);
 
-        // Add 7 text entries
+        // Add 8 text entries
         for (size_t i = _debug_offset; i < _console_offset; i++)
         {
             add_text("", 0, 0);
