@@ -327,17 +327,6 @@ class ui_bg_assets
         // Load rect at position
         set_rect_rot(2, p, scale, reload_coord, _cursor_angle);
     }
-    inline void load_energy_meter()
-    {
-        const float y_height = _s_blue_y * _energy;
-        const float y_offset = (y_height - _s_blue_x) * 0.5 + _tool_height;
-        const min::vec2<float> p(_center_w + _energy_start, y_offset);
-        const min::vec2<float> scale(_s_blue_x, y_height);
-        const min::vec4<float> blue_coord(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv);
-
-        // Load rect at position
-        set_rect(3, p, scale, blue_coord);
-    }
     inline void load_health_meter()
     {
         const float y_height = _s_red_y * _health;
@@ -347,7 +336,18 @@ class ui_bg_assets
         const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect(4, p, scale, red_coord);
+        set_rect(3, p, scale, red_coord);
+    }
+    inline void load_energy_meter()
+    {
+        const float y_height = _s_blue_y * _energy;
+        const float y_offset = (y_height - _s_blue_x) * 0.5 + _tool_height;
+        const min::vec2<float> p(_center_w + _energy_start, y_offset);
+        const min::vec2<float> scale(_s_blue_x, y_height);
+        const min::vec4<float> blue_coord(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(4, p, scale, blue_coord);
     }
     inline void load_bg_black(const inv_id id, const min::vec2<float> &p)
     {

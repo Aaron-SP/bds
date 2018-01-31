@@ -246,11 +246,6 @@ class projectiles
 
         return launch(grid, r);
     }
-    inline void draw(const uniforms &uniforms) const
-    {
-        // Draw launch particles
-        _part->draw_miss_launch(uniforms);
-    }
     inline void update(const cgrid &grid, const float speed,
                        const std::function<void(
                            const min::vec3<float> &point,

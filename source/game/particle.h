@@ -119,7 +119,7 @@ class particle
     {
         return cam.get_position() + (cam.get_right() - cam.get_up()) * 0.1;
     }
-    inline void draw_emit(const game::uniforms &uniforms) const
+    inline void draw_emit() const
     {
         // Bind this texture for drawing
         _tbuffer.bind(_dds_id, 0);
@@ -130,7 +130,19 @@ class particle
         // Draw the particles
         _emit.draw();
     }
-    inline void draw_miss(const size_t index, const game::uniforms &uniforms) const
+    inline void draw_emit_charge() const
+    {
+        // Draw charge
+        if (_charge_time > 0.0)
+        {
+            // Set the charge reference point
+            set_reference(_charge_ref);
+
+            // Draw on emit buffer
+            draw_emit();
+        }
+    }
+    inline void draw_miss(const size_t index) const
     {
         // Bind VAO
         _miss[index].emit().bind();
@@ -138,7 +150,25 @@ class particle
         // Draw the particles
         _miss[index].emit().draw();
     }
-    inline void draw_static(const game::uniforms &uniforms) const
+    inline void draw_miss_launch() const
+    {
+        // Bind this texture for drawing missiles
+        _tbuffer.bind(_dds_id, 0);
+
+        // Draw all miss launch
+        for (size_t i = 0; i < _miss_limit; i++)
+        {
+            if (_miss[i].time() > 0.0)
+            {
+                // Set the launch reference point
+                set_reference(_miss[i].ref());
+
+                // Draw on emit buffer
+                draw_miss(i);
+            }
+        }
+    }
+    inline void draw_static() const
     {
         // Bind this texture for drawing
         _tbuffer.bind(_dds_id, 0);
@@ -148,6 +178,30 @@ class particle
 
         // Draw the particles
         _static.draw();
+    }
+    inline void draw_static_explode() const
+    {
+        // Draw explode
+        if (_explode_time > 0.0)
+        {
+            // Set the explode reference point
+            set_reference(_explode_ref);
+
+            // Draw on static buffer
+            draw_static();
+        }
+    }
+    inline void draw_static_line() const
+    {
+        // Draw draw
+        if (_line_time > 0.0)
+        {
+            // Set the explode reference point
+            set_reference(_line_ref);
+
+            // Draw on static buffer
+            draw_static();
+        }
     }
     inline void load_emit(const min::vec3<float> &p, const min::vec3<float> &speed, const min::vec3<float> &wind)
     {
@@ -274,59 +328,19 @@ class particle
         // Abort particle animation
         _line_time = -1.0;
     }
-    inline void draw_emit_charge(const game::uniforms &uniforms) const
+    inline void draw() const
     {
-        // Draw charge
-        if (_charge_time > 0.0)
-        {
-            // Set the charge reference point
-            set_reference(_charge_ref);
+        // Draw the explode particles
+        draw_static_explode();
 
-            // Draw on emit buffer
-            draw_emit(uniforms);
-        }
-    }
-    inline void draw_miss_launch(const game::uniforms &uniforms) const
-    {
-        // Bind this texture for drawing missiles
-        _tbuffer.bind(_dds_id, 0);
+        // Draw the charge particles
+        draw_emit_charge();
 
-        // Draw all miss launch
-        for (size_t i = 0; i < _miss_limit; i++)
-        {
-            if (_miss[i].time() > 0.0)
-            {
-                // Set the launch reference point
-                set_reference(_miss[i].ref());
+        // Draw the line particles
+        draw_static_line();
 
-                // Draw on emit buffer
-                draw_miss(i, uniforms);
-            }
-        }
-    }
-    inline void draw_static_explode(const game::uniforms &uniforms) const
-    {
-        // Draw explode
-        if (_explode_time > 0.0)
-        {
-            // Set the explode reference point
-            set_reference(_explode_ref);
-
-            // Draw on static buffer
-            draw_static(uniforms);
-        }
-    }
-    inline void draw_static_line(const game::uniforms &uniforms) const
-    {
-        // Draw draw
-        if (_line_time > 0.0)
-        {
-            // Set the explode reference point
-            set_reference(_line_ref);
-
-            // Draw on static buffer
-            draw_static(uniforms);
-        }
+        // Draw missiles
+        draw_miss_launch();
     }
     inline size_t get_idle_miss_launch_id()
     {

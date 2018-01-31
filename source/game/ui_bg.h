@@ -43,6 +43,7 @@ class ui_bg
     min::shader _vertex;
     min::shader _fragment;
     min::program _prog;
+    const GLint _index_location;
 
     // Instance buffer stuff
     min::vertex_buffer<float, uint32_t, ui_vertex, GL_FLOAT, GL_UNSIGNED_INT> _vb;
@@ -69,16 +70,19 @@ class ui_bg
     std::vector<min::aabbox<float, min::vec2>> _shapes;
     min::grid<float, uint16_t, uint16_t, min::vec2, min::aabbox, min::aabbox> _grid;
 
-    inline void draw_all() const
+    inline void draw_opaque_all() const
     {
         // Bind the ui texture for drawing
         _tbuffer.bind(_ui_id, 0);
 
+        // Skip over the overlay
+        set_start_index(3);
+
         // Draw the all ui elements
-        const size_t size = _assets.size();
+        const size_t size = _assets.size() - 3;
         _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
     }
-    inline void draw_title() const
+    inline void draw_opaque_title() const
     {
         // Bind the ui texture for drawing
         _tbuffer.bind(_title_id, 0);
@@ -86,14 +90,28 @@ class ui_bg
         // Draw the first thing in the buffer, title screen
         _vb.draw_many(GL_TRIANGLES, _mesh_id, 1);
     }
-    inline void draw_ui() const
+    inline void draw_opaque_ui() const
     {
         // Bind the ui texture for drawing
         _tbuffer.bind(_ui_id, 0);
 
+        // Skip over the overlay
+        set_start_index(3);
+
         // Draw the base ui elements
-        const size_t size = _assets.ui_size();
+        const size_t size = _assets.ui_size() - 3;
         _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
+    }
+    inline void draw_transparent_ui() const
+    {
+        // Bind the ui texture for drawing
+        _tbuffer.bind(_ui_id, 0);
+
+        // Skip over the overlay
+        set_start_index(0);
+
+        // Draw the base ui elements
+        _vb.draw_many(GL_TRIANGLES, _mesh_id, 3);
     }
     inline void load_base_rect()
     {
@@ -179,6 +197,20 @@ class ui_bg
 
         // Insert the shapes into the grid
         _grid.insert(_shapes, scale);
+    }
+    inline GLint load_program_index(const uniforms &uniforms) const
+    {
+        // Load the uniform buffer with program we will use
+        uniforms.set_program_matrix(_prog);
+
+        // Get the start_index uniform location
+        const GLint location = glGetUniformLocation(_prog.id(), "start_index");
+        if (location == -1)
+        {
+            throw std::runtime_error("ui_bg: could not find uniform 'start_index'");
+        }
+
+        return location;
     }
     inline void load_texture()
     {
@@ -361,6 +393,11 @@ class ui_bg
             return _assets.load_cube_icon(inv, _inv->id_to_atlas(id), p);
         }
     }
+    inline void set_start_index(const GLint start_index) const
+    {
+        // Set the sampler active texture
+        glUniform1i(_index_location, start_index);
+    }
     inline void unselect()
     {
         // Bg key placement
@@ -521,7 +558,7 @@ class ui_bg
     ui_bg(const uniforms &uniforms, inventory *const inv, const uint16_t width, const uint16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
-          _prog(_vertex, _fragment), _mesh_id(0),
+          _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)), _mesh_id(0),
           _click(0), _hover(0), _select(0),
           _clicking(false), _hovering(false), _minimized(false),
           _assets(width, height), _inv(inv), _grid(screen_box(width, height))
@@ -538,14 +575,11 @@ class ui_bg
         // Load the grid inventory boxes
         load_grid(width, height);
 
-        // Load the uniform buffer with program we will use
-        uniforms.set_program_matrix(_prog);
-
         // Reposition all ui on the screen
         position_ui();
     }
 
-    inline void draw(const uniforms &uniforms) const
+    inline void draw_opaque() const
     {
         // Bind the text_buffer vao
         _vb.bind();
@@ -556,17 +590,31 @@ class ui_bg
         // If we are drawing the title screen
         if (_assets.get_draw_title())
         {
-            draw_title();
+            draw_opaque_title();
         }
         else if (_assets.get_draw_ex())
         {
             // Draw extended ui?
-            draw_all();
+            draw_opaque_all();
         }
         else
         {
             // Draw only basic ui
-            draw_ui();
+            draw_opaque_ui();
+        }
+    }
+    inline void draw_transparent() const
+    {
+        if (!_assets.get_draw_title())
+        {
+            // Bind the text_buffer vao
+            _vb.bind();
+
+            // Bind the ui program
+            _prog.use();
+
+            // Draw transparent ui
+            draw_transparent_ui();
         }
     }
     inline const std::vector<min::mat3<float>> &get_scale() const

@@ -395,6 +395,9 @@ class world
     }
     void draw(const uniforms &uniforms) const
     {
+        // Draw the static instances
+        _instance.draw(uniforms);
+
         // Binds textures and uses program
         _terrain.bind();
 
@@ -410,15 +413,6 @@ class world
 
         // Draw the sky, uses geometry VAO -- HACK!
         _sky.draw();
-
-        // Draw the static instances
-        _instance.draw(uniforms);
-
-        // Draw the explode particles
-        _particles->draw_static_explode(uniforms);
-
-        // Draw projectiles
-        _projectile.draw(uniforms);
     }
     int8_t explode_block(const min::ray<float, min::vec3> &r, const min::vec3<unsigned> &scale,
                          const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)

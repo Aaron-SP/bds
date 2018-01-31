@@ -43,10 +43,15 @@ class ui_overlay
             _bg.click();
         }
     }
-    inline void draw(const uniforms &uniforms) const
+    inline void draw_opaque() const
     {
         // Draw background ui
-        _bg.draw(uniforms);
+        _bg.draw_opaque();
+    }
+    inline void draw_transparent() const
+    {
+        // Draw background ui
+        _bg.draw_transparent();
 
         // Draw the text
         _text.draw();

@@ -885,10 +885,13 @@ class cgrid
         _sort_view_index.resize(size);
         std::iota(_sort_view_index.begin(), _sort_view_index.end(), 0);
 
+        // Calculate a weighted center to favor chunks in front of viewer
+        const min::vec3<float> weight_center = cam.project_point(_chunk_size / 2);
+
         // Calculate square distances from center of view frustum
         for (size_t i = 0; i < size; i++)
         {
-            const min::vec3<float> d = center - chunk_start(out[i]);
+            const min::vec3<float> d = weight_center - chunk_start(out[i]);
             _sort_view[i] = d.dot(d);
         }
 

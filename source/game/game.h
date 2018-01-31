@@ -195,7 +195,7 @@ class bds
     void clear_background() const
     {
         // blue background
-        const float color[] = {0.690, 0.875f, 0.901f, 1.0f};
+        const float color[] = {0.145, 0.145f, 0.150f, 1.0f};
         glClearBufferfv(GL_COLOR, 0, color);
         glClear(GL_DEPTH_BUFFER_BIT);
     }
@@ -216,18 +216,24 @@ class bds
     }
     void draw() const
     {
-        // Draw world geometry
-        _world.draw(_uniforms);
+        // Draw the opaque ui
+        _ui.draw_opaque();
 
         // Draw the character if fire mode activated
         const game::skills &skill = _world.get_player().get_skills();
         if (skill.is_gun_active())
         {
-            _character.draw(_uniforms);
+            _character.draw();
         }
 
-        // Draw the ui
-        _ui.draw(_uniforms);
+        // Draw world geometry
+        _world.draw(_uniforms);
+
+        // Draw particles
+        _particles.draw();
+
+        // Draw the transparent ui
+        _ui.draw_transparent();
     }
     void draw_title(const float dt)
     {
@@ -237,7 +243,8 @@ class bds
         update_uniforms(camera, false);
 
         // Draw the ui
-        _ui.draw(_uniforms);
+        _ui.draw_opaque();
+        _ui.draw_transparent();
     }
     bool is_closed() const
     {

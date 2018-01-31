@@ -115,8 +115,8 @@ class character
 
   public:
     character(particle *const particles, const uniforms &uniforms)
-        : _vertex(memory_map::memory.get_file("data/shader/md5.vertex"), GL_VERTEX_SHADER),
-          _fragment(memory_map::memory.get_file("data/shader/md5.fragment"), GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory.get_file("data/shader/character.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory.get_file("data/shader/character.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _md5_model(std::move(min::md5_mesh<float, uint32_t>(memory_map::memory.get_file("data/models/gun.md5mesh")))),
           _particles(particles),
@@ -148,17 +148,8 @@ class character
         // Abort the particle system
         _particles->abort_charge();
     }
-    inline void draw(const uniforms &uniforms) const
+    inline void draw() const
     {
-        // Draw the charge particles
-        _particles->draw_emit_charge(uniforms);
-
-        // Draw the line particles
-        _particles->draw_static_line(uniforms);
-
-        // Clear depth for drawing character over terrain
-        glClear(GL_DEPTH_BUFFER_BIT);
-
         // Bind VAO
         _skbuffer.bind();
 
