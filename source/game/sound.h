@@ -118,8 +118,9 @@ class sound
 {
   private:
     static constexpr size_t _bg_sounds = 2;
+    static constexpr size_t _sounds = 21;
+    static constexpr size_t _voice_sounds = 6;
     static constexpr size_t _max_delay = 120;
-    static constexpr size_t _max_sounds = 20;
     static constexpr size_t _miss_limit = 10;
     static constexpr float _land_threshold = 3.0;
     static constexpr float _max_speed = 10.0;
@@ -147,6 +148,7 @@ class sound
     static constexpr float _miss_launch_gain = 0.7;
     static constexpr float _pickup_gain = 0.25;
     static constexpr float _shot_gain = 0.125;
+    static constexpr float _voice_gain = 0.25;
 
     // FADES
     static constexpr float _charge_fade = _charge_gain / _charge_ff;
@@ -168,15 +170,18 @@ class sound
     min::sound_buffer _buffer;
     std::vector<sound_info> _si;
     std::vector<size_t> _music;
+    float _bg_delay;
+    bool _bg_enable;
     std::vector<size_t> _miss;
     size_t _miss_old;
+    std::vector<size_t> _voice;
+    std::vector<size_t> _v_queue;
+    size_t _v_head;
+    float _v_delay;
+    bool _v_enable;
     std::uniform_int_distribution<size_t> _int_dist;
     std::uniform_real_distribution<double> _real_dist;
     std::mt19937 _gen;
-    double _delay;
-    std::chrono::high_resolution_clock::time_point _start;
-    bool _waiting;
-    bool _enable_bg;
 
     inline sound_info &bg_info()
     {
@@ -222,9 +227,37 @@ class sound
     {
         return _si[10];
     }
+    inline sound_info &voice_info()
+    {
+        return _si[11];
+    }
     inline sound_info &miss_launch_info(const size_t index)
     {
-        return _si[11 + index];
+        return _si[12 + index];
+    }
+    inline static size_t v_comply()
+    {
+        return 0;
+    }
+    inline static size_t v_critical()
+    {
+        return 1;
+    }
+    inline static size_t v_power()
+    {
+        return 2;
+    }
+    inline static size_t v_repair()
+    {
+        return 3;
+    }
+    inline static size_t v_resource()
+    {
+        return 4;
+    }
+    inline static size_t v_shutdown()
+    {
+        return 5;
     }
     inline void load_explosion_settings(const size_t s)
     {
@@ -416,42 +449,46 @@ class sound
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _shot_gain);
     }
-    inline void random_music()
+    inline void load_voice_sound()
     {
-        // Get a random music index
-        const size_t index = _int_dist(_gen);
+        // Load a music OGG files
+        const min::mem_file &ogg1 = memory_map::memory.get_file("data/sound/voice_comply_s.ogg");
+        const min::ogg sound1(ogg1);
+        const min::mem_file &ogg2 = memory_map::memory.get_file("data/sound/voice_critical_s.ogg");
+        const min::ogg sound2(ogg2);
+        const min::mem_file &ogg3 = memory_map::memory.get_file("data/sound/voice_power_s.ogg");
+        const min::ogg sound3(ogg3);
+        const min::mem_file &ogg4 = memory_map::memory.get_file("data/sound/voice_repair_s.ogg");
+        const min::ogg sound4(ogg4);
+        const min::mem_file &ogg5 = memory_map::memory.get_file("data/sound/voice_resource_s.ogg");
+        const min::ogg sound5(ogg5);
+        const min::mem_file &ogg6 = memory_map::memory.get_file("data/sound/voice_shutdown_s.ogg");
+        const min::ogg sound6(ogg6);
 
-        // Bind source to random music data
-        _buffer.bind(_music[index], bg_info().source());
-    }
-    inline void random_wait()
-    {
-        // Update the current time
-        _start = std::chrono::high_resolution_clock::now();
+        // Create music buffers
+        _voice[0] = _buffer.add_ogg_pcm(sound1);
+        _voice[1] = _buffer.add_ogg_pcm(sound2);
+        _voice[2] = _buffer.add_ogg_pcm(sound3);
+        _voice[3] = _buffer.add_ogg_pcm(sound4);
+        _voice[4] = _buffer.add_ogg_pcm(sound5);
+        _voice[5] = _buffer.add_ogg_pcm(sound6);
 
-        // Calculate delay time
-        _delay = _real_dist(_gen);
-    }
-    inline bool delay()
-    {
-        // Get the time since we started counting
-        const auto now = std::chrono::high_resolution_clock::now();
-        const double delta = std::chrono::duration<double>(now - _start).count();
-
-        // Return if we need to delay
-        return delta < _delay;
+        // Load the first sound into the sound buffer
+        load_sound(_voice[0], _voice_gain, _fade_speed);
     }
     inline void reserve_memory()
     {
-        _si.reserve(_max_sounds);
+        _si.reserve(_sounds);
+        _v_queue.reserve(_voice_sounds);
     }
 
   public:
     sound()
-        : _music(_bg_sounds), _miss(_miss_limit), _miss_old(0),
+        : _music(_bg_sounds), _bg_delay(30.0), _bg_enable(false),
+          _miss(_miss_limit), _miss_old(0),
+          _voice(_voice_sounds), _v_head(0), _v_delay(1.0), _v_enable(true),
           _int_dist(0, 1), _real_dist(0, _max_delay),
-          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
-          _delay(0.0), _start{}, _waiting(false), _enable_bg(false)
+          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
     {
         // Reserve memory for sources and buffers
         reserve_memory();
@@ -488,6 +525,9 @@ class sound
 
         // Load shot sound into buffer
         load_shot_sound();
+
+        // Load voice sounds into buffer
+        load_voice_sound();
 
         // Load missile launch sound into buffer
         load_miss_launch_sound();
@@ -545,7 +585,11 @@ class sound
     }
     inline void play_bg(const bool flag)
     {
-        _enable_bg = flag;
+        _bg_enable = flag;
+    }
+    inline void play_voice(const bool flag)
+    {
+        _v_enable = flag;
     }
     inline void play_charge()
     {
@@ -713,7 +757,54 @@ class sound
     {
         _buffer.play_async(shot_info().source());
     }
-    inline void update(const min::camera<float> &cam, const min::vec3<float> &vel)
+    inline void play_voice_comply()
+    {
+        _v_queue.push_back(v_comply());
+
+        // Remove duplicates
+        _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
+    }
+    inline void play_voice_critical()
+    {
+        _v_queue.push_back(v_critical());
+
+        // Remove duplicates
+        _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
+    }
+    inline void play_voice_power()
+    {
+        _v_queue.push_back(v_power());
+
+        // Remove duplicates
+        _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
+    }
+    inline void play_voice_repair()
+    {
+        _v_queue.push_back(v_repair());
+
+        // Remove duplicates
+        _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
+    }
+    inline void play_voice_resource()
+    {
+        _v_queue.push_back(v_resource());
+
+        // Remove duplicates
+        _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
+    }
+    inline void play_voice_shutdown()
+    {
+        _v_queue.push_back(v_shutdown());
+
+        // Remove duplicates
+        _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
+    }
+    inline void reset_voice_queue()
+    {
+        _v_queue.clear();
+        _v_head = 0;
+    }
+    inline void update(const min::camera<float> &cam, const min::vec3<float> &vel, const float dt)
     {
         // Get camera vectors
         const min::vec3<float> &p = cam.get_position();
@@ -733,27 +824,23 @@ class sound
         // CLICK == JET == LAND == PICKUP == SHOT == STEREO
 
         // If music is not disabled
-        if (_enable_bg)
+        if (_bg_enable)
         {
             // If we are not playing any music
             sound_info &bg_si = bg_info();
             if (!bg_si.playing())
             {
-                // If we haven't calculated a delay time yet
-                if (!_waiting)
-                {
-                    // Calculate a random delay
-                    random_wait();
-
-                    // Flag that we are waiting
-                    _waiting = true;
-                }
+                // Decrement delay timer
+                _bg_delay -= dt;
 
                 // If we are done waiting
-                if (!delay())
+                if (_bg_delay < 0.0)
                 {
-                    // Get a random track
-                    random_music();
+                    // Get a random music index
+                    const size_t ran_index = _int_dist(_gen);
+
+                    // Bind source to random music data
+                    _buffer.bind(_music[ran_index], bg_info().source());
 
                     // Set the sound is playing
                     bg_si.set_fade_in(true);
@@ -763,8 +850,45 @@ class sound
                     // Play the background music
                     _buffer.play_async(bg_si.source());
 
-                    // Reset the wait flag
-                    _waiting = false;
+                    // Calculate a random delay
+                    _bg_delay = _real_dist(_gen);
+                }
+            }
+        }
+
+        // Update voices
+        if (_v_enable)
+        {
+            // If we are not playing any voices
+            sound_info &v_si = voice_info();
+            const size_t size = _v_queue.size();
+            if (!v_si.playing() && size > 0)
+            {
+                // Decrement delay timer
+                _v_delay -= dt;
+
+                if (_v_delay < 0.0)
+                {
+                    // Flag that we are playing
+                    v_si.set_play(true);
+
+                    // Bind source to next voice track
+                    _buffer.bind(_voice[_v_queue[_v_head]], v_si.source());
+
+                    // Increment head
+                    _v_head++;
+
+                    // Reset queue buffer
+                    if (_v_head == size)
+                    {
+                        reset_voice_queue();
+                    }
+
+                    // Play the voice sound music
+                    _buffer.play_async(v_si.source());
+
+                    // Calculate next delay
+                    _v_delay = 1.0;
                 }
             }
         }

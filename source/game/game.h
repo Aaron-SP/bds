@@ -77,15 +77,6 @@ class bds
         // Return screen center
         return std::make_pair(w2, h2);
     }
-    inline void die()
-    {
-        // Set menu for dead
-        _ui.set_menu_dead();
-
-        // Disable the keyboard
-        auto &keyboard = _win.get_keyboard();
-        keyboard.disable();
-    }
     inline std::pair<uint16_t, uint16_t> get_cursor() const
     {
         // If player is dead return screen center
@@ -116,34 +107,47 @@ class bds
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
     }
-    inline void respawn()
-    {
-        // Refresh state
-        _state.respawn();
-
-        // Refresh ui
-        _ui.respawn();
-
-        // Refresh the world exploded flag
-        _world.respawn(_state.get_default_spawn());
-
-        // Enable the keyboard
-        auto &keyboard = _win.get_keyboard();
-        keyboard.enable();
-    }
-    inline void update_die_respawn()
+    inline void update_die_respawn(const float dt)
     {
         game::player &player = _world.get_player();
 
         // Check if we need to respawn
         if (_state.is_respawn())
         {
-            // Respawn
-            respawn();
+            // Refresh state
+            _state.respawn();
+
+            // Refresh ui
+            _ui.respawn();
+
+            // Refresh the world exploded flag
+            _world.respawn(_state.get_default_spawn());
+
+            // Enable the keyboard
+            auto &keyboard = _win.get_keyboard();
+            keyboard.enable();
+
+            // Reset the voice queue
+            _sound.reset_voice_queue();
         }
         else if (player.is_dead())
         {
-            die();
+            // Check for debounce
+            if (!_state.is_dead())
+            {
+                // Set menu for dead
+                _ui.set_menu_dead();
+
+                // Disable the keyboard
+                auto &keyboard = _win.get_keyboard();
+                keyboard.disable();
+
+                // Play shutdown sound
+                _sound.play_voice_shutdown();
+
+                // Debounce this routine
+                _state.set_dead(true);
+            }
         }
     }
     inline void update_uniforms(min::camera<float> &camera, const bool update_bones)
@@ -332,20 +336,20 @@ class bds
             // Update the world state
             _world.update(camera, dt);
 
-            // Check if we died
-            update_die_respawn();
-
             // Update the particle system
             _particles.set_velocity(player.velocity());
             _particles.update(camera, dt);
 
             // Update the player walk sound if moving and not falling
-            if (player.has_landed())
+            if (player.is_landed())
             {
                 // Volume is proportional to square y velocity
                 const min::vec3<float> &lv = player.land_velocity();
                 const float speed = std::abs(lv.y());
                 _sound.play_land(speed);
+
+                // Reset land flag
+                player.reset_landed();
             }
 
             // Update the character state
@@ -356,11 +360,14 @@ class bds
 
             // Update the UI class
             _ui.update();
+
+            // Check if we died
+            update_die_respawn(dt);
         }
 
         // Update the sound listener properties
         const min::vec3<float> &v = player.velocity();
-        _sound.update(camera, v);
+        _sound.update(camera, v, dt);
 
         // Update all uniforms
         update_uniforms(camera, update);

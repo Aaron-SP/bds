@@ -55,8 +55,9 @@ class player
     skills _skills;
     float _health;
     bool _dead;
+    bool _low_health;
 
-    void reserve_memory()
+    inline void reserve_memory()
     {
         _col_cells.reserve(36);
     }
@@ -113,7 +114,7 @@ class player
             force(tension);
         }
     }
-    void update_land(const bool landed)
+    inline void update_land(const bool landed)
     {
         // Reset the jump condition if collided with cell, and moving in Y axis
         const min::vec3<float> &v = velocity();
@@ -156,7 +157,7 @@ class player
             _land_vel = v;
         }
     }
-    void update_position(const float friction)
+    inline void update_position(const float friction)
     {
         // If hooked, add hook forces
         if (_hooked)
@@ -192,13 +193,13 @@ class player
     player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const size_t body_id)
         : _sim(sim), _hook_length(0.0), _jump_count(0), _land_count(0), _explode_id(-1),
           _airborn(false), _exploded(false), _falling(false), _hooked(false), _jet(false), _landed(false),
-          _body_id(body_id), _health(_health_cap), _dead(false)
+          _body_id(body_id), _health(_health_cap), _dead(false), _low_health(false)
     {
         // Reserve space for collision cells
         reserve_memory();
     }
 
-    inline void add_health(float health)
+    inline void add_health(const float health)
     {
         if (_health < _health_cap)
         {
@@ -219,12 +220,21 @@ class player
     {
         return _sim->get_body(_body_id);
     }
-    inline void consume_health(float health)
+    inline void consume_health(const float health)
     {
+        // Check above warning threshold
+        const bool above = _health >= 25.0;
+
         _health -= health;
         if (_health <= 0.0)
         {
             _dead = true;
+        }
+
+        // Check for low health
+        if (above && _health < 25.0)
+        {
+            _low_health = true;
         }
     }
     inline void drone_collide(const min::vec3<float> &p)
@@ -279,16 +289,6 @@ class player
     {
         return _skills;
     }
-    inline bool has_landed()
-    {
-        const bool landed = _landed;
-
-        // Reset the landed flag
-        _landed = false;
-
-        // Return landed state
-        return landed;
-    }
     inline float get_health() const
     {
         return _health;
@@ -305,30 +305,38 @@ class player
     {
         return _inv;
     }
-    void hook_abort()
+    inline void hook_abort()
     {
         // abort hooking
         _hooked = false;
     }
-    bool is_airborn() const
+    inline bool is_airborn() const
     {
         return _airborn;
     }
-    bool is_exploded() const
+    inline bool is_exploded() const
     {
         return _exploded;
     }
-    bool is_hooked() const
-    {
-        return _hooked;
-    }
-    bool is_falling() const
+    inline bool is_falling() const
     {
         return _falling;
     }
-    bool is_jet() const
+    inline bool is_hooked() const
+    {
+        return _hooked;
+    }
+    inline bool is_jet() const
     {
         return _jet;
+    }
+    inline bool is_landed()
+    {
+        return _landed;
+    }
+    inline bool is_low_health() const
+    {
+        return _low_health;
     }
     inline void jump()
     {
@@ -388,8 +396,19 @@ class player
         _exploded = false;
         _explode_id = -1;
     }
+    inline void reset_landed()
+    {
+        _landed = false;
+    }
+    inline void reset_low_health()
+    {
+        _low_health = false;
+    }
     inline void respawn()
     {
+        // Reset inventory
+        _inv.respawn();
+
         // Reset explode settings
         reset_explode();
 
@@ -397,17 +416,16 @@ class player
         _hooked = false;
         _jet = false;
 
-        // Reset energy
-        _skills.set_energy(0.0);
+        // Reset landed flag
+        _landed = false;
 
-        // Reset dead flag
-        _dead = false;
+        // Respawn skills
+        _skills.respawn();
 
         // Reset health
         _health = _health_cap;
-
-        // Reset inventory
-        _inv.respawn();
+        _dead = false;
+        _low_health = false;
     }
     inline void set_hook(const min::vec3<float> &hook, const float hook_length)
     {
@@ -439,8 +457,8 @@ class player
         // Warp character to new position
         body().set_position(p);
     }
-    void update_frame(const cgrid &grid, const float friction,
-                      const std::function<void(const std::pair<min::aabbox<float, min::vec3>, int8_t> &)> &ex)
+    inline void update_frame(const cgrid &grid, const float friction,
+                             const std::function<void(const std::pair<min::aabbox<float, min::vec3>, int8_t> &)> &ex)
     {
         // Check if player is still in the grid
         const min::vec3<float> &p = position();

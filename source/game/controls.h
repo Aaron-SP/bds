@@ -661,6 +661,10 @@ class controls
                     // Lock the gun in beam mode
                     skill.lock();
                 }
+                else
+                {
+                    sound->play_voice_resource();
+                }
             }
             else if (skill.is_grapple_mode())
             {
@@ -690,6 +694,10 @@ class controls
                         // Lock the gun in beam mode
                         skill.lock();
                     }
+                }
+                else
+                {
+                    sound->play_voice_resource();
                 }
             }
             else if (skill.is_missile_mode() && skill.is_off_cooldown())
@@ -839,6 +847,10 @@ class controls
                             sound->play_shot();
                         }
                     }
+                    else
+                    {
+                        sound->play_voice_resource();
+                    }
 
                     // Stop the charge sound
                     sound->stop_charge();
@@ -876,6 +888,10 @@ class controls
                             // Start gun cooldown timer
                             skill.start_cooldown();
                         }
+                    }
+                    else
+                    {
+                        sound->play_voice_resource();
                     }
 
                     // Unlock the gun if missile mode
@@ -1019,11 +1035,35 @@ class controls
             skill.add_energy(_energy_regen * dt);
         }
 
+        // If low health
+        if (player.is_low_health())
+        {
+            // Play low power warning
+            _sound->play_voice_critical();
+
+            // Reset low health
+            player.reset_low_health();
+        }
+
+        // If low energy
+        if (skill.is_low_energy())
+        {
+            // Play low power warning
+            _sound->play_voice_power();
+
+            // Reset low health
+            skill.reset_low_energy();
+        }
+
+        // Get health and energy
+        const float health = player.get_health_percent();
+        const float energy = skill.get_energy_percent();
+
         // Update the ui health bar
-        _ui->set_health(player.get_health_percent());
+        _ui->set_health(health);
 
         // Update the ui energy bar
-        _ui->set_energy(skill.get_energy_percent());
+        _ui->set_energy(energy);
     }
     inline void update_skills()
     {

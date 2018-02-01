@@ -37,6 +37,7 @@ class state
     load_state _load;
     std::string _mode;
     min::vec3<float> _target;
+    bool _dead;
     bool _fix_target;
     bool _pause;
     bool _respawn;
@@ -127,8 +128,9 @@ class state
         : _x{}, _y{}, _frame_count{},
           _load(grid_size),
           _mode("MODE: PLAY"),
-          _fix_target(false), _pause(false),
-          _respawn(false), _user_input(false)
+          _dead(false), _fix_target(false),
+          _pause(false), _respawn(false),
+          _user_input(false)
     {
         // Load camera
         load_camera();
@@ -172,6 +174,10 @@ class state
     {
         return _user_input;
     }
+    inline bool is_dead() const
+    {
+        return _dead;
+    }
     inline bool is_respawn() const
     {
         return _respawn;
@@ -179,6 +185,7 @@ class state
     inline void respawn()
     {
         // Reset flags
+        _dead = false;
         _respawn = false;
 
         // Reload camera settings
@@ -215,6 +222,10 @@ class state
 
         // Update rotation quaternion
         _q = update_model_rotation();
+    }
+    inline void set_dead(const bool flag)
+    {
+        _dead = flag;
     }
     inline void set_game_mode(const std::string &mode)
     {

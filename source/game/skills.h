@@ -44,10 +44,11 @@ class skills
     std::chrono::high_resolution_clock::time_point _charge;
     std::chrono::high_resolution_clock::time_point _cool;
     float _energy;
+    bool _low_energy;
+    bool _charging;
     bool _gun_active;
     bool _locked;
     bool _shoot_cooldown;
-    bool _charging;
 
     inline double get_charge_time() const
     {
@@ -68,8 +69,10 @@ class skills
 
   public:
     skills()
-        : _mode(skill_mode::beam), _energy(0.0),
-          _gun_active(true), _locked(false), _shoot_cooldown(false), _charging(false) {}
+        : _mode(skill_mode::beam),
+          _energy(100.0), _low_energy(false),
+          _charging(false), _gun_active(true),
+          _locked(false), _shoot_cooldown(false) {}
 
     inline void add_energy(const float energy)
     {
@@ -119,17 +122,42 @@ class skills
         // Not enough energy
         return false;
     }
+    inline bool check_cooldown()
+    {
+        if (_shoot_cooldown)
+        {
+            const double dt = get_cool_time();
+            if (dt > _miss_cd)
+            {
+                _shoot_cooldown = !_shoot_cooldown;
+            }
+        }
+
+        return !_shoot_cooldown;
+    }
     inline void consume(const float energy)
     {
+        // Check above warning threshold
+        const bool above = _energy >= 25.0;
+
         // Consume energy
         _energy -= energy;
+
+        // Check for low energy
+        if (above && _energy < 25.0)
+        {
+            _low_energy = true;
+        }
     }
     inline bool will_consume(const float energy)
     {
         // Try to consume energy
         if (_energy >= energy)
         {
-            _energy -= energy;
+            // Consume energy
+            consume(energy);
+
+            // Enough energy
             return true;
         }
 
@@ -176,6 +204,10 @@ class skills
     {
         return _locked;
     }
+    inline bool is_low_energy() const
+    {
+        return _low_energy;
+    }
     inline bool is_off_cooldown() const
     {
         return !_shoot_cooldown;
@@ -183,6 +215,56 @@ class skills
     inline void lock()
     {
         _locked = true;
+    }
+    inline void reset_low_energy()
+    {
+        _low_energy = false;
+    }
+    inline void respawn()
+    {
+        // Reset energy
+        _energy = 100.0;
+        _low_energy = false;
+    }
+    inline void set_energy(const float energy)
+    {
+        _energy = energy;
+    }
+    inline void set_gun_active(const bool mode)
+    {
+        _gun_active = mode;
+    }
+    inline void set_beam_mode()
+    {
+        _mode = skill_mode::beam;
+    }
+    inline void set_grapple_mode()
+    {
+        _mode = skill_mode::grapple;
+    }
+    inline void set_missile_mode()
+    {
+        _mode = skill_mode::missile;
+    }
+    inline void set_jetpack_mode()
+    {
+        _mode = skill_mode::jetpack;
+    }
+    inline void set_scan_mode()
+    {
+        _mode = skill_mode::scan;
+    }
+    inline void start_charge()
+    {
+        _charge = std::chrono::high_resolution_clock::now();
+    }
+    inline void start_cooldown()
+    {
+        // Start the cooldown timer
+        _shoot_cooldown = true;
+
+        // Update start time
+        _cool = std::chrono::high_resolution_clock::now();
     }
     inline void unlock_beam()
     {
@@ -219,59 +301,6 @@ class skills
         {
             _locked = false;
         }
-    }
-    inline bool check_cooldown()
-    {
-        if (_shoot_cooldown)
-        {
-            const double dt = get_cool_time();
-            if (dt > _miss_cd)
-            {
-                _shoot_cooldown = !_shoot_cooldown;
-            }
-        }
-
-        return !_shoot_cooldown;
-    }
-    inline void start_charge()
-    {
-        _charge = std::chrono::high_resolution_clock::now();
-    }
-    inline void start_cooldown()
-    {
-        // Start the cooldown timer
-        _shoot_cooldown = true;
-
-        // Update start time
-        _cool = std::chrono::high_resolution_clock::now();
-    }
-    inline void set_energy(const float energy)
-    {
-        _energy = energy;
-    }
-    inline void set_gun_active(const bool mode)
-    {
-        _gun_active = mode;
-    }
-    inline void set_beam_mode()
-    {
-        _mode = skill_mode::beam;
-    }
-    inline void set_grapple_mode()
-    {
-        _mode = skill_mode::grapple;
-    }
-    inline void set_missile_mode()
-    {
-        _mode = skill_mode::missile;
-    }
-    inline void set_jetpack_mode()
-    {
-        _mode = skill_mode::jetpack;
-    }
-    inline void set_scan_mode()
-    {
-        _mode = skill_mode::scan;
     }
 };
 }
