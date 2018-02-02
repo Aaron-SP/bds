@@ -117,18 +117,10 @@ class projectiles
     std::vector<missile> _miss;
     const min::vec3<unsigned> _scale;
 
-    static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
-    {
-        const min::vec3<float> offset(scale.x() / 2, scale.y() / 2, scale.z() / 2);
-        const min::vec3<float> center = p - offset;
-
-        // return center position
-        return center;
-    }
-    inline bool launch(const cgrid &grid, const min::ray<float, min::vec3> &r)
+    inline void launch(const min::vec3<float> &start, const min::vec3<float> &dest, const size_t key, const int8_t value)
     {
         // Get instance id
-        const size_t inst_id = _inst->add_missile(r.get_origin());
+        const size_t inst_id = _inst->add_missile(start);
 
         // Get particle id
         const size_t part_id = _part->get_idle_miss_launch_id();
@@ -136,21 +128,15 @@ class projectiles
         // Get sound id
         const size_t sound_id = _sound->get_idle_miss_launch_id();
 
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        int8_t value;
-        size_t key;
-        min::vec3<float> traced;
-        const bool valid = grid.ray_trace_last_key(r, _miss_max_dist, traced, key, value);
-        if (!valid)
-        {
-            return false;
-        }
+        // Create an empty ray
+        min::ray<float, min::vec3> r;
 
-        // Calculate trajectory distance, set missile trajectory
-        const float weight = 1.0 / (traced - r.get_origin()).magnitude();
+        // Calculate trajectory distance
+        const float length = r.set(start, dest);
+        const float weight = 1.0 / length;
 
         // Create new missile
-        _miss.push_back(missile(r, traced, weight, inst_id, part_id, sound_id, key, value));
+        _miss.push_back(missile(r, dest, weight, inst_id, part_id, sound_id, key, value));
 
         // Create quaternion from Y axis to facing direction
         const min::quat<float> q(min::vec3<float>::up(), r.get_direction());
@@ -163,9 +149,6 @@ class projectiles
 
         // Play the launch sound
         _sound->play_miss_launch(sound_id, r.get_origin());
-
-        // Return that we launched a missile
-        return true;
     }
     inline bool relaunch(const cgrid &grid, missile &m)
     {
@@ -236,7 +219,7 @@ class projectiles
     projectiles(particle *const particles, static_instance *const inst, sound *const s)
         : _inst(inst), _part(particles), _sound(s), _scale(3, 3, 3) {}
 
-    inline bool launch_missile(const cgrid &grid, const min::ray<float, min::vec3> &r)
+    inline bool launch_missile(const min::vec3<float> &start, const min::vec3<float> &dest, const size_t key, const int8_t value)
     {
         // Are all missiles being used?
         if (_inst->missile_full())
@@ -244,7 +227,11 @@ class projectiles
             return false;
         }
 
-        return launch(grid, r);
+        // Launch the missile
+        launch(start, dest, key, value);
+
+        // Return that we launched it
+        return true;
     }
     inline void update(const cgrid &grid, const float speed,
                        const std::function<void(
@@ -301,11 +288,8 @@ class projectiles
                             // Get direction for particle spray
                             const min::vec3<float> dir = m.ray().get_direction() * -1.0;
 
-                            // Center the explosion point of missile explosion
-                            const min::vec3<float> center = center_radius(m.dest(), _scale);
-
                             // Call function callback
-                            f(center, dir, _scale, m.value());
+                            f(m.dest(), dir, _scale, m.value());
                         }
                     }
 

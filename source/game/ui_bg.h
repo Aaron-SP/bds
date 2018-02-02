@@ -55,12 +55,12 @@ class ui_bg
     GLuint _ui_id;
 
     // Misc
-    inv_id _click;
-    inv_id _hover;
-    inv_id _select;
     bool _clicking;
+    inv_id _click;
     bool _hovering;
     bool _minimized;
+    inv_id _hover;
+    inv_id _select;
 
     // Background assets
     ui_bg_assets _assets;
@@ -258,38 +258,40 @@ class ui_bg
     }
     inline void position_ui()
     {
+        // Load overlay
         if (_assets.get_draw_title())
         {
             _assets.load_title_overlay();
         }
         else
         {
-            // Load health overlay
             _assets.load_health_overlay();
         }
 
         // Load console background
         _assets.load_console_bg();
 
+        // Load cursor
         if (_assets.get_draw_dead())
         {
-            // Load dead message
             _assets.load_menu_dead();
         }
         else if (_assets.get_draw_pause())
         {
-            // Load pause message
             _assets.load_menu_pause();
         }
         else if (_assets.get_draw_reload())
         {
-            // Load reload cursor
             _assets.load_cursor_reload();
+        }
+        else if (_assets.get_draw_target())
+        {
+            _assets.load_cursor_target();
         }
         else
         {
-            // Load FPS cursor
-            _assets.load_cursor_fps();
+            // Load aim cursor
+            _assets.load_cursor_aim();
         }
 
         // Load health meter
@@ -563,8 +565,7 @@ class ui_bg
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)), _mesh_id(0),
-          _click(0), _hover(0), _select(0),
-          _clicking(false), _hovering(false), _minimized(false),
+          _clicking(false), _click(0), _hovering(false), _minimized(false), _hover(0), _select(0),
           _assets(width, height), _inv(inv), _grid(screen_box(width, height))
     {
         // Create the instance rectangle
@@ -688,10 +689,10 @@ class ui_bg
     inline void reset_menu()
     {
         // Turn off drawing the dead or pause
-        _assets.set_draw_fps();
+        _assets.set_draw_aim();
 
-        // Set the cursor to fps
-        _assets.load_cursor_fps();
+        // Set the cursor to aim
+        _assets.load_cursor_aim();
     }
     inline void respawn()
     {
@@ -731,6 +732,14 @@ class ui_bg
             _clicking = true;
         }
     }
+    inline void set_cursor_aim()
+    {
+        if (!_assets.get_draw_menu())
+        {
+            _assets.set_draw_aim();
+            _assets.load_cursor_aim();
+        }
+    }
     inline void set_cursor_reload()
     {
         if (!_assets.get_draw_menu())
@@ -743,8 +752,8 @@ class ui_bg
     {
         if (!_assets.get_draw_menu())
         {
-            _assets.set_draw_fps();
-            _assets.load_cursor_fps();
+            _assets.set_draw_target();
+            _assets.load_cursor_target();
         }
     }
     inline void set_draw_console(const bool flag)

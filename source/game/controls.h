@@ -329,10 +329,11 @@ class controls
     void key_down(const size_t index)
     {
         // Get the skills pointer
-        skills &skill = _world->get_player().get_skills();
+        player &play = _world->get_player();
+        skills &skill = play.get_skills();
 
         // Lookup key in inventory
-        const inventory &inv = _world->get_player().get_inventory();
+        const inventory &inv = play.get_inventory();
         const uint8_t id = inv[index].id();
 
         // Is the gun locked?
@@ -612,7 +613,6 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the ALL the pointers
-        min::camera<float> *const cam = control->get_camera();
         character *const character = control->get_character();
         state *const state = control->get_state();
         world *const world = control->get_world();
@@ -671,22 +671,15 @@ class controls
                 // Try to consume energy to power this resource
                 if (skill.can_consume(_grapple_cost))
                 {
-                    // Calculate new point to add
-                    const min::vec3<float> proj = cam->project_point(_project_dist);
-
-                    // Create a ray from camera to destination
-                    const min::ray<float, min::vec3> r(cam->get_position(), proj);
-
                     // Fire grappling hook
-                    min::vec3<float> point;
-                    const bool hit = world->hook_set(r, point);
+                    const bool hit = world->hook_set();
                     if (hit)
                     {
                         // Consume energy
                         skill.consume(_grapple_cost);
 
                         // Activate grapple animation
-                        character->set_animation_grapple(point);
+                        character->set_animation_grapple(play.get_hook_point());
 
                         // Play the grapple sound
                         sound->play_grapple();
@@ -708,7 +701,7 @@ class controls
             else if (skill.is_jetpack_mode())
             {
                 // Turn on the jets
-                world->get_player().set_jet(true);
+                play.set_jet(true);
 
                 // Play the jet sound
                 sound->play_jet();
@@ -796,12 +789,6 @@ class controls
             // Abort the charge animation
             character->abort_animation_shoot();
 
-            // Calculate point to remove from
-            const min::vec3<float> point = cam->project_point(_project_dist);
-
-            // Create a ray from camera to destination
-            const min::ray<float, min::vec3> r(cam->get_position(), point);
-
             // If the gun is locked into a mode
             if (skill.is_locked())
             {
@@ -810,7 +797,7 @@ class controls
                 {
                     // Expolode block with radius, get the ray target value
                     min::vec3<unsigned> explode_radius(3, 3, 3);
-                    const int8_t value = world->explode_block(r, explode_radius, play_ex);
+                    const int8_t value = world->explode_ray(explode_radius, play_ex);
                     if (value >= 0)
                     {
                         // Consume energy
@@ -834,7 +821,7 @@ class controls
                     // Remove block from world, get the removed block id
                     if (skill.can_consume(_beam_cost))
                     {
-                        const int8_t block_id = world->explode_block(r, nullptr, 20.0);
+                        const int8_t block_id = world->explode_ray(nullptr, 20.0);
                         if (block_id >= 0)
                         {
                             // Consume energy
@@ -861,7 +848,7 @@ class controls
                 else if (skill.is_grapple_mode())
                 {
                     //Abort grappling hook
-                    world->get_player().hook_abort();
+                    play.hook_abort();
 
                     // Stop grapple animation
                     character->abort_animation_grapple();
@@ -879,7 +866,7 @@ class controls
                     if (consumed)
                     {
                         // Launch a missile
-                        bool launched = world->launch_missile(r);
+                        const bool launched = world->launch_missile();
                         if (launched)
                         {
                             // Activate shoot animation
@@ -900,7 +887,7 @@ class controls
                 else if (skill.is_jetpack_mode())
                 {
                     // Turn off the jets
-                    world->get_player().set_jet(false);
+                    play.set_jet(false);
 
                     // Stop the jet sound
                     sound->stop_jet();
@@ -908,10 +895,10 @@ class controls
                     // Unlock the gun if jetpack mode
                     skill.unlock_jetpack();
                 }
-                else if (skill.is_scan_mode())
+                else if (skill.is_scan_mode() && play.is_target_valid())
                 {
                     // Scan the block on this ray
-                    const int8_t atlas = world->scan_block(r);
+                    const int8_t atlas = play.get_target_value();
                     const item it(inv.id_from_atlas(atlas), 1);
                     const std::string &text = inv.get_string(it);
 
@@ -930,7 +917,6 @@ class controls
         controls *const control = reinterpret_cast<controls *>(ptr);
 
         // Get the camera and state pointers
-        min::camera<float> *const cam = control->get_camera();
         state *const state = control->get_state();
         world *const world = control->get_world();
         player &play = world->get_player();
@@ -954,19 +940,15 @@ class controls
             return;
         }
 
-        // Calculate point to remove from
-        const min::vec3<float> point = cam->project_point(_project_dist);
-
-        // Create a ray from camera to destination
-        const min::ray<float, min::vec3> r(cam->get_position(), point);
-
-        // Shoot a ray at a block and target it if we hit it
-        min::vec3<float> target;
-        const bool hit = world->target_block(r, target);
-        if (hit)
+        // Track block if player's target is a block
+        if (play.is_target_valid())
         {
-            // Set tracking of target
-            state->track_target(target);
+            const int8_t value = play.get_target_value();
+            if (value >= 0)
+            {
+                // Set tracking of target
+                state->track_target(play.get_target());
+            }
         }
     }
     static void right_click_up(void *ptr, const uint16_t x, const uint16_t y)
@@ -1028,7 +1010,7 @@ class controls
         }
 
         // Regen energy
-        skills &skill = _world->get_player().get_skills();
+        skills &skill = player.get_skills();
         if (!skill.is_locked())
         {
             // Rate is units / second
@@ -1092,15 +1074,22 @@ class controls
     }
     inline void update_ui()
     {
-        // Check cooldown state and update ui
-        skills &skill = _world->get_player().get_skills();
-        if (skill.check_cooldown())
+        // Check cursor state
+        player &player = _world->get_player();
+        skills &skill = player.get_skills();
+        if (!skill.check_cooldown())
+        {
+            // Reloading
+            _ui->set_cursor_reload();
+        }
+        else if (player.get_target_value() == 21 && _world->in_range_explosion(player.get_target()) && player.is_target_valid())
         {
             _ui->set_cursor_target();
         }
         else
         {
-            _ui->set_cursor_reload();
+
+            _ui->set_cursor_aim();
         }
     }
     void update(const float dt)

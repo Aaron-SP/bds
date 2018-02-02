@@ -35,23 +35,29 @@ class player
     static constexpr float _grav_mag = 10.0;
     static constexpr float _health_cap = 100.0;
     static constexpr float _jet_cost = 0.25;
+    static constexpr float _project_dist = 0.5;
 
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
+    size_t _body_id;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
     inventory _inv;
-    min::vec3<float> _hook;
-    min::vec3<float> _land_vel;
-    float _hook_length;
-    unsigned _jump_count;
-    size_t _land_count;
-    int8_t _explode_id;
-    bool _airborn;
     bool _exploded;
-    bool _falling;
+    int8_t _explode_id;
     bool _hooked;
-    bool _jet;
+    min::vec3<float> _hook;
+    float _hook_length;
+    min::vec3<float> _project;
+    min::vec3<float> _target;
+    size_t _target_key;
+    int8_t _target_value;
+    bool _target_valid;
+    bool _airborn;
+    bool _falling;
+    size_t _land_count;
+    size_t _jump_count;
     bool _landed;
-    size_t _body_id;
+    min::vec3<float> _land_vel;
+    bool _jet;
     skills _skills;
     float _health;
     bool _dead;
@@ -150,8 +156,9 @@ class player
         }
         else if (!_landed && _falling)
         {
-            _landed = false;
+            // Reset landed flags
             _land_count = 0;
+            _landed = false;
 
             // Cache the land velocity at time of landing
             _land_vel = v;
@@ -191,9 +198,11 @@ class player
 
   public:
     player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const size_t body_id)
-        : _sim(sim), _hook_length(0.0), _jump_count(0), _land_count(0), _explode_id(-1),
-          _airborn(false), _exploded(false), _falling(false), _hooked(false), _jet(false), _landed(false),
-          _body_id(body_id), _health(_health_cap), _dead(false), _low_health(false)
+        : _sim(sim), _body_id(body_id),
+          _exploded(false), _explode_id(-1),
+          _hooked(false), _hook_length(0.0), _target_key(0), _target_value(-2), _target_valid(false),
+          _airborn(false), _falling(false), _land_count(0), _jump_count(0), _landed(false), _jet(false),
+          _health(_health_cap), _dead(false), _low_health(false)
     {
         // Reserve space for collision cells
         reserve_memory();
@@ -230,9 +239,7 @@ class player
         {
             _dead = true;
         }
-
-        // Check for low health
-        if (above && _health < 25.0)
+        else if (above && _health < 25.0)
         {
             _low_health = true;
         }
@@ -250,12 +257,13 @@ class player
     }
     inline void explode(const min::vec3<float> &direction, const float dist, const float size, const float power, const int8_t value)
     {
-        // Record what we hit
-        _explode_id = value;
-
         // If we haven't been exploded take damage
         if (!_exploded)
         {
+            // Record what we hit
+            _explode_id = value;
+
+            // If we hit lava
             if (_explode_id == 21)
             {
                 consume_health(90.0);
@@ -297,6 +305,10 @@ class player
     {
         return _health / _health_cap;
     }
+    inline const min::vec3<float> &get_hook_point() const
+    {
+        return _hook;
+    }
     inline inventory &get_inventory()
     {
         return _inv;
@@ -304,6 +316,18 @@ class player
     inline const inventory &get_inventory() const
     {
         return _inv;
+    }
+    inline const min::vec3<float> &get_target() const
+    {
+        return _target;
+    }
+    inline size_t get_target_key() const
+    {
+        return _target_key;
+    }
+    inline int8_t get_target_value() const
+    {
+        return _target_value;
     }
     inline void hook_abort()
     {
@@ -337,6 +361,10 @@ class player
     inline bool is_low_health() const
     {
         return _low_health;
+    }
+    inline bool is_target_valid() const
+    {
+        return _target_valid;
     }
     inline void jump()
     {
@@ -391,6 +419,11 @@ class player
         // Return the character position
         return body().get_position();
     }
+    inline const min::vec3<float> &projection() const
+    {
+        // Return the character position
+        return _project;
+    }
     inline void reset_explode()
     {
         _exploded = false;
@@ -412,12 +445,10 @@ class player
         // Reset explode settings
         reset_explode();
 
-        // Stop hooking for jetting
-        _hooked = false;
-        _jet = false;
-
         // Reset landed flag
+        _hooked = false;
         _landed = false;
+        _jet = false;
 
         // Respawn skills
         _skills.respawn();
@@ -427,20 +458,40 @@ class player
         _dead = false;
         _low_health = false;
     }
-    inline void set_hook(const min::vec3<float> &hook, const float hook_length)
+    inline bool set_hook()
     {
-        // Set hook point
-        _hook = hook;
+        // Get the atlas of target block, if hit a block remove it
+        if (_target_value >= 0)
+        {
+            // Enable hooking
+            _hooked = true;
 
-        // Enable hooking
-        _hooked = true;
+            // Set hook point
+            _hook = _target;
 
-        // Calculate the hook length
-        _hook_length = hook_length;
+            // Calculate the hook length
+            _hook_length = (_hook - position()).magnitude();
+
+            // Return that we are hooked
+            return true;
+        }
+
+        return false;
     }
     inline void set_jet(const bool flag)
     {
         _jet = flag;
+    }
+    inline void set_target(const cgrid &grid, min::camera<float> &cam, const size_t max_dist)
+    {
+        // Calculate new point to add
+        _project = cam.project_point(_project_dist);
+
+        // Create a ray from camera to destination
+        const min::ray<float, min::vec3> r(cam.get_position(), _project);
+
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        _target_valid = grid.ray_trace_last_key(r, max_dist, _target, _target_key, _target_value);
     }
     inline const min::vec3<float> &velocity() const
     {

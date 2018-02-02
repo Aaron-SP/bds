@@ -68,7 +68,7 @@ class world
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
     size_t _char_id;
 
-    // Player control stuff
+    // Terrain control stuff
     min::mesh<float, uint32_t> _terr_mesh;
     min::vec3<int> _cached_offset;
     min::vec3<int> _preview_offset;
@@ -78,6 +78,7 @@ class world
 
     // Player
     player _player;
+    const min::vec3<unsigned> _ex_radius;
 
     // Skybox
     sky _sky;
@@ -127,10 +128,27 @@ class world
         // Return the character body id
         return _char_id;
     }
+    inline std::tuple<bool, float, float, float> in_range_explode(const min::vec3<float> &p1, const min::vec3<float> &p2, const min::vec3<unsigned> &scale) const
+    {
+        // Calculate the size of the explosion
+        const float explode_size = scale.dot(scale);
+
+        // Calculate the explosion radius
+        const float explode_radius = _explode_scale * std::sqrt(explode_size);
+
+        // Calculate distance from explosion center
+        const float dist = (p2 - p1).magnitude();
+
+        // Check if character is too close to the explosion
+        return {dist < explode_radius, explode_size, explode_radius, dist};
+    }
     inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
     {
+        // Offset explosion radius for geometry removal
+        const min::vec3<float> center = center_radius(point, scale);
+
         // Try to remove geometry from the grid
-        const unsigned removed = _grid.set_geometry(point, scale, _preview_offset, -1);
+        const unsigned removed = _grid.set_geometry(center, scale, _preview_offset, -1);
 
         // If we removed geometry, play particles
         if (removed > 0)
@@ -151,17 +169,12 @@ class world
             // Get player position
             const min::vec3<float> &p = _player.position();
 
-            // Calculate distance from explosion center
-            const float dist = (point - p).magnitude();
-
-            // Calculate the size of the explosion
-            const float explode_size = scale.dot(scale);
-
-            // Calculate the explosion radius
-            const float explode_radius = _explode_scale * std::sqrt(explode_size);
-
             // Check if character is too close to the explosion
-            const bool in_range = dist < explode_radius;
+            const auto pack = in_range_explode(p, point, scale);
+            const bool in_range = std::get<0>(pack);
+            const float explode_size = std::get<1>(pack);
+            const float explode_radius = std::get<2>(pack);
+            const float dist = std::get<3>(pack);
 
             // If block is lava, play exploding sound
             // Prefer stereo if close to the explosion
@@ -296,13 +309,14 @@ class world
             // Check for exploding mines
             if (cell.second == 21)
             {
+                // Get box center for explosion point
+                const min::vec3<float> point = cell.first.get_center();
+
                 // Calculate position and direction
-                const min::vec3<unsigned> radius(3, 3, 3);
-                const min::vec3<float> box_center = center_radius(cell.first.get_center(), radius);
-                const min::vec3<float> dir = (p - box_center).normalize();
+                const min::vec3<float> dir = (p - point).normalize();
 
                 // Explode the block with radius
-                explode_block(box_center, dir, radius, cell.second, 100.0);
+                explode_block(point, dir, _ex_radius, cell.second, 100.0);
             }
         };
 
@@ -331,7 +345,7 @@ class world
         // Update the drones positions
         _drops.update(_grid);
 
-        // On missile collision remove block
+        // On missile collision explode block
         const auto on_collide = [this](const min::vec3<float> &point,
                                        const min::vec3<float> &direction,
                                        const min::vec3<unsigned> &scale, const int8_t value) {
@@ -361,6 +375,7 @@ class world
           _scale(1, 1, 1),
           _edit_mode(false),
           _player(&_simulation, character_load(state)),
+          _ex_radius(3, 3, 3),
           _sky(uniforms),
           _instance(uniforms),
           _drones(&_simulation, &_instance),
@@ -393,7 +408,7 @@ class world
         // Add to grid
         _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
     }
-    void draw(const uniforms &uniforms) const
+    inline void draw(const uniforms &uniforms) const
     {
         // Draw the static instances
         _instance.draw(uniforms);
@@ -414,19 +429,21 @@ class world
         // Draw the sky, uses geometry VAO -- HACK!
         _sky.draw();
     }
-    int8_t explode_block(const min::ray<float, min::vec3> &r, const min::vec3<unsigned> &scale,
-                         const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
+    inline int8_t explode_ray(const min::vec3<unsigned> &scale,
+                              const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
     {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        int8_t value = -2;
-        const min::vec3<float> traced = _grid.ray_trace_last(r, _ray_max_dist, value);
+        if (!_player.is_target_valid())
+        {
+            return -2;
+        }
 
-        // Get the atlas of target block, if hit a block remove it
+        // Use player's target as ray destination
+        const min::vec3<float> target = _player.get_target();
+        const int8_t value = _player.get_target_value();
+
+        // Get the atlas of target block, remove if hit
         if (value >= 0)
         {
-            // Get direction for particle spray
-            const min::vec3<float> direction = r.get_direction() * -1.0;
-
             // Invoke the function callback if provided
             if (f)
             {
@@ -434,30 +451,29 @@ class world
                 min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
                 // Call function callback
-                f(traced, body);
+                f(target, body);
             }
 
             // If block is lava override explode scale
             min::vec3<unsigned> ex_scale = scale;
             if (value == 21)
             {
-                ex_scale = min::vec3<unsigned>(3, 3, 3);
+                ex_scale = _ex_radius;
             }
 
-            // Remove the block
-            const min::vec3<float> center = center_radius(traced, ex_scale);
+            // Get direction for particle spray
+            const min::vec3<float> direction = (_player.position() - target).normalize();
 
             // Explode block
-            explode_block(center, direction, ex_scale, value, size);
+            explode_block(target, direction, ex_scale, value, size);
         }
 
         // return the block atlas id
         return value;
     }
-    inline int8_t explode_block(const min::ray<float, min::vec3> &r,
-                                const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
+    inline int8_t explode_ray(const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
     {
-        return explode_block(r, _scale, f, size);
+        return explode_ray(_scale, f, size);
     }
     inline int8_t get_atlas_id() const
     {
@@ -503,32 +519,25 @@ class world
     {
         return min::mat4<float>(_preview);
     }
-    bool hook_set(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
+    inline bool hook_set()
     {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        int8_t value = -2;
-        out = _grid.ray_trace_last(r, _ray_max_dist, value);
-
-        // Get the atlas of target block, if hit a block remove it
-        if (value >= 0)
+        return _player.set_hook();
+    }
+    inline bool in_range_explosion(const min::vec3<float> &point) const
+    {
+        return std::get<0>(in_range_explode(_player.position(), point, _ex_radius));
+    }
+    inline bool launch_missile()
+    {
+        // Launch a missile on play target ray
+        if (_player.is_target_valid())
         {
-            // Calculate the hook length
-            const float hook_length = (out - r.get_origin()).magnitude();
-
-            // Set player hook
-            _player.set_hook(out, hook_length);
-
-            // Return that we are hooked
-            return true;
+            return _projectile.launch_missile(
+                _player.projection(), _player.get_target(),
+                _player.get_target_key(), _player.get_target_value());
         }
 
-        // Return that we are  not hooked
         return false;
-    }
-    inline bool launch_missile(const min::ray<float, min::vec3> &r)
-    {
-        // Launch a missile on this ray
-        return _projectile.launch_missile(_grid, r);
     }
     inline void respawn(const min::vec3<float> p)
     {
@@ -568,15 +577,6 @@ class world
             // Regenerate the preview mesh
             generate_preview();
         }
-    }
-    inline int8_t scan_block(const min::ray<float, min::vec3> &r)
-    {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        int8_t value = -2;
-        _grid.ray_trace_last(r, _ray_max_dist, value);
-
-        // return the block id
-        return value;
     }
     inline void set_edit_mode(const bool flag)
     {
@@ -640,15 +640,6 @@ class world
             }
         }
     }
-    inline bool target_block(const min::ray<float, min::vec3> &r, min::vec3<float> &out)
-    {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        int8_t value = -2;
-        out = _grid.ray_trace_last(r, _ray_max_dist, value);
-
-        // return if we hit something
-        return value >= 0;
-    }
     void update(min::camera<float> &cam, const float dt)
     {
         // Update the physics and AI in world
@@ -659,6 +650,9 @@ class world
 
         // Reset explosion state
         _player.reset_explode();
+
+        // Set player current target
+        _player.set_target(_grid, cam, _ray_max_dist);
 
         // Detect if we crossed a chunk boundary
         _grid.update_current_chunk(p);

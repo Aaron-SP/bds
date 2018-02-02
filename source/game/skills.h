@@ -270,8 +270,8 @@ class skills
     {
         if (_mode == skill_mode::beam)
         {
-            _locked = false;
             _charging = false;
+            _locked = false;
         }
     }
     inline void unlock_grapple()

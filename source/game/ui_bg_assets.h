@@ -36,17 +36,19 @@ class ui_bg_assets
     static constexpr float _next_icon = 36.0 / _image_size;
     static constexpr float _x_cursor_uv = 4.0 / _image_size;
     static constexpr float _y_cursor_uv = 4.0 / _image_size;
-    static constexpr float _x_black_uv = 40.0 / _image_size;
+    static constexpr float _x_tar_cursor_uv = 40.0 / _image_size;
+    static constexpr float _y_tar_cursor_uv = 4.0 / _image_size;
+    static constexpr float _x_black_uv = 76.0 / _image_size;
     static constexpr float _y_black_uv = 4.0 / _image_size;
-    static constexpr float _x_yellow_uv = 76.0 / _image_size;
+    static constexpr float _x_yellow_uv = 112.0 / _image_size;
     static constexpr float _y_yellow_uv = 4.0 / _image_size;
-    static constexpr float _x_red_uv = 112.0 / _image_size;
+    static constexpr float _x_red_uv = 148.0 / _image_size;
     static constexpr float _y_red_uv = 4.0 / _image_size;
-    static constexpr float _x_blue_uv = 148.0 / _image_size;
+    static constexpr float _x_blue_uv = 184.0 / _image_size;
     static constexpr float _y_blue_uv = 4.0 / _image_size;
-    static constexpr float _x_white_uv = 184.0 / _image_size;
+    static constexpr float _x_white_uv = 220.0 / _image_size;
     static constexpr float _y_white_uv = 4.0 / _image_size;
-    static constexpr float _x_light_blue_uv = 220.0 / _image_size;
+    static constexpr float _x_light_blue_uv = 256.0 / _image_size;
     static constexpr float _y_light_blue_uv = 4.0 / _image_size;
 
     // Icons
@@ -213,7 +215,7 @@ class ui_bg_assets
     }
     inline bool get_draw_dead() const
     {
-        return _draw_menu == 2;
+        return _draw_menu == 3;
     }
     inline bool get_draw_ex() const
     {
@@ -221,15 +223,19 @@ class ui_bg_assets
     }
     inline bool get_draw_menu() const
     {
-        return _draw_menu >= 2;
+        return _draw_menu >= 3;
     }
     inline bool get_draw_pause() const
     {
-        return _draw_menu == 3;
+        return _draw_menu == 4;
     }
     inline bool get_draw_reload() const
     {
         return _draw_menu == 1;
+    }
+    inline bool get_draw_target() const
+    {
+        return _draw_menu == 2;
     }
     inline bool get_draw_title() const
     {
@@ -306,14 +312,14 @@ class ui_bg_assets
         // Load rect at position
         set_rect_reset(2, p, scale, pause_coord);
     }
-    inline void load_cursor_fps()
+    inline void load_cursor_aim()
     {
         const min::vec2<float> p(_center_w, _center_h);
         const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec4<float> fps_coord(_x_cursor_uv, _y_cursor_uv, _s_uv, _s_uv);
+        const min::vec4<float> aim_coord(_x_cursor_uv, _y_cursor_uv, _s_uv, _s_uv);
 
         // Load rect at position
-        set_rect_reset(2, p, scale, fps_coord);
+        set_rect_reset(2, p, scale, aim_coord);
     }
     inline void load_cursor_reload()
     {
@@ -330,6 +336,15 @@ class ui_bg_assets
 
         // Load rect at position
         set_rect_rot(2, p, scale, reload_coord, _cursor_angle);
+    }
+    inline void load_cursor_target()
+    {
+        const min::vec2<float> p(_center_w, _center_h);
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> target_coord(_x_tar_cursor_uv, _y_tar_cursor_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect_reset(2, p, scale, target_coord);
     }
     inline void load_health_meter()
     {
@@ -453,19 +468,23 @@ class ui_bg_assets
     }
     inline void set_draw_dead()
     {
-        _draw_menu = 2;
+        _draw_menu = 3;
     }
-    inline void set_draw_fps()
+    inline void set_draw_aim()
     {
         _draw_menu = 0;
     }
     inline void set_draw_pause()
     {
-        _draw_menu = 3;
+        _draw_menu = 4;
     }
     inline void set_draw_reload()
     {
         _draw_menu = 1;
+    }
+    inline void set_draw_target()
+    {
+        _draw_menu = 2;
     }
     inline void set_draw_title(const bool flag)
     {

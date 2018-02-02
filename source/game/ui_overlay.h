@@ -98,6 +98,10 @@ class ui_overlay
         // Upload changes to the buffer
         _text.upload();
     }
+    inline void set_cursor_aim()
+    {
+        _bg.set_cursor_aim();
+    }
     inline void set_cursor_reload()
     {
         _bg.set_cursor_reload();
