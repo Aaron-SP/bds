@@ -255,7 +255,7 @@ class player
         // Add a kick force
         //force(dir * 1000.0);
     }
-    inline void explode(const min::vec3<float> &direction, const float dist, const float size, const float power, const int8_t value)
+    inline void explode(const min::vec3<float> &direction, const float sq_dist, const float size, const float power, const int8_t value)
     {
         // If we haven't been exploded take damage
         if (!_exploded)
@@ -263,15 +263,11 @@ class player
             // Record what we hit
             _explode_id = value;
 
-            // If we hit lava
-            if (_explode_id == 21)
-            {
-                consume_health(90.0);
-            }
-            else
-            {
-                consume_health(size * 4.0 / dist);
-            }
+            // Calculate damage
+            const float inv_sq = 1.0 / sq_dist;
+            const float mult = power * size * inv_sq * 0.0005;
+            const float damage = (mult * 2.0) - (mult * inv_sq);
+            consume_health(damage);
 
             // Signal explode signal
             _exploded = true;

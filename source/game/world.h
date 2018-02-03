@@ -128,19 +128,17 @@ class world
         // Return the character body id
         return _char_id;
     }
-    inline std::tuple<bool, float, float, float> in_range_explode(const min::vec3<float> &p1, const min::vec3<float> &p2, const min::vec3<unsigned> &scale) const
+    inline std::tuple<bool, float, float> in_range_explode(const min::vec3<float> &p1, const min::vec3<float> &p2, const min::vec3<unsigned> &scale) const
     {
         // Calculate the size of the explosion
-        const float explode_size = scale.dot(scale);
+        const float ex_squared_radius = scale.dot(scale);
 
-        // Calculate the explosion radius
-        const float explode_radius = _explode_scale * std::sqrt(explode_size);
-
-        // Calculate distance from explosion center
-        const float dist = (p2 - p1).magnitude();
+        // Calculate squared distance from explosion center
+        const min::vec3<float> dp = p2 - p1;
+        const float sq_dist = dp.dot(dp);
 
         // Check if character is too close to the explosion
-        return {dist < explode_radius, explode_size, explode_radius, dist};
+        return {sq_dist < ex_squared_radius, ex_squared_radius, sq_dist};
     }
     inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
     {
@@ -172,13 +170,12 @@ class world
             // Check if character is too close to the explosion
             const auto pack = in_range_explode(p, point, scale);
             const bool in_range = std::get<0>(pack);
-            const float explode_size = std::get<1>(pack);
-            const float explode_radius = std::get<2>(pack);
-            const float dist = std::get<3>(pack);
+            const float ex_size = std::get<1>(pack);
+            const float sq_dist = std::get<2>(pack);
 
             // If block is lava, play exploding sound
             // Prefer stereo if close to the explosion
-            float power = 666.6 * explode_radius;
+            float power = 115.5 * ex_size;
             if (in_range && value == 21)
             {
                 // Play explode sound
@@ -194,7 +191,7 @@ class world
             // If explode hasn't been flagged yet
             if (!_player.is_exploded() && in_range)
             {
-                _player.explode(direction, dist, explode_size, power, value);
+                _player.explode(direction, sq_dist, ex_size, power, value);
             }
         }
     }

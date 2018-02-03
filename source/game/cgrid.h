@@ -178,6 +178,23 @@ class cgrid
 
         return chunk_key_unsafe(point);
     }
+    inline min::vec3<float> chunk_center(const size_t key) const
+    {
+        const std::tuple<size_t, size_t, size_t> comp = chunk_key_unpack(key);
+
+        // Adjust to middle of chunk
+        const float col = std::get<0>(comp) + 0.5;
+        const float row = std::get<1>(comp) + 0.5;
+        const float hei = std::get<2>(comp) + 0.5;
+
+        // Calculate the center of the chunk in world space
+        const float x = col * _chunk_size + _world.get_min().x();
+        const float y = row * _chunk_size + _world.get_min().y();
+        const float z = hei * _chunk_size + _world.get_min().z();
+
+        // Center not guaranteed to be in middle of box!
+        return min::vec3<float>(x, y, z);
+    }
     inline min::vec3<float> chunk_start(const size_t key) const
     {
         const std::tuple<size_t, size_t, size_t> comp = chunk_key_unpack(key);
@@ -187,7 +204,7 @@ class cgrid
         const size_t row = std::get<1>(comp);
         const size_t hei = std::get<2>(comp);
 
-        // Calculate the bottom left corner of the box cell
+        // Calculate the bottom left corner of chunk in world space
         const float x = col * _chunk_size + _world.get_min().x() + 0.5;
         const float y = row * _chunk_size + _world.get_min().y() + 0.5;
         const float z = hei * _chunk_size + _world.get_min().z() + 0.5;
@@ -857,12 +874,15 @@ class cgrid
         // Center of view chunks
         const min::vec3<float> center = chunk_start(_recent_chunk);
 
-        // Get the chunk starting point
-        const min::vec3<float> start = center - min::vec3<float>(_chunk_size, _chunk_size, _chunk_size) * _view_half_width;
+        // Calculate view half width chunk size
+        const float half_width = _chunk_size * _view_half_width;
+
+        // Get cubic chunk start point
+        const min::vec3<float> start = center - min::vec3<float>(half_width, half_width, half_width);
         const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
         const min::vec3<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
 
-        // Create cubic function, for each cell in cubic space
+        // Create cubic function, for each chunk in cubic space
         const auto f = [this, &cam](const min::vec3<float> &p) {
 
             // Create chunk bounding box
@@ -891,7 +911,7 @@ class cgrid
         // Calculate square distances from center of view frustum
         for (size_t i = 0; i < size; i++)
         {
-            const min::vec3<float> d = weight_center - chunk_start(out[i]);
+            const min::vec3<float> d = weight_center - chunk_center(_sort_chunk[i]);
             _sort_view[i] = d.dot(d);
         }
 
