@@ -22,6 +22,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <game/height_map.h>
 #include <game/work_queue.h>
+#include <kernel/base_terrain.h>
 #include <kernel/brownian_grow.h>
 #include <kernel/mandelbulb.h>
 #include <min/vec3.h>
@@ -35,10 +36,10 @@ namespace game
 class cgrid_generator
 {
   private:
-    std::vector<int8_t> _copy;
-    int _density;
+    std::vector<int8_t> _back;
+    int _radius;
     int _seed;
-    int _length;
+    int _years;
 
     inline void load_config()
     {
@@ -46,33 +47,33 @@ class cgrid_generator
         std::ifstream file("data/config/gen.config");
         if (file.is_open())
         {
-            // Read density
+            // Read seed density
             getline(file, line);
             std::stringstream ss(line);
-            ss >> _density;
+            ss >> _radius;
             if (ss.fail())
             {
-                _density = 30000;
+                _radius = 10;
             }
 
             // Read seed
             getline(file, line);
             ss.clear();
-            ss.str(std::string());
+            ss.str(line);
             ss >> _seed;
             if (ss.fail())
             {
-                _seed = 100;
+                _seed = 1000;
             }
 
             // Read length
             getline(file, line);
             ss.clear();
-            ss.str(std::string());
-            ss >> _length;
+            ss.str(line);
+            ss >> _years;
             if (ss.fail())
             {
-                _length = 20;
+                _years = 100;
             }
 
             // Close the file
@@ -82,26 +83,26 @@ class cgrid_generator
 
   public:
     cgrid_generator(const std::vector<int8_t> &grid)
-        : _copy(grid.size(), -1), _density(30000), _seed(100), _length(20)
+        : _back(grid.size(), -1), _seed(100), _years(20)
     {
         // Load the terrain config file
         load_config();
 
-        std::cout << _density << std::endl;
-        std::cout << _seed << std::endl;
-        std::cout << _length << std::endl;
+        std::cout << "RADIUS: " << _radius << std::endl;
+        std::cout << "SEED: " << _seed << std::endl;
+        std::cout << "YEARS: " << _years << std::endl;
     }
     inline void copy(std::vector<int8_t> &grid) const
     {
         // Parallelize on copying buffers
         const auto work = [this, &grid](const size_t i) {
-            grid[i] = _copy[i];
+            grid[i] = _back[i];
         };
 
         // Convert cells to mesh in parallel
         work_queue::worker.run(work, 0, grid.size());
     }
-    void generate(std::vector<int8_t> &grid, const size_t scale,
+    void generate(std::vector<int8_t> &grid, const size_t scale, const size_t chunk_size,
                   const std::function<size_t(const std::tuple<size_t, size_t, size_t> &)> &grid_key_unpack,
                   const std::function<min::vec3<float>(const size_t)> &grid_cell_center)
     {
@@ -135,7 +136,7 @@ class cgrid_generator
                     if (j < height)
                     {
                         // Set ground textures
-                        _copy[grid_key_unpack(std::make_tuple(i, j, k))] = dist(gen);
+                        _back[grid_key_unpack(std::make_tuple(i, j, k))] = dist(gen);
                     }
                 }
             }
@@ -144,27 +145,25 @@ class cgrid_generator
         // Run height map in parallel
         work_queue::worker.run(work, 0, scale);
 
-        // Copy data from back to front
+        // Simulates growing
+        kernel::brownian_grow grow(scale, _radius, _seed, _back);
+
+        // Copy data from back to front buffer
         copy(grid);
 
-        // Simulates growing
-        kernel::brownian_grow grow(scale);
+        grow.generate(work_queue::worker, grid, _back, _years);
 
-        // Highest point is height * 2
-        const size_t height = std::ceil(scale * 0.85);
-        for (size_t i = floor_height; i < height; i++)
-        {
-            grow.set_height(i);
-            grow.generate(work_queue::worker, grid, _copy, _density, _seed, _length);
+        // Copy data from front to back
+        copy(grid);
 
-            // Copy data from front to back
-            copy(grid);
-        }
+        // Calculates perlin noise
+        //kernel::base_terrain terrain(scale, chunk_size);
+        //terrain.generate(work_queue::worker, grid);
 
         // generate mandelbulb world using mandelbulb generator
-        kernel::mandelbulb().generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
-            return grid_cell_center(i);
-        });
+        // kernel::mandelbulb().generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
+        //     return grid_cell_center(i);
+        // });
 
         // Put the threads back to sleep
         work_queue::worker.sleep();

@@ -343,7 +343,7 @@ class cgrid
         };
 
         // Generate the cgrid data
-        generator.generate(_grid, _grid_scale, f, g);
+        generator.generate(_grid, _grid_scale, _chunk_size, f, g);
     }
     inline float grid_center_square_dist(const size_t key, const min::vec3<float> &point) const
     {
@@ -621,7 +621,7 @@ class cgrid
         min::write_le_vector<int8_t>(stream, _grid);
 
         // Write data to file
-        save_file("bin/world.bmesh", stream);
+        //save_file("bin/world.bmesh", stream);
     }
 
   public:

@@ -31,24 +31,18 @@ namespace kernel
 class brownian_grow
 {
   private:
-    size_t _scale;
-    std::uniform_int_distribution<uint8_t> _idist;
-    std::uniform_int_distribution<size_t> _gdist;
-    std::mt19937 _gen;
-    std::vector<std::tuple<size_t, size_t, size_t>> _walkers;
-    size_t _y;
+    const size_t _scale;
+    const size_t _seed;
+    const size_t _radius;
+    std::vector<std::tuple<size_t, size_t, size_t>> _points;
 
+    inline static size_t add(const size_t x, const int dx)
+    {
+        return static_cast<size_t>(static_cast<int>(x) + dx);
+    }
     inline size_t key(const std::tuple<size_t, size_t, size_t> &index) const
     {
         return min::vec3<float>::grid_key(index, _scale);
-    }
-    inline uint8_t random_int()
-    {
-        return _idist(_gen);
-    }
-    inline size_t random_grid_point()
-    {
-        return _gdist(_gen);
     }
     inline bool on_edge(size_t &x) const
     {
@@ -66,16 +60,7 @@ class brownian_grow
 
         return false;
     }
-    inline std::tuple<size_t, size_t, size_t> random_index()
-    {
-        // Generate spawn point
-        const size_t x = random_grid_point();
-        const size_t z = random_grid_point();
-
-        // Spawn walker
-        return std::make_tuple(x, _y, z);
-    }
-    inline int8_t color_table(const int8_t value)
+    inline static int8_t color_table(const int8_t value)
     {
         switch (value)
         {
@@ -117,10 +102,10 @@ class brownian_grow
             return 8;
         }
     }
-    inline bool random_walk(const std::vector<int8_t> &read, const size_t i, int8_t &value)
+    inline bool random_walk(const std::vector<int8_t> &read, std::tuple<size_t, size_t, size_t> &walker, const uint8_t dir, int8_t &value) const
     {
-        // Move in direction
-        std::tuple<size_t, size_t, size_t> next = _walkers[i];
+        // Copy walker position
+        std::tuple<size_t, size_t, size_t> next = walker;
 
         // Reflect walker if on edge
         bool edge = false;
@@ -140,7 +125,6 @@ class brownian_grow
         // Calculate random walk direction if not on edge
         if (!edge)
         {
-            const uint8_t dir = random_int();
             switch (dir)
             {
             case 0:
@@ -169,7 +153,7 @@ class brownian_grow
         if (value == -1)
         {
             // Move the walker
-            _walkers[i] = next;
+            walker = next;
 
             // Didn't hit a wall
             return false;
@@ -178,72 +162,95 @@ class brownian_grow
         // We hit a wall
         return true;
     }
-    inline void do_brownian(game::thread_pool &pool, const std::vector<int8_t> &read, std::vector<int8_t> &write, const size_t seed, const size_t years)
+    inline void do_brownian(game::thread_pool &pool, const std::vector<int8_t> &read, std::vector<int8_t> &write, const size_t years) const
     {
-        // Calculate a random tree seed
-        for (size_t i = 0; i < seed; i++)
-        {
-            // Seed the write buffer
-            const size_t value = (i % 3) * 8;
-            write[key(random_index())] = color_table(value);
-        }
+        // Create working function
+        const auto work = [this, &read, &write, years](const size_t i) {
 
-        // Evolve simulation for years
-        for (size_t i = 0; i < years; i++)
-        {
-            // Create working function
-            const auto work = [this, &read, &write, i](const size_t j) {
+            // Create random number generator for this thread
+            std::uniform_int_distribution<int> gdist(-_radius, _radius);
+            std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+            std::uniform_int_distribution<uint8_t> idist(0, 5);
 
-                // If walker hits something in write buffer
-                int8_t value;
-                if (random_walk(read, j, value))
+            // Spawn a walker at each seed location
+            for (size_t j = 0; j < _seed; j++)
+            {
+                // Spawn walker at random offset from seed location
+                const size_t x = add(std::get<0>(_points[j]), gdist(gen));
+                const size_t y = add(std::get<1>(_points[j]), gdist(gen));
+                const size_t z = add(std::get<2>(_points[j]), gdist(gen));
+                auto walker = std::make_tuple(x, y, z);
+
+                // Evolve simulation for years
+                for (size_t k = 0; k < years; k++)
                 {
-                    // Seed the write buffer
-                    write[key(_walkers[j])] = color_table(value);
+                    // Calculate random direction
+                    const uint8_t dir = idist(gen);
 
-                    // Move walker
-                    spawn_walker(j);
+                    // If walker hits something in write buffer
+                    int8_t value;
+                    if (random_walk(read, walker, dir, value))
+                    {
+                        // Calculate grid cell
+                        const size_t cell = key(walker);
+
+                        // Seed the write buffer
+                        write[cell] = color_table(value);
+
+                        // Respawn walker
+                        const size_t x1 = add(std::get<0>(_points[j]), gdist(gen));
+                        const size_t y1 = add(std::get<1>(_points[j]), gdist(gen));
+                        const size_t z1 = add(std::get<2>(_points[j]), gdist(gen));
+                        walker = std::make_tuple(x1, y1, z1);
+                    }
                 }
-            };
+            }
+        };
 
-            // Run the job in parallel
-            pool.run(work, 0, _walkers.size());
-        }
-    }
-    inline void spawn_walker(const size_t i)
-    {
-        // Spawn walker
-        _walkers[i] = random_index();
-    }
-    inline void spawn_walkers(const size_t size)
-    {
-        // Allocate walkers
-        _walkers.resize(size);
-
-        // Randomly scatter walkers
-        for (size_t i = 0; i < size; i++)
+        // Get number of cpu cores
+        const size_t size = std::thread::hardware_concurrency();
+        if (size < 1)
         {
-            spawn_walker(i);
+            throw std::runtime_error("brownian_grow: can't determine number of CPU cores");
         }
+
+        // Run the job in parallel
+        pool.run(work, 0, size);
     }
 
   public:
-    brownian_grow(const size_t scale)
-        : _scale(scale), _idist(0, 5), _gdist(0, _scale - 1),
-          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
-          _y(0) {}
-
-    inline void set_height(const size_t height)
+    brownian_grow(const size_t scale, const size_t radius, const size_t seed, std::vector<int8_t> &write)
+        : _scale(scale), _seed(seed), _radius(radius)
     {
-        _y = height;
+        // Check if radius is valid
+        if (_radius >= _scale / 2)
+        {
+            throw std::runtime_error("brownian_grow: radius larger than world size");
+        }
+
+        // Create random number generator for this thread
+        std::uniform_int_distribution<size_t> gdist(_radius, _scale - _radius - 1);
+        std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+
+        // Randomly seed buffer
+        _points.resize(_seed);
+        for (size_t i = 0; i < _seed; i++)
+        {
+            // Calculate random cell in the grid and write value
+            _points[i] = std::make_tuple(gdist(gen), gdist(gen), gdist(gen));
+
+            // Calculate grid cell
+            const size_t cell = key(_points[i]);
+
+            // Write pixel into grid
+            write[cell] = color_table(i % 24);
+        }
     }
-    inline void generate(game::thread_pool &pool, const std::vector<int8_t> &read, std::vector<int8_t> &write, const size_t walkers, const size_t seed, const size_t years)
-    {
-        // Spawn the random walkers
-        spawn_walkers(walkers);
 
+    inline void generate(game::thread_pool &pool, const std::vector<int8_t> &read, std::vector<int8_t> &write, const size_t years)
+    {
         // Generate brownian tree
-        do_brownian(pool, read, write, seed, years);
+        do_brownian(pool, read, write, years);
     }
 };
 }
