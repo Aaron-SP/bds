@@ -19,9 +19,11 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __THREAD_POOL__
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <random>
 #include <stdexcept>
 #include <thread>
 #include <vector>
@@ -32,22 +34,70 @@ namespace game
 class work_item
 {
   private:
-    std::function<void(const size_t)> _f;
+    std::function<void(std::mt19937 &gen, const size_t)> _f;
     size_t _begin;
     size_t _length;
 
   public:
-    work_item(const std::function<void(const size_t)> &f, const size_t begin, const size_t length)
+    work_item(const std::function<void(std::mt19937 &gen, const size_t)> &f, const size_t begin, const size_t length)
         : _f(f), _begin(begin), _length(length) {}
 
-    void work() const
+    void work(std::mt19937 &gen) const
     {
         const size_t end = _begin + _length;
         for (size_t i = _begin; i < end; i++)
         {
             // Do the work for this item
-            _f(i);
+            _f(gen, i);
         }
+    }
+};
+
+class thread
+{
+  private:
+    std::vector<work_item> _work;
+    std::atomic<bool> _sleep;
+    std::atomic<bool> _state;
+    std::thread _thread;
+    std::mt19937 _gen;
+
+  public:
+    thread()
+        : _sleep(true), _state(false),
+          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count()) {}
+
+    inline std::thread &get_thread()
+    {
+        return _thread;
+    }
+    inline void join()
+    {
+        _thread.join();
+    }
+    inline std::mt19937 &rand()
+    {
+        return _gen;
+    }
+    inline void set_sleep(const bool flag)
+    {
+        _sleep = flag;
+    }
+    inline void set_state(const bool flag)
+    {
+        _state = flag;
+    }
+    inline bool sleep() const
+    {
+        return _sleep;
+    }
+    inline bool state() const
+    {
+        return _state;
+    }
+    inline std::vector<work_item> &work()
+    {
+        return _work;
     }
 };
 
@@ -55,14 +105,12 @@ class thread_pool
 {
   private:
     unsigned _thread_count;
-    std::vector<std::vector<work_item>> _queue;
-    std::vector<std::atomic<bool>> _sleep;
-    std::vector<std::atomic<bool>> _state;
-    std::vector<std::thread> _threads;
+    std::vector<thread> _threads;
     std::mutex _sleep_lock;
     std::condition_variable _more_data;
     std::atomic<bool> _die;
     std::atomic<bool> _turbo;
+    std::mt19937 _gen;
 
     inline void notify()
     {
@@ -86,7 +134,7 @@ class thread_pool
                 std::unique_lock<std::mutex> lock(_sleep_lock);
 
                 // See if worker is finished
-                if (_sleep[i] == false)
+                if (_threads[i].sleep() == false)
                 {
                     count++;
                 }
@@ -109,7 +157,7 @@ class thread_pool
             for (size_t i = 0; i < _thread_count - 1; i++)
             {
                 // See if worker is finished
-                if (_state[i] == false)
+                if (_threads[i].state() == false)
                 {
                     count++;
                 }
@@ -144,30 +192,30 @@ class thread_pool
                 std::unique_lock<std::mutex> lock(_sleep_lock);
 
                 // ATOMIC: Signal Sleeping
-                _sleep[index] = false;
+                _threads[index].set_sleep(false);
 
                 // Wait on more data
-                _more_data.wait(lock, [this, index]() { return (_state[index] || _die) || _turbo; });
+                _more_data.wait(lock, [this, index]() { return (_threads[index].state() || _die) || _turbo; });
             }
 
             // Do work
-            if (_state[index])
+            if (_threads[index].state())
             {
                 // Get access to work
-                std::vector<work_item> &items = _queue[index];
+                std::vector<work_item> &items = _threads[index].work();
                 const size_t size = items.size();
 
                 // Do all work in this queue
                 for (size_t i = 0; i < size; i++)
                 {
-                    items[i].work();
+                    items[i].work(_threads[index].rand());
                 }
 
                 // Clear the queue
                 items.clear();
 
                 // ATOMIC: Signal Finished
-                _state[index] = false;
+                _threads[index].set_state(false);
             }
             else if (_die)
             {
@@ -178,8 +226,9 @@ class thread_pool
     }
 
   public:
-    thread_pool() : _thread_count(std::thread::hardware_concurrency()), _queue(_thread_count - 1),
-                    _sleep(_thread_count - 1), _state(_thread_count - 1), _threads(_thread_count - 1), _die(false), _turbo(false)
+    thread_pool() : _thread_count(std::thread::hardware_concurrency()),
+                    _threads(_thread_count - 1), _die(false), _turbo(false),
+                    _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
     {
         // Error out if can't determine core count
         if (_thread_count < 1)
@@ -187,18 +236,11 @@ class thread_pool
             throw std::runtime_error("thread_pool: can't determine number of CPU cores");
         }
 
-        // Set all default synchronization flags
-        for (size_t i = 0; i < _thread_count - 1; i++)
-        {
-            _sleep[i] = true;
-            _state[i] = false;
-        }
-
         // Boot all threads
         for (size_t i = 0; i < _thread_count - 1; i++)
         {
             // Boot the thread
-            _threads[i] = std::thread(&thread_pool::work, this, i);
+            _threads[i].get_thread() = std::thread(&thread_pool::work, this, i);
         }
     }
     ~thread_pool()
@@ -229,7 +271,7 @@ class thread_pool
         for (size_t i = 0; i < _thread_count - 1; i++)
         {
             // Signal finished
-            _sleep[i] = true;
+            _threads[i].set_sleep(true);
         }
 
         // Put all threads to sleep
@@ -246,7 +288,7 @@ class thread_pool
         // Wake up idle threads
         _more_data.notify_all();
     }
-    void run(const std::function<void(const size_t)> &f, const size_t start, const size_t stop)
+    void run(const std::function<void(std::mt19937 &gen, const size_t)> &f, const size_t start, const size_t stop)
     {
         // Wait for all workers to sleep
         wait();
@@ -258,7 +300,7 @@ class thread_pool
         for (size_t i = 0; i < _thread_count - 1; i++)
         {
             // Create work for thread
-            _queue[i].emplace_back(f, begin, length);
+            _threads[i].work().emplace_back(f, begin, length);
 
             // Increment next work item
             begin += length;
@@ -268,8 +310,8 @@ class thread_pool
         for (size_t i = 0; i < _thread_count - 1; i++)
         {
             // Signal that there is work to do
-            _sleep[i] = true;
-            _state[i] = true;
+            _threads[i].set_sleep(true);
+            _threads[i].set_state(true);
         }
 
         // Notify threads
@@ -278,7 +320,7 @@ class thread_pool
         // Boot the residual work on this thread
         const size_t remain = stop - begin;
         work_item item(f, begin, remain);
-        item.work();
+        item.work(_gen);
 
         // Wait for all workers to finish work
         wait_done();

@@ -24,10 +24,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/window.h>
 #include <stdexcept>
 
-#ifndef USE_GS_RENDER
-#include <game/work_queue.h>
-#endif
-
 namespace game
 {
 

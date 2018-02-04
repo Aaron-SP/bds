@@ -110,7 +110,7 @@ class mandelbulb
     void generate(game::thread_pool &pool, std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
     {
         // Create working function
-        const auto work = [this, &grid, gsize, &f](const size_t i) {
+        const auto work = [this, &grid, gsize, &f](std::mt19937 &gen, const size_t i) {
 
             // Do mandelbulb on this cell if empty
             if (grid[i] == -1)

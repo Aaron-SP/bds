@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __BASE_TERRAIN__
-#define __BASE_TERRAIN__
+#ifndef __TERRAIN_BASE__
+#define __TERRAIN_BASE__
 
 #include <game/perlin.h>
 #include <game/thread_pool.h>
@@ -25,7 +25,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace kernel
 {
 
-class base_terrain
+class terrain_base
 {
   private:
     const size_t _scale;
@@ -71,7 +71,7 @@ class base_terrain
     inline void do_perlin_terrain(game::thread_pool &pool, std::vector<int8_t> &write)
     {
         // Create working function
-        const auto work = [this, &write](const size_t i) {
+        const auto work = [this, &write](std::mt19937 &gen, const size_t i) {
             const float value = do_perlin(i);
             if (value >= 0.0 && value < 0.05)
             {
@@ -105,7 +105,7 @@ class base_terrain
     }
 
   public:
-    base_terrain(const size_t scale, const size_t chunk_size)
+    terrain_base(const size_t scale, const size_t chunk_size)
         : _scale(scale), _chunk_size(chunk_size) {}
 
     inline void generate(game::thread_pool &pool, std::vector<int8_t> &write)

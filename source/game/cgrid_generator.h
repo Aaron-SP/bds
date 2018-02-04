@@ -20,11 +20,11 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cmath>
 #include <fstream>
-#include <game/height_map.h>
 #include <game/work_queue.h>
-#include <kernel/base_terrain.h>
 #include <kernel/brownian_grow.h>
 #include <kernel/mandelbulb.h>
+#include <kernel/terrain_base.h>
+#include <kernel/terrain_height.h>
 #include <min/vec3.h>
 #include <random>
 #include <sstream>
@@ -95,7 +95,7 @@ class cgrid_generator
     inline void copy(std::vector<int8_t> &grid) const
     {
         // Parallelize on copying buffers
-        const auto work = [this, &grid](const size_t i) {
+        const auto work = [this, &grid](std::mt19937 &gen, const size_t i) {
             grid[i] = _back[i];
         };
 
@@ -109,41 +109,9 @@ class cgrid_generator
         // Wake up the threads for processing
         work_queue::worker.wake();
 
-        // 1 / 4 of the bottom half of the grid is filled
-        const size_t floor_height = std::ceil(scale * 0.0625);
-
-        // Random numbers between 0 and 5, including both
-        std::uniform_int_distribution<int8_t> dist(0, 5);
-        std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-
-        // Generate height map
-        const size_t level = std::ceil(std::log2(scale));
-        const height_map<float, float> map(level, -1.0, 4.0);
-
-        // Parallelize on x-axis
-        const auto work = [this, &dist, &gen,
-                           &map, scale, floor_height,
-                           grid_key_unpack](const size_t i) {
-
-            // y axis
-            for (size_t j = 0; j < floor_height; j++)
-            {
-                // z axis
-                for (size_t k = 0; k < scale; k++)
-                {
-                    // Get the height
-                    const uint8_t height = static_cast<uint8_t>(std::round(map.get(i, k)));
-                    if (j < height)
-                    {
-                        // Set ground textures
-                        _back[grid_key_unpack(std::make_tuple(i, j, k))] = dist(gen);
-                    }
-                }
-            }
-        };
-
-        // Run height map in parallel
-        work_queue::worker.run(work, 0, scale);
+        // Calculates a height map
+        kernel::terrain_height height(scale);
+        height.generate(work_queue::worker, _back);
 
         // Simulates growing
         kernel::brownian_grow grow(scale, _radius, _seed, _back);
@@ -157,8 +125,8 @@ class cgrid_generator
         copy(grid);
 
         // Calculates perlin noise
-        //kernel::base_terrain terrain(scale, chunk_size);
-        //terrain.generate(work_queue::worker, grid);
+        //kernel::terrain_base base(scale, chunk_size);
+        //base.generate(work_queue::worker, grid);
 
         // generate mandelbulb world using mandelbulb generator
         // kernel::mandelbulb().generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {

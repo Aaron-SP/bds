@@ -18,10 +18,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __BROWNIAN_GROW__
 #define __BROWNIAN_GROW__
 
-#include <chrono>
 #include <game/thread_pool.h>
 #include <min/vec3.h>
-#include <random>
 #include <tuple>
 #include <vector>
 
@@ -165,11 +163,10 @@ class brownian_grow
     inline void do_brownian(game::thread_pool &pool, const std::vector<int8_t> &read, std::vector<int8_t> &write, const size_t years) const
     {
         // Create working function
-        const auto work = [this, &read, &write, years](const size_t i) {
+        const auto work = [this, &read, &write, years](std::mt19937 &gen, const size_t i) {
 
             // Create random number generator for this thread
             std::uniform_int_distribution<int> gdist(-_radius, _radius);
-            std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
             std::uniform_int_distribution<uint8_t> idist(0, 5);
 
             // Spawn a walker at each seed location

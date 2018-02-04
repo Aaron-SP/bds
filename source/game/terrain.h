@@ -522,7 +522,7 @@ class terrain
             allocate_mesh_buffer(child.vertex);
 
             // Parallelize on generating cells
-            const auto work = [this, &child](const size_t i) {
+            const auto work = [this, &child](std::mt19937 &gen, const size_t i) {
                 set_cell(i, child.vertex);
             };
 
@@ -743,7 +743,7 @@ class terrain
             allocate_mesh_buffer(child.vertex);
 
             // Parallelize on generating cells
-            const auto work = [this, &child](const size_t i) {
+            const auto work = [this, &child](std::mt19937 &gen, const size_t i) {
                 set_cell(i, child.vertex);
             };
 

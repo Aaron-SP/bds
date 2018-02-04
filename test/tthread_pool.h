@@ -33,7 +33,7 @@ bool test_thread_pool()
     std::vector<int> items = {0, 1, 2, 3, 4, 5, 6, 7};
 
     // Create working function
-    const auto work = [&items](const size_t i) {
+    const auto work = [&items](std::mt19937 &gen, const size_t i) {
         items[i]++;
     };
 
