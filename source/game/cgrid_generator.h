@@ -109,24 +109,22 @@ class cgrid_generator
         // Wake up the threads for processing
         work_queue::worker.wake();
 
-        // Calculates a height map
-        kernel::terrain_height height(scale);
-        height.generate(work_queue::worker, _back);
+        // Calculates perlin noise
+        kernel::terrain_base base(scale, chunk_size, 0, scale / 2);
+        base.generate(work_queue::worker, _back);
 
-        // Simulates growing
-        kernel::brownian_grow grow(scale, _radius, _seed, _back);
+        // Calculates a height map
+        kernel::terrain_height height(scale, scale / 2, scale - 1);
+        height.generate(work_queue::worker, _back);
 
         // Copy data from back to front buffer
         copy(grid);
 
-        grow.generate(work_queue::worker, grid, _back, _years);
-
+        // Simulates growing
+        //kernel::brownian_grow grow(scale, _radius, _seed, _back);
+        //grow.generate(work_queue::worker, grid, _back, _years);
         // Copy data from front to back
-        copy(grid);
-
-        // Calculates perlin noise
-        //kernel::terrain_base base(scale, chunk_size);
-        //base.generate(work_queue::worker, grid);
+        //copy(grid);
 
         // generate mandelbulb world using mandelbulb generator
         // kernel::mandelbulb().generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {

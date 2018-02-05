@@ -67,14 +67,14 @@ class load_state
 
   public:
     load_state(const min::vec3<float> &look, const min::vec3<float> &spawn, const float grid_size)
-        : _default_look(1.0, grid_size * -0.75, 0.0), _default_spawn(0.0, grid_size * -0.75, 0.0),
+        : _default_look(1.0, grid_size * 0.75, 0.0), _default_spawn(0.0, grid_size * 0.75, 0.0),
           _look(look), _spawn(spawn), _loaded(true)
     {
         // Check that we loaded a valid point
         check_inside(grid_size);
     }
     load_state(const float grid_size)
-        : _default_look(1.0, grid_size * -0.75, 0.0), _default_spawn(0.0, grid_size * -0.75, 0.0),
+        : _default_look(1.0, grid_size * 0.75, 0.0), _default_spawn(0.0, grid_size * 0.75, 0.0),
           _look(_default_look), _spawn(_default_spawn), _loaded(false)
     {
         // Check that we loaded a valid point

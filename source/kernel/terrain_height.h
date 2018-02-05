@@ -29,6 +29,8 @@ class terrain_height
 {
   private:
     const size_t _scale;
+    const size_t _start;
+    const size_t _stop;
 
     inline size_t key(const std::tuple<size_t, size_t, size_t> &index) const
     {
@@ -43,48 +45,54 @@ class terrain_height
 
         return false;
     }
-    inline void do_height(game::thread_pool &pool, std::vector<int8_t> &write) const
+
+  public:
+    terrain_height(const size_t scale, const size_t start, const size_t stop)
+        : _scale(scale), _start(start), _stop(stop) {}
+
+    inline void generate(game::thread_pool &pool, std::vector<int8_t> &write)
     {
         // Generate height map
         const size_t level = std::ceil(std::log2(_scale));
-        const game::height_map<float, float> map(level, -1.0, 4.0);
-
-        // 1 / 4 of the bottom half of the grid is filled
-        const size_t floor_height = std::ceil(_scale * 0.0625);
+        const game::height_map<float, float> map(level, 4.0, 8.0);
 
         // Parallelize on X axis
-        const auto work = [this, &map, &write, floor_height](std::mt19937 &gen, const size_t i) {
+        const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
 
             // Random numbers between 0 and 5, including both
-            std::uniform_int_distribution<int8_t> dist(0, 5);
+            std::uniform_int_distribution<int8_t> grass(0, 1);
+            std::uniform_int_distribution<int8_t> soil(2, 3);
+            std::uniform_int_distribution<int8_t> sand(4, 5);
 
-            // Y axis
-            for (size_t j = 0; j < floor_height; j++)
+            // Z axis
+            for (size_t k = 0; k < _scale; k++)
             {
-                // Z axis
-                for (size_t k = 0; k < _scale; k++)
+                // Get the height
+                const size_t level = static_cast<size_t>(std::round(map.get(i, k)));
+                const size_t height = (level > _stop) ? _stop : level;
+                const size_t mid = _start + height / 2;
+                const size_t stop = _start + height;
+                const size_t end = stop - 1;
+
+                // First section
+                for (size_t j = _start; j < mid; j++)
                 {
-                    // Get the height
-                    const uint8_t height = static_cast<uint8_t>(std::round(map.get(i, k)));
-                    if (j < height)
-                    {
-                        // Set ground textures
-                        write[key(std::make_tuple(i, j, k))] = dist(gen);
-                    }
+                    write[key(std::make_tuple(i, j, k))] = sand(gen);
                 }
+
+                // Mid section
+                for (size_t j = mid; j < end; j++)
+                {
+                    write[key(std::make_tuple(i, j, k))] = soil(gen);
+                }
+
+                // Surface section
+                write[key(std::make_tuple(i, end, k))] = grass(gen);
             }
         };
 
         // Run height map in parallel
         pool.run(work, 0, _scale);
-    }
-
-  public:
-    terrain_height(const size_t scale) : _scale(scale) {}
-    inline void generate(game::thread_pool &pool, std::vector<int8_t> &write)
-    {
-        // Generate brownian tree
-        do_height(pool, write);
     }
 };
 }

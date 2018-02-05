@@ -102,25 +102,33 @@ class world
         // return center position
         return center;
     }
+    inline min::vec3<float> ray_spawn(const min::vec3<float> &p)
+    {
+        // Create a ray point down
+        const min::ray<float, min::vec3> r(p, p - min::vec3<float>::up());
+
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        return _grid.ray_trace_prev(r, _ray_max_dist);
+    }
     inline size_t character_load(const load_state &state)
     {
         // Get spawn point
         const min::vec3<float> &p = state.get_spawn();
 
-        // Snap position to grid
-        const min::vec3<float> snapped = cgrid::snap(p);
+        // Spawn character position
+        const min::vec3<float> spawned = ray_spawn(p);
 
         // Create the physics body
-        _char_id = _simulation.add_body(cgrid::player_box(snapped), 10.0);
+        _char_id = _simulation.add_body(cgrid::player_box(spawned), 10.0);
 
         // Update recent chunk
-        _grid.update_current_chunk(snapped);
+        _grid.update_current_chunk(spawned);
 
         // Set scale to 3x3x3
         _scale = min::vec3<unsigned>(3, 3, 3);
 
         // Remove geometry around player, requires position snapped to grid and calculated direction vector
-        _grid.set_geometry(snapped, _scale, _preview_offset, -1);
+        _grid.set_geometry(spawned, _scale, _preview_offset, -1);
 
         // Reset scale to default value
         _scale = min::vec3<unsigned>(1, 1, 1);
@@ -536,13 +544,13 @@ class world
 
         return false;
     }
-    inline void respawn(const min::vec3<float> p)
+    inline void respawn(const min::vec3<float> &p)
     {
         // Respawn player
         _player.respawn();
 
-        // Set character position snapped to grid
-        _player.warp(cgrid::snap(p));
+        // Spawn character position
+        _player.warp(ray_spawn(p));
 
         // Zero out character velocity
         _player.velocity(min::vec3<float>());

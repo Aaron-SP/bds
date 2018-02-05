@@ -30,11 +30,13 @@ class terrain_base
   private:
     const size_t _scale;
     const size_t _chunk_size;
+    const size_t _start;
+    const size_t _stop;
     perlin_noise _noise;
 
-    inline std::tuple<size_t, size_t, size_t> key_unpack(const size_t key) const
+    inline size_t key(const std::tuple<size_t, size_t, size_t> &index) const
     {
-        return min::vec3<float>::grid_index(key, _scale);
+        return min::vec3<float>::grid_key(index, _scale);
     }
     inline bool on_edge(const size_t x) const
     {
@@ -45,15 +47,9 @@ class terrain_base
 
         return false;
     }
-    inline float do_perlin(const size_t index)
+    inline float do_perlin(const size_t x, const size_t y, const size_t z) const
     {
-        // Unpack grid cell components
-        const auto comp = key_unpack(index);
-        const size_t gx = std::get<0>(comp);
-        const size_t gy = std::get<1>(comp);
-        const size_t gz = std::get<2>(comp);
-
-        if (on_edge(gx) || on_edge(gy) || on_edge(gz))
+        if (on_edge(x) || on_edge(y) || on_edge(z))
         {
             // Abort this iteration
             return 0.0;
@@ -61,57 +57,63 @@ class terrain_base
 
         // Relative grid components in chunk
         const float inv_cs = 1.0 / _chunk_size;
-        const float rgx = gx * inv_cs;
-        const float rgy = gy * inv_cs;
-        const float rgz = gz * inv_cs;
+        const float rx = x * inv_cs;
+        const float ry = y * inv_cs;
+        const float rz = z * inv_cs;
 
         // Calculate noise for this grid cell
-        return _noise.perlin(rgx, rgy, rgz);
-    }
-    inline void do_perlin_terrain(game::thread_pool &pool, std::vector<int8_t> &write)
-    {
-        // Create working function
-        const auto work = [this, &write](std::mt19937 &gen, const size_t i) {
-            const float value = do_perlin(i);
-            if (value >= 0.0 && value < 0.05)
-            {
-                write[i] = 2;
-            }
-            else if (value >= 0.05 && value < 0.10)
-            {
-                write[i] = 3;
-            }
-            else if (value >= 0.20 && value < 0.25)
-            {
-                write[i] = 16;
-            }
-            else if (value >= 0.25 && value < 0.30)
-            {
-                write[i] = 17;
-            }
-            else if (value >= 0.40 && value < 0.45)
-            {
-                write[i] = 18;
-            }
-            else if (value >= 0.45 && value < 0.50)
-            {
-                write[i] = 19;
-            }
-        };
-
-        // Run the job in parallel
-        const size_t size = write.size();
-        pool.run(work, 0, size);
+        return _noise.perlin(rx, ry, rz);
     }
 
   public:
-    terrain_base(const size_t scale, const size_t chunk_size)
-        : _scale(scale), _chunk_size(chunk_size) {}
+    terrain_base(const size_t scale, const size_t chunk_size, const size_t start, const size_t stop)
+        : _scale(scale), _chunk_size(chunk_size), _start(start), _stop(stop) {}
 
-    inline void generate(game::thread_pool &pool, std::vector<int8_t> &write)
+    inline void generate(game::thread_pool &pool, std::vector<int8_t> &write) const
     {
-        // Generate perlin noise
-        do_perlin_terrain(pool, write);
+        // Create working function
+        const auto work = [this, &write](std::mt19937 &gen, const size_t i) {
+
+            // Fill out this section
+            for (size_t j = _start; j < _stop; j++)
+            {
+                for (size_t k = 0; k < _scale; k++)
+                {
+                    // Calculate 3d perlin
+                    const float value = do_perlin(i, j, k);
+
+                    // Calculate key index
+                    const size_t index = key(std::make_tuple(i, j, k));
+                    if (value >= 0.0 && value < 0.05)
+                    {
+                        write[index] = 2;
+                    }
+                    else if (value >= 0.05 && value < 0.10)
+                    {
+                        write[index] = 3;
+                    }
+                    else if (value >= 0.20 && value < 0.25)
+                    {
+                        write[index] = 16;
+                    }
+                    else if (value >= 0.25 && value < 0.30)
+                    {
+                        write[index] = 17;
+                    }
+                    else if (value >= 0.40 && value < 0.45)
+                    {
+                        write[index] = 18;
+                    }
+                    else if (value >= 0.45 && value < 0.50)
+                    {
+                        write[index] = 19;
+                    }
+                }
+            }
+        };
+
+        // Parallelize on X axis
+        pool.run(work, 0, _scale);
     }
 };
 }
