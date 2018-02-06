@@ -45,17 +45,8 @@ class terrain_height
 
         return false;
     }
-
-  public:
-    terrain_height(const size_t scale, const size_t start, const size_t stop)
-        : _scale(scale), _start(start), _stop(stop) {}
-
-    inline void generate(game::thread_pool &pool, std::vector<int8_t> &write)
+    inline void terrain(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map) const
     {
-        // Generate height map
-        const size_t level = std::ceil(std::log2(_scale));
-        const game::height_map<float, float> map(level, 4.0, 8.0);
-
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
 
@@ -93,6 +84,81 @@ class terrain_height
 
         // Run height map in parallel
         pool.run(work, 0, _scale);
+    }
+    inline void trees(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map) const
+    {
+        // Parallelize on X axis
+        const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
+
+            std::uniform_int_distribution<size_t> p(3, _scale - 4);
+
+            // Get random X/Z coord
+            const size_t x0 = p(gen);
+            const size_t z0 = p(gen);
+
+            // Random numbers between 0 and 5, including both
+            std::uniform_int_distribution<uint8_t> size(4, 12);
+            std::uniform_int_distribution<int8_t> wood(8, 9);
+
+            // Get the top of trees at X/Z coord
+            const size_t base = _start + static_cast<size_t>(std::round(map.get(x0, z0)));
+            const size_t height = base + size(gen);
+            const size_t top = (height > _stop) ? _stop : height;
+
+            // Create tree wood
+            const size_t type = wood(gen);
+            for (size_t y0 = base; y0 < top; y0++)
+            {
+                write[key(std::make_tuple(x0, y0, z0))] = type;
+            }
+
+            // Calculate leaf type
+            std::uniform_int_distribution<int8_t> leaves(10, 13);
+            const size_t leaf = leaves(gen);
+
+            // Leaf position
+            const size_t x1 = x0 - 2;
+            const size_t y1 = top - 2;
+            const size_t z1 = z0 - 2;
+            std::uniform_int_distribution<uint8_t> leaf_offset(0, 1);
+
+            // Generate cubic leaves
+            const size_t dx = leaf_offset(gen);
+            const size_t x_end = x1 + 5 - dx;
+            for (size_t x = x1 + dx; x < x_end; x++)
+            {
+                const size_t y_end = y1 + 3;
+                for (size_t y = y1; y < y_end; y++)
+                {
+                    const size_t dz = leaf_offset(gen);
+                    const size_t z_end = z1 + 5 - dz;
+                    for (size_t z = z1 + dz; z < z_end; z++)
+                    {
+                        write[key(std::make_tuple(x, y, z))] = leaf;
+                    }
+                }
+            }
+        };
+
+        // Run height map in parallel
+        pool.run(work, 0, 500);
+    }
+
+  public:
+    terrain_height(const size_t scale, const size_t start, const size_t stop)
+        : _scale(scale), _start(start), _stop(stop) {}
+
+    inline void generate(game::thread_pool &pool, std::vector<int8_t> &write) const
+    {
+        // Generate height map
+        const size_t level = std::ceil(std::log2(_scale));
+        const game::height_map<float, float> map(level, 4.0, 8.0);
+
+        // Generate terrain
+        terrain(pool, write, map);
+
+        // Generate trees
+        trees(pool, write, map);
     }
 };
 }
