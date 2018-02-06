@@ -100,6 +100,7 @@ class ui_bg_assets
     // Placement values
     static constexpr size_t _num_buttons = 8;
     static constexpr size_t _num_half_buttons = _num_buttons / 2;
+    static constexpr float _store_height = 48.0;
     static constexpr float _tool_height = 48.0;
     static constexpr float _tool_space = 48.0;
     static constexpr float _tool_start = -_tool_space * _num_half_buttons + _tool_space / 2;
@@ -110,9 +111,9 @@ class ui_bg_assets
     // Inventory stuff
     static constexpr size_t _max_slots = 32;
 
-    // Number of ui elements, 3 + 2 + 8 + 8 + 24 + 24
-    static constexpr size_t _base_size = 21;
-    static constexpr size_t _extend_size = 69;
+    // Number of ui elements, 3 + 2 + 16 + 16 + 24 + 24
+    static constexpr size_t _base_size = 37;
+    static constexpr size_t _extend_size = 85;
     static constexpr size_t _max_size = _extend_size;
 
     // Rect Instance stuff
@@ -527,6 +528,15 @@ class ui_bg_assets
     {
         _draw_ex = !_draw_ex;
     }
+    inline min::vec2<float> store_position(const size_t row, const size_t col) const
+    {
+        // Calculate offset from center for this toolbar element
+        const float x = (_center_w + _tool_start) + (col * _tool_space);
+        const float y = _height - _store_height;
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
+    }
     inline min::vec2<float> toolbar_position(const size_t row, const size_t col) const
     {
         // Calculate offset from center for this toolbar element
@@ -558,7 +568,7 @@ class ui_bg_assets
     }
     inline static constexpr size_t ui_size()
     {
-        // 3 + 2 + 8 + 8
+        // 3 + 2 + 16 + 16
         return _base_size;
     }
 };

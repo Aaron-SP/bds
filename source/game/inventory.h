@@ -48,21 +48,29 @@ class inv_id
     {
         return _id;
     }
-    inline inv_id bg_key_index() const
+    inline inv_id bg_store_index() const
     {
         return inv_id(_id + 5);
     }
-    inline inv_id key_index() const
+    inline inv_id store_index() const
     {
         return inv_id(_id + 13);
+    }
+    inline inv_id bg_key_index() const
+    {
+        return inv_id(_id + 21);
+    }
+    inline inv_id key_index() const
+    {
+        return inv_id(_id + 29);
     }
     inline inv_id bg_inv_index() const
     {
-        return inv_id(_id + 13);
+        return inv_id(_id + 29);
     }
     inline inv_id inv_index() const
     {
-        return inv_id(_id + 37);
+        return inv_id(_id + 53);
     }
     inline bool is_key() const
     {

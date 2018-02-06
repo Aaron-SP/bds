@@ -238,7 +238,7 @@ class ui_bg
             _title_id = _tbuffer.add_dds_texture(tex);
         }
     }
-    inline min::vec2<float> position(const inv_id inv)
+    inline min::vec2<float> position(const inv_id inv) const
     {
         // Get row and col
         const size_t row = inv.row();
@@ -247,7 +247,7 @@ class ui_bg
         // Calculate ui element position
         return _assets.toolbar_position(row, col);
     }
-    inline min::vec2<float> position_ext(const inv_id inv)
+    inline min::vec2<float> position_ext(const inv_id inv) const
     {
         // Get row and col
         const size_t row = inv.ext_row();
@@ -255,6 +255,15 @@ class ui_bg
 
         // Calculate ui element position
         return _assets.toolbar_position(row, col);
+    }
+    inline min::vec2<float> position_store(const inv_id inv) const
+    {
+        // Get row and col
+        const size_t row = inv.row();
+        const size_t col = inv.col();
+
+        // Calculate ui element position
+        return _assets.store_position(row, col);
     }
     inline void position_ui()
     {
@@ -474,6 +483,35 @@ class ui_bg
     }
     inline void update_inventory()
     {
+        // Update all bg store icons
+        for (size_t i = 0; i < _cols; i++)
+        {
+            // Offset this index for a ui bg key
+            const inv_id inv = inv_id(i);
+
+            // Get ui position
+            const min::vec2<float> p = position_store(inv);
+
+            // Update the black bg icon
+            _assets.load_bg_black(inv.bg_store_index(), p);
+        }
+
+        // Update all store icons
+        for (size_t i = 0; i < _cols; i++)
+        {
+            // Offset this index for a ui bg key
+            const inv_id inv = inv_id(i);
+
+            // Get ui position
+            const min::vec2<float> p = position_store(inv);
+
+            // Get the inventory id
+            const uint8_t id = 1;
+
+            // Update the icon
+            set_inventory(inv.store_index(), id, p);
+        }
+
         // Update all bg icons
         for (size_t i = 0; i < _cols; i++)
         {
