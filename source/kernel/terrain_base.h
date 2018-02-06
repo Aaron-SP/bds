@@ -100,6 +100,10 @@ class terrain_base
                     {
                         write[index] = 17;
                     }
+                    else if (value >= 0.31 && value < 0.32)
+                    {
+                        write[index] = 20;
+                    }
                     else if (value >= 0.40 && value < 0.45)
                     {
                         write[index] = 18;
@@ -107,6 +111,10 @@ class terrain_base
                     else if (value >= 0.45 && value < 0.50)
                     {
                         write[index] = 19;
+                    }
+                    else if (value >= 0.51 && value < 0.515)
+                    {
+                        write[index] = 21;
                     }
                 }
             }
