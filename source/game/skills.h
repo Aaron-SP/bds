@@ -71,7 +71,7 @@ class skills
     skills()
         : _mode(skill_mode::beam),
           _energy(100.0), _low_energy(false),
-          _charging(false), _gun_active(true),
+          _charging(false), _gun_active(false),
           _locked(false), _shoot_cooldown(false) {}
 
     inline void add_energy(const float energy)

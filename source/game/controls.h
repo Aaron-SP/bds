@@ -334,7 +334,8 @@ class controls
 
         // Lookup key in inventory
         const inventory &inv = play.get_inventory();
-        const uint8_t id = inv[index].id();
+        const item &it = inv.get_key(index);
+        const uint8_t id = it.id();
 
         // Is the gun locked?
         const bool locked = skill.is_locked();
@@ -346,7 +347,7 @@ class controls
             _ui->set_key_down(index);
 
             // Set the console string from item
-            _ui->set_console_string(inv.get_string(inv[index]));
+            _ui->set_console_string(inv.get_string(it));
 
             // Determine if we need to go to edit or skill mode
             if (id == 0)

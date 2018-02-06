@@ -24,6 +24,13 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
+enum inv_type
+{
+    store,
+    key,
+    extend
+};
+
 class inv_id
 {
   private:
@@ -39,6 +46,18 @@ class inv_id
     inline bool operator!=(const inv_id other) const
     {
         return _id != other.id();
+    }
+    inline size_t row() const
+    {
+        return 0;
+    }
+    inline size_t ext_row() const
+    {
+        return _id / 8;
+    }
+    inline size_t col() const
+    {
+        return _id & 7;
     }
     inline uint8_t id() const
     {
@@ -58,35 +77,39 @@ class inv_id
     }
     inline inv_id bg_key_index() const
     {
-        return inv_id(_id + 21);
+        return inv_id(_id + 13);
     }
     inline inv_id key_index() const
     {
-        return inv_id(_id + 29);
+        return inv_id(_id + 21);
     }
-    inline inv_id bg_inv_index() const
+    inline inv_id bg_ex_index() const
     {
-        return inv_id(_id + 29);
+        return inv_id(_id + 21);
     }
-    inline inv_id inv_index() const
+    inline inv_id ex_index() const
     {
-        return inv_id(_id + 53);
+        return inv_id(_id + 45);
     }
-    inline bool is_key() const
+    inline inv_id to_key() const
     {
-        return _id < 8;
+        return inv_id(_id + 8);
     }
-    inline size_t row() const
+    inline inv_type type() const
     {
-        return 0;
-    }
-    inline size_t ext_row() const
-    {
-        return 1 + (_id / 8);
-    }
-    inline size_t col() const
-    {
-        return _id % 8;
+        if (_id >= 16)
+        {
+            // Extended type
+            return inv_type::extend;
+        }
+        else if (_id >= 8)
+        {
+            // Key type
+            return inv_type::key;
+        }
+
+        // Store type
+        return inv_type::store;
     }
 };
 
@@ -138,7 +161,7 @@ class item
 class inventory
 {
   private:
-    static constexpr size_t _max_slots = 32;
+    static constexpr size_t _max_slots = 40;
     static constexpr size_t _max_strings = 37;
     std::array<item, _max_slots> _inv;
     std::array<std::string, _max_strings> _inv_desc;
@@ -194,18 +217,34 @@ class inventory
         // Reserve memory for update buffer
         _update.reserve(_max_slots);
 
-        // Add a default beam
-        _inv[0] = item(1, 1);
+        // Create items in the store
+        _inv[begin_store()] = item(1, 1);
+        _inv[begin_store() + 1] = item(2, 1);
+        _inv[begin_store() + 2] = item(3, 1);
+        _inv[begin_store() + 3] = item(4, 1);
+        _inv[begin_store() + 4] = item(5, 1);
     }
     inline const item &operator[](const size_t index) const
     {
         return _inv[index];
     }
+    inline const item &get_extend(const size_t index) const
+    {
+        return _inv[index + begin_extend()];
+    }
+    inline const item &get_key(const size_t index) const
+    {
+        return _inv[index + begin_key()];
+    }
+    inline const item &get_store(const size_t index) const
+    {
+        return _inv[index + begin_store()];
+    }
     inline bool add(const uint8_t id, uint8_t &count)
     {
         // Search for item of same id in slots
         const size_t size = _inv.size();
-        for (size_t i = 0; i < size; i++)
+        for (size_t i = begin_key(); i < size; i++)
         {
             // Get the current item
             item &it = _inv[i];
@@ -244,6 +283,30 @@ class inventory
         // Failed to add all items
         return false;
     }
+    inline static size_t begin_store()
+    {
+        return 0;
+    }
+    inline static size_t end_store()
+    {
+        return 8;
+    }
+    inline static size_t begin_key()
+    {
+        return 8;
+    }
+    inline static size_t end_key()
+    {
+        return 16;
+    }
+    inline static size_t begin_extend()
+    {
+        return 16;
+    }
+    inline static size_t end_extend()
+    {
+        return 40;
+    }
     inline void clean()
     {
         _update.clear();
@@ -252,7 +315,7 @@ class inventory
     {
         // Search for item of same id in slots
         const size_t size = _inv.size();
-        for (size_t i = 0; i < size; i++)
+        for (size_t i = begin_key(); i < size; i++)
         {
             // Get the current item
             item &it = _inv[i];
@@ -316,8 +379,12 @@ class inventory
     {
         std::fill(_inv.begin(), _inv.end(), item());
 
-        // Add a default beam
-        _inv[0] = item(1, 1);
+        // Create items in the store
+        _inv[begin_store()] = item(1, 1);
+        _inv[begin_store() + 1] = item(2, 1);
+        _inv[begin_store() + 2] = item(3, 1);
+        _inv[begin_store() + 3] = item(4, 1);
+        _inv[begin_store() + 4] = item(5, 1);
 
         // Flag all dirty
         _update.resize(_inv.size());

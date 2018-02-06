@@ -37,8 +37,6 @@ namespace game
 class ui_bg
 {
   private:
-    static constexpr uint8_t _cols = 8;
-
     // OpenGL stuff
     min::shader _vertex;
     min::shader _fragment;
@@ -161,36 +159,52 @@ class ui_bg
         // Clear the shapes buffer
         _shapes.clear();
 
-        // First row
-        for (size_t i = 0; i < _cols; i++)
+        // Get start and end of store
+        const size_t bs = _inv->begin_store();
+        const size_t es = _inv->end_store();
+
+        // Store rows
+        for (size_t i = bs; i < es; i++)
         {
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
-            // Get row and col
-            const size_t row = inv.row();
-            const size_t col = inv.col();
-
-            // Calculate ui element position
-            const min::vec2<float> p = _assets.toolbar_position(row, col);
+            // Get ui position
+            const min::vec2<float> p = position_store(inv);
 
             // Add shape to buffer
             _shapes.push_back(_assets.inv_box(p));
         }
 
-        // Extended rows
-        const size_t size = _inv->size();
-        for (size_t i = _cols; i < size; i++)
+        // Get start and end of keys
+        const size_t bk = _inv->begin_key();
+        const size_t ek = _inv->end_key();
+
+        // First row
+        for (size_t i = bk; i < ek; i++)
         {
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
-            // Get row and col
-            const size_t row = inv.ext_row();
-            const size_t col = inv.col();
+            // Get ui position
+            const min::vec2<float> p = position_key(inv);
 
-            // Calculate ui element position
-            const min::vec2<float> p = _assets.toolbar_position(row, col);
+            // Add shape to buffer
+            _shapes.push_back(_assets.inv_box(p));
+        }
+
+        // Get start and end of keys
+        const size_t be = _inv->begin_extend();
+        const size_t ee = _inv->end_extend();
+
+        // Extended rows
+        for (size_t i = be; i < ee; i++)
+        {
+            // Offset this index for a ui bg key
+            const inv_id inv = inv_id(i);
+
+            // Get ui extended position
+            const min::vec2<float> p = position_ext(inv);
 
             // Add shape to buffer
             _shapes.push_back(_assets.inv_box(p));
@@ -238,7 +252,7 @@ class ui_bg
             _title_id = _tbuffer.add_dds_texture(tex);
         }
     }
-    inline min::vec2<float> position(const inv_id inv) const
+    inline min::vec2<float> position_key(const inv_id inv) const
     {
         // Get row and col
         const size_t row = inv.row();
@@ -324,7 +338,7 @@ class ui_bg
     inline void select()
     {
         // Bg key placement
-        const min::vec2<float> active = _assets.toolbar_position(0, _select.id());
+        const min::vec2<float> active = _assets.toolbar_position(0, _select.col());
 
         // Set activated index color to white
         _assets.load_bg_white(_select.bg_key_index(), active);
@@ -332,29 +346,40 @@ class ui_bg
     void select_active()
     {
         // Bg key placement
-        const min::vec2<float> active = _assets.toolbar_position(0, _select.id());
+        const min::vec2<float> active = _assets.toolbar_position(0, _select.col());
 
         // Set activated index color to white
         _assets.load_bg_yellow(_select.bg_key_index(), active);
     }
     void select_click()
     {
+        // Get the ui type
+        const inv_type type = _click.type();
+
         // Determine if this is extended inventory
-        if (_click.id() >= 8)
+        if (type == inv_type::extend)
         {
             // Get ui position
             const min::vec2<float> p = position_ext(_click);
 
             // Update the bg color
-            _assets.load_bg_light_blue(_click.bg_inv_index(), p);
+            _assets.load_bg_light_blue(_click.bg_ex_index(), p);
+        }
+        else if (type == inv_type::key)
+        {
+            // Get ui position
+            const min::vec2<float> p = position_key(_click);
+
+            // Update the bg color
+            _assets.load_bg_light_blue(_click.bg_key_index(), p);
         }
         else
         {
             // Get ui position
-            const min::vec2<float> p = position(_click);
+            const min::vec2<float> p = position_store(_click);
 
             // Update the bg color
-            _assets.load_bg_light_blue(_click.bg_key_index(), p);
+            _assets.load_bg_light_blue(_click.bg_store_index(), p);
         }
     }
     void select_hover()
@@ -362,22 +387,33 @@ class ui_bg
         // Are we hovering?
         if (_hovering)
         {
+            // Get the ui type
+            const inv_type type = _hover.type();
+
             // Determine if this is extended inventory
-            if (_hover.id() >= 8)
+            if (type == inv_type::extend)
             {
                 // Get ui position
                 const min::vec2<float> p = position_ext(_hover);
 
                 // Update the bg color
-                _assets.load_bg_yellow(_hover.bg_inv_index(), p);
+                _assets.load_bg_yellow(_hover.bg_ex_index(), p);
+            }
+            else if (type == inv_type::key)
+            {
+                // Get ui position
+                const min::vec2<float> p = position_key(_hover);
+
+                // Update the bg color
+                _assets.load_bg_yellow(_hover.bg_key_index(), p);
             }
             else
             {
                 // Get ui position
-                const min::vec2<float> p = position(_hover);
+                const min::vec2<float> p = position_store(_hover);
 
                 // Update the bg color
-                _assets.load_bg_yellow(_hover.bg_key_index(), p);
+                _assets.load_bg_yellow(_hover.bg_store_index(), p);
             }
         }
     }
@@ -416,7 +452,7 @@ class ui_bg
     inline void unselect()
     {
         // Bg key placement
-        const min::vec2<float> prev = _assets.toolbar_position(0, _select.id());
+        const min::vec2<float> prev = _assets.toolbar_position(0, _select.col());
 
         // Set previous unselected color to black
         _assets.load_bg_black(_select.bg_key_index(), prev);
@@ -434,21 +470,33 @@ class ui_bg
         }
         else
         {
-            if (_click.id() >= 8)
+            // Get the ui type
+            const inv_type type = _click.type();
+
+            // Determine if this is extended inventory
+            if (type == inv_type::extend)
             {
                 // Get ui position
                 const min::vec2<float> p = position_ext(_click);
 
                 // Update the bg color
-                _assets.load_bg_black(_click.bg_inv_index(), p);
+                _assets.load_bg_black(_click.bg_ex_index(), p);
+            }
+            else if (type == inv_type::key)
+            {
+                // Get ui position
+                const min::vec2<float> p = position_key(_click);
+
+                // Update the bg color
+                _assets.load_bg_black(_click.bg_key_index(), p);
             }
             else
             {
                 // Get ui position
-                const min::vec2<float> p = position(_click);
+                const min::vec2<float> p = position_store(_click);
 
                 // Update the bg color
-                _assets.load_bg_black(_click.bg_key_index(), p);
+                _assets.load_bg_black(_click.bg_store_index(), p);
             }
         }
     }
@@ -461,30 +509,45 @@ class ui_bg
             const bool skip = (_clicking && _hover == _click) || _hover == _select;
             if (!skip)
             {
+                // Get the ui type
+                const inv_type type = _hover.type();
+
                 // Determine if this is extended inventory
-                if (_hover.id() >= 8)
+                if (type == inv_type::extend)
                 {
                     // Get ui position
                     const min::vec2<float> p = position_ext(_hover);
 
                     // Update the bg color
-                    _assets.load_bg_black(_hover.bg_inv_index(), p);
+                    _assets.load_bg_black(_hover.bg_ex_index(), p);
                 }
-                else
+                else if (type == inv_type::key)
                 {
                     // Get ui position
-                    const min::vec2<float> p = position(_hover);
+                    const min::vec2<float> p = position_key(_hover);
 
                     // Update the bg color
                     _assets.load_bg_black(_hover.bg_key_index(), p);
                 }
+                else
+                {
+                    // Get ui position
+                    const min::vec2<float> p = position_store(_hover);
+
+                    // Update the bg color
+                    _assets.load_bg_black(_hover.bg_store_index(), p);
+                }
             }
         }
     }
-    inline void update_inventory()
+    inline void update_store()
     {
-        // Update all bg store icons
-        for (size_t i = 0; i < _cols; i++)
+        // Get start and end of store
+        const size_t bs = _inv->begin_store();
+        const size_t es = _inv->end_store();
+
+        // Update all store icons
+        for (size_t i = bs; i < es; i++)
         {
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
@@ -494,45 +557,31 @@ class ui_bg
 
             // Update the black bg icon
             _assets.load_bg_black(inv.bg_store_index(), p);
-        }
-
-        // Update all store icons
-        for (size_t i = 0; i < _cols; i++)
-        {
-            // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
-
-            // Get ui position
-            const min::vec2<float> p = position_store(inv);
 
             // Get the inventory id
-            const uint8_t id = 1;
+            const uint8_t id = (*_inv)[i].id();
 
             // Update the icon
             set_inventory(inv.store_index(), id, p);
         }
+    }
+    inline void update_key()
+    {
+        // Get start and end of keys
+        const size_t bk = _inv->begin_key();
+        const size_t ek = _inv->end_key();
 
-        // Update all bg icons
-        for (size_t i = 0; i < _cols; i++)
+        // Update all key icons
+        for (size_t i = bk; i < ek; i++)
         {
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
             // Get ui position
-            const min::vec2<float> p = position(inv);
+            const min::vec2<float> p = position_key(inv);
 
             // Update the black bg icon
             _assets.load_bg_black(inv.bg_key_index(), p);
-        }
-
-        // Update all key icons
-        for (size_t i = 0; i < _cols; i++)
-        {
-            // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
-
-            // Get ui position
-            const min::vec2<float> p = position(inv);
 
             // Get the inventory id
             const uint8_t id = (*_inv)[i].id();
@@ -540,10 +589,15 @@ class ui_bg
             // Update the icon
             set_inventory(inv.key_index(), id, p);
         }
+    }
+    inline void update_extend()
+    {
+        // Get start and end of keys
+        const size_t be = _inv->begin_extend();
+        const size_t ee = _inv->end_extend();
 
-        // Update all bg inventory icons
-        const size_t size = _inv->size();
-        for (size_t i = _cols; i < size; i++)
+        // Update all extended icons
+        for (size_t i = be; i < ee; i++)
         {
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
@@ -552,24 +606,25 @@ class ui_bg
             const min::vec2<float> p = position_ext(inv);
 
             // Update the black bg icon
-            _assets.load_bg_black(inv.bg_inv_index(), p);
-        }
-
-        // Update all inventory icons
-        for (size_t i = _cols; i < size; i++)
-        {
-            // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
-
-            // Get ui position
-            const min::vec2<float> p = position_ext(inv);
+            _assets.load_bg_black(inv.bg_ex_index(), p);
 
             // Get the inventory id
             const uint8_t id = (*_inv)[i].id();
 
             // Update the icon
-            set_inventory(inv.inv_index(), id, p);
+            set_inventory(inv.ex_index(), id, p);
         }
+    }
+    inline void update_inventory()
+    {
+        // Update store
+        update_store();
+
+        // Update keys
+        update_key();
+
+        // Update extend
+        update_extend();
 
         // Select selected key
         select_active();
@@ -579,22 +634,33 @@ class ui_bg
     }
     inline void update_inv_slot(const inv_id inv, const uint8_t id)
     {
+        // Get the ui type
+        const inv_type type = inv.type();
+
         // Determine if this is extended inventory
-        if (inv.id() >= 8)
+        if (type == inv_type::extend)
         {
             // Get ui position
             const min::vec2<float> p = position_ext(inv);
 
             // Update the icon
-            set_inventory(inv.inv_index(), id, p);
+            set_inventory(inv.ex_index(), id, p);
+        }
+        else if (type == inv_type::key)
+        {
+            // Get ui position
+            const min::vec2<float> p = position_key(inv);
+
+            // Update the icon
+            set_inventory(inv.key_index(), id, p);
         }
         else
         {
             // Get ui position
-            const min::vec2<float> p = position(inv);
+            const min::vec2<float> p = position_store(inv);
 
             // Update the icon
-            set_inventory(inv.key_index(), id, p);
+            set_inventory(inv.store_index(), id, p);
         }
     }
 
@@ -603,7 +669,7 @@ class ui_bg
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)), _mesh_id(0),
-          _clicking(false), _click(0), _hovering(false), _minimized(false), _hover(0), _select(0),
+          _clicking(false), _click(0), _hovering(false), _minimized(false), _hover(0), _select(inv->begin_key()),
           _assets(width, height), _inv(inv), _grid(screen_box(width, height))
     {
         // Create the instance rectangle
@@ -853,7 +919,7 @@ class ui_bg
         unselect();
 
         // Set selected index
-        _select = inv_id(index);
+        _select = inv_id(index).to_key();
 
         // If select a clicked cell 'unclick it'
         if (_clicking && _select == _click)
@@ -869,7 +935,7 @@ class ui_bg
         const min::vec2<float> p = _assets.toolbar_position(0, index);
 
         // Convert index to inv_id
-        const inv_id inv = inv_id(index);
+        const inv_id inv = inv_id(index).to_key();
 
         // Set background color
         _assets.load_bg_red(inv.bg_key_index(), p);
@@ -880,10 +946,10 @@ class ui_bg
         const min::vec2<float> p = _assets.toolbar_position(0, index);
 
         // Convert index to inv_id
-        const inv_id inv = inv_id(index);
+        const inv_id inv = inv_id(index).to_key();
 
         // Set background color
-        if (_select.id() == index)
+        if (_select.id() == inv.id())
         {
             _assets.load_bg_yellow(inv.bg_key_index(), p);
         }
