@@ -108,9 +108,6 @@ class ui_bg_assets
     static constexpr float _health_start = _tool_start - _tool_space - 4.0;
     static constexpr float _y_console = 100.0;
 
-    // Inventory stuff
-    static constexpr size_t _max_slots = 32;
-
     // Number of ui elements, 3 + 2 + 16 + 16 + 24 + 24
     static constexpr size_t _base_size = 37;
     static constexpr size_t _extend_size = 85;

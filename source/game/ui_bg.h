@@ -730,6 +730,14 @@ class ui_bg
         position_ui();
     }
 
+    inline void click()
+    {
+        // Click on the currently hovered icon
+        if (_hovering && !_minimized)
+        {
+            set_click_down(_hover);
+        }
+    }
     inline void draw_opaque() const
     {
         // Bind the text_buffer vao
@@ -768,6 +776,22 @@ class ui_bg
             draw_transparent_ui();
         }
     }
+    inline size_t bg_text_size() const
+    {
+        // If extended draw
+        if (_assets.get_draw_ex())
+        {
+            return _text->size();
+        }
+        else if (_assets.get_draw_title())
+        {
+            // Do not draw anything
+            return 0;
+        }
+
+        // If not extended
+        return _inv->end_key();
+    }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
         return _assets.get_scale();
@@ -775,14 +799,6 @@ class ui_bg
     inline const std::vector<min::mat3<float>> &get_uv() const
     {
         return _assets.get_uv();
-    }
-    inline void click()
-    {
-        // Click on the currently hovered icon
-        if (_hovering && !_minimized)
-        {
-            set_click_down(_hover);
-        }
     }
     inline bool is_extended() const
     {
@@ -1062,6 +1078,8 @@ class ui_bg
                 // Update item count text
                 clear_stream();
                 _stream << static_cast<int>((*_inv)[i.index()].count());
+
+                // Might require a shift in the future
                 _text->set_text(_stream.str(), i.index());
 
                 // Update the slot

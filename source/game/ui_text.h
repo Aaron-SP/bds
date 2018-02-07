@@ -142,7 +142,7 @@ class ui_text
         // Reposition all of the text
         reposition_text(width, height);
     }
-    void draw() const
+    void draw(const size_t bg_size) const
     {
         if (_draw_debug && _draw_console && _draw_ui)
         {
@@ -193,9 +193,12 @@ class ui_text
             bind();
         }
 
-        // Draw the bg text
-        _text_bg.bind(0);
-        _text_bg.draw_all();
+        // Draw the background text
+        if (bg_size > 0)
+        {
+            _text_bg.bind(0);
+            _text_bg.draw(0, bg_size - 1);
+        }
     }
     inline min::text_buffer &get_bg_text()
     {

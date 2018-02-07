@@ -54,7 +54,8 @@ class ui_overlay
         _bg.draw_transparent();
 
         // Draw the text
-        _text.draw();
+        const size_t bg_size = _bg.bg_text_size();
+        _text.draw(bg_size);
     }
     inline void disable_console()
     {
