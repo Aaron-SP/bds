@@ -20,6 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/character.h>
 #include <game/file.h>
+#include <game/inventory.h>
 #include <game/load_state.h>
 
 namespace game
@@ -34,7 +35,7 @@ class state
     float _x[_frame_average];
     float _y[_frame_average];
     unsigned _frame_count;
-    load_state _load;
+    load_state _state;
     min::vec3<float> _target;
     bool _dead;
     bool _fix_target;
@@ -49,46 +50,9 @@ class state
         f.set_far(5000.0);
         f.set_fov(90.0);
         _camera.set_perspective();
-    }
-    inline void load_state_file(const size_t grid_size)
-    {
-        // Create output stream for loading world
-        std::vector<uint8_t> stream;
-
-        // Load data into stream from file
-        load_file("bin/state", stream);
-
-        // If load failed dont try to parse stream data
-        if (stream.size() != 0)
-        {
-            // Character position
-            size_t next = 0;
-            const float x = min::read_le<float>(stream, next);
-            const float y = min::read_le<float>(stream, next);
-            const float z = min::read_le<float>(stream, next);
-
-            // Load character at this position
-            const min::vec3<float> p(x, y, z);
-
-            // Look direction
-            const float lx = min::read_le<float>(stream, next);
-            const float ly = min::read_le<float>(stream, next);
-            const float lz = min::read_le<float>(stream, next);
-
-            // Load camera settings
-            const min::vec3<float> look(lx, ly, lz);
-
-            // Load the starting state
-            _load = load_state(look, p, grid_size);
-        }
-        else
-        {
-            // Load the starting state
-            _load = load_state(grid_size);
-        }
 
         // Load camera settings
-        set_camera(_load.get_spawn(), _load.get_look());
+        set_camera(_state.get_spawn(), _state.get_look());
     }
     inline void update_model_matrix()
     {
@@ -125,16 +89,13 @@ class state
   public:
     state(const size_t grid_size)
         : _x{}, _y{}, _frame_count{},
-          _load(grid_size),
+          _state(grid_size),
           _dead(false), _fix_target(false),
           _pause(false), _respawn(false),
           _user_input(false)
     {
         // Load camera
         load_camera();
-
-        // Load state
-        load_state_file(grid_size);
     }
     inline void abort_tracking()
     {
@@ -150,11 +111,11 @@ class state
     }
     inline const min::vec3<float> &get_default_spawn() const
     {
-        return _load.get_default_spawn();
+        return _state.get_default_spawn();
     }
-    inline const load_state &get_load_state() const
+    inline const load_state &get_state_state() const
     {
-        return _load;
+        return _state;
     }
     inline const min::mat4<float> &get_model_matrix() const
     {
@@ -183,28 +144,11 @@ class state
         _respawn = false;
 
         // Reload camera settings
-        set_camera(_load.get_default_spawn(), _load.get_default_look());
+        set_camera(_state.get_default_spawn(), _state.get_default_look());
     }
-    inline void save_state_file(const min::vec3<float> &p)
+    inline void save_state(const inventory &inv, const min::vec3<float> &p)
     {
-        // Create output stream for saving world
-        std::vector<uint8_t> stream;
-
-        // Write position into stream
-        min::write_le<float>(stream, p.x());
-        min::write_le<float>(stream, p.y());
-        min::write_le<float>(stream, p.z());
-
-        // Get the camera look position
-        const min::vec3<float> look = _camera.project_point(1.0);
-
-        // Write look into stream
-        min::write_le<float>(stream, look.x());
-        min::write_le<float>(stream, look.y());
-        min::write_le<float>(stream, look.z());
-
-        // Write data to file
-        save_file("bin/state", stream);
+        _state.save_state(inv, _camera, p);
     }
     inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
     {

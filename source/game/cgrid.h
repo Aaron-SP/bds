@@ -621,7 +621,7 @@ class cgrid
         min::write_le_vector<int8_t>(stream, _grid);
 
         // Write data to file
-        //save_file("bin/world.bmesh", stream);
+        save_file("bin/world.bmesh", stream);
     }
 
   public:

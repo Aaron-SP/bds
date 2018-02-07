@@ -379,7 +379,7 @@ class world
           _preview_offset(1, 1, 1),
           _scale(1, 1, 1),
           _edit_mode(false),
-          _player(&_simulation, character_load(state)),
+          _player(&_simulation, state, character_load(state)),
           _ex_radius(3, 3, 3),
           _sky(uniforms),
           _instance(uniforms),

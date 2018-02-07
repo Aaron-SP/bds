@@ -305,7 +305,11 @@ class inventory
     }
     inline static size_t end_extend()
     {
-        return 40;
+        return _max_slots;
+    }
+    inline static size_t size()
+    {
+        return _max_slots;
     }
     inline void clean()
     {
@@ -357,6 +361,16 @@ class inventory
         // Store update index
         _update.emplace_back(index);
     }
+    inline void fill(const std::vector<item> &inv)
+    {
+        // Write inventory data into stream
+        const size_t start = begin_key();
+        const size_t end = end_extend();
+        for (size_t i = start; i < end; i++)
+        {
+            _inv[i] = inv[i];
+        }
+    }
     inline const std::string &get_string(const item it) const
     {
         return _inv_desc[it.id()];
@@ -389,10 +403,6 @@ class inventory
         // Flag all dirty
         _update.resize(_inv.size());
         std::iota(_update.begin(), _update.end(), 0);
-    }
-    inline size_t size() const
-    {
-        return _inv.size();
     }
     inline void swap(const size_t one, const size_t two)
     {

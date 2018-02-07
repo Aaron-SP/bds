@@ -22,6 +22,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <iostream>
 #include <min/vec3.h>
 #include <stdexcept>
+#include <vector>
 
 namespace game
 {
@@ -32,6 +33,7 @@ class load_state
     min::vec3<float> _default_spawn;
     min::vec3<float> _look;
     min::vec3<float> _spawn;
+    std::vector<item> _inv;
     bool _loaded;
 
     inline void check_inside(const float grid_size)
@@ -64,21 +66,89 @@ class load_state
             }
         }
     }
+    inline void state_load_file(const size_t grid_size)
+    {
+        // Create output stream for loading world
+        std::vector<uint8_t> stream;
+
+        // Load data into stream from file
+        load_file("bin/state", stream);
+
+        // If load failed dont try to parse stream data
+        if (stream.size() != 0)
+        {
+            // Character position
+            size_t next = 0;
+            const float x = min::read_le<float>(stream, next);
+            const float y = min::read_le<float>(stream, next);
+            const float z = min::read_le<float>(stream, next);
+
+            // Load position
+            _spawn = min::vec3<float>(x, y, z);
+
+            // Look direction
+            const float lx = min::read_le<float>(stream, next);
+            const float ly = min::read_le<float>(stream, next);
+            const float lz = min::read_le<float>(stream, next);
+
+            // Load look vector
+            _look = min::vec3<float>(lx, ly, lz);
+
+            // Load inventory data from stream
+            const size_t start = inventory::begin_key();
+            const size_t end = inventory::end_extend();
+            for (size_t i = start; i < end; i++)
+            {
+                const uint8_t id = min::read_le<uint8_t>(stream, next);
+                const uint8_t count = min::read_le<uint8_t>(stream, next);
+                _inv[i] = item(id, count);
+            }
+        }
+    }
+    inline void state_save_file(const inventory &inv, const min::camera<float> &camera, const min::vec3<float> &p)
+    {
+        // Create output stream for saving world
+        std::vector<uint8_t> stream;
+
+        // Write position into stream
+        min::write_le<float>(stream, p.x());
+        min::write_le<float>(stream, p.y());
+        min::write_le<float>(stream, p.z());
+
+        // Get the camera look position
+        const min::vec3<float> look = camera.project_point(1.0);
+
+        // Write look into stream
+        min::write_le<float>(stream, look.x());
+        min::write_le<float>(stream, look.y());
+        min::write_le<float>(stream, look.z());
+
+        // Write inventory data into stream
+        const size_t start = inv.begin_key();
+        const size_t end = inv.end_extend();
+        for (size_t i = start; i < end; i++)
+        {
+            const item &it = inv[i];
+            min::write_le<uint8_t>(stream, it.id());
+            min::write_le<uint8_t>(stream, it.count());
+        }
+
+        // Write data to file
+        save_file("bin/state", stream);
+    }
 
   public:
-    load_state(const min::vec3<float> &look, const min::vec3<float> &spawn, const float grid_size)
-        : _default_look(1.0, grid_size * 0.75, 0.0), _default_spawn(0.0, grid_size * 0.75, 0.0),
-          _look(look), _spawn(spawn), _loaded(true)
-    {
-        // Check that we loaded a valid point
-        check_inside(grid_size);
-    }
     load_state(const float grid_size)
-        : _default_look(1.0, grid_size * 0.75, 0.0), _default_spawn(0.0, grid_size * 0.75, 0.0),
-          _look(_default_look), _spawn(_default_spawn), _loaded(false)
+        : _default_look(1.0, grid_size * 0.75, 0.0),
+          _default_spawn(0.0, grid_size * 0.75, 0.0),
+          _look(_default_look), _spawn(_default_spawn),
+          _inv(inventory::size()), _loaded(false)
     {
         // Check that we loaded a valid point
         check_inside(grid_size);
+
+        // Load state
+        state_load_file(grid_size);
     }
     inline const min::vec3<float> &get_default_look() const
     {
@@ -87,6 +157,10 @@ class load_state
     inline const min::vec3<float> &get_default_spawn() const
     {
         return _default_spawn;
+    }
+    inline const std::vector<item> &get_inventory() const
+    {
+        return _inv;
     }
     inline const min::vec3<float> &get_look() const
     {
@@ -99,6 +173,10 @@ class load_state
     inline bool is_loaded() const
     {
         return _loaded;
+    }
+    inline void save_state(const inventory &inv, const min::camera<float> &camera, const min::vec3<float> &p)
+    {
+        state_save_file(inv, camera, p);
     }
 };
 }

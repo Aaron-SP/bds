@@ -19,11 +19,13 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __PLAYER__
 
 #include <game/inventory.h>
+#include <game/load_state.h>
 #include <game/skills.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
 #include <min/physics_nt.h>
 #include <min/vec3.h>
+#include <vector>
 
 namespace game
 {
@@ -207,7 +209,7 @@ class player
     }
 
   public:
-    player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const size_t body_id)
+    player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const load_state &state, const size_t body_id)
         : _sim(sim), _body_id(body_id),
           _exploded(false), _explode_id(-1),
           _hooked(false), _hook_length(0.0), _target_key(0), _target_value(-2), _target_valid(false),
@@ -216,6 +218,9 @@ class player
     {
         // Reserve space for collision cells
         reserve_memory();
+
+        // Copy loaded inventory
+        _inv.fill(state.get_inventory());
     }
 
     inline void add_health(const float health)

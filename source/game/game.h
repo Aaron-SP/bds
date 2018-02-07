@@ -210,8 +210,11 @@ class bds
     }
     ~bds()
     {
+        // Get player object
+        game::player &play = _world.get_player();
+
         // Save game data to file
-        _state.save_state_file(_world.get_player().position());
+        _state.save_state(play.get_inventory(), play.position());
     }
     void blink_console_message()
     {
