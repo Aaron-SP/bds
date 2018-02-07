@@ -27,6 +27,15 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace game
 {
+
+enum play_mode
+{
+    none,
+    gun,
+    place,
+    skill,
+};
+
 class player
 {
   private:
@@ -62,6 +71,7 @@ class player
     float _health;
     bool _dead;
     bool _low_health;
+    play_mode _mode;
 
     inline void reserve_memory()
     {
@@ -202,7 +212,7 @@ class player
           _exploded(false), _explode_id(-1),
           _hooked(false), _hook_length(0.0), _target_key(0), _target_value(-2), _target_valid(false),
           _airborn(false), _falling(false), _land_count(0), _jump_count(0), _landed(false), _jet(false),
-          _health(_health_cap), _dead(false), _low_health(false)
+          _health(_health_cap), _dead(false), _low_health(false), _mode(play_mode::none)
     {
         // Reserve space for collision cells
         reserve_memory();
@@ -334,6 +344,10 @@ class player
     {
         return _airborn;
     }
+    inline bool is_action_mode() const
+    {
+        return _mode == play_mode::gun || _mode == play_mode::skill;
+    }
     inline bool is_exploded() const
     {
         return _exploded;
@@ -410,6 +424,10 @@ class player
             force(dxz * 30.0);
         }
     }
+    inline play_mode get_mode() const
+    {
+        return _mode;
+    }
     inline const min::vec3<float> &position() const
     {
         // Return the character position
@@ -477,6 +495,10 @@ class player
     inline void set_jet(const bool flag)
     {
         _jet = flag;
+    }
+    inline void set_mode(const play_mode &mode)
+    {
+        _mode = mode;
     }
     inline void set_target(const cgrid &grid, min::camera<float> &cam, const size_t max_dist)
     {

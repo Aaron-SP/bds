@@ -21,6 +21,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/inventory.h>
 #include <game/ui_bg.h>
 #include <game/ui_text.h>
+#include <string>
 
 namespace game
 {
@@ -30,11 +31,15 @@ class ui_overlay
   private:
     ui_text _text;
     ui_bg _bg;
+    bool _dirty;
+    const std::string _res;
+    float _time;
 
   public:
     ui_overlay(const uniforms &uniforms, inventory *const inv, const uint16_t width, const uint16_t height)
         : _text(28, width, height),
-          _bg(uniforms, inv, _text.get_bg_text(), width, height) {}
+          _bg(uniforms, inv, _text.get_bg_text(), width, height),
+          _dirty(false), _res("Low Power!"), _time(-1.0) {}
 
     inline void click()
     {
@@ -159,6 +164,20 @@ class ui_overlay
         // Set text screen dimensions
         _text.set_screen(width, height);
     }
+    inline void set_ui_error_resource()
+    {
+        // Flag dirty
+        _dirty = true;
+
+        // Enable drawing error text
+        _text.set_draw_error(true);
+
+        // Show resource message
+        _text.update_ui_error(_res);
+
+        // Add some time on the clock
+        _time = 2.0;
+    }
     inline ui_text &text()
     {
         return _text;
@@ -180,19 +199,40 @@ class ui_overlay
     {
         _text.toggle_draw_debug();
     }
-    inline void update()
+    inline void update(const float dt)
     {
         _bg.update();
+
+        // If we need to upload text
+        if (_dirty)
+        {
+            // Flag cleaned
+            _dirty = false;
+
+            // Upload the changed text
+            _text.upload();
+        }
+
+        // Decrement time on timer
+        if (_time > 0.0)
+        {
+            _time -= dt;
+            if (_time < 0.0)
+            {
+                // Disable error text
+                _text.set_draw_error(false);
+            }
+        }
     }
-    void update_text(const min::vec3<float> &p, const min::vec3<float> &dir, const std::string &mode,
-                     const float health, const float energy, const double fps, const double idle, const size_t chunks)
+    void update_text(const min::vec3<float> &p, const min::vec3<float> &dir,
+                     const float health, const float energy, const double fps,
+                     const double idle, const size_t chunks)
     {
         // Update all text and upload it
         if (_text.is_draw_debug())
         {
             _text.set_debug_position(p);
             _text.set_debug_direction(dir);
-            _text.set_debug_mode(mode);
             _text.set_debug_health(health);
             _text.set_debug_energy(energy);
             _text.set_debug_fps(fps);

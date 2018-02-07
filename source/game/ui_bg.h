@@ -1086,11 +1086,11 @@ class ui_bg
                 update_inv_slot(i, it.id());
             }
 
-            // Upload the new text
-            upload_text();
-
             // Flag inventory clean state
             _inv->clean();
+
+            // Upload the new text
+            upload_text();
         }
     }
     inline void upload_text() const

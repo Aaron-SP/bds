@@ -35,7 +35,6 @@ class state
     float _y[_frame_average];
     unsigned _frame_count;
     load_state _load;
-    std::string _mode;
     min::vec3<float> _target;
     bool _dead;
     bool _fix_target;
@@ -127,7 +126,6 @@ class state
     state(const size_t grid_size)
         : _x{}, _y{}, _frame_count{},
           _load(grid_size),
-          _mode("MODE: PLAY"),
           _dead(false), _fix_target(false),
           _pause(false), _respawn(false),
           _user_input(false)
@@ -153,10 +151,6 @@ class state
     inline const min::vec3<float> &get_default_spawn() const
     {
         return _load.get_default_spawn();
-    }
-    inline const std::string &get_game_mode() const
-    {
-        return _mode;
     }
     inline const load_state &get_load_state() const
     {
@@ -226,10 +220,6 @@ class state
     inline void set_dead(const bool flag)
     {
         _dead = flag;
-    }
-    inline void set_game_mode(const std::string &mode)
-    {
-        _mode = mode;
     }
     inline void set_pause(const bool mode)
     {

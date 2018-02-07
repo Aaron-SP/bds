@@ -46,7 +46,6 @@ class skills
     float _energy;
     bool _low_energy;
     bool _charging;
-    bool _gun_active;
     bool _locked;
     bool _shoot_cooldown;
 
@@ -71,8 +70,8 @@ class skills
     skills()
         : _mode(skill_mode::beam),
           _energy(100.0), _low_energy(false),
-          _charging(false), _gun_active(false),
-          _locked(false), _shoot_cooldown(false) {}
+          _charging(false), _locked(false),
+          _shoot_cooldown(false) {}
 
     inline void add_energy(const float energy)
     {
@@ -176,10 +175,6 @@ class skills
     {
         return is_beam_mode() && _locked && get_charge_time() > _beam_cd;
     }
-    inline bool is_gun_active() const
-    {
-        return _gun_active;
-    }
     inline bool is_jetpack_mode() const
     {
         return _mode == skill_mode::jetpack;
@@ -225,17 +220,10 @@ class skills
         // Reset energy
         _energy = 100.0;
         _low_energy = false;
-
-        // Turn off the active gun
-        set_gun_active(false);
     }
     inline void set_energy(const float energy)
     {
         _energy = energy;
-    }
-    inline void set_gun_active(const bool mode)
-    {
-        _gun_active = mode;
     }
     inline void set_beam_mode()
     {

@@ -261,9 +261,6 @@ class controls
             // Turn on cursor
             win->display_cursor(true);
 
-            // Set state text to pause
-            state->set_game_mode("MODE: PAUSE");
-
             // Turn on the menu
             ui->set_menu_pause();
         }
@@ -271,9 +268,6 @@ class controls
         {
             // Turn off cursor
             win->display_cursor(false);
-
-            // Set state text to play
-            state->set_game_mode("MODE: PLAY");
 
             // Turn off the menu
             ui->reset_menu();
@@ -349,16 +343,22 @@ class controls
             // Set the console string from item
             _ui->set_console_string(inv.get_string(it));
 
-            // Determine if we need to go to edit or skill mode
-            if (id == 0)
+            // Cancel edit mode
+            if (id < 9)
             {
-                // Disable fire mode
-                skill.set_gun_active(false);
-
                 // Disable edit mode
                 _world->set_edit_mode(false);
             }
-            else if (id >= 9)
+
+            // Play selection sound
+            if (id > 0)
+            {
+                // Play selection sound
+                _sound->play_click();
+            }
+
+            // Choose action
+            if (id >= 9)
             {
                 // Reset scale
                 _world->reset_scale();
@@ -366,59 +366,40 @@ class controls
                 // Enable edit mode
                 _world->set_edit_mode(true);
 
-                // Disable fire mode
-                skill.set_gun_active(false);
+                // Set atlas id
+                _world->set_atlas_id(inv.id_to_atlas(id));
+
+                // Set place mode
+                play.set_mode(play_mode::place);
             }
             else if (id > 0)
             {
-                // Reset scale
-                _world->reset_scale();
-
-                // Disable edit mode
-                _world->set_edit_mode(false);
-
-                // Enable fire mode
-                skill.set_gun_active(true);
-            }
-
-            // If gun is active
-            if (skill.is_gun_active())
-            {
-                // Play selection sound
-                _sound->play_click();
-
-                // Set skill mode from ID
+                // Set skill mode
                 switch (id)
                 {
-                case 0:
-                    // Do nothing
-                    break;
                 case 1:
+                    play.set_mode(play_mode::gun);
                     skill.set_beam_mode();
                     break;
                 case 2:
+                    play.set_mode(play_mode::gun);
                     skill.set_missile_mode();
                     break;
                 case 3:
+                    play.set_mode(play_mode::gun);
                     skill.set_grapple_mode();
                     break;
                 case 4:
+                    play.set_mode(play_mode::skill);
                     skill.set_jetpack_mode();
                     break;
                 case 5:
+                    play.set_mode(play_mode::skill);
                     skill.set_scan_mode();
                     break;
                 default:
                     break;
                 }
-            }
-            else if (_world->get_edit_mode())
-            {
-                // Play selection sound
-                _sound->play_click();
-
-                // Set atlas id
-                _world->set_atlas_id(inv.id_to_atlas(id));
             }
         }
         else
@@ -620,6 +601,7 @@ class controls
         player &play = world->get_player();
         skills &skill = play.get_skills();
         sound *const sound = control->get_sound();
+        ui_overlay *const ui = control->get_ui();
 
         // Are we dead?
         const bool dead = play.is_dead();
@@ -646,8 +628,8 @@ class controls
             return;
         }
 
-        // Activate gun skill if active
-        if (skill.is_gun_active())
+        // Activate action if active
+        if (play.is_action_mode())
         {
             if (skill.is_beam_mode() && skill.is_off_cooldown())
             {
@@ -665,6 +647,7 @@ class controls
                 else
                 {
                     sound->play_voice_resource();
+                    ui->set_ui_error_resource();
                 }
             }
             else if (skill.is_grapple_mode())
@@ -692,6 +675,7 @@ class controls
                 else
                 {
                     sound->play_voice_resource();
+                    ui->set_ui_error_resource();
                 }
             }
             else if (skill.is_missile_mode() && skill.is_off_cooldown())
@@ -785,7 +769,7 @@ class controls
                 }
             }
         }
-        else if (skill.is_gun_active())
+        else if (play.is_action_mode())
         {
             // Abort the charge animation
             character->abort_animation_shoot();
@@ -838,6 +822,7 @@ class controls
                     else
                     {
                         sound->play_voice_resource();
+                        ui->set_ui_error_resource();
                     }
 
                     // Stop the charge sound
@@ -880,6 +865,7 @@ class controls
                     else
                     {
                         sound->play_voice_resource();
+                        ui->set_ui_error_resource();
                     }
 
                     // Unlock the gun if missile mode

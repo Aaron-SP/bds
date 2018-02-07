@@ -253,8 +253,8 @@ class bds
         _ui.draw_opaque();
 
         // Draw the character if fire mode activated
-        const game::skills &skill = _world.get_player().get_skills();
-        if (skill.is_gun_active())
+        const game::player &play = _world.get_player();
+        if (play.get_mode() == game::play_mode::gun)
         {
             _character.draw();
         }
@@ -359,7 +359,7 @@ class bds
             _controls.update(dt);
 
             // Update the UI class
-            _ui.update();
+            _ui.update(dt);
 
             // Check if we died
             update_die_respawn(dt);
@@ -385,13 +385,12 @@ class bds
         const game::skills &skills = player.get_skills();
         const min::vec3<float> &p = player.position();
         const min::vec3<float> &f = _state.get_camera().get_forward();
-        const std::string &mode = _state.get_game_mode();
         const float health = player.get_health();
         const float energy = skills.get_energy();
         const size_t chunks = _world.get_chunks_in_view();
 
         // Update the ui overlay
-        _ui.update_text(p, f, mode, health, energy, fps, idle, chunks);
+        _ui.update_text(p, f, health, energy, fps, idle, chunks);
     }
     void update_window()
     {
