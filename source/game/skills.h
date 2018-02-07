@@ -225,6 +225,9 @@ class skills
         // Reset energy
         _energy = 100.0;
         _low_energy = false;
+
+        // Turn off the active gun
+        set_gun_active(false);
     }
     inline void set_energy(const float energy)
     {

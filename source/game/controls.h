@@ -91,7 +91,7 @@ class controls
 
         // Enable the console and set default message
         _ui->enable_console();
-        _ui->set_console_string(inv.get_string(inv[0]));
+        _ui->set_console_string(inv.get_string(inv.get_key(0)));
 
         // Get access to the keyboard
         auto &keyboard = _window->get_keyboard();
