@@ -804,7 +804,7 @@ class sound
         _v_queue.clear();
         _v_head = 0;
     }
-    inline void update(const min::camera<float> &cam, const min::vec3<float> &vel, const float dt)
+    void update(const min::camera<float> &cam, const min::vec3<float> &vel, const float dt)
     {
         // Get camera vectors
         const min::vec3<float> &p = cam.get_position();

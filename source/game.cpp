@@ -18,7 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/game.h>
 
-inline void show_title(bds &game, min::loop_sync &sync, const size_t frames)
+void show_title(bds &game, min::loop_sync &sync, const size_t frames)
 {
     double frame_time = 0.0;
 
@@ -58,7 +58,7 @@ inline void show_title(bds &game, min::loop_sync &sync, const size_t frames)
     }
 }
 
-inline void show_game(bds &game, min::loop_sync &sync, const size_t frames)
+void show_game(bds &game, min::loop_sync &sync, const size_t frames)
 {
     // Register the game callbacks
     game.disable_title_screen();

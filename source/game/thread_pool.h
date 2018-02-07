@@ -42,7 +42,7 @@ class work_item
     work_item(const std::function<void(std::mt19937 &gen, const size_t)> &f, const size_t begin, const size_t length)
         : _f(f), _begin(begin), _length(length) {}
 
-    void work(std::mt19937 &gen) const
+    inline void work(std::mt19937 &gen) const
     {
         const size_t end = _begin + _length;
         for (size_t i = _begin; i < end; i++)
@@ -254,7 +254,7 @@ class thread_pool
             _threads[i].join();
         }
     }
-    void kill()
+    inline void kill()
     {
         // Wait for threads to finish work
         wait();
@@ -265,7 +265,7 @@ class thread_pool
         // Notify threads
         notify();
     }
-    void sleep()
+    inline void sleep()
     {
         // ATOMIC: Set state of all workers to 'sleep'
         for (size_t i = 0; i < _thread_count - 1; i++)
@@ -277,7 +277,7 @@ class thread_pool
         // Put all threads to sleep
         _turbo = false;
     }
-    void wake()
+    inline void wake()
     {
         // Wait for all workers to sleep
         wait_sleep();

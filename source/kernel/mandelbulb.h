@@ -107,7 +107,7 @@ class mandelbulb
 
   public:
     mandelbulb() {}
-    void generate(game::thread_pool &pool, std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
+    inline void generate(game::thread_pool &pool, std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
     {
         // Create working function
         const auto work = [this, &grid, gsize, &f](std::mt19937 &gen, const size_t i) {

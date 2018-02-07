@@ -75,6 +75,5 @@ tests64:
 
 # clean targets
 clean:
-	rm -f game.txt
-	rm -f test.txt
+	rm -f *.txt
 	rm -f bin/*

@@ -27,9 +27,11 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/grid.h>
 #include <min/program.h>
 #include <min/shader.h>
+#include <min/text_buffer.h>
 #include <min/texture_buffer.h>
 #include <min/vec2.h>
 #include <min/vertex_buffer.h>
+#include <sstream>
 
 namespace game
 {
@@ -37,6 +39,8 @@ namespace game
 class ui_bg
 {
   private:
+    constexpr static float _to_x = 8.0;
+    constexpr static float _to_y = -16.0;
     // OpenGL stuff
     min::shader _vertex;
     min::shader _fragment;
@@ -63,11 +67,18 @@ class ui_bg
     // Background assets
     ui_bg_assets _assets;
     inventory *const _inv;
+    min::text_buffer *const _text;
 
     // Click detection
     std::vector<min::aabbox<float, min::vec2>> _shapes;
     min::grid<float, uint16_t, uint16_t, min::vec2, min::aabbox, min::aabbox> _grid;
+    std::ostringstream _stream;
 
+    inline void clear_stream()
+    {
+        _stream.clear();
+        _stream.str(std::string());
+    }
     inline void draw_opaque_extend() const
     {
         // Bind the ui texture for drawing
@@ -158,6 +169,7 @@ class ui_bg
     {
         // Clear the shapes buffer
         _shapes.clear();
+        _text->clear();
 
         // Get start and end of store
         const size_t bs = _inv->begin_store();
@@ -174,6 +186,15 @@ class ui_bg
 
             // Add shape to buffer
             _shapes.push_back(_assets.inv_box(p));
+
+            // Clear and reset the stream
+            clear_stream();
+
+            // Update item count
+            _stream << static_cast<int>((*_inv)[i].count());
+
+            // Add text for each box
+            _text->add_text(_stream.str(), p.x() + _to_x, p.y() + _to_y);
         }
 
         // Get start and end of keys
@@ -191,6 +212,15 @@ class ui_bg
 
             // Add shape to buffer
             _shapes.push_back(_assets.inv_box(p));
+
+            // Clear and reset the stream
+            clear_stream();
+
+            // Update item count
+            _stream << static_cast<int>((*_inv)[i].count());
+
+            // Add text for each box
+            _text->add_text(_stream.str(), p.x() + _to_x, p.y() + _to_y);
         }
 
         // Get start and end of keys
@@ -208,6 +238,15 @@ class ui_bg
 
             // Add shape to buffer
             _shapes.push_back(_assets.inv_box(p));
+
+            // Clear and reset the stream
+            clear_stream();
+
+            // Update item count
+            _stream << static_cast<int>((*_inv)[i].count());
+
+            // Add text for each box
+            _text->add_text(_stream.str(), p.x() + _to_x, p.y() + _to_y);
         }
 
         // Calculate the grid scale
@@ -215,6 +254,9 @@ class ui_bg
 
         // Insert the shapes into the grid
         _grid.insert(_shapes, scale);
+
+        // Upload text for display
+        upload_text();
     }
     inline GLint load_program_index(const uniforms &uniforms) const
     {
@@ -343,7 +385,7 @@ class ui_bg
         // Set activated index color to white
         _assets.load_bg_white(_select.bg_key_index(), active);
     }
-    void select_active()
+    inline void select_active()
     {
         // Bg key placement
         const min::vec2<float> active = _assets.toolbar_position(0, _select.col());
@@ -351,7 +393,7 @@ class ui_bg
         // Set activated index color to white
         _assets.load_bg_yellow(_select.bg_key_index(), active);
     }
-    void select_click()
+    inline void select_click()
     {
         // Get the ui type
         const inv_type type = _click.type();
@@ -382,7 +424,7 @@ class ui_bg
             _assets.load_bg_light_blue(_click.bg_store_index(), p);
         }
     }
-    void select_hover()
+    inline void select_hover()
     {
         // Are we hovering?
         if (_hovering)
@@ -665,12 +707,12 @@ class ui_bg
     }
 
   public:
-    ui_bg(const uniforms &uniforms, inventory *const inv, const uint16_t width, const uint16_t height)
+    ui_bg(const uniforms &uniforms, inventory *const inv, min::text_buffer &text, const uint16_t width, const uint16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)), _mesh_id(0),
           _clicking(false), _click(0), _hovering(false), _minimized(false), _hover(0), _select(inv->begin_key()),
-          _assets(width, height), _inv(inv), _grid(screen_box(width, height))
+          _assets(width, height), _inv(inv), _text(&text), _grid(screen_box(width, height))
     {
         // Create the instance rectangle
         load_base_rect();
@@ -982,6 +1024,7 @@ class ui_bg
     {
         // Set asset screen size
         _assets.set_screen(width, height);
+        _text->set_screen(width, height);
 
         // Reposition all ui on the screen
         position_ui();
@@ -1003,7 +1046,7 @@ class ui_bg
     {
         _assets.toggle_draw_ex();
     }
-    void update()
+    inline void update()
     {
         // Update the inventory matrices if dirty
         if (_inv->dirty())
@@ -1015,12 +1058,30 @@ class ui_bg
             for (auto i : updates)
             {
                 const item &it = (*_inv)[i.index()];
+
+                // Update item count text
+                clear_stream();
+                _stream << static_cast<int>((*_inv)[i.index()].count());
+                _text->set_text(_stream.str(), i.index());
+
+                // Update the slot
                 update_inv_slot(i, it.id());
             }
 
-            // Flag that we clean updated the inventory state
+            // Upload the new text
+            upload_text();
+
+            // Flag inventory clean state
             _inv->clean();
         }
+    }
+    inline void upload_text() const
+    {
+        // Unbind the last VAO to prevent scrambling buffers
+        _text->unbind();
+
+        // Upload the text glyphs to the GPU
+        _text->upload();
     }
 };
 }

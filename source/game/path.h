@@ -234,7 +234,7 @@ class path
         // Reserve space for path
         _path.reserve(100);
     }
-    void clear()
+    inline void clear()
     {
         _path.clear();
     }
@@ -285,7 +285,7 @@ class path
         // Failure fallback
         return data.get_direction();
     }
-    const std::vector<min::vec3<float>> &get_path() const
+    inline const std::vector<min::vec3<float>> &get_path() const
     {
         return _path;
     }

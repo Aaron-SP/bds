@@ -413,7 +413,7 @@ class world
         // Add to grid
         _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
     }
-    inline void draw(const uniforms &uniforms) const
+    void draw(const uniforms &uniforms) const
     {
         // Draw the static instances
         _instance.draw(uniforms);
@@ -434,8 +434,8 @@ class world
         // Draw the sky, uses geometry VAO -- HACK!
         _sky.draw();
     }
-    inline int8_t explode_ray(const min::vec3<unsigned> &scale,
-                              const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
+    int8_t explode_ray(const min::vec3<unsigned> &scale,
+                       const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
     {
         if (!_player.is_target_valid())
         {

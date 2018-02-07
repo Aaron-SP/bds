@@ -34,7 +34,7 @@ class ui_overlay
   public:
     ui_overlay(const uniforms &uniforms, inventory *const inv, const uint16_t width, const uint16_t height)
         : _text(28, width, height),
-          _bg(uniforms, inv, width, height) {}
+          _bg(uniforms, inv, _text.get_bg_text(), width, height) {}
 
     inline void click()
     {
@@ -179,7 +179,7 @@ class ui_overlay
     {
         _text.toggle_draw_debug();
     }
-    void update()
+    inline void update()
     {
         _bg.update();
     }

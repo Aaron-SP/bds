@@ -143,7 +143,7 @@ class drops
         // Return the drop index
         return _drops.size() - 1;
     }
-    int8_t atlas(const size_t index) const
+    inline int8_t atlas(const size_t index) const
     {
         return _drops[index].atlas();
     }

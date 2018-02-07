@@ -80,24 +80,23 @@ class load_state
         // Check that we loaded a valid point
         check_inside(grid_size);
     }
-
-    const min::vec3<float> &get_default_look() const
+    inline const min::vec3<float> &get_default_look() const
     {
         return _default_look;
     }
-    const min::vec3<float> &get_default_spawn() const
+    inline const min::vec3<float> &get_default_spawn() const
     {
         return _default_spawn;
     }
-    const min::vec3<float> &get_look() const
+    inline const min::vec3<float> &get_look() const
     {
         return _look;
     }
-    const min::vec3<float> &get_spawn() const
+    inline const min::vec3<float> &get_spawn() const
     {
         return _spawn;
     }
-    bool is_loaded() const
+    inline bool is_loaded() const
     {
         return _loaded;
     }

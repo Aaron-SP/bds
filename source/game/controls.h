@@ -1000,7 +1000,7 @@ class controls
         // Update the screen size for ui and text
         ui->set_screen(width, height);
     }
-    inline void update_energy_regen(const float dt)
+    void update_energy_regen(const float dt)
     {
         // Regen some healthhealth
         player &player = _world->get_player();
@@ -1048,7 +1048,7 @@ class controls
         // Update the ui energy bar
         _ui->set_energy(energy);
     }
-    inline void update_skills()
+    void update_skills()
     {
         player &player = _world->get_player();
         skills &skill = player.get_skills();
@@ -1073,7 +1073,7 @@ class controls
             _character->set_animation_charge(*_camera);
         }
     }
-    inline void update_ui()
+    void update_ui()
     {
         // Check cursor state
         player &player = _world->get_player();

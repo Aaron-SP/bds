@@ -59,7 +59,7 @@ class bds
     game::sound _sound;
     std::pair<uint16_t, uint16_t> _cursor;
 
-    inline void set_cursor_center()
+    void set_cursor_center()
     {
         // Get the screen dimensions
         const uint16_t w = _win.get_width();
@@ -68,7 +68,7 @@ class bds
         // Center cursor in middle of window
         _win.set_cursor(w / 2, h / 2);
     }
-    inline std::pair<uint16_t, uint16_t> cursor_center() const
+    std::pair<uint16_t, uint16_t> cursor_center() const
     {
         // Get the screen dimensions
         const uint16_t w2 = _win.get_width() / 2;
@@ -77,7 +77,7 @@ class bds
         // Return screen center
         return std::make_pair(w2, h2);
     }
-    inline std::pair<uint16_t, uint16_t> get_cursor() const
+    std::pair<uint16_t, uint16_t> get_cursor() const
     {
         // If player is dead return screen center
         if (_world.get_player().is_dead())
@@ -88,7 +88,7 @@ class bds
         // Return cursor position
         return _win.get_cursor();
     }
-    inline void load_gpu_info()
+    void load_gpu_info()
     {
         // Get OpenGL implementation info
         const char *vendor = _win.get_context_string(GL_VENDOR);
@@ -107,7 +107,7 @@ class bds
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
     }
-    inline void update_die_respawn(const float dt)
+    void update_die_respawn(const float dt)
     {
         game::player &player = _world.get_player();
 
@@ -150,7 +150,7 @@ class bds
             }
         }
     }
-    inline void update_uniforms(min::camera<float> &camera, const bool update_bones)
+    void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
         // Bind uniforms
         _uniforms.bind();
@@ -213,26 +213,26 @@ class bds
         // Save game data to file
         _state.save_state_file(_world.get_player().position());
     }
-    inline void blink_console_message()
+    void blink_console_message()
     {
         _ui.toggle_console();
     }
-    inline bool check_gl_error() const
+    bool check_gl_error() const
     {
         return min::check_gl_error();
     }
-    inline bool check_al_error() const
+    bool check_al_error() const
     {
         return _sound.check_error();
     }
-    inline void clear_background() const
+    void clear_background() const
     {
         // blue background
         const float color[] = {0.145, 0.145f, 0.150f, 1.0f};
         glClearBufferfv(GL_COLOR, 0, color);
         glClear(GL_DEPTH_BUFFER_BIT);
     }
-    inline void disable_title_screen()
+    void disable_title_screen()
     {
         // Register window callbacks
         _controls.register_control_callbacks();
@@ -247,7 +247,7 @@ class bds
         // Update the mouse cursor to center
         set_cursor_center();
     }
-    inline void draw() const
+    void draw() const
     {
         // Draw the opaque ui
         _ui.draw_opaque();
@@ -268,7 +268,7 @@ class bds
         // Draw the transparent ui
         _ui.draw_transparent();
     }
-    inline void draw_title(const float dt)
+    void draw_title(const float dt)
     {
         min::camera<float> &camera = _state.get_camera();
 
@@ -279,19 +279,19 @@ class bds
         _ui.draw_opaque();
         _ui.draw_transparent();
     }
-    inline bool is_closed() const
+    bool is_closed() const
     {
         return _win.get_shutdown();
     }
-    inline bool is_show_title() const
+    bool is_show_title() const
     {
         return _title.is_show_title();
     }
-    inline void maximize() const
+    void maximize() const
     {
         _win.maximize();
     }
-    inline void play_music()
+    void play_music()
     {
         _sound.play_bg(true);
     }
@@ -372,13 +372,13 @@ class bds
         // Update all uniforms
         update_uniforms(camera, update);
     }
-    inline void update_keyboard(const float dt)
+    void update_keyboard(const float dt)
     {
         // Update the keyboard
         auto &keyboard = _win.get_keyboard();
         keyboard.update(dt);
     }
-    inline void update_text(const double fps, const double idle)
+    void update_text(const double fps, const double idle)
     {
         // Update player position debug text
         const game::player &player = _world.get_player();
@@ -393,7 +393,7 @@ class bds
         // Update the ui overlay
         _ui.update_text(p, f, mode, health, energy, fps, idle, chunks);
     }
-    inline void update_window()
+    void update_window()
     {
         // Update and swap buffers
         _win.update();

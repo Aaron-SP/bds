@@ -50,6 +50,7 @@ class ui_text
 
     // Buffer for holding text
     min::text_buffer _text;
+    min::text_buffer _text_bg;
     std::vector<size_t> _indices;
     std::ostringstream _stream;
     size_t _font_size;
@@ -107,10 +108,12 @@ class ui_text
           _fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _text("data/fonts/open_sans.ttf", font_size),
+          _text_bg("data/fonts/open_sans.ttf", 14),
           _font_size(font_size), _draw_console(false), _draw_debug(false), _draw_ui(false)
     {
         // Update the text buffer screen dimensions
         _text.set_screen(width, height);
+        _text_bg.set_screen(width, height);
 
         // Add title text
         add_text("Title", 0, 0);
@@ -139,7 +142,7 @@ class ui_text
         // Reposition all of the text
         reposition_text(width, height);
     }
-    inline void draw() const
+    void draw() const
     {
         if (_draw_debug && _draw_console && _draw_ui)
         {
@@ -184,6 +187,19 @@ class ui_text
             // Draw only debug text
             _text.draw(_console_offset, _ui_offset - 1);
         }
+        else
+        {
+            // Bind program for text_bg
+            bind();
+        }
+
+        // Draw the bg text
+        _text_bg.bind(0);
+        _text_bg.draw_all();
+    }
+    inline min::text_buffer &get_bg_text()
+    {
+        return _text_bg;
     }
     inline bool is_draw_debug() const
     {

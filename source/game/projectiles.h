@@ -233,12 +233,12 @@ class projectiles
         // Return that we launched it
         return true;
     }
-    inline void update(const cgrid &grid, const float speed,
-                       const std::function<void(
-                           const min::vec3<float> &point,
-                           const min::vec3<float> &direction,
-                           const min::vec3<unsigned> &scale,
-                           const size_t value)> &f = nullptr)
+    void update(const cgrid &grid, const float speed,
+                const std::function<void(
+                    const min::vec3<float> &point,
+                    const min::vec3<float> &direction,
+                    const min::vec3<unsigned> &scale,
+                    const size_t value)> &f = nullptr)
     {
         // Update each missile
         size_t size = _miss.size();

@@ -70,11 +70,11 @@ class title
         // Stop showing the title screen
         t->set_show_title(false);
     }
-    inline void set_show_title(const bool flag)
+    void set_show_title(const bool flag)
     {
         _show = flag;
     }
-    inline bool is_show_title() const
+    bool is_show_title() const
     {
         return _show;
     }
