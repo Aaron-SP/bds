@@ -20,7 +20,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/memory_map.h>
 #include <iomanip>
-#include <min/dds.h>
 #include <min/program.h>
 #include <min/shader.h>
 #include <min/text_buffer.h>
@@ -45,12 +44,12 @@ class ui_text
     static constexpr float _y_ui = 150.0;
 
     // Text OpenGL stuff
-    min::shader _text_vertex;
-    min::shader _text_fragment;
-    min::program _text_prog;
+    min::shader _vertex;
+    min::shader _fragment;
+    min::program _prog;
 
     // Buffer for holding text
-    min::text_buffer _text_buffer;
+    min::text_buffer _text;
     std::vector<size_t> _indices;
     std::ostringstream _stream;
     size_t _font_size;
@@ -60,7 +59,7 @@ class ui_text
 
     inline void add_text(const std::string &s, const float x, const float y)
     {
-        const size_t index = _text_buffer.add_text(s, x, y);
+        const size_t index = _text.add_text(s, x, y);
 
         // Add text index to index buffer
         _indices.push_back(index);
@@ -68,10 +67,10 @@ class ui_text
     inline void bind() const
     {
         // Bind the text_buffer vao, and textures on channel '1'
-        _text_buffer.bind(1);
+        _text.bind(0);
 
         // Bind the text program
-        _text_prog.use();
+        _prog.use();
     }
     inline void clear_stream()
     {
@@ -85,37 +84,33 @@ class ui_text
         for (size_t i = 0; i < _console_offset; i++)
         {
             // Update the text location
-            _text_buffer.set_text_location(i, 10, y);
+            _text.set_text_location(i, 10, y);
             y -= _font_size;
         }
 
         // Position the console elements
         const uint16_t w2 = (width / 2);
-        _text_buffer.set_text_center(_console_offset, w2, _y_console);
+        _text.set_text_center(_console_offset, w2, _y_console);
 
         // Position the ui elements
-        _text_buffer.set_text_location(_console_offset + 1, w2 - _x_health_offset, _y_ui);
-        _text_buffer.set_text_location(_console_offset + 2, w2 + _x_energy_offset, _y_ui);
+        _text.set_text_location(_console_offset + 1, w2 - _x_health_offset, _y_ui);
+        _text.set_text_location(_console_offset + 2, w2 + _x_energy_offset, _y_ui);
     }
     inline void update_text(const size_t index, const std::string &s)
     {
-        _text_buffer.set_text(s, index);
+        _text.set_text(s, index);
     }
 
   public:
     ui_text(const size_t font_size, const uint16_t width, const uint16_t height)
-        : _text_vertex(memory_map::memory.get_file("data/shader/text.vertex"), GL_VERTEX_SHADER),
-          _text_fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
-          _text_prog(_text_vertex, _text_fragment),
-          _text_buffer("data/fonts/open_sans.ttf", font_size),
+        : _vertex(memory_map::memory.get_file("data/shader/text.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
+          _prog(_vertex, _fragment),
+          _text("data/fonts/open_sans.ttf", font_size),
           _font_size(font_size), _draw_console(false), _draw_debug(false), _draw_ui(false)
     {
-        // Set the texture channel for this program, we need to do this here because we render text on channel '1'
-        // _text_prog will be in use by the end of this call
-        _text_buffer.set_texture_uniform(_text_prog, "in_texture", 1);
-
         // Update the text buffer screen dimensions
-        _text_buffer.set_screen(width, height);
+        _text.set_screen(width, height);
 
         // Add title text
         add_text("Title", 0, 0);
@@ -132,7 +127,7 @@ class ui_text
         for (size_t i = _console_offset; i < _ui_offset; i++)
         {
             add_text("", 0, 0);
-            _text_buffer.set_line_wrap(i, _x_console_wrap, _y_console_wrap);
+            _text.set_line_wrap(i, _x_console_wrap, _y_console_wrap);
         }
 
         // Add 2 text entries
@@ -152,7 +147,7 @@ class ui_text
             bind();
 
             // Draw all the text
-            _text_buffer.draw_all();
+            _text.draw_all();
         }
         else if (_draw_debug && _draw_ui)
         {
@@ -160,10 +155,10 @@ class ui_text
             bind();
 
             // Draw only debug text
-            _text_buffer.draw(0, _console_offset - 1);
+            _text.draw(0, _console_offset - 1);
 
             // Draw only ui text
-            _text_buffer.draw(_ui_offset, _end - 1);
+            _text.draw(_ui_offset, _end - 1);
         }
         else if (_draw_console && _draw_ui)
         {
@@ -171,7 +166,7 @@ class ui_text
             bind();
 
             // Draw from console start to end of buffer
-            _text_buffer.draw(_console_offset, _end - 1);
+            _text.draw(_console_offset, _end - 1);
         }
         else if (_draw_ui)
         {
@@ -179,7 +174,7 @@ class ui_text
             bind();
 
             // Draw only ui text
-            _text_buffer.draw(_ui_offset, _end - 1);
+            _text.draw(_ui_offset, _end - 1);
         }
         else if (_draw_console)
         {
@@ -187,7 +182,7 @@ class ui_text
             bind();
 
             // Draw only debug text
-            _text_buffer.draw(_console_offset, _ui_offset - 1);
+            _text.draw(_console_offset, _ui_offset - 1);
         }
     }
     inline bool is_draw_debug() const
@@ -209,7 +204,7 @@ class ui_text
     inline void set_screen(const uint16_t width, const uint16_t height)
     {
         // Update the text buffer screen dimensions
-        _text_buffer.set_screen(width, height);
+        _text.set_screen(width, height);
 
         // Rescale all text on the screen
         reposition_text(width, height);
@@ -345,19 +340,19 @@ class ui_text
         update_text(_console_offset, str);
 
         // Get the screen dimensions
-        const std::pair<float, float> size = _text_buffer.get_screen_size();
+        const std::pair<float, float> size = _text.get_screen_size();
 
         // Position the console elements
         const uint16_t w2 = (size.first / 2);
-        _text_buffer.set_text_center(_console_offset, w2, _y_console);
+        _text.set_text_center(_console_offset, w2, _y_console);
     }
     inline void upload() const
     {
         // Unbind the last VAO to prevent scrambling buffers
-        _text_buffer.unbind();
+        _text.unbind();
 
         // Upload the text glyphs to the GPU
-        _text_buffer.upload();
+        _text.upload();
     }
 };
 }
