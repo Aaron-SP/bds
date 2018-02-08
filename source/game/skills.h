@@ -28,7 +28,6 @@ namespace game
 class skills
 {
   private:
-    static constexpr float _max_energy = 100.0;
     static constexpr float _miss_cd = 500.0;
     static constexpr float _beam_cd = 500.0;
     enum skill_mode
@@ -43,8 +42,6 @@ class skills
     skill_mode _mode;
     std::chrono::high_resolution_clock::time_point _charge;
     std::chrono::high_resolution_clock::time_point _cool;
-    float _energy;
-    bool _low_energy;
     bool _charging;
     bool _locked;
     bool _shoot_cooldown;
@@ -69,24 +66,9 @@ class skills
   public:
     skills()
         : _mode(skill_mode::beam),
-          _energy(100.0), _low_energy(false),
           _charging(false), _locked(false),
           _shoot_cooldown(false) {}
 
-    inline void add_energy(const float energy)
-    {
-        // Absorb this amount of energy if not full
-        if (_energy < _max_energy)
-        {
-            _energy += energy;
-
-            // Cap energy at max_energy
-            if (_energy > _max_energy)
-            {
-                _energy = _max_energy;
-            }
-        }
-    }
     inline bool activate_charge()
     {
         // Should we start charging?
@@ -110,17 +92,6 @@ class skills
         // Do not active charging
         return false;
     }
-    inline bool can_consume(const float energy) const
-    {
-        // Try to consume energy
-        if (_energy >= energy)
-        {
-            return true;
-        }
-
-        // Not enough energy
-        return false;
-    }
     inline bool check_cooldown()
     {
         if (_shoot_cooldown)
@@ -133,43 +104,6 @@ class skills
         }
 
         return !_shoot_cooldown;
-    }
-    inline void consume(const float energy)
-    {
-        // Check above warning threshold
-        const bool above = _energy >= 25.0;
-
-        // Consume energy
-        _energy -= energy;
-
-        // Check for low energy
-        if (above && _energy < 25.0)
-        {
-            _low_energy = true;
-        }
-    }
-    inline bool will_consume(const float energy)
-    {
-        // Try to consume energy
-        if (_energy >= energy)
-        {
-            // Consume energy
-            consume(energy);
-
-            // Enough energy
-            return true;
-        }
-
-        // Not enough energy
-        return false;
-    }
-    inline float get_energy() const
-    {
-        return _energy;
-    }
-    inline float get_energy_percent() const
-    {
-        return _energy / _max_energy;
     }
     inline bool is_beam_charged() const
     {
@@ -199,10 +133,6 @@ class skills
     {
         return _locked;
     }
-    inline bool is_low_energy() const
-    {
-        return _low_energy;
-    }
     inline bool is_off_cooldown() const
     {
         return !_shoot_cooldown;
@@ -210,20 +140,6 @@ class skills
     inline void lock()
     {
         _locked = true;
-    }
-    inline void reset_low_energy()
-    {
-        _low_energy = false;
-    }
-    inline void respawn()
-    {
-        // Reset energy
-        _energy = 100.0;
-        _low_energy = false;
-    }
-    inline void set_energy(const float energy)
-    {
-        _energy = energy;
     }
     inline void set_beam_mode()
     {

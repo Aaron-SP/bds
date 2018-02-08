@@ -39,8 +39,6 @@ class controls
     static constexpr float _beam_charge_cost = 20.0;
     static constexpr float _missile_cost = 20.0;
     static constexpr float _grapple_cost = 10.0;
-    static constexpr float _health_regen = 5.0;
-    static constexpr float _energy_regen = 10.0;
     static constexpr float _project_dist = 3.0;
     min::window *_window;
     min::camera<float> *_camera;
@@ -600,6 +598,7 @@ class controls
         world *const world = control->get_world();
         player &play = world->get_player();
         skills &skill = play.get_skills();
+        stats &stat = play.get_stats();
         sound *const sound = control->get_sound();
         ui_overlay *const ui = control->get_ui();
 
@@ -633,7 +632,7 @@ class controls
         {
             if (skill.is_beam_mode() && skill.is_off_cooldown())
             {
-                if (skill.can_consume(_beam_charge_cost))
+                if (stat.can_consume_energy(_beam_charge_cost))
                 {
                     // Play the charge sound
                     sound->play_charge();
@@ -653,14 +652,14 @@ class controls
             else if (skill.is_grapple_mode())
             {
                 // Try to consume energy to power this resource
-                if (skill.can_consume(_grapple_cost))
+                if (stat.can_consume_energy(_grapple_cost))
                 {
                     // Fire grappling hook
                     const bool hit = world->hook_set();
                     if (hit)
                     {
                         // Consume energy
-                        skill.consume(_grapple_cost);
+                        stat.consume_energy(_grapple_cost);
 
                         // Activate grapple animation
                         character->set_animation_grapple(play.get_hook_point());
@@ -680,8 +679,17 @@ class controls
             }
             else if (skill.is_missile_mode() && skill.is_off_cooldown())
             {
-                // Lock the gun in missile mode
-                skill.lock();
+                // Try to consume energy to create missile
+                if (stat.can_consume_energy(_missile_cost))
+                {
+                    // Lock the gun in missile mode
+                    skill.lock();
+                }
+                else
+                {
+                    sound->play_voice_resource();
+                    ui->set_ui_error_resource();
+                }
             }
             else if (skill.is_jetpack_mode())
             {
@@ -713,6 +721,7 @@ class controls
         player &play = world->get_player();
         inventory &inv = play.get_inventory();
         skills &skill = play.get_skills();
+        stats &stat = play.get_stats();
         state *const state = control->get_state();
         sound *const sound = control->get_sound();
         ui_overlay *const ui = control->get_ui();
@@ -785,14 +794,14 @@ class controls
                     const int8_t value = world->explode_ray(explode_radius, play_ex);
                     if (value >= 0)
                     {
-                        // Consume energy
-                        skill.consume(_beam_charge_cost);
-
                         // Activate shoot animation
                         character->set_animation_shoot();
 
                         // Start gun cooldown timer
                         skill.start_cooldown();
+
+                        // Consume energy
+                        stat.consume_energy(_beam_charge_cost);
                     }
 
                     // Stop the charge sound
@@ -804,19 +813,19 @@ class controls
                 else if (skill.is_beam_mode())
                 {
                     // Remove block from world, get the removed block id
-                    if (skill.can_consume(_beam_cost))
+                    if (stat.can_consume_energy(_beam_cost))
                     {
                         const int8_t block_id = world->explode_ray(nullptr, 20.0);
                         if (block_id >= 0)
                         {
-                            // Consume energy
-                            skill.consume(_beam_cost);
-
                             // Activate shoot animation
                             character->set_animation_shoot();
 
                             // Play the shot sound
                             sound->play_shot();
+
+                            // Consume energy
+                            stat.consume_energy(_beam_cost);
                         }
                     }
                     else
@@ -847,25 +856,18 @@ class controls
                 }
                 else if (skill.is_missile_mode())
                 {
-                    // Try to consume energy to create missile
-                    const bool consumed = skill.will_consume(_missile_cost);
-                    if (consumed)
+                    // Launch a missile
+                    const bool launched = world->launch_missile();
+                    if (launched)
                     {
-                        // Launch a missile
-                        const bool launched = world->launch_missile();
-                        if (launched)
-                        {
-                            // Activate shoot animation
-                            character->set_animation_shoot();
+                        // Activate shoot animation
+                        character->set_animation_shoot();
 
-                            // Start gun cooldown timer
-                            skill.start_cooldown();
-                        }
-                    }
-                    else
-                    {
-                        sound->play_voice_resource();
-                        ui->set_ui_error_resource();
+                        // Start gun cooldown timer
+                        skill.start_cooldown();
+
+                        // Consume energy
+                        stat.consume_energy(_missile_cost);
                     }
 
                     // Unlock the gun if missile mode
@@ -993,51 +995,53 @@ class controls
     }
     void update_energy_regen(const float dt)
     {
-        // Regen some healthhealth
-        player &player = _world->get_player();
-        if (!player.is_dead())
-        {
-            // Rate is units / second
-            player.add_health(_health_regen * dt);
-        }
+        player &play = _world->get_player();
+        stats &stat = play.get_stats();
+        skills &skill = play.get_skills();
 
         // Regen energy
-        skills &skill = player.get_skills();
         if (!skill.is_locked())
         {
             // Rate is units / second
-            skill.add_energy(_energy_regen * dt);
-        }
-
-        // If low health
-        if (player.is_low_health())
-        {
-            // Play low power warning
-            _sound->play_voice_critical();
-
-            // Reset low health
-            player.reset_low_health();
+            stat.regen_energy(dt);
         }
 
         // If low energy
-        if (skill.is_low_energy())
+        if (stat.is_low_energy())
         {
             // Play low power warning
             _sound->play_voice_power();
 
             // Reset low health
-            skill.reset_low_energy();
+            stat.reset_low_energy();
+        }
+
+        // Regen health
+        if (!stat.is_dead())
+        {
+            // Rate is units / second
+            stat.regen_health(dt);
+        }
+
+        // If low health
+        if (stat.is_low_health())
+        {
+            // Play low power warning
+            _sound->play_voice_critical();
+
+            // Reset low health
+            stat.reset_low_health();
         }
 
         // Get health and energy
-        const float health = player.get_health_percent();
-        const float energy = skill.get_energy_percent();
-
-        // Update the ui health bar
-        _ui->set_health(health);
+        const float energy = stat.get_energy_percent();
+        const float health = stat.get_health_percent();
 
         // Update the ui energy bar
         _ui->set_energy(energy);
+
+        // Update the ui health bar
+        _ui->set_health(health);
     }
     void update_skills()
     {

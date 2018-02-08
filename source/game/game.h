@@ -387,12 +387,13 @@ class bds
     void update_text(const double fps, const double idle)
     {
         // Update player position debug text
-        const game::player &player = _world.get_player();
-        const game::skills &skills = player.get_skills();
-        const min::vec3<float> &p = player.position();
+        const game::player &play = _world.get_player();
+        const game::skills &skills = play.get_skills();
+        const game::stats &stat = play.get_stats();
+        const min::vec3<float> &p = play.position();
         const min::vec3<float> &f = _state.get_camera().get_forward();
-        const float health = player.get_health();
-        const float energy = skills.get_energy();
+        const float health = stat.get_health();
+        const float energy = stat.get_energy();
         const size_t chunks = _world.get_chunks_in_view();
 
         // Update the ui overlay

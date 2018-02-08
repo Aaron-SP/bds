@@ -21,6 +21,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/inventory.h>
 #include <game/load_state.h>
 #include <game/skills.h>
+#include <game/stats.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
 #include <min/physics_nt.h>
@@ -44,7 +45,6 @@ class player
     static constexpr float _air_threshold = 1.0;
     static constexpr float _fall_threshold = -1.0;
     static constexpr float _grav_mag = 10.0;
-    static constexpr float _health_cap = 100.0;
     static constexpr float _jet_cost = 0.25;
     static constexpr float _project_dist = 0.5;
 
@@ -69,11 +69,9 @@ class player
     bool _landed;
     min::vec3<float> _land_vel;
     bool _jet;
-    skills _skills;
-    float _health;
-    bool _dead;
-    bool _low_health;
     play_mode _mode;
+    skills _skills;
+    stats _stats;
 
     inline void reserve_memory()
     {
@@ -158,11 +156,11 @@ class player
                 if (speed > 20.0)
                 {
                     // Lethal damage
-                    consume_health(100.0);
+                    _stats.consume_health(100.0);
                 }
                 else if (speed > 10.0)
                 {
-                    consume_health(50.0);
+                    _stats.consume_health(50.0);
                 }
             }
         }
@@ -186,10 +184,12 @@ class player
         }
         else if (_jet)
         {
-            const bool consumed = _skills.will_consume(_jet_cost);
-            if (consumed)
+            if (_stats.can_consume_energy(_jet_cost))
             {
-                // Add force to player body
+                // Consume energy
+                _stats.consume_energy(_jet_cost);
+
+                // Apply force to player body
                 force(min::vec3<float>(0.0, 11.0, 0.0));
             }
             else
@@ -214,27 +214,13 @@ class player
           _exploded(false), _explode_id(-1),
           _hooked(false), _hook_length(0.0), _target_key(0), _target_value(-2), _target_valid(false),
           _airborn(false), _falling(false), _land_count(0), _jump_count(0), _landed(false), _jet(false),
-          _health(_health_cap), _dead(false), _low_health(false), _mode(play_mode::none)
+          _mode(play_mode::none)
     {
         // Reserve space for collision cells
         reserve_memory();
 
         // Copy loaded inventory
         _inv.fill(state.get_inventory());
-    }
-
-    inline void add_health(const float health)
-    {
-        if (_health < _health_cap)
-        {
-            _health += health;
-
-            // Cap health at health_cap;
-            if (_health > _health_cap)
-            {
-                _health = _health_cap;
-            }
-        }
     }
     inline const min::body<float, min::vec3> &body() const
     {
@@ -244,25 +230,10 @@ class player
     {
         return _sim->get_body(_body_id);
     }
-    inline void consume_health(const float health)
-    {
-        // Check above warning threshold
-        const bool above = _health >= 25.0;
-
-        _health -= health;
-        if (_health <= 0.0)
-        {
-            _dead = true;
-        }
-        else if (above && _health < 25.0)
-        {
-            _low_health = true;
-        }
-    }
     inline void drone_collide(const min::vec3<float> &p)
     {
         // Consume some of players health
-        consume_health(5);
+        _stats.consume_health(5);
 
         // Calculate collision direction towards player
         //const min::vec3<float> dir = (position() - p).normalize();
@@ -282,7 +253,7 @@ class player
             const float inv_sq = 1.0 / sq_dist;
             const float mult = power * size * inv_sq * 0.0005;
             const float damage = (mult * 2.0) - (mult * inv_sq);
-            consume_health(damage);
+            _stats.consume_health(damage);
 
             // Signal explode signal
             _exploded = true;
@@ -300,22 +271,6 @@ class player
     {
         return _explode_id;
     }
-    inline const skills &get_skills() const
-    {
-        return _skills;
-    }
-    inline skills &get_skills()
-    {
-        return _skills;
-    }
-    inline float get_health() const
-    {
-        return _health;
-    }
-    inline float get_health_percent() const
-    {
-        return _health / _health_cap;
-    }
     inline const min::vec3<float> &get_hook_point() const
     {
         return _hook;
@@ -327,6 +282,22 @@ class player
     inline const inventory &get_inventory() const
     {
         return _inv;
+    }
+    inline const skills &get_skills() const
+    {
+        return _skills;
+    }
+    inline skills &get_skills()
+    {
+        return _skills;
+    }
+    inline const stats &get_stats() const
+    {
+        return _stats;
+    }
+    inline stats &get_stats()
+    {
+        return _stats;
     }
     inline const min::vec3<float> &get_target() const
     {
@@ -373,10 +344,6 @@ class player
     {
         return _landed;
     }
-    inline bool is_low_health() const
-    {
-        return _low_health;
-    }
     inline bool is_target_valid() const
     {
         return _target_valid;
@@ -407,7 +374,7 @@ class player
     }
     inline bool is_dead() const
     {
-        return _dead;
+        return _stats.is_dead();
     }
     inline const min::vec3<float> &land_velocity() const
     {
@@ -452,10 +419,6 @@ class player
     {
         _landed = false;
     }
-    inline void reset_low_health()
-    {
-        _low_health = false;
-    }
     inline void respawn()
     {
         // Reset inventory
@@ -469,16 +432,11 @@ class player
         _landed = false;
         _jet = false;
 
-        // Respawn skills
-        _skills.respawn();
-
-        // Reset health
-        _health = _health_cap;
-        _dead = false;
-        _low_health = false;
-
         // Reset mode
         _mode = play_mode::none;
+
+        // Reset stats
+        _stats.respawn();
     }
     inline bool set_hook()
     {
