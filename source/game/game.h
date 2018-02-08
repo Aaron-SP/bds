@@ -123,6 +123,9 @@ class bds
             // Refresh the world exploded flag
             _world.respawn(_state.get_default_spawn());
 
+            // Reset control class
+            _controls.respawn();
+
             // Enable the keyboard
             auto &keyboard = _win.get_keyboard();
             keyboard.enable();

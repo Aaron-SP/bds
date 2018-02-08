@@ -986,6 +986,11 @@ class controls
         // Update the screen size for ui and text
         ui->set_screen(width, height);
     }
+    void respawn()
+    {
+        // Simulate a key down to change equipment
+        key_down(0);
+    }
     void update_energy_regen(const float dt)
     {
         // Regen some healthhealth

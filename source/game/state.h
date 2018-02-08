@@ -113,7 +113,7 @@ class state
     {
         return _state.get_default_spawn();
     }
-    inline const load_state &get_state_state() const
+    inline const load_state &get_load_state() const
     {
         return _state;
     }

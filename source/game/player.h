@@ -476,6 +476,9 @@ class player
         _health = _health_cap;
         _dead = false;
         _low_health = false;
+
+        // Reset mode
+        _mode = play_mode::none;
     }
     inline bool set_hook()
     {
