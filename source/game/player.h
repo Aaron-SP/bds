@@ -207,6 +207,22 @@ class player
             force(xz * friction);
         }
     }
+    inline void update_stats()
+    {
+        // Regen energy
+        if (!_skills.is_locked())
+        {
+            // Rate is units / second
+            _stats.regen_energy();
+        }
+
+        // Regen health
+        if (!_stats.is_dead())
+        {
+            // Rate is units / second
+            _stats.regen_health();
+        }
+    }
 
   public:
     player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const load_state &state, const size_t body_id)
@@ -531,6 +547,9 @@ class player
 
         // Update the player position
         update_position(friction);
+
+        // Update the player stats
+        update_stats();
     }
 };
 }

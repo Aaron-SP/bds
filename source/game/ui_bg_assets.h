@@ -32,7 +32,7 @@ class ui_bg_assets
 {
   private:
     // Backgrounds
-    static constexpr float _image_size = 512.0;
+    static constexpr float _image_size = 1024.0;
     static constexpr float _next_icon = 36.0 / _image_size;
     static constexpr float _x_cursor_uv = 4.0 / _image_size;
     static constexpr float _y_cursor_uv = 4.0 / _image_size;
@@ -74,6 +74,8 @@ class ui_bg_assets
     static constexpr float _y_dead_uv = 384.0 / _image_size;
     static constexpr float _x_pause_uv = 4.0 / _image_size;
     static constexpr float _y_pause_uv = 256.0 / _image_size;
+    static constexpr float _x_stat_uv = 508.0 / _image_size;
+    static constexpr float _y_stat_uv = 256.0 / _image_size;
 
     // Scale sizes
     static constexpr float _s_bg = 40.0;
@@ -83,6 +85,12 @@ class ui_bg_assets
     static constexpr float _s_red_y = 96.0;
     static constexpr float _s_blue_x = 32.0;
     static constexpr float _s_blue_y = 96.0;
+    static constexpr float _s_stat_bg_x = 376.0;
+    static constexpr float _s_stat_bg_y = 134.0;
+    static constexpr float _s_stat_fg_x = 366.0;
+    static constexpr float _s_stat_fg_y = 124.0;
+    static constexpr float _s_stat_uv_x = _s_stat_fg_x / _image_size;
+    static constexpr float _s_stat_uv_y = _s_stat_fg_y / _image_size;
 
     // Inventory pixel scale
     static constexpr float _s_inv = 16.0;
@@ -100,6 +108,9 @@ class ui_bg_assets
     // Placement values
     static constexpr size_t _num_buttons = 8;
     static constexpr size_t _num_half_buttons = _num_buttons / 2;
+    static constexpr float _stat_height = 336.0;
+    static constexpr float _stat_text_dx = -176.0;
+    static constexpr float _stat_text_dy = 381.0;
     static constexpr float _store_height = 48.0;
     static constexpr float _tool_height = 48.0;
     static constexpr float _tool_space = 48.0;
@@ -108,9 +119,9 @@ class ui_bg_assets
     static constexpr float _health_start = _tool_start - _tool_space - 4.0;
     static constexpr float _y_console = 100.0;
 
-    // Number of ui elements, 3 + 2 + 16 + 16 + 24 + 24
+    // Number of ui elements, 3 + 2 + 16 + 16 + 24 + 24 + 2
     static constexpr size_t _base_size = 37;
-    static constexpr size_t _extend_size = 85;
+    static constexpr size_t _extend_size = 87;
     static constexpr size_t _max_size = _extend_size;
 
     // Rect Instance stuff
@@ -366,6 +377,20 @@ class ui_bg_assets
         // Load rect at position
         set_rect(4, p, scale, blue_coord);
     }
+    inline void load_bg_stat()
+    {
+        const min::vec2<float> bg_scale(_s_stat_bg_x, _s_stat_bg_y);
+        const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
+        const min::vec2<float> p(_center_w, _stat_height);
+
+        // Load BG rect at position
+        set_rect(85, p, bg_scale, black_coord);
+
+        // Load FG rect at position
+        const min::vec2<float> fg_scale(_s_stat_fg_x, _s_stat_fg_y);
+        const min::vec4<float> stat_coord(_x_stat_uv, _y_stat_uv, _s_stat_uv_x, _s_stat_uv_y);
+        set_rect(86, p, fg_scale, stat_coord);
+    }
     inline void load_bg_black(const inv_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
@@ -524,6 +549,15 @@ class ui_bg_assets
     inline void toggle_draw_ex()
     {
         _draw_ex = !_draw_ex;
+    }
+    inline min::vec2<float> stat_position(const size_t row, const size_t size) const
+    {
+        // Calculate offset from center for this stat text element
+        const float x = _center_w + _stat_text_dx;
+        const float y = _stat_text_dy - (row * size);
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
     }
     inline min::vec2<float> store_position(const size_t row, const size_t col) const
     {

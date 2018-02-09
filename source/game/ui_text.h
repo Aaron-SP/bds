@@ -36,7 +36,7 @@ class ui_text
     static constexpr size_t _ui = _console + 1;
     static constexpr size_t _error = _ui + 2;
     static constexpr size_t _debug = _error + 1;
-    static constexpr size_t _end = _debug + 10;
+    static constexpr size_t _end = _debug + 11;
     static constexpr float _y_console = 90.0;
     static constexpr float _y_error = 180.0;
     static constexpr float _x_console_wrap = 400.0;
@@ -332,6 +332,10 @@ class ui_text
         // Update FPS and IDLE
         _stream << "CHUNKS: " << chunks;
         update_text(_debug + 9, _stream.str());
+    }
+    inline void set_debug_version(const std::string &str)
+    {
+        update_text(_debug + 10, str);
     }
     inline void toggle_draw_console()
     {

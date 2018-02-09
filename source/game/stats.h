@@ -18,15 +18,18 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __STATS__
 #define __STATS__
 
+#include <array>
+#include <string>
+
 namespace game
 {
 
 class stats
 {
   private:
-    static constexpr float _health_regen = 1.0;
-    static constexpr float _energy_regen = 2.0;
-    float _cd;
+    static constexpr float _health_regen = 1.0 / 180.0;
+    static constexpr float _energy_regen = 2.0 / 180.0;
+    static constexpr size_t _max_stats = 6;
     float _max_energy;
     float _energy;
     bool _low_energy;
@@ -34,19 +37,14 @@ class stats
     float _health;
     bool _low_health;
     bool _dead;
-    float _power;
-    float _range;
-    float _regen;
-    float _speed;
-    float _vital;
+    std::array<uint16_t, _max_stats> _stats;
 
   public:
+    static std::array<std::string, _max_stats> stat_str;
     stats()
-        : _cd(5.0),
-          _max_energy(100.0), _energy(_max_energy), _low_energy(false),
+        : _max_energy(100.0), _energy(_max_energy), _low_energy(false),
           _max_health(100.0), _health(_max_health), _low_health(false), _dead(false),
-          _power(5.0), _range(5.0), _regen(5.0),
-          _speed(5.0), _vital(5.0) {}
+          _stats{5, 5, 5, 5, 5, 5} {}
 
     inline void add_energy(const float energy)
     {
@@ -115,10 +113,6 @@ class stats
             _low_energy = true;
         }
     }
-    float cooldown() const
-    {
-        return _power;
-    }
     inline float get_energy() const
     {
         return _energy;
@@ -147,25 +141,13 @@ class stats
     {
         return _low_health;
     }
-    float power() const
+    void regen_energy()
     {
-        return _power;
+        add_energy(_energy_regen * regen());
     }
-    float range() const
+    void regen_health()
     {
-        return _range;
-    }
-    float regen() const
-    {
-        return _regen;
-    }
-    void regen_energy(const float dt)
-    {
-        add_energy(_energy_regen * _regen * dt);
-    }
-    void regen_health(const float dt)
-    {
-        add_health(_health_regen * _regen * dt);
+        add_health(_health_regen * regen());
     }
     inline void reset_low_energy()
     {
@@ -186,15 +168,46 @@ class stats
         _low_health = false;
         _dead = false;
     }
-    float speed() const
+    static constexpr size_t str_size()
     {
-        return _speed;
+        return _max_stats;
     }
-    float vital() const
+    static const std::string &str(const size_t index)
     {
-        return _vital;
+        return stat_str[index];
+    }
+    uint16_t value(const size_t index)
+    {
+        return _stats[index];
+    }
+    uint16_t power() const
+    {
+        return _stats[0];
+    }
+    uint16_t speed() const
+    {
+        return _stats[1];
+    }
+    uint16_t vital() const
+    {
+        return _stats[2];
+    }
+    uint16_t cooldown() const
+    {
+        return _stats[3];
+    }
+    uint16_t range() const
+    {
+        return _stats[4];
+    }
+    uint16_t regen() const
+    {
+        return _stats[5];
     }
 };
+
+// Initialize public static string stats
+std::array<std::string, stats::str_size()> stats::stat_str = {"Force", "Dynamism", "Tenacity", "Tranquility", "Vision", "Zeal"};
 }
 
 #endif

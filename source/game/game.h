@@ -106,6 +106,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
+        _ui.text().set_debug_version("VERSION: 0.1.193");
     }
     void update_die_respawn(const float dt)
     {
@@ -195,7 +196,7 @@ class bds
           _character(&_particles, _uniforms),
           _state(grid),
           _world(_state.get_load_state(), &_particles, &_sound, _uniforms, chunk, grid, view),
-          _ui(_uniforms, &_world.get_player().get_inventory(), _win.get_width(), _win.get_height()),
+          _ui(_uniforms, &_world.get_player().get_inventory(), &_world.get_player().get_stats(), _win.get_width(), _win.get_height()),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
           _title(_state.get_camera(), _ui, _win)
     {
@@ -362,7 +363,7 @@ class bds
             update = _character.update(camera, dt);
 
             // Update control class
-            _controls.update(dt);
+            _controls.update();
 
             // Update the UI class
             _ui.update(dt);
@@ -388,7 +389,6 @@ class bds
     {
         // Update player position debug text
         const game::player &play = _world.get_player();
-        const game::skills &skills = play.get_skills();
         const game::stats &stat = play.get_stats();
         const min::vec3<float> &p = play.position();
         const min::vec3<float> &f = _state.get_camera().get_forward();

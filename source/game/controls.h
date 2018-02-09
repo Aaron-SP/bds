@@ -993,18 +993,10 @@ class controls
         // Simulate a key down to change equipment
         key_down(0);
     }
-    void update_energy_regen(const float dt)
+    void update_stat_ui()
     {
         player &play = _world->get_player();
         stats &stat = play.get_stats();
-        skills &skill = play.get_skills();
-
-        // Regen energy
-        if (!skill.is_locked())
-        {
-            // Rate is units / second
-            stat.regen_energy(dt);
-        }
 
         // If low energy
         if (stat.is_low_energy())
@@ -1014,13 +1006,6 @@ class controls
 
             // Reset low health
             stat.reset_low_energy();
-        }
-
-        // Regen health
-        if (!stat.is_dead())
-        {
-            // Rate is units / second
-            stat.regen_health(dt);
         }
 
         // If low health
@@ -1088,10 +1073,10 @@ class controls
             _ui->set_cursor_aim();
         }
     }
-    void update(const float dt)
+    void update()
     {
         // Update energy regen
-        update_energy_regen(dt);
+        update_stat_ui();
 
         // Update ui
         update_ui();

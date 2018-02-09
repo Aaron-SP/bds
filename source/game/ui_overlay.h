@@ -36,9 +36,9 @@ class ui_overlay
     float _time;
 
   public:
-    ui_overlay(const uniforms &uniforms, inventory *const inv, const uint16_t width, const uint16_t height)
+    ui_overlay(const uniforms &uniforms, inventory *const inv, stats *const stat, const uint16_t width, const uint16_t height)
         : _text(28, width, height),
-          _bg(uniforms, inv, _text.get_bg_text(), width, height),
+          _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
           _dirty(false), _res("Low Power!"), _time(-1.0) {}
 
     inline void click()
