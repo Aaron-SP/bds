@@ -28,7 +28,8 @@ enum inv_type
 {
     store,
     key,
-    extend
+    extend,
+    cube
 };
 
 class inv_id
@@ -47,15 +48,19 @@ class inv_id
     {
         return _id != other.id();
     }
-    inline size_t row() const
+    inline size_t row3() const
     {
-        return 0;
+        return (_id - 40) / 3;
     }
-    inline size_t ext_row() const
+    inline size_t col3() const
+    {
+        return (_id - 40) % 3;
+    }
+    inline size_t row8() const
     {
         return _id / 8;
     }
-    inline size_t col() const
+    inline size_t col8() const
     {
         return _id & 7;
     }
@@ -91,12 +96,25 @@ class inv_id
     {
         return inv_id(_id + 45);
     }
+    inline inv_id bg_cube_index() const
+    {
+        return inv_id(_id + 47);
+    }
+    inline inv_id cube_index() const
+    {
+        return inv_id(_id + 56);
+    }
     inline inv_id to_key() const
     {
         return inv_id(_id + 8);
     }
     inline inv_type type() const
     {
+        if (_id >= 40)
+        {
+            // Cube type
+            return inv_type::cube;
+        }
         if (_id >= 16)
         {
             // Extended type
@@ -161,7 +179,7 @@ class item
 class inventory
 {
   private:
-    static constexpr size_t _max_slots = 40;
+    static constexpr size_t _max_slots = 49;
     static constexpr size_t _max_strings = 37;
     std::array<item, _max_slots> _inv;
     std::array<std::string, _max_strings> _inv_desc;
@@ -196,16 +214,16 @@ class inventory
         _inv_desc[24] = "???";
         _inv_desc[25] = "Light Stone";
         _inv_desc[26] = "Dark Stone";
-        _inv_desc[27] = "Light clay";
+        _inv_desc[27] = "Light Clay";
         _inv_desc[28] = "Dark Clay";
         _inv_desc[29] = "Mossy Stone";
         _inv_desc[30] = "Unstable Sodium";
         _inv_desc[31] = "???";
         _inv_desc[32] = "???";
-        _inv_desc[33] = "Red Energy";
-        _inv_desc[34] = "Purple Energy";
-        _inv_desc[35] = "Blue Energy";
-        _inv_desc[36] = "Green Energy";
+        _inv_desc[33] = "Red Crystals";
+        _inv_desc[34] = "Purple Crystals";
+        _inv_desc[35] = "Blue Crystals";
+        _inv_desc[36] = "Green Crystals";
     }
 
   public:
@@ -227,6 +245,10 @@ class inventory
     inline const item &operator[](const size_t index) const
     {
         return _inv[index];
+    }
+    inline const item &get_cube(const size_t index) const
+    {
+        return _inv[index + begin_cube()];
     }
     inline const item &get_extend(const size_t index) const
     {
@@ -305,7 +327,15 @@ class inventory
     }
     inline static size_t end_extend()
     {
-        return _max_slots;
+        return 40;
+    }
+    inline static size_t begin_cube()
+    {
+        return 40;
+    }
+    inline static size_t end_cube()
+    {
+        return 49;
     }
     inline static size_t size()
     {

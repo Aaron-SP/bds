@@ -85,9 +85,9 @@ class ui_bg_assets
     static constexpr float _s_red_y = 96.0;
     static constexpr float _s_blue_x = 32.0;
     static constexpr float _s_blue_y = 96.0;
-    static constexpr float _s_stat_bg_x = 376.0;
+    static constexpr float _s_stat_bg_x = 256.0;
     static constexpr float _s_stat_bg_y = 134.0;
-    static constexpr float _s_stat_fg_x = 366.0;
+    static constexpr float _s_stat_fg_x = 246.0;
     static constexpr float _s_stat_fg_y = 124.0;
     static constexpr float _s_stat_uv_x = _s_stat_fg_x / _image_size;
     static constexpr float _s_stat_uv_y = _s_stat_fg_y / _image_size;
@@ -108,6 +108,10 @@ class ui_bg_assets
     // Placement values
     static constexpr size_t _num_buttons = 8;
     static constexpr size_t _num_half_buttons = _num_buttons / 2;
+    static constexpr float _cube_start = 90;
+    static constexpr float _cube_height = 294;
+    static constexpr float _cube_space = 42;
+    static constexpr float _stat_dx = -60.0;
     static constexpr float _stat_height = 336.0;
     static constexpr float _stat_text_dx = -176.0;
     static constexpr float _stat_text_dy = 381.0;
@@ -119,9 +123,9 @@ class ui_bg_assets
     static constexpr float _health_start = _tool_start - _tool_space - 4.0;
     static constexpr float _y_console = 100.0;
 
-    // Number of ui elements, 3 + 2 + 16 + 16 + 24 + 24 + 2
+    // Number of ui elements, 3 + 2 + 16 + 16 + 24 + 24 + 2 + 9 + 9
     static constexpr size_t _base_size = 37;
-    static constexpr size_t _extend_size = 87;
+    static constexpr size_t _extend_size = 105;
     static constexpr size_t _max_size = _extend_size;
 
     // Rect Instance stuff
@@ -381,7 +385,7 @@ class ui_bg_assets
     {
         const min::vec2<float> bg_scale(_s_stat_bg_x, _s_stat_bg_y);
         const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
-        const min::vec2<float> p(_center_w, _stat_height);
+        const min::vec2<float> p(_center_w + _stat_dx, _stat_height);
 
         // Load BG rect at position
         set_rect(85, p, bg_scale, black_coord);
@@ -549,6 +553,15 @@ class ui_bg_assets
     inline void toggle_draw_ex()
     {
         _draw_ex = !_draw_ex;
+    }
+    inline min::vec2<float> cube_position(const size_t row, const size_t col) const
+    {
+        // Calculate offset from center for this toolbar element
+        const float x = (_center_w + _cube_start) + (col * _cube_space);
+        const float y = _cube_height + (row * _cube_space);
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
     }
     inline min::vec2<float> stat_position(const size_t row, const size_t size) const
     {

@@ -252,6 +252,32 @@ class ui_bg
             _text->add_text(_stream.str(), p.x() + _to_x, p.y() + _to_y);
         }
 
+        // Get start and end of keys
+        const size_t bc = _inv->begin_cube();
+        const size_t ec = _inv->end_cube();
+
+        // Extended rows
+        for (size_t i = bc; i < ec; i++)
+        {
+            // Offset this index for a ui bg key
+            const inv_id inv = inv_id(i);
+
+            // Get ui extended position
+            const min::vec2<float> p = pos_cube(inv);
+
+            // Add shape to buffer
+            _shapes.push_back(_assets.inv_box(p));
+
+            // Clear and reset the stream
+            clear_stream();
+
+            // Update item count
+            _stream << static_cast<int>((*_inv)[i].count());
+
+            // Add text for each box
+            _text->add_text(_stream.str(), p.x() + _to_x, p.y() + _to_y);
+        }
+
         // Add stat text
         const size_t size = _stat->str_size();
         for (size_t i = 0; i < size; i++)
@@ -319,20 +345,29 @@ class ui_bg
             _title_id = _tbuffer.add_dds_texture(tex);
         }
     }
-    inline min::vec2<float> pos_key(const inv_id inv) const
+    inline min::vec2<float> pos_cube(const inv_id inv) const
     {
         // Get row and col
-        const size_t row = inv.row();
-        const size_t col = inv.col();
+        const size_t row = inv.row3();
+        const size_t col = inv.col3();
 
         // Calculate ui element position
-        return _assets.toolbar_position(row, col);
+        return _assets.cube_position(row, col);
     }
     inline min::vec2<float> pos_ext(const inv_id inv) const
     {
         // Get row and col
-        const size_t row = inv.ext_row();
-        const size_t col = inv.col();
+        const size_t row = inv.row8();
+        const size_t col = inv.col8();
+
+        // Calculate ui element position
+        return _assets.toolbar_position(row, col);
+    }
+    inline min::vec2<float> pos_key(const inv_id inv) const
+    {
+        // Get row and col
+        const size_t row = 0;
+        const size_t col = inv.col8();
 
         // Calculate ui element position
         return _assets.toolbar_position(row, col);
@@ -340,8 +375,8 @@ class ui_bg
     inline min::vec2<float> pos_store(const inv_id inv) const
     {
         // Get row and col
-        const size_t row = inv.row();
-        const size_t col = inv.col();
+        const size_t row = 0;
+        const size_t col = inv.col8();
 
         // Calculate ui element position
         return _assets.store_position(row, col);
@@ -408,7 +443,7 @@ class ui_bg
     inline void select()
     {
         // Bg key placement
-        const min::vec2<float> active = _assets.toolbar_position(0, _select.col());
+        const min::vec2<float> active = _assets.toolbar_position(0, _select.col8());
 
         // Set activated index color to white
         _assets.load_bg_white(_select.bg_key_index(), active);
@@ -416,7 +451,7 @@ class ui_bg
     inline void select_active()
     {
         // Bg key placement
-        const min::vec2<float> active = _assets.toolbar_position(0, _select.col());
+        const min::vec2<float> active = _assets.toolbar_position(0, _select.col8());
 
         // Set activated index color to white
         _assets.load_bg_yellow(_select.bg_key_index(), active);
@@ -426,20 +461,21 @@ class ui_bg
         // Get the ui type
         const inv_type type = _click.type();
 
-        // Determine if this is extended inventory
-        if (type == inv_type::extend)
+        // Determine inventory type to update bg color
+        if (type == inv_type::cube)
         {
-            // Update the bg color
+            _assets.load_bg_light_blue(_click.bg_cube_index(), pos_cube(_click));
+        }
+        else if (type == inv_type::extend)
+        {
             _assets.load_bg_light_blue(_click.bg_ex_index(), pos_ext(_click));
         }
         else if (type == inv_type::key)
         {
-            // Update the bg color
             _assets.load_bg_light_blue(_click.bg_key_index(), pos_key(_click));
         }
         else
         {
-            // Update the bg color
             _assets.load_bg_light_blue(_click.bg_store_index(), pos_store(_click));
         }
     }
@@ -453,39 +489,41 @@ class ui_bg
 
             if (_clicking)
             {
-                // Determine if this is extended inventory
-                if (type == inv_type::extend)
+                // Determine inventory type to update bg color
+                if (type == inv_type::cube)
                 {
-                    // Update the bg color
+                    _assets.load_bg_white(_hover.bg_cube_index(), pos_cube(_hover));
+                }
+                else if (type == inv_type::extend)
+                {
                     _assets.load_bg_white(_hover.bg_ex_index(), pos_ext(_hover));
                 }
                 else if (type == inv_type::key)
                 {
-                    // Update the bg color
                     _assets.load_bg_white(_hover.bg_key_index(), pos_key(_hover));
                 }
                 else
                 {
-                    // Update the bg color
                     _assets.load_bg_white(_hover.bg_store_index(), pos_store(_hover));
                 }
             }
             else
             {
-                // Determine if this is extended inventory
-                if (type == inv_type::extend)
+                // Determine inventory type to update bg color
+                if (type == inv_type::cube)
                 {
-                    // Update the bg color
+                    _assets.load_bg_yellow(_hover.bg_cube_index(), pos_cube(_hover));
+                }
+                else if (type == inv_type::extend)
+                {
                     _assets.load_bg_yellow(_hover.bg_ex_index(), pos_ext(_hover));
                 }
                 else if (type == inv_type::key)
                 {
-                    // Update the bg color
                     _assets.load_bg_yellow(_hover.bg_key_index(), pos_key(_hover));
                 }
                 else
                 {
-                    // Update the bg color
                     _assets.load_bg_yellow(_hover.bg_store_index(), pos_store(_hover));
                 }
             }
@@ -540,14 +578,13 @@ class ui_bg
     inline void unselect()
     {
         // Bg key placement
-        const min::vec2<float> prev = _assets.toolbar_position(0, _select.col());
+        const min::vec2<float> prev = _assets.toolbar_position(0, _select.col8());
 
         // Set previous unselected color to black
         _assets.load_bg_black(_select.bg_key_index(), prev);
     }
     inline void unselect_click()
     {
-        // Determine if this is extended inventory
         if (_click == _select)
         {
             select_active();
@@ -561,20 +598,21 @@ class ui_bg
             // Get the ui type
             const inv_type type = _click.type();
 
-            // Determine if this is extended inventory
-            if (type == inv_type::extend)
+            // Determine inventory type to update bg color
+            if (type == inv_type::cube)
             {
-                // Update the bg color
+                _assets.load_bg_black(_click.bg_cube_index(), pos_cube(_click));
+            }
+            else if (type == inv_type::extend)
+            {
                 _assets.load_bg_black(_click.bg_ex_index(), pos_ext(_click));
             }
             else if (type == inv_type::key)
             {
-                // Update the bg color
                 _assets.load_bg_black(_click.bg_key_index(), pos_key(_click));
             }
             else
             {
-                // Update the bg color
                 _assets.load_bg_black(_click.bg_store_index(), pos_store(_click));
             }
         }
@@ -591,20 +629,21 @@ class ui_bg
                 // Get the ui type
                 const inv_type type = _hover.type();
 
-                // Determine if this is extended inventory
-                if (type == inv_type::extend)
+                // Determine inventory type to update bg color
+                if (type == inv_type::cube)
                 {
-                    // Update the bg color
+                    _assets.load_bg_black(_hover.bg_cube_index(), pos_cube(_hover));
+                }
+                else if (type == inv_type::extend)
+                {
                     _assets.load_bg_black(_hover.bg_ex_index(), pos_ext(_hover));
                 }
                 else if (type == inv_type::key)
                 {
-                    // Update the bg color
                     _assets.load_bg_black(_hover.bg_key_index(), pos_key(_hover));
                 }
                 else
                 {
-                    // Update the bg color
                     _assets.load_bg_black(_hover.bg_store_index(), pos_store(_hover));
                 }
             }
@@ -622,17 +661,36 @@ class ui_bg
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
-            // Get ui position
-            const min::vec2<float> p = pos_store(inv);
-
             // Update the black bg icon
-            _assets.load_bg_black(inv.bg_store_index(), p);
+            _assets.load_bg_black(inv.bg_store_index(), pos_store(inv));
 
             // Get the inventory id
             const uint8_t id = (*_inv)[i].id();
 
             // Update the icon
             set_inventory(inv.store_index(), id, p);
+        }
+    }
+    inline void update_cube()
+    {
+        // Get start and end of keys
+        const size_t bc = _inv->begin_cube();
+        const size_t ec = _inv->end_cube();
+
+        // Update all key icons
+        for (size_t i = bc; i < ec; i++)
+        {
+            // Offset this index for a ui bg key
+            const inv_id inv = inv_id(i);
+
+            // Update the black bg icon
+            _assets.load_bg_black(inv.bg_cube_index(), pos_cube(inv));
+
+            // Get the inventory id
+            const uint8_t id = (*_inv)[i].id();
+
+            // Update the icon
+            set_inventory(inv.cube_index(), id, p);
         }
     }
     inline void update_key()
@@ -647,11 +705,8 @@ class ui_bg
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
-            // Get ui position
-            const min::vec2<float> p = pos_key(inv);
-
             // Update the black bg icon
-            _assets.load_bg_black(inv.bg_key_index(), p);
+            _assets.load_bg_black(inv.bg_key_index(), pos_key(inv));
 
             // Get the inventory id
             const uint8_t id = (*_inv)[i].id();
@@ -672,11 +727,8 @@ class ui_bg
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
-            // Get ui position
-            const min::vec2<float> p = pos_ext(inv);
-
             // Update the black bg icon
-            _assets.load_bg_black(inv.bg_ex_index(), p);
+            _assets.load_bg_black(inv.bg_ex_index(), pos_ext(inv));
 
             // Get the inventory id
             const uint8_t id = (*_inv)[i].id();
@@ -696,6 +748,9 @@ class ui_bg
         // Update extend
         update_extend();
 
+        // Update cube
+        update_cube();
+
         // Select selected key
         select_active();
 
@@ -707,20 +762,21 @@ class ui_bg
         // Get the ui type
         const inv_type type = inv.type();
 
-        // Determine if this is extended inventory
-        if (type == inv_type::extend)
+        // Determine inventory type to update icon
+        if (type == inv_type::cube)
         {
-            // Update the icon
+            set_inventory(inv.cube_index(), id, pos_cube(inv));
+        }
+        else if (type == inv_type::extend)
+        {
             set_inventory(inv.ex_index(), id, pos_ext(inv));
         }
         else if (type == inv_type::key)
         {
-            // Update the icon
             set_inventory(inv.key_index(), id, pos_key(inv));
         }
         else
         {
-            // Update the icon
             set_inventory(inv.store_index(), id, pos_store(inv));
         }
     }
