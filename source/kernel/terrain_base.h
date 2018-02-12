@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __TERRAIN_BASE__
 #define __TERRAIN_BASE__
 
+#include <game/id.h>
 #include <game/perlin.h>
 #include <game/thread_pool.h>
 #include <min/vec3.h>
@@ -74,6 +75,9 @@ class terrain_base
         // Create working function
         const auto work = [this, &write](std::mt19937 &gen, const size_t i) {
 
+            // Dope minerals in base
+            std::uniform_int_distribution<int8_t> dope(0, 11);
+
             // Fill out this section
             for (size_t j = _start; j < _stop; j++)
             {
@@ -86,35 +90,91 @@ class terrain_base
                     const size_t index = key(std::make_tuple(i, j, k));
                     if (value >= 0.0 && value < 0.05)
                     {
-                        write[index] = 2;
+                        if (dope(gen) == 0)
+                        {
+                            write[index] = game::id_value(game::block_id::IRON);
+                        }
+                        else
+                        {
+                            write[index] = game::id_value(game::block_id::DIRT1);
+                        }
                     }
                     else if (value >= 0.05 && value < 0.10)
                     {
-                        write[index] = 3;
+                        if (dope(gen) == 0)
+                        {
+                            write[index] = game::id_value(game::block_id::SILVER);
+                        }
+                        else
+                        {
+                            write[index] = game::id_value(game::block_id::DIRT2);
+                        }
                     }
                     else if (value >= 0.20 && value < 0.25)
                     {
-                        write[index] = 16;
+                        if (dope(gen) == 0)
+                        {
+                            write[index] = game::id_value(game::block_id::MAGNESIUM);
+                        }
+                        else
+                        {
+                            write[index] = game::id_value(game::block_id::STONE1);
+                        }
                     }
                     else if (value >= 0.25 && value < 0.30)
                     {
-                        write[index] = 17;
+                        if (dope(gen) == 0)
+                        {
+                            write[index] = game::id_value(game::block_id::GOLD);
+                        }
+                        else
+                        {
+                            write[index] = game::id_value(game::block_id::STONE2);
+                        }
                     }
                     else if (value >= 0.31 && value < 0.32)
                     {
-                        write[index] = 20;
+                        if (dope(gen) == 0)
+                        {
+                            write[index] = game::id_value(game::block_id::COPPER);
+                        }
+                        else
+                        {
+                            write[index] = game::id_value(game::block_id::STONE3);
+                        }
                     }
                     else if (value >= 0.40 && value < 0.45)
                     {
-                        write[index] = 18;
+                        if (dope(gen) == 0)
+                        {
+                            write[index] = game::id_value(game::block_id::SODIUM);
+                        }
+                        else
+                        {
+                            write[index] = game::id_value(game::block_id::CLAY1);
+                        }
                     }
                     else if (value >= 0.45 && value < 0.50)
                     {
-                        write[index] = 19;
+                        if (dope(gen) == 0)
+                        {
+                            write[index] = game::id_value(game::block_id::CALCIUM);
+                        }
+                        else
+                        {
+                            write[index] = game::id_value(game::block_id::CLAY2);
+                        }
                     }
                     else if (value >= 0.51 && value < 0.515)
                     {
-                        write[index] = 21;
+                        if (dope(gen) == 0)
+                        {
+                            write[index] = game::id_value(game::block_id::POTASSIUM);
+                        }
+                        else
+                        {
+                            write[index] = game::id_value(game::block_id::SODIUM);
+                        }
                     }
                 }
             }

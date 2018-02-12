@@ -24,6 +24,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/cgrid.h>
 #include <game/drones.h>
 #include <game/drops.h>
+#include <game/id.h>
 #include <game/load_state.h>
 #include <game/particle.h>
 #include <game/player.h>
@@ -184,13 +185,13 @@ class world
             // If block is lava, play exploding sound
             // Prefer stereo if close to the explosion
             float power = 115.5 * ex_size;
-            if (in_range && value == 21)
+            if (in_range && value == id_value(block_id::SODIUM))
             {
                 // Play explode sound
                 power = 5000.0;
                 _sound->play_explode_stereo(point);
             }
-            else if (value == 21)
+            else if (value == id_value(block_id::SODIUM))
             {
                 // Play explode sound
                 _sound->play_explode_mono(point);
@@ -312,7 +313,7 @@ class world
         const auto ex = [this, p](const std::pair<min::aabbox<float, min::vec3>, int8_t> &cell) {
 
             // Check for exploding mines
-            if (cell.second == 21)
+            if (cell.second == id_value(block_id::SODIUM))
             {
                 // Get box center for explosion point
                 const min::vec3<float> point = cell.first.get_center();
@@ -461,7 +462,7 @@ class world
 
             // If block is lava override explode scale
             min::vec3<unsigned> ex_scale = scale;
-            if (value == 21)
+            if (value == id_value(block_id::SODIUM))
             {
                 ex_scale = _ex_radius;
             }

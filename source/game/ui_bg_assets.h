@@ -50,6 +50,8 @@ class ui_bg_assets
     static constexpr float _y_white_uv = 4.0 / _image_size;
     static constexpr float _x_light_blue_uv = 256.0 / _image_size;
     static constexpr float _y_light_blue_uv = 4.0 / _image_size;
+    static constexpr float _x_grey_uv = 292.0 / _image_size;
+    static constexpr float _y_grey_uv = 4.0 / _image_size;
 
     // Icons
     static constexpr float _x_reload_uv = 4.0 / _image_size;
@@ -66,16 +68,18 @@ class ui_bg_assets
     static constexpr float _y_scan_uv = 40.0 / _image_size;
 
     // Cubes
-    static constexpr float _x_cube_uv = 4.0 / _image_size;
-    static constexpr float _y_cube_uv = 76.0 / _image_size;
+    static constexpr float _x_block_uv = 4.0 / _image_size;
+    static constexpr float _y_block_uv = 76.0 / _image_size;
+    static constexpr float _x_item_uv = 328.0 / _image_size;
+    static constexpr float _y_item_uv = 76.0 / _image_size;
 
     // Menu text
     static constexpr float _x_dead_uv = 4.0 / _image_size;
-    static constexpr float _y_dead_uv = 384.0 / _image_size;
+    static constexpr float _y_dead_uv = 896.0 / _image_size;
     static constexpr float _x_pause_uv = 4.0 / _image_size;
-    static constexpr float _y_pause_uv = 256.0 / _image_size;
+    static constexpr float _y_pause_uv = 768.0 / _image_size;
     static constexpr float _x_stat_uv = 508.0 / _image_size;
-    static constexpr float _y_stat_uv = 256.0 / _image_size;
+    static constexpr float _y_stat_uv = 768.0 / _image_size;
 
     // Scale sizes
     static constexpr float _s_bg = 40.0;
@@ -435,6 +439,14 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, white_coord);
     }
+    inline void load_empty_icon(const inv_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> grey_coord(_x_grey_uv, _y_grey_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, grey_coord);
+    }
     inline void load_beam_icon(const inv_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
@@ -443,13 +455,27 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, beam_coord);
     }
-    inline void load_cube_icon(const inv_id id, const int8_t atlas_id, const min::vec2<float> &p)
+    inline void load_block_icon(const inv_id id, const int8_t block_id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
 
         // Calculate the start of cube uv in grid
-        const float x = _x_cube_uv + (atlas_id % 8) * _next_icon;
-        const float y = _y_cube_uv + (atlas_id / 8) * _next_icon;
+        const float x = _x_block_uv + (block_id & 7) * _next_icon;
+        const float y = _y_block_uv + (block_id / 8) * _next_icon;
+
+        // Calculate cube uv coordinates
+        const min::vec4<float> beam_coord(x, y, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, beam_coord);
+    }
+    inline void load_item_icon(const inv_id id, const int8_t item_id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+
+        // Calculate the start of cube uv in grid
+        const float x = _x_item_uv + (item_id & 15) * _next_icon;
+        const float y = _y_item_uv + (item_id / 16) * _next_icon;
 
         // Calculate cube uv coordinates
         const min::vec4<float> beam_coord(x, y, _s_uv, _s_uv);

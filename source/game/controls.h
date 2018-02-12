@@ -327,10 +327,18 @@ class controls
         // Lookup key in inventory
         const inventory &inv = play.get_inventory();
         const item &it = inv.get_key(index);
+
+        // Get the item id and type
+        const item_type type = it.type();
         const uint8_t id = it.id();
 
         // Is the gun locked?
         const bool locked = skill.is_locked();
+
+        // What type of item is it?
+        const bool is_empty = (type == item_type::empty);
+        const bool is_skill = (type == item_type::skill);
+        const bool is_block = (type == item_type::block);
 
         // If not locked
         if (!locked)
@@ -342,21 +350,21 @@ class controls
             _ui->set_console_string(inv.get_string(it));
 
             // Cancel edit mode
-            if (id < 9)
+            if (!is_block)
             {
                 // Disable edit mode
                 _world->set_edit_mode(false);
             }
 
             // Play selection sound
-            if (id > 0)
+            if (!is_empty)
             {
                 // Play selection sound
                 _sound->play_click();
             }
 
             // Choose action
-            if (id >= 9)
+            if (is_block)
             {
                 // Reset scale
                 _world->reset_scale();
@@ -370,7 +378,7 @@ class controls
                 // Set place mode
                 play.set_mode(play_mode::place);
             }
-            else if (id > 0)
+            else if (is_skill)
             {
                 // Set skill mode
                 switch (id)
@@ -618,9 +626,11 @@ class controls
         const bool pause = state->get_pause();
         if (input)
         {
-            ui_overlay *const ui = control->get_ui();
-            ui->click();
-            return;
+            // Play click sound
+            sound->play_click();
+
+            // Do mouse click on UI
+            return ui->click();
         }
         else if (pause)
         {
@@ -751,11 +761,12 @@ class controls
         if (mode)
         {
             // Get the active atlas id
-            const uint8_t inv_id = inv.id_from_atlas(world->get_atlas_id());
+            const uint8_t block_id = inv.id_from_atlas(world->get_atlas_id());
 
             // Try to consume energy to create this resource
             uint8_t count = 1;
-            const bool consumed = inv.consume(inv_id, count);
+            const inv_id id = ui->get_selected();
+            const bool consumed = inv.consume(id.index(), block_id, count);
             if (consumed)
             {
                 // Calculate new point to add
@@ -909,6 +920,8 @@ class controls
         state *const state = control->get_state();
         world *const world = control->get_world();
         player &play = world->get_player();
+        sound *const sound = control->get_sound();
+        ui_overlay *const ui = control->get_ui();
 
         // Are we dead?
         const bool dead = play.is_dead();
@@ -924,7 +937,15 @@ class controls
         // Does user have control of cursor?
         const bool input = state->get_user_input();
         const bool pause = state->get_pause();
-        if (input || pause)
+        if (input)
+        {
+            // Play click sound
+            sound->play_click();
+
+            // Do mouse action on UI
+            return ui->action();
+        }
+        else if (pause)
         {
             return;
         }
@@ -1063,7 +1084,7 @@ class controls
             // Reloading
             _ui->set_cursor_reload();
         }
-        else if (player.get_target_value() == 21 && _world->in_range_explosion(player.get_target()) && player.is_target_valid())
+        else if (player.get_target_value() == id_value(block_id::SODIUM) && _world->in_range_explosion(player.get_target()) && player.is_target_valid())
         {
             _ui->set_cursor_target();
         }

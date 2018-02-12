@@ -41,6 +41,13 @@ class ui_overlay
           _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
           _dirty(false), _res("Low Power!"), _time(-1.0) {}
 
+    inline void action()
+    {
+        if (_bg.is_extended())
+        {
+            _bg.action();
+        }
+    }
     inline void click()
     {
         if (_bg.is_extended())
@@ -75,6 +82,10 @@ class ui_overlay
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
         return _bg.get_scale();
+    }
+    inline inv_id get_selected() const
+    {
+        return _bg.get_selected();
     }
     inline const std::vector<min::mat3<float>> &get_uv() const
     {

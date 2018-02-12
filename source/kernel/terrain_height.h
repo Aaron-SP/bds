@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __TERRAIN_HEIGHT__
 
 #include <game/height_map.h>
+#include <game/id.h>
 #include <game/thread_pool.h>
 #include <min/vec3.h>
 
@@ -50,10 +51,17 @@ class terrain_height
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
 
+            const int8_t grass_start = game::id_value(game::block_id::GRASS1);
+            const int8_t grass_end = game::id_value(game::block_id::GRASS2);
+            const int8_t dirt_start = game::id_value(game::block_id::DIRT1);
+            const int8_t dirt_end = game::id_value(game::block_id::DIRT2);
+            const int8_t sand_start = game::id_value(game::block_id::SAND1);
+            const int8_t sand_end = game::id_value(game::block_id::SAND2);
+
             // Random numbers between 0 and 5, including both
-            std::uniform_int_distribution<int8_t> grass(0, 1);
-            std::uniform_int_distribution<int8_t> soil(2, 3);
-            std::uniform_int_distribution<int8_t> sand(4, 5);
+            std::uniform_int_distribution<int8_t> grass(grass_start, grass_end);
+            std::uniform_int_distribution<int8_t> soil(dirt_start, dirt_end);
+            std::uniform_int_distribution<int8_t> sand(sand_start, sand_end);
 
             // Z axis
             for (size_t k = 0; k < _scale; k++)

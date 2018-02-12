@@ -529,31 +529,92 @@ class ui_bg
             }
         }
     }
-    inline void set_inventory(const inv_id inv, const uint8_t id, const min::vec2<float> &p)
+    inline void set_click_down(const inv_id inv)
     {
-        // Draw key icon overlay
-        switch (id)
+        // If we are unclicking
+        if (_clicking && _click == inv)
         {
-        case 0:
-            return _assets.load_cube_icon(inv, 23, p);
-        case 1:
-            return _assets.load_beam_icon(inv, p);
-        case 2:
-            return _assets.load_missile_icon(inv, p);
-        case 3:
-            return _assets.load_grapple_icon(inv, p);
-        case 4:
-            return _assets.load_jet_icon(inv, p);
-        case 5:
-            return _assets.load_scan_icon(inv, p);
-        case 6:
-            break;
-        case 7:
-            break;
-        case 8:
-            break;
-        default:
-            return _assets.load_cube_icon(inv, _inv->id_to_atlas(id), p);
+            unselect_click();
+
+            // Unset clicking
+            _clicking = false;
+        }
+        else if (_clicking)
+        {
+            // Unselect old click
+            unselect_click();
+
+            // Swap inventory
+            _inv->swap(_click.index(), inv.index());
+
+            // Disable clicking
+            _clicking = false;
+        }
+        else
+        {
+            // Set selected index
+            _click = inv;
+
+            // Select hover
+            select_click();
+
+            // Set clicking
+            _clicking = true;
+        }
+    }
+    inline void set_hover_down(const inv_id inv)
+    {
+        // Already hovering here?
+        if (_hovering && _hover == inv)
+        {
+            return;
+        }
+
+        // Unselect hover
+        unselect_hover();
+
+        // Set selected index
+        _hover = inv;
+
+        // Set hovering
+        _hovering = true;
+
+        // If key is not selected or clicked change color
+        const bool clicked = (_clicking && _click == inv);
+        if (!clicked && _select != inv)
+        {
+            // Select hover
+            select_hover();
+        }
+    }
+    inline void set_inventory(const inv_id inv, const item &it, const min::vec2<float> &p)
+    {
+        // Draw key icon overlay based on type
+        const item_type type = it.type();
+        switch (type)
+        {
+        case item_type::empty:
+            return _assets.load_empty_icon(inv, p);
+        case item_type::skill:
+            switch (it.id())
+            {
+            case 1:
+                return _assets.load_beam_icon(inv, p);
+            case 2:
+                return _assets.load_missile_icon(inv, p);
+            case 3:
+                return _assets.load_grapple_icon(inv, p);
+            case 4:
+                return _assets.load_jet_icon(inv, p);
+            case 5:
+                return _assets.load_scan_icon(inv, p);
+            default:
+                return;
+            }
+        case item_type::block:
+            return _assets.load_block_icon(inv, it.to_block_id(), p);
+        case item_type::item:
+            return _assets.load_item_icon(inv, it.to_item_id(), p);
         }
     }
     inline void set_start_index(const GLint start_index) const
@@ -661,14 +722,14 @@ class ui_bg
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
-            // Update the black bg icon
-            _assets.load_bg_black(inv.bg_store_index(), pos_store(inv));
+            // Calculate icon position
+            const min::vec2<float> p = pos_store(inv);
 
-            // Get the inventory id
-            const uint8_t id = (*_inv)[i].id();
+            // Update the black bg icon
+            _assets.load_bg_black(inv.bg_store_index(), p);
 
             // Update the icon
-            set_inventory(inv.store_index(), id, p);
+            set_inventory(inv.store_index(), (*_inv)[i], p);
         }
     }
     inline void update_cube()
@@ -683,14 +744,14 @@ class ui_bg
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
-            // Update the black bg icon
-            _assets.load_bg_black(inv.bg_cube_index(), pos_cube(inv));
+            // Calculate icon position
+            const min::vec2<float> p = pos_cube(inv);
 
-            // Get the inventory id
-            const uint8_t id = (*_inv)[i].id();
+            // Update the black bg icon
+            _assets.load_bg_black(inv.bg_cube_index(), p);
 
             // Update the icon
-            set_inventory(inv.cube_index(), id, p);
+            set_inventory(inv.cube_index(), (*_inv)[i], p);
         }
     }
     inline void update_key()
@@ -705,14 +766,14 @@ class ui_bg
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
-            // Update the black bg icon
-            _assets.load_bg_black(inv.bg_key_index(), pos_key(inv));
+            // Calculate icon position
+            const min::vec2<float> p = pos_key(inv);
 
-            // Get the inventory id
-            const uint8_t id = (*_inv)[i].id();
+            // Update the black bg icon
+            _assets.load_bg_black(inv.bg_key_index(), p);
 
             // Update the icon
-            set_inventory(inv.key_index(), id, p);
+            set_inventory(inv.key_index(), (*_inv)[i], p);
         }
     }
     inline void update_extend()
@@ -727,14 +788,14 @@ class ui_bg
             // Offset this index for a ui bg key
             const inv_id inv = inv_id(i);
 
-            // Update the black bg icon
-            _assets.load_bg_black(inv.bg_ex_index(), pos_ext(inv));
+            // Calculate icon position
+            const min::vec2<float> p = pos_ext(inv);
 
-            // Get the inventory id
-            const uint8_t id = (*_inv)[i].id();
+            // Update the black bg icon
+            _assets.load_bg_black(inv.bg_ex_index(), p);
 
             // Update the icon
-            set_inventory(inv.ex_index(), id, p);
+            set_inventory(inv.ex_index(), (*_inv)[i], p);
         }
     }
     inline void update_inventory()
@@ -757,7 +818,7 @@ class ui_bg
         // Select hovered key
         select_hover();
     }
-    inline void update_inv_slot(const inv_id inv, const uint8_t id)
+    inline void update_inv_slot(const inv_id inv, const item &it)
     {
         // Get the ui type
         const inv_type type = inv.type();
@@ -765,19 +826,19 @@ class ui_bg
         // Determine inventory type to update icon
         if (type == inv_type::cube)
         {
-            set_inventory(inv.cube_index(), id, pos_cube(inv));
+            set_inventory(inv.cube_index(), it, pos_cube(inv));
         }
         else if (type == inv_type::extend)
         {
-            set_inventory(inv.ex_index(), id, pos_ext(inv));
+            set_inventory(inv.ex_index(), it, pos_ext(inv));
         }
         else if (type == inv_type::key)
         {
-            set_inventory(inv.key_index(), id, pos_key(inv));
+            set_inventory(inv.key_index(), it, pos_key(inv));
         }
         else
         {
-            set_inventory(inv.store_index(), id, pos_store(inv));
+            set_inventory(inv.store_index(), it, pos_store(inv));
         }
     }
 
@@ -805,6 +866,30 @@ class ui_bg
         position_ui();
     }
 
+    inline void action()
+    {
+        if (_hovering && !_minimized)
+        {
+            // Use the hover id to do action on ui element
+            _inv->decay(_hover.index());
+        }
+    }
+    inline size_t bg_text_size() const
+    {
+        // If extended draw
+        if (_assets.get_draw_ex())
+        {
+            return _text->size();
+        }
+        else if (_assets.get_draw_title())
+        {
+            // Do not draw anything
+            return 0;
+        }
+
+        // If not extended
+        return _inv->end_key();
+    }
     inline void click()
     {
         // Click on the currently hovered icon
@@ -851,25 +936,13 @@ class ui_bg
             draw_transparent_ui();
         }
     }
-    inline size_t bg_text_size() const
-    {
-        // If extended draw
-        if (_assets.get_draw_ex())
-        {
-            return _text->size();
-        }
-        else if (_assets.get_draw_title())
-        {
-            // Do not draw anything
-            return 0;
-        }
-
-        // If not extended
-        return _inv->end_key();
-    }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
         return _assets.get_scale();
+    }
+    inline inv_id get_selected() const
+    {
+        return _select;
     }
     inline const std::vector<min::mat3<float>> &get_uv() const
     {
@@ -936,39 +1009,6 @@ class ui_bg
         // Turn off showing menu
         reset_menu();
     }
-    inline void set_click_down(const inv_id inv)
-    {
-        // If we are unclicking
-        if (_clicking && _click == inv)
-        {
-            unselect_click();
-
-            // Unset clicking
-            _clicking = false;
-        }
-        else if (_clicking)
-        {
-            // Unselect old click
-            unselect_click();
-
-            // Swap inventory
-            _inv->swap(_click.index(), inv.index());
-
-            // Disable clicking
-            _clicking = false;
-        }
-        else
-        {
-            // Set selected index
-            _click = inv;
-
-            // Select hover
-            select_click();
-
-            // Set clicking
-            _clicking = true;
-        }
-    }
     inline void set_cursor_aim()
     {
         if (!_assets.get_draw_menu())
@@ -1021,31 +1061,6 @@ class ui_bg
     inline void set_health(const float health)
     {
         _assets.set_health(health);
-    }
-    inline void set_hover_down(const inv_id inv)
-    {
-        // Already hovering here?
-        if (_hovering && _hover == inv)
-        {
-            return;
-        }
-
-        // Unselect hover
-        unselect_hover();
-
-        // Set selected index
-        _hover = inv;
-
-        // Set hovering
-        _hovering = true;
-
-        // If key is not selected or clicked change color
-        const bool clicked = (_clicking && _click == inv);
-        if (!clicked && _select != inv)
-        {
-            // Select hover
-            select_hover();
-        }
     }
     inline void set_key_down(const size_t index)
     {
@@ -1153,13 +1168,13 @@ class ui_bg
 
                 // Update item count text
                 clear_stream();
-                _stream << static_cast<int>((*_inv)[i.index()].count());
+                _stream << static_cast<int>(it.count());
 
                 // Might require a shift in the future
                 _text->set_text(_stream.str(), i.index());
 
                 // Update the slot
-                update_inv_slot(i, it.id());
+                update_inv_slot(i, it);
             }
 
             // Flag inventory clean state
