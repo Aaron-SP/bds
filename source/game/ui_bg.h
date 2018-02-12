@@ -936,6 +936,10 @@ class ui_bg
             draw_transparent_ui();
         }
     }
+    inline const std::string &get_hover_string() const
+    {
+        return _inv->get_string((*_inv)[_hover.index()]);
+    }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
         return _assets.get_scale();
@@ -989,11 +993,16 @@ class ui_bg
 
                 // Reset the hover index
                 _hovering = false;
+
+                // Not overlapping a UI element
+                return false;
             }
 
+            // Overlapping a UI element
             return true;
         }
 
+        // Not overlapping a UI element
         return false;
     }
     inline void reset_menu()

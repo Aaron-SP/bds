@@ -58,6 +58,8 @@ class bds
     game::title _title;
     game::sound _sound;
     std::pair<uint16_t, uint16_t> _cursor;
+    double _fps;
+    double _idle;
 
     void set_cursor_center()
     {
@@ -154,6 +156,23 @@ class bds
             }
         }
     }
+    void update_ui(const float dt)
+    {
+        // Update player position debug text
+        const game::player &play = _world.get_player();
+        const game::stats &stat = play.get_stats();
+        const min::vec3<float> &p = play.position();
+        const min::vec3<float> &f = _state.get_camera().get_forward();
+        const float health = stat.get_health();
+        const float energy = stat.get_energy();
+        const size_t chunks = _world.get_chunks_in_view();
+
+        // Update the ui overlay
+        _ui.update_text(p, f, health, energy, _fps, _idle, chunks);
+
+        // Process timer and upload changes
+        _ui.update(dt);
+    }
     void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
         // Bind uniforms
@@ -198,7 +217,7 @@ class bds
           _world(_state.get_load_state(), &_particles, &_sound, _uniforms, chunk, grid, view),
           _ui(_uniforms, &_world.get_player().get_inventory(), &_world.get_player().get_stats(), _win.get_width(), _win.get_height()),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
-          _title(_state.get_camera(), _ui, _win)
+          _title(_state.get_camera(), _ui, _win), _fps(0.0), _idle(0.0)
     {
         // Set depth and cull settings
         min::settings::initialize();
@@ -366,7 +385,7 @@ class bds
             _controls.update();
 
             // Update the UI class
-            _ui.update(dt);
+            update_ui(dt);
 
             // Check if we died
             update_die_respawn(dt);
@@ -385,19 +404,10 @@ class bds
         auto &keyboard = _win.get_keyboard();
         keyboard.update(dt);
     }
-    void update_text(const double fps, const double idle)
+    void update_fps(const double fps, const double idle)
     {
-        // Update player position debug text
-        const game::player &play = _world.get_player();
-        const game::stats &stat = play.get_stats();
-        const min::vec3<float> &p = play.position();
-        const min::vec3<float> &f = _state.get_camera().get_forward();
-        const float health = stat.get_health();
-        const float energy = stat.get_energy();
-        const size_t chunks = _world.get_chunks_in_view();
-
-        // Update the ui overlay
-        _ui.update_text(p, f, health, energy, fps, idle, chunks);
+        _fps = fps;
+        _idle = idle;
     }
     void update_window()
     {

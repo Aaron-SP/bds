@@ -35,7 +35,8 @@ class ui_text
     static constexpr size_t _console = 0;
     static constexpr size_t _ui = _console + 1;
     static constexpr size_t _error = _ui + 2;
-    static constexpr size_t _debug = _error + 1;
+    static constexpr size_t _hover = _error + 1;
+    static constexpr size_t _debug = _hover + 1;
     static constexpr size_t _end = _debug + 11;
     static constexpr float _y_console = 90.0;
     static constexpr float _y_error = 180.0;
@@ -44,6 +45,8 @@ class ui_text
     static constexpr float _x_health = 248.0;
     static constexpr float _x_energy = 200.0;
     static constexpr float _y_ui = 150.0;
+    static constexpr float _hover_dx = 10.0;
+    static constexpr float _hover_dy = 20.0;
 
     // Text OpenGL stuff
     min::shader _vertex;
@@ -60,6 +63,8 @@ class ui_text
     bool _draw_debug;
     bool _draw_error;
     bool _draw_ui;
+    bool _draw_hover;
+    min::vec2<float> _hover_p;
 
     inline void add_text(const std::string &s, const float x, const float y)
     {
@@ -83,7 +88,7 @@ class ui_text
     }
     inline void reposition_text(const uint16_t width, const uint16_t height)
     {
-        // Position the console elements
+        // Position the console element
         const uint16_t w2 = (width / 2);
         _text.set_text_center(_console, w2, _y_console);
 
@@ -91,8 +96,11 @@ class ui_text
         _text.set_text_location(_ui, w2 - _x_health, _y_ui);
         _text.set_text_location(_ui + 1, w2 + _x_energy, _y_ui);
 
-        // Position error elements
+        // Position error element
         _text.set_text_center(_error, w2, height - _y_error);
+
+        // Position the hover element
+        _text.set_text_location(_hover, _hover_p.x(), _hover_p.y());
 
         // Rescale all debug text
         uint16_t y = height - 20;
@@ -102,6 +110,10 @@ class ui_text
             _text.set_text_location(i, 10, y);
             y -= _font_size;
         }
+    }
+    inline void reserve_memory()
+    {
+        _text.reserve(_end);
     }
     inline void update_text(const size_t index, const std::string &s)
     {
@@ -115,11 +127,16 @@ class ui_text
           _prog(_vertex, _fragment),
           _text("data/fonts/open_sans.ttf", font_size),
           _text_bg("data/fonts/open_sans.ttf", 14),
-          _font_size(font_size), _draw_console(false), _draw_debug(false), _draw_error(false), _draw_ui(false)
+          _font_size(font_size),
+          _draw_console(false), _draw_debug(false), _draw_error(false),
+          _draw_ui(false), _draw_hover(false)
     {
         // Update the text buffer screen dimensions
         _text.set_screen(width, height);
         _text_bg.set_screen(width, height);
+
+        // Reserve text buffer memory
+        reserve_memory();
 
         // Add 1 console entries
         for (size_t i = _console; i < _ui; i++)
@@ -134,8 +151,14 @@ class ui_text
             add_text("", 0, 0);
         }
 
+        // Add 1 hover entries
+        for (size_t i = _error; i < _hover; i++)
+        {
+            add_text("", 0, 0);
+        }
+
         // Add 1 error entry
-        for (size_t i = _error; i < _debug; i++)
+        for (size_t i = _hover; i < _debug; i++)
         {
             add_text("", 0, 0);
             _text.set_line_wrap(i, _x_console_wrap, _y_console_wrap);
@@ -153,28 +176,45 @@ class ui_text
     void draw(const size_t bg_size) const
     {
         // Minimize draw calls by lumping togetherness
-        if (_draw_console && _draw_ui && _draw_error && _draw_debug)
+        if (_draw_console && _draw_ui && _draw_error && _draw_hover && _draw_debug)
         {
             bind();
             _text.draw_all();
         }
-        else if (_draw_console && _draw_ui && _draw_error && !_draw_debug)
+        else if (_draw_console && _draw_ui && _draw_error && _draw_hover && !_draw_debug)
         {
             bind();
             _text.draw(_console, _debug - 1);
         }
-        else if (_draw_console && _draw_ui && !_draw_error && !_draw_debug)
+        else if (_draw_console && _draw_ui && _draw_error && !_draw_hover && !_draw_debug)
+        {
+            bind();
+            _text.draw(_console, _hover - 1);
+        }
+        else if (_draw_console && _draw_ui && !_draw_error && !_draw_hover && !_draw_debug)
         {
             bind();
             _text.draw(_console, _error - 1);
         }
-        else if (_draw_console && _draw_ui && !_draw_error && _draw_debug)
+        else if (_draw_console && _draw_ui && !_draw_error && _draw_hover && _draw_debug)
+        {
+            bind();
+            _text.draw(_console, _error - 1);
+            _text.draw(_hover, _end - 1);
+        }
+        else if (_draw_console && _draw_ui && !_draw_error && _draw_hover && !_draw_debug)
+        {
+            bind();
+            _text.draw(_console, _error - 1);
+            _text.draw(_hover, _debug - 1);
+        }
+        else if (_draw_console && _draw_ui && !_draw_error && !_draw_hover && _draw_debug)
         {
             bind();
             _text.draw(_console, _error - 1);
             _text.draw(_debug, _end - 1);
         }
-        else if (_draw_console && !_draw_ui && !_draw_error && !_draw_debug)
+        else if (_draw_console && !_draw_ui && !_draw_error && !_draw_hover && !_draw_debug)
         {
             bind();
             _text.draw(_console);
@@ -193,7 +233,11 @@ class ui_text
             }
             if (_draw_error)
             {
-                _text.draw(_error, _debug - 1);
+                _text.draw(_error, _hover - 1);
+            }
+            if (_draw_hover)
+            {
+                _text.draw(_hover, _debug - 1);
             }
             if (_draw_debug)
             {
@@ -216,21 +260,25 @@ class ui_text
     {
         return _draw_debug;
     }
-    inline void set_draw_debug(const bool flag)
-    {
-        _draw_debug = flag;
-    }
     inline void set_draw_console(const bool flag)
     {
         _draw_console = flag;
     }
-    inline void set_draw_ui(const bool flag)
+    inline void set_draw_debug(const bool flag)
     {
-        _draw_ui = flag;
+        _draw_debug = flag;
     }
     inline void set_draw_error(const bool flag)
     {
         _draw_error = flag;
+    }
+    inline void set_draw_hover(const bool flag)
+    {
+        _draw_hover = flag;
+    }
+    inline void set_draw_ui(const bool flag)
+    {
+        _draw_ui = flag;
     }
     inline void set_screen(const uint16_t width, const uint16_t height)
     {
@@ -384,6 +432,17 @@ class ui_text
         // Position the console elements
         const uint16_t w2 = (size.first / 2);
         _text.set_text_center(_error, w2, size.second - _y_error);
+    }
+    inline void update_hover(const min::vec2<float> &p, const std::string &error)
+    {
+        // Update the hover position
+        _hover_p = min::vec2<float>(p.x() + _hover_dx, p.y() + _hover_dy);
+
+        // Update the error text
+        update_text(_hover, error);
+
+        // Position the hover element
+        _text.set_text_location(_hover, _hover_p.x(), _hover_p.y());
     }
     inline void upload() const
     {

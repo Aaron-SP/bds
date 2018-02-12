@@ -100,7 +100,7 @@ void show_game(bds &game, min::loop_sync &sync, const size_t frames)
         const double idle = sync.idle();
 
         // Update the debug text
-        game.update_text(fps, idle);
+        game.update_fps(fps, idle);
 
         // Check for errors
         if (game.check_gl_error())
@@ -163,8 +163,8 @@ int main(int argc, char *argv[])
         size_t chunk = 8;
         size_t grid = 64;
         size_t view = 5;
-        size_t width = 720;
-        size_t height = 480;
+        size_t width = 800;
+        size_t height = 600;
         bool resize = true;
 
         // Try to parse commandline args

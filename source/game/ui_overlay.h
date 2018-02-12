@@ -97,7 +97,29 @@ class ui_overlay
     }
     inline bool overlap(const min::vec2<float> &p)
     {
-        return _bg.overlap(p);
+        // Test for overlap on UI
+        const bool overlap = _bg.overlap(p);
+
+        // Show tooltips here!
+        if (overlap)
+        {
+            // Get the hover text
+            const std::string &str = _bg.get_hover_string();
+
+            // Update the hover text
+            _text.update_hover(p, str);
+
+            // Enable drawing hover text
+            _text.set_draw_hover(true);
+        }
+        else
+        {
+            // Disable drawing hover text
+            _text.set_draw_hover(false);
+        }
+
+        // Are we overlapping a UI element?
+        return overlap;
     }
     inline void reset_menu()
     {
@@ -109,11 +131,11 @@ class ui_overlay
     }
     inline void set_console_string(const std::string &str)
     {
+        // Flag dirty
+        _dirty = true;
+
         // Update the console text
         _text.update_console(str);
-
-        // Upload changes to the buffer
-        _text.upload();
     }
     inline void set_cursor_aim()
     {
@@ -239,6 +261,9 @@ class ui_overlay
                      const float health, const float energy, const double fps,
                      const double idle, const size_t chunks)
     {
+        // Flag dirty
+        _dirty = true;
+
         // Update all text and upload it
         if (_text.is_draw_debug())
         {
@@ -252,9 +277,6 @@ class ui_overlay
         }
 
         _text.update_ui(health, energy);
-
-        // Upload the changed text
-        _text.upload();
     }
 };
 }
