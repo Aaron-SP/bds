@@ -26,9 +26,9 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/drops.h>
 #include <game/id.h>
 #include <game/load_state.h>
+#include <game/missiles.h>
 #include <game/particle.h>
 #include <game/player.h>
-#include <game/projectiles.h>
 #include <game/sky.h>
 #include <game/sound.h>
 #include <game/static_instance.h>
@@ -88,7 +88,7 @@ class world
     static_instance _instance;
     drones _drones;
     drops _drops;
-    projectiles _projectile;
+    missiles _missile;
 
     // Random stuff
     std::uniform_int_distribution<size_t> _drop_dist;
@@ -363,7 +363,7 @@ class world
         };
 
         // Update any missiles
-        _projectile.update(_grid, steps * 0.0666, on_collide);
+        _missile.update(_grid, steps * 0.0666, on_collide);
     }
 
   public:
@@ -386,7 +386,7 @@ class world
           _instance(uniforms),
           _drones(&_simulation, &_instance),
           _drops(&_simulation, &_instance),
-          _projectile(particles, &_instance, s),
+          _missile(particles, &_instance, s),
           _drop_dist(0, 20),
           _grid_dist((grid_size * -1.0) + 1.0, grid_size - 1.0),
           _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
@@ -538,7 +538,7 @@ class world
         // Launch a missile on play target ray
         if (_player.is_target_valid())
         {
-            return _projectile.launch_missile(
+            return _missile.launch_missile(
                 _player.projection(), _player.get_target(),
                 _player.get_target_key(), _player.get_target_value());
         }

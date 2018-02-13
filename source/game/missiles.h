@@ -15,13 +15,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __PROJECTILE__
-#define __PROJECTILE__
+#ifndef __MISSILES__
+#define __MISSILES__
 
 #include <functional>
 #include <game/particle.h>
 #include <game/sound.h>
 #include <game/static_instance.h>
+#include <min/ray.h>
+#include <min/sample.h>
 #include <vector>
 
 namespace game
@@ -105,7 +107,7 @@ class missile
     }
 };
 
-class projectiles
+class missiles
 {
   private:
     static constexpr size_t _miss_size = 1;
@@ -216,7 +218,7 @@ class projectiles
     }
 
   public:
-    projectiles(particle *const particles, static_instance *const inst, sound *const s)
+    missiles(particle *const particles, static_instance *const inst, sound *const s)
         : _inst(inst), _part(particles), _sound(s), _scale(3, 3, 3) {}
 
     inline bool launch_missile(const min::vec3<float> &start, const min::vec3<float> &dest, const size_t key, const int8_t value)

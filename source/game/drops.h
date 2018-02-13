@@ -69,6 +69,19 @@ class drops
     float _angle;
     size_t _oldest;
 
+    inline min::body<float, min::vec3> &body(const size_t index)
+    {
+        return _sim->get_body(_drops[index].body_id());
+    }
+    inline const min::body<float, min::vec3> &body(const size_t index) const
+    {
+        return _sim->get_body(_drops[index].body_id());
+    }
+    inline const min::vec3<float> &position(const size_t index) const
+    {
+        // Return the drop position
+        return body(index).get_position();
+    }
     inline void reserve_memory()
     {
         // Reserve space for collision cells
@@ -147,27 +160,14 @@ class drops
     {
         return _drops[index].atlas();
     }
-    inline min::body<float, min::vec3> &body(const size_t index)
-    {
-        return _sim->get_body(_drops[index].body_id());
-    }
-    inline const min::body<float, min::vec3> &body(const size_t index) const
-    {
-        return _sim->get_body(_drops[index].body_id());
-    }
-    inline const min::vec3<float> &position(const size_t index) const
-    {
-        // Return the character position
-        return body(index).get_position();
-    }
     inline void remove(const size_t index)
     {
-        // Clear missiles at index
+        // Clear drops at index
         _inst->clear_drop(_drops[index].inst_id());
         _sim->clear_body(_drops[index].body_id());
         _drops.erase(_drops.begin() + index);
 
-        // Adjust the remaining missile indices
+        // Adjust the remaining drop indices
         const size_t size = _drops.size();
         for (size_t i = index; i < size; i++)
         {

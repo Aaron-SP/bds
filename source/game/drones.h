@@ -78,6 +78,14 @@ class drones
     min::vec3<float> _dest;
     bool _disable;
 
+    inline min::body<float, min::vec3> &body(const size_t index)
+    {
+        return _sim->get_body(_drones[index].body_id());
+    }
+    inline const min::body<float, min::vec3> &body(const size_t index) const
+    {
+        return _sim->get_body(_drones[index].body_id());
+    }
     inline float path_speed(const float remain)
     {
         // Calculate speed slowing down as approaching goal
@@ -96,6 +104,11 @@ class drones
 
         // Add velocity to the body
         body(index).set_linear_velocity(step);
+    }
+    inline const min::vec3<float> &position(const size_t index) const
+    {
+        // Return the drone position
+        return body(index).get_position();
     }
     inline void reserve_memory()
     {
@@ -125,19 +138,6 @@ class drones
 
         // Return the drone index
         return _drones.size() - 1;
-    }
-    inline min::body<float, min::vec3> &body(const size_t index)
-    {
-        return _sim->get_body(_drones[index].body_id());
-    }
-    inline const min::body<float, min::vec3> &body(const size_t index) const
-    {
-        return _sim->get_body(_drones[index].body_id());
-    }
-    inline const min::vec3<float> &position(const size_t index) const
-    {
-        // Return the character position
-        return body(index).get_position();
     }
     inline void set_destination(const min::vec3<float> &p)
     {

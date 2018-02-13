@@ -195,6 +195,12 @@ class static_instance
         // Load dds into texture buffer
         _miss_tid = _texture_buffer.add_dds_texture(missile);
     }
+    inline void reserve_memory()
+    {
+        _drone_mat.reserve(_DRONE_LIMIT);
+        _drop_mat.reserve(_DROP_LIMIT);
+        _miss_mat.reserve(_MISS_LIMIT);
+    }
     inline void set_start_index(const GLint start_index) const
     {
         // Set the sampler active texture
@@ -210,6 +216,9 @@ class static_instance
         // Since we are using a BMESH, assert floating point compatibility
         static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 float required");
         static_assert(sizeof(float) == 4, "32 bit IEEE 754 float required");
+
+        // Reserve memory
+        reserve_memory();
 
         // Load instance model
         load_models();
