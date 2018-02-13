@@ -99,11 +99,11 @@ class inv_id
     }
     inline inv_id bg_cube_index() const
     {
-        return inv_id(_id + 47);
+        return inv_id(_id + 46);
     }
     inline inv_id cube_index() const
     {
-        return inv_id(_id + 56);
+        return inv_id(_id + 55);
     }
     inline inv_id to_key() const
     {
@@ -365,26 +365,15 @@ class inventory
     {
         // Search for item of same id in slots
         const size_t size = _inv.size();
+
+        // First pass, prefer searching all slots for a stack
         for (size_t i = begin_key(); i < size; i++)
         {
             // Get the current item
             item &it = _inv[i];
 
-            // If this slot empty?
-            if (it.id() == 0)
-            {
-                it = item(id, count);
-
-                // Store update index
-                _update.emplace_back(i);
-
-                // Signal that we picked it up
-                count = 0;
-
-                // Return added
-                return true;
-            }
-            else if (it.id() == id)
+            // Can we stack this item?
+            if (it.id() == id)
             {
                 // Try to stack the item
                 it.stack(count);
@@ -398,6 +387,28 @@ class inventory
                     // Return added
                     return true;
                 }
+            }
+        }
+
+        // Second pass, get the first empty slot in inventory
+        for (size_t i = begin_key(); i < size; i++)
+        {
+            // Get the current item
+            item &it = _inv[i];
+
+            // Is this slot empty?
+            if (it.id() == 0)
+            {
+                it = item(id, count);
+
+                // Store update index
+                _update.emplace_back(i);
+
+                // Signal that we picked it up
+                count = 0;
+
+                // Return added
+                return true;
             }
         }
 

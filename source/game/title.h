@@ -89,6 +89,7 @@ class title
         // Cast to title pointer
         title *const t = reinterpret_cast<title *>(ptr);
         min::camera<float> *const camera = t->get_camera();
+        min::window *const win = t->get_window();
         game::ui_overlay *const ui = t->get_ui();
 
         // Get camera frustum
@@ -99,8 +100,12 @@ class title
         f.make_dirty();
         camera->make_dirty();
 
+        // Get the screen dimensions
+        const uint16_t w = win->get_width();
+        const uint16_t h = win->get_height();
+
         // Update the screen size for ui and text
-        ui->set_screen(width, height);
+        ui->set_screen(min::vec2<float>(w, h), width, height);
     }
 };
 }

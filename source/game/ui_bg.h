@@ -88,11 +88,11 @@ class ui_bg
         _tbuffer.bind(_ui_id, 0);
 
         // Get the start of the opaque ui
-        const size_t opaque_start = _assets.opaque_start();
-        set_start_index(opaque_start);
+        const size_t start = _assets.opaque_start();
+        set_start_index(start);
 
         // Draw extended ui elements
-        const size_t size = _assets.opaque_extend_size();
+        const size_t size = _assets.opaque_ext_size();
         _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
     }
     inline void draw_opaque_base() const
@@ -101,8 +101,8 @@ class ui_bg
         _tbuffer.bind(_ui_id, 0);
 
         // Get the start of the opaque ui
-        const size_t opaque_start = _assets.opaque_start();
-        set_start_index(opaque_start);
+        const size_t start = _assets.opaque_start();
+        set_start_index(start);
 
         // Draw base ui elements
         const size_t size = _assets.opaque_base_size();
@@ -115,6 +115,19 @@ class ui_bg
 
         // Draw the first thing in the buffer, title screen
         _vb.draw_many(GL_TRIANGLES, _mesh_id, 1);
+    }
+    inline void draw_tooltip_ui() const
+    {
+        // Bind the ui texture for drawing
+        _tbuffer.bind(_ui_id, 0);
+
+        // Get the start of the opaque ui
+        const size_t start = _assets.tooltip_start();
+        set_start_index(start);
+
+        // Draw extended ui elements
+        const size_t size = _assets.tooltip_size();
+        _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
     }
     inline void draw_transparent_ui() const
     {
@@ -381,7 +394,7 @@ class ui_bg
         // Calculate ui element position
         return _assets.store_position(row, col);
     }
-    inline void position_ui()
+    inline void position_ui(const min::vec2<float> &p)
     {
         // Load overlay
         if (_assets.get_draw_title())
@@ -430,6 +443,9 @@ class ui_bg
 
         // Load stat background
         _assets.load_bg_stat();
+
+        // Load hover background
+        _assets.load_bg_hover(p);
     }
     inline static min::aabbox<float, min::vec2> screen_box(const uint16_t width, const uint16_t height)
     {
@@ -863,7 +879,7 @@ class ui_bg
         load_grid(width, height);
 
         // Reposition all ui on the screen
-        position_ui();
+        position_ui(min::vec2<float>());
     }
 
     inline void action()
@@ -920,6 +936,20 @@ class ui_bg
         {
             // Draw only base ui
             draw_opaque_base();
+        }
+    }
+    inline void draw_tooltips() const
+    {
+        if (_hovering && _assets.get_draw_ex())
+        {
+            // Bind the text_buffer vao
+            _vb.bind();
+
+            // Bind the ui program
+            _prog.use();
+
+            // Draw tooltip ui
+            draw_tooltip_ui();
         }
     }
     inline void draw_transparent() const
@@ -996,6 +1026,11 @@ class ui_bg
 
                 // Not overlapping a UI element
                 return false;
+            }
+            else
+            {
+                // Update tooltips
+                _assets.load_bg_hover(p);
             }
 
             // Overlapping a UI element
@@ -1136,14 +1171,14 @@ class ui_bg
     {
         _minimized = flag;
     }
-    inline void set_screen(const uint16_t width, const uint16_t height)
+    inline void set_screen(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
     {
         // Set asset screen size
         _assets.set_screen(width, height);
         _text->set_screen(width, height);
 
         // Reposition all ui on the screen
-        position_ui();
+        position_ui(p);
 
         // Resize the screen grid box
         _grid.resize(screen_box(width, height));

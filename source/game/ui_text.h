@@ -32,21 +32,25 @@ namespace game
 class ui_text
 {
   private:
+    static constexpr size_t _font_size = 28;
+    static constexpr size_t _ui_font_size = 14;
     static constexpr size_t _console = 0;
     static constexpr size_t _ui = _console + 1;
     static constexpr size_t _error = _ui + 2;
-    static constexpr size_t _hover = _error + 1;
-    static constexpr size_t _debug = _hover + 1;
-    static constexpr size_t _end = _debug + 11;
-    static constexpr float _y_console = 90.0;
+    static constexpr size_t _debug = _error + 1;
+    static constexpr size_t _hover = _debug + 11;
+    static constexpr size_t _end = _hover + 1;
+    static constexpr float _y_console = 100.0;
     static constexpr float _y_error = 180.0;
     static constexpr float _x_console_wrap = 400.0;
-    static constexpr float _y_console_wrap = 40.0;
+    static constexpr float _y_console_wrap = _font_size;
     static constexpr float _x_health = 248.0;
     static constexpr float _x_energy = 200.0;
     static constexpr float _y_ui = 150.0;
-    static constexpr float _hover_dx = 10.0;
-    static constexpr float _hover_dy = 20.0;
+    static constexpr float _s_hover_x = 176.0;
+    static constexpr float _s_hover_y = 124.0;
+    static constexpr float _hover_dx = _s_hover_x * 0.5 - 1.0;
+    static constexpr float _hover_dy = 95.0;
 
     // Text OpenGL stuff
     min::shader _vertex;
@@ -58,13 +62,11 @@ class ui_text
     min::text_buffer _text_bg;
     std::vector<size_t> _indices;
     std::ostringstream _stream;
-    size_t _font_size;
     bool _draw_console;
     bool _draw_debug;
     bool _draw_error;
     bool _draw_ui;
     bool _draw_hover;
-    min::vec2<float> _hover_p;
 
     inline void add_text(const std::string &s, const float x, const float y)
     {
@@ -86,7 +88,7 @@ class ui_text
         _stream.clear();
         _stream.str(std::string());
     }
-    inline void reposition_text(const uint16_t width, const uint16_t height)
+    inline void reposition_text(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
     {
         // Position the console element
         const uint16_t w2 = (width / 2);
@@ -99,9 +101,6 @@ class ui_text
         // Position error element
         _text.set_text_center(_error, w2, height - _y_error);
 
-        // Position the hover element
-        _text.set_text_location(_hover, _hover_p.x(), _hover_p.y());
-
         // Rescale all debug text
         uint16_t y = height - 20;
         for (size_t i = _debug; i < _end; i++)
@@ -110,6 +109,9 @@ class ui_text
             _text.set_text_location(i, 10, y);
             y -= _font_size;
         }
+
+        // Position the hover element
+        _text.set_text_location(_hover, p.x() + _hover_dx, p.y() + _hover_dy);
     }
     inline void reserve_memory()
     {
@@ -121,13 +123,12 @@ class ui_text
     }
 
   public:
-    ui_text(const size_t font_size, const uint16_t width, const uint16_t height)
+    ui_text(const uint16_t width, const uint16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/text.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _text("data/fonts/open_sans.ttf", font_size),
-          _text_bg("data/fonts/open_sans.ttf", 14),
-          _font_size(font_size),
+          _text("data/fonts/open_sans.ttf", _font_size),
+          _text_bg("data/fonts/open_sans.ttf", _ui_font_size),
           _draw_console(false), _draw_debug(false), _draw_error(false),
           _draw_ui(false), _draw_hover(false)
     {
@@ -151,70 +152,54 @@ class ui_text
             add_text("", 0, 0);
         }
 
-        // Add 1 hover entries
-        for (size_t i = _error; i < _hover; i++)
-        {
-            add_text("", 0, 0);
-        }
-
         // Add 1 error entry
-        for (size_t i = _hover; i < _debug; i++)
+        for (size_t i = _error; i < _debug; i++)
         {
             add_text("", 0, 0);
             _text.set_line_wrap(i, _x_console_wrap, _y_console_wrap);
         }
 
         // Add 11 debug entries
-        for (size_t i = _debug; i < _end; i++)
+        for (size_t i = _debug; i < _hover; i++)
         {
             add_text("", 0, 0);
         }
 
+        // Add 1 hover entries
+        for (size_t i = _hover; i < _end; i++)
+        {
+            add_text("", 0, 0);
+            _text.set_line_wrap(i, _s_hover_x, _s_hover_y);
+        }
+
         // Reposition all of the text
-        reposition_text(width, height);
+        reposition_text(min::vec2<float>(), width, height);
     }
     void draw(const size_t bg_size) const
     {
         // Minimize draw calls by lumping togetherness
-        if (_draw_console && _draw_ui && _draw_error && _draw_hover && _draw_debug)
-        {
-            bind();
-            _text.draw_all();
-        }
-        else if (_draw_console && _draw_ui && _draw_error && _draw_hover && !_draw_debug)
-        {
-            bind();
-            _text.draw(_console, _debug - 1);
-        }
-        else if (_draw_console && _draw_ui && _draw_error && !_draw_hover && !_draw_debug)
+        if (_draw_console && _draw_ui && _draw_error && _draw_debug)
         {
             bind();
             _text.draw(_console, _hover - 1);
         }
-        else if (_draw_console && _draw_ui && !_draw_error && !_draw_hover && !_draw_debug)
+        else if (_draw_console && _draw_ui && _draw_error && !_draw_debug)
+        {
+            bind();
+            _text.draw(_console, _debug - 1);
+        }
+        else if (_draw_console && _draw_ui && !_draw_error && !_draw_debug)
         {
             bind();
             _text.draw(_console, _error - 1);
         }
-        else if (_draw_console && _draw_ui && !_draw_error && _draw_hover && _draw_debug)
+        else if (_draw_console && _draw_ui && !_draw_error && _draw_debug)
         {
             bind();
             _text.draw(_console, _error - 1);
-            _text.draw(_hover, _end - 1);
+            _text.draw(_debug, _hover - 1);
         }
-        else if (_draw_console && _draw_ui && !_draw_error && _draw_hover && !_draw_debug)
-        {
-            bind();
-            _text.draw(_console, _error - 1);
-            _text.draw(_hover, _debug - 1);
-        }
-        else if (_draw_console && _draw_ui && !_draw_error && !_draw_hover && _draw_debug)
-        {
-            bind();
-            _text.draw(_console, _error - 1);
-            _text.draw(_debug, _end - 1);
-        }
-        else if (_draw_console && !_draw_ui && !_draw_error && !_draw_hover && !_draw_debug)
+        else if (_draw_console && !_draw_ui && !_draw_error && !_draw_debug)
         {
             bind();
             _text.draw(_console);
@@ -233,15 +218,11 @@ class ui_text
             }
             if (_draw_error)
             {
-                _text.draw(_error, _hover - 1);
-            }
-            if (_draw_hover)
-            {
-                _text.draw(_hover, _debug - 1);
+                _text.draw(_error, _debug - 1);
             }
             if (_draw_debug)
             {
-                _text.draw(_debug, _end - 1);
+                _text.draw(_debug, _hover - 1);
             }
         }
 
@@ -250,6 +231,14 @@ class ui_text
         {
             _text_bg.bind(0);
             _text_bg.draw(0, bg_size - 1);
+        }
+    }
+    void draw_tooltips() const
+    {
+        if (_draw_hover)
+        {
+            bind();
+            _text.draw(_hover, _end - 1);
         }
     }
     inline min::text_buffer &get_bg_text()
@@ -280,13 +269,13 @@ class ui_text
     {
         _draw_ui = flag;
     }
-    inline void set_screen(const uint16_t width, const uint16_t height)
+    inline void set_screen(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
     {
         // Update the text buffer screen dimensions
         _text.set_screen(width, height);
 
         // Rescale all text on the screen
-        reposition_text(width, height);
+        reposition_text(p, width, height);
 
         // Upload new text
         upload();
@@ -435,14 +424,22 @@ class ui_text
     }
     inline void update_hover(const min::vec2<float> &p, const std::string &error)
     {
-        // Update the hover position
-        _hover_p = min::vec2<float>(p.x() + _hover_dx, p.y() + _hover_dy);
-
         // Update the error text
         update_text(_hover, error);
 
+        // Get the screen dimensions
+        const std::pair<float, float> size = _text.get_screen_size();
+        const uint16_t h2 = (size.second / 2);
+
+        // Calculate hover y offset to avoid off screen issues
+        const float hover_dy = (p.y() > h2) ? _hover_dy - _s_hover_y : _hover_dy;
+
+        // Calculate text location
+        const float x = p.x() + _hover_dx;
+        const float y = p.y() + hover_dy;
+
         // Position the hover element
-        _text.set_text_location(_hover, _hover_p.x(), _hover_p.y());
+        _text.set_text_center(_hover, x, y);
     }
     inline void upload() const
     {

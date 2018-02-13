@@ -37,7 +37,7 @@ class ui_overlay
 
   public:
     ui_overlay(const uniforms &uniforms, inventory *const inv, stats *const stat, const uint16_t width, const uint16_t height)
-        : _text(28, width, height),
+        : _text(width, height),
           _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
           _dirty(false), _res("Low Power!"), _time(-1.0) {}
 
@@ -59,6 +59,20 @@ class ui_overlay
     {
         // Draw background ui
         _bg.draw_opaque();
+    }
+    inline void draw_tooltips() const
+    {
+        // Disable the depth test
+        glDisable(GL_DEPTH_TEST);
+
+        // Draw the tooltip bg
+        _bg.draw_tooltips();
+
+        // Draw the tooltip text
+        _text.draw_tooltips();
+
+        // Enable the depth test
+        glEnable(GL_DEPTH_TEST);
     }
     inline void draw_transparent() const
     {
@@ -189,13 +203,13 @@ class ui_overlay
     {
         _bg.set_menu_pause();
     }
-    inline void set_screen(const uint16_t width, const uint16_t height)
+    inline void set_screen(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
     {
         // Set bg screen dimensions
-        _bg.set_screen(width, height);
+        _bg.set_screen(p, width, height);
 
         // Set text screen dimensions
-        _text.set_screen(width, height);
+        _text.set_screen(p, width, height);
     }
     inline void set_ui_error_resource()
     {
@@ -226,7 +240,11 @@ class ui_overlay
     }
     inline void toggle_extend()
     {
+        // Toggle bg and text extended flags
         _bg.toggle_draw_ex();
+
+        // Force reloading of hover flag
+        _text.set_draw_hover(false);
     }
     inline void toggle_debug_text()
     {

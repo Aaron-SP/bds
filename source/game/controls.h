@@ -982,6 +982,7 @@ class controls
     {
         // Get the ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
+        min::window *const win = control->get_window();
         ui_overlay *const ui = control->get_ui();
 
         // Ignore minimizing window
@@ -1006,8 +1007,12 @@ class controls
         f.make_dirty();
         camera->make_dirty();
 
+        // Get the screen dimensions
+        const uint16_t w = win->get_width();
+        const uint16_t h = win->get_height();
+
         // Update the screen size for ui and text
-        ui->set_screen(width, height);
+        ui->set_screen(min::vec2<float>(w, h), width, height);
     }
     void respawn()
     {

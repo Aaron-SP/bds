@@ -293,6 +293,9 @@ class bds
 
         // Draw the transparent ui
         _ui.draw_transparent();
+
+        // Draw the tooltip ui
+        _ui.draw_tooltips();
     }
     void draw_title(const float dt)
     {
