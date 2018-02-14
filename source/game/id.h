@@ -53,7 +53,11 @@ enum class block_id : int8_t
     CRYSTAL_P = 25,
     CRYSTAL_B = 26,
     CRYSTAL_G = 27,
-    POTASSIUM = 30
+    POTASSIUM = 30,
+    TOMATO = 32,
+    EGGPLANT = 33,
+    RED_PEPPER = 34,
+    GREEN_PEPPER = 35
 };
 
 enum class item_id : uint8_t
@@ -70,6 +74,10 @@ enum class item_id : uint8_t
     BLK_CRYS_B = 43,
     BLK_CRYS_G = 44,
     BLK_K = 47,
+    BLK_TOM = 49,
+    BLK_EGGP = 50,
+    BLK_RED_PEP = 51,
+    BLK_GR_PEP = 52,
 
     SHARD_R = 81,
     SHARD_P = 82,
@@ -82,7 +90,11 @@ enum class item_id : uint8_t
     CAT_K = 91,
     CAT_NA = 92,
     BAR_AU = 103,
-    BAR_SI = 104
+    BAR_SI = 104,
+    FOOD_TOM = 113,
+    FOOD_EGGP = 114,
+    FOOD_RED_PEP = 115,
+    FOOD_GR_PEP = 116
 };
 
 inline constexpr int8_t id_value(const block_id id)

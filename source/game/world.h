@@ -24,6 +24,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/cgrid.h>
 #include <game/drones.h>
 #include <game/drops.h>
+#include <game/explosive.h>
 #include <game/id.h>
 #include <game/load_state.h>
 #include <game/missiles.h>
@@ -50,6 +51,8 @@ class world
   private:
     static constexpr float _body_size = 21;
     static constexpr float _damping = 0.1;
+    static constexpr float _explode_speed = 5.0;
+    static constexpr float _explode_time = 5.0;
     static constexpr float _time_step = 1.0 / 180.0;
     static constexpr float _grav_mag = 10.0;
     static constexpr size_t _pre_max_scale = 5;
@@ -88,6 +91,7 @@ class world
     static_instance _instance;
     drones _drones;
     drops _drops;
+    explosives _explosives;
     missiles _missile;
 
     // Random stuff
@@ -149,7 +153,7 @@ class world
         // Check if character is too close to the explosion
         return {sq_dist < ex_squared_radius, ex_squared_radius, sq_dist};
     }
-    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
+    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
     {
         // Offset explosion radius for geometry removal
         const min::vec3<float> center = center_radius(point, scale);
@@ -161,17 +165,20 @@ class world
         if (removed > 0)
         {
             // Add a drop
-            _drops.add(point, direction, value);
+            _drops.add(point, dir, value);
 
             // Randomly drop a powerup
             const size_t ran_drop = random_drop();
             if (ran_drop < 4)
             {
-                _drops.add(point, direction, 24 + ran_drop);
+                _drops.add(point, dir, id_value(block_id::CRYSTAL_R) + ran_drop);
             }
 
+            // Calculate explosion speed
+            const min::vec3<float> speed = dir * _explode_speed;
+
             // Add particle effects
-            _particles->load_static_explode(point, direction, 5.0, size);
+            _particles->load_static_explode(point, speed, _explode_time, size);
 
             // Get player position
             const min::vec3<float> &p = _player.position();
@@ -200,7 +207,7 @@ class world
             // If explode hasn't been flagged yet
             if (!_player.is_exploded() && in_range)
             {
-                _player.explode(direction, sq_dist, ex_size, power, value);
+                _player.explode(dir, sq_dist, ex_size, power, value);
             }
         }
     }
@@ -309,7 +316,7 @@ class world
         // Solve the physics simulation
         const min::vec3<float> &p = _player.position();
 
-        // Explosion callback
+        // Block explosion callback
         const auto ex = [this, p](const std::pair<min::aabbox<float, min::vec3>, int8_t> &cell) {
 
             // Check for exploding mines
@@ -324,6 +331,18 @@ class world
                 // Explode the block with radius
                 explode_block(point, dir, _ex_radius, cell.second, 100.0);
             }
+        };
+
+        // On collision explode callback
+        const auto explode_ex = [this](const min::vec3<float> &point,
+                                       const min::vec3<float> &dir,
+                                       const min::vec3<unsigned> &scale,
+                                       const int8_t value) {
+            // Play missile explosion sound
+            this->_sound->play_miss_ex(point);
+
+            // Explode the block
+            this->explode_block(point, dir, scale, value, 100.0);
         };
 
         // Send drones after the player
@@ -341,6 +360,9 @@ class world
             // Update drops on this frame
             _drops.update_frame(_grid, _time_step);
 
+            // Update explosives on this frame
+            _explosives.update_frame(_grid, _time_step, explode_ex);
+
             // Solve all collisions
             _simulation.solve(_time_step, _damping);
         }
@@ -348,22 +370,14 @@ class world
         // Update the drones positions
         _drones.update(_grid);
 
-        // Update the drones positions
+        // Update the drop positions
         _drops.update(_grid);
 
-        // On missile collision explode block
-        const auto on_collide = [this](const min::vec3<float> &point,
-                                       const min::vec3<float> &direction,
-                                       const min::vec3<unsigned> &scale, const int8_t value) {
-            // Play missile explosion sound
-            this->_sound->play_miss_ex(point);
-
-            // Explode the block
-            this->explode_block(point, direction, scale, value, 100.0);
-        };
+        // Update the explosive positions
+        _explosives.update(_grid);
 
         // Update any missiles
-        _missile.update(_grid, steps * 0.0666, on_collide);
+        _missile.update(_grid, steps * 0.0666, explode_ex);
     }
 
   public:
@@ -386,6 +400,7 @@ class world
           _instance(uniforms),
           _drones(&_simulation, &_instance),
           _drops(&_simulation, &_instance),
+          _explosives(&_simulation, &_instance),
           _missile(particles, &_instance, s),
           _drop_dist(0, 20),
           _grid_dist((grid_size * -1.0) + 1.0, grid_size - 1.0),
@@ -532,6 +547,15 @@ class world
     inline bool in_range_explosion(const min::vec3<float> &point) const
     {
         return std::get<0>(in_range_explode(_player.position(), point, _ex_radius));
+    }
+    inline bool launch_explosive()
+    {
+        // Get player look direction
+        const min::vec3<float> p = _player.project(2.0);
+        const min::vec3<float> dir = _player.forward();
+
+        // Launch an explosive in front of player
+        return _explosives.launch(p, dir, id_value(block_id::SODIUM));
     }
     inline bool launch_missile()
     {

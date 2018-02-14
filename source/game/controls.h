@@ -37,8 +37,9 @@ class controls
   private:
     static constexpr float _beam_cost = 10.0;
     static constexpr float _beam_charge_cost = 20.0;
-    static constexpr float _missile_cost = 20.0;
     static constexpr float _grapple_cost = 10.0;
+    static constexpr float _grenade_cost = 20.0;
+    static constexpr float _missile_cost = 20.0;
     static constexpr float _project_dist = 3.0;
     min::window *_window;
     min::camera<float> *_camera;
@@ -403,6 +404,11 @@ class controls
                     play.set_mode(play_mode::skill);
                     skill.set_scan_mode();
                     break;
+                case 6:
+                    play.set_mode(play_mode::gun);
+                    skill.set_grenade_mode();
+                    break;
+                    break;
                 default:
                     break;
                 }
@@ -640,7 +646,18 @@ class controls
         // Activate action if active
         if (play.is_action_mode())
         {
-            if (skill.is_beam_mode() && skill.is_off_cooldown())
+            if (skill.is_jetpack_mode())
+            {
+                // Turn on the jets
+                play.set_jet(true);
+
+                // Play the jet sound
+                sound->play_jet();
+
+                // Lock the gun in jetpack mode
+                skill.lock();
+            }
+            else if (skill.is_beam_mode() && skill.is_off_cooldown())
             {
                 if (stat.can_consume_energy(_beam_charge_cost))
                 {
@@ -701,21 +718,24 @@ class controls
                     ui->set_ui_error_resource();
                 }
             }
-            else if (skill.is_jetpack_mode())
-            {
-                // Turn on the jets
-                play.set_jet(true);
-
-                // Play the jet sound
-                sound->play_jet();
-
-                // Lock the gun in jetpack mode
-                skill.lock();
-            }
             else if (skill.is_scan_mode())
             {
                 // Lock the gun in scan mode
                 skill.lock();
+            }
+            else if (skill.is_grenade_mode() && skill.is_off_cooldown())
+            {
+                // Try to consume energy to create grenade
+                if (stat.can_consume_energy(_grenade_cost))
+                {
+                    // Lock the gun in grenade mode
+                    skill.lock();
+                }
+                else
+                {
+                    sound->play_voice_resource();
+                    ui->set_ui_error_resource();
+                }
             }
         }
     }
@@ -794,11 +814,21 @@ class controls
             // Abort the charge animation
             character->abort_animation_shoot();
 
-            // If the gun is locked into a mode
+            // If skill is locked into a mode
             if (skill.is_locked())
             {
-                // If we are in beam mode and charged up
-                if (skill.is_beam_charged())
+                if (skill.is_jetpack_mode())
+                {
+                    // Turn off the jets
+                    play.set_jet(false);
+
+                    // Stop the jet sound
+                    sound->stop_jet();
+
+                    // Unlock the gun if jetpack mode
+                    skill.unlock_jetpack();
+                }
+                else if (skill.is_beam_charged())
                 {
                     // Expolode block with radius, get the ray target value
                     min::vec3<unsigned> explode_radius(3, 3, 3);
@@ -884,17 +914,6 @@ class controls
                     // Unlock the gun if missile mode
                     skill.unlock_missile();
                 }
-                else if (skill.is_jetpack_mode())
-                {
-                    // Turn off the jets
-                    play.set_jet(false);
-
-                    // Stop the jet sound
-                    sound->stop_jet();
-
-                    // Unlock the gun if jetpack mode
-                    skill.unlock_jetpack();
-                }
                 else if (skill.is_scan_mode() && play.is_target_valid())
                 {
                     // Scan the block on this ray
@@ -907,6 +926,28 @@ class controls
 
                     // Unlock the gun if scan mode
                     skill.unlock_scan();
+                }
+                else if (skill.is_grenade_mode())
+                {
+                    // Launch an explosive
+                    const bool launched = world->launch_explosive();
+                    if (launched)
+                    {
+                        // Activate shoot animation
+                        character->set_animation_shoot();
+
+                        // Play the shot sound
+                        sound->play_shot();
+
+                        // Start gun cooldown timer
+                        skill.start_cooldown();
+
+                        // Consume energy
+                        stat.consume_energy(_grenade_cost);
+                    }
+
+                    // Unlock the gun if grenade mode
+                    skill.unlock_grenade();
                 }
             }
         }

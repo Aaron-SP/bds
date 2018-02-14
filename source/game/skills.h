@@ -36,7 +36,8 @@ class skills
         beam,
         grapple,
         missile,
-        scan
+        scan,
+        grenade
     };
 
     skill_mode _mode;
@@ -121,6 +122,10 @@ class skills
     {
         return _mode == skill_mode::grapple;
     }
+    inline bool is_grenade_mode() const
+    {
+        return _mode == skill_mode::grenade;
+    }
     inline bool is_missile_mode() const
     {
         return _mode == skill_mode::missile;
@@ -148,6 +153,10 @@ class skills
     inline void set_grapple_mode()
     {
         _mode = skill_mode::grapple;
+    }
+    inline void set_grenade_mode()
+    {
+        _mode = skill_mode::grenade;
     }
     inline void set_missile_mode()
     {
@@ -184,6 +193,13 @@ class skills
     inline void unlock_grapple()
     {
         if (_mode == skill_mode::grapple)
+        {
+            _locked = false;
+        }
+    }
+    inline void unlock_grenade()
+    {
+        if (_mode == skill_mode::grenade)
         {
             _locked = false;
         }

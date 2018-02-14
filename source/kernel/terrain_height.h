@@ -93,6 +93,36 @@ class terrain_height
         // Run height map in parallel
         pool.run(work, 0, _scale);
     }
+    inline void plants(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map) const
+    {
+        // Parallelize on X axis
+        const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
+
+            std::uniform_int_distribution<size_t> p(3, _scale - 4);
+
+            const int8_t plant_start = game::id_value(game::block_id::TOMATO);
+            const int8_t plant_end = game::id_value(game::block_id::GREEN_PEPPER);
+
+            // Random numbers between 0 and 5, including both
+            std::uniform_int_distribution<int8_t> plants(plant_start, plant_end);
+
+            // Get random X/Z coord
+            const size_t x0 = p(gen);
+            const size_t z0 = p(gen);
+
+            // Get y coord
+            const size_t y0 = _start + static_cast<size_t>(std::round(map.get(x0, z0)));
+
+            // Create plants only in empty cells
+            if (write[key(std::make_tuple(x0, y0, z0))] == -1)
+            {
+                write[key(std::make_tuple(x0, y0, z0))] = plants(gen);
+            }
+        };
+
+        // Run height map in parallel
+        pool.run(work, 0, 100);
+    }
     inline void trees(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map) const
     {
         // Parallelize on X axis
@@ -104,9 +134,15 @@ class terrain_height
             const size_t x0 = p(gen);
             const size_t z0 = p(gen);
 
+            const int8_t leaf_start = game::id_value(game::block_id::LEAF1);
+            const int8_t leaf_end = game::id_value(game::block_id::LEAF4);
+
+            const int8_t wood_start = game::id_value(game::block_id::WOOD1);
+            const int8_t wood_end = game::id_value(game::block_id::WOOD2);
+
             // Random numbers between 0 and 5, including both
-            std::uniform_int_distribution<uint8_t> size(4, 12);
-            std::uniform_int_distribution<int8_t> wood(8, 9);
+            std::uniform_int_distribution<uint8_t> size(leaf_start, leaf_end);
+            std::uniform_int_distribution<int8_t> wood(wood_start, wood_end);
 
             // Get the top of trees at X/Z coord
             const size_t base = _start + static_cast<size_t>(std::round(map.get(x0, z0)));
@@ -167,6 +203,9 @@ class terrain_height
 
         // Generate trees
         trees(pool, write, map);
+
+        // Generate plants
+        plants(pool, write, map);
     }
 };
 }

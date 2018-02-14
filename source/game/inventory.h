@@ -218,7 +218,7 @@ class inventory
 {
   private:
     static constexpr size_t _max_slots = 49;
-    static constexpr size_t _max_strings = 111;
+    static constexpr size_t _max_strings = 117;
     std::array<item, _max_slots> _inv;
     std::array<std::string, _max_strings> _inv_desc;
     std::vector<inv_id> _update;
@@ -250,7 +250,7 @@ class inventory
         _inv_desc[3] = "Grapple Hook";
         _inv_desc[4] = "Jet Pack";
         _inv_desc[5] = "Pending Scan";
-        _inv_desc[6] = "Reserved";
+        _inv_desc[6] = "Grenade Launcher";
         _inv_desc[7] = "Reserved";
         _inv_desc[8] = "Reserved";
         _inv_desc[9] = "Reserved";
@@ -293,6 +293,10 @@ class inventory
         _inv_desc[46] = "???";
         _inv_desc[47] = "Potassium";
         _inv_desc[48] = "???";
+        _inv_desc[49] = "Tomatoes";
+        _inv_desc[50] = "Eggplant";
+        _inv_desc[51] = "Red Peppers";
+        _inv_desc[52] = "Green Peppers";
         _inv_desc[81] = "Red Crystal Shards";
         _inv_desc[82] = "Purple Crystal Shards";
         _inv_desc[83] = "Blue Crystal Shards";
@@ -323,6 +327,12 @@ class inventory
         _inv_desc[108] = "Sulfuric Acid [H2SO4]";
         _inv_desc[109] = "Sodium Battery";
         _inv_desc[110] = "Plasma Shield";
+        _inv_desc[111] = "???";
+        _inv_desc[112] = "???";
+        _inv_desc[113] = "Tomato";
+        _inv_desc[114] = "Eggplant";
+        _inv_desc[115] = "Red Pepper";
+        _inv_desc[116] = "Green Pepper";
     }
 
   public:
@@ -340,6 +350,7 @@ class inventory
         _inv[begin_store() + 2] = item(3, 1);
         _inv[begin_store() + 3] = item(4, 1);
         _inv[begin_store() + 4] = item(5, 1);
+        _inv[begin_store() + 5] = item(6, 1);
     }
     inline const item &operator[](const size_t index) const
     {
@@ -533,6 +544,14 @@ class inventory
             return decay(index, id_value(item_id::BLK_CRYS_G), id_value(item_id::SHARD_G), count);
         case item_id::BLK_K:
             return decay(index, id_value(item_id::BLK_K), id_value(item_id::CAT_K), count);
+        case item_id::BLK_TOM:
+            return decay(index, id_value(item_id::BLK_TOM), id_value(item_id::FOOD_TOM), count);
+        case item_id::BLK_EGGP:
+            return decay(index, id_value(item_id::BLK_EGGP), id_value(item_id::FOOD_EGGP), count);
+        case item_id::BLK_RED_PEP:
+            return decay(index, id_value(item_id::BLK_RED_PEP), id_value(item_id::FOOD_RED_PEP), count);
+        case item_id::BLK_GR_PEP:
+            return decay(index, id_value(item_id::BLK_GR_PEP), id_value(item_id::FOOD_GR_PEP), count);
         default:
             return false;
         }
@@ -593,6 +612,7 @@ class inventory
         _inv[begin_store() + 2] = item(3, 1);
         _inv[begin_store() + 3] = item(4, 1);
         _inv[begin_store() + 4] = item(5, 1);
+        _inv[begin_store() + 5] = item(6, 1);
 
         // Flag all dirty
         _update.resize(_inv.size());

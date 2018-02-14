@@ -624,6 +624,8 @@ class ui_bg
                 return _assets.load_jet_icon(inv, p);
             case 5:
                 return _assets.load_scan_icon(inv, p);
+            case 6:
+                return _assets.load_grenade_icon(inv, p);
             default:
                 return;
             }

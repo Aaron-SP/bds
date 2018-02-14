@@ -57,6 +57,7 @@ class player
     bool _hooked;
     min::vec3<float> _hook;
     float _hook_length;
+    min::vec3<float> _forward;
     min::vec3<float> _project;
     min::vec3<float> _target;
     size_t _target_key;
@@ -257,7 +258,7 @@ class player
         // Add a kick force
         //force(dir * 1000.0);
     }
-    inline void explode(const min::vec3<float> &direction, const float sq_dist, const float size, const float power, const int8_t value)
+    inline void explode(const min::vec3<float> &dir, const float sq_dist, const float size, const float power, const int8_t value)
     {
         // If we haven't been exploded take damage
         if (!_exploded)
@@ -275,7 +276,7 @@ class player
             _exploded = true;
 
             // Apply force to the player body
-            force(direction * power);
+            force(dir * power);
         }
     }
     inline void force(const min::vec3<float> &f)
@@ -416,10 +417,19 @@ class player
     {
         return _mode;
     }
+    inline const min::vec3<float> &forward() const
+    {
+        return _forward;
+    }
     inline const min::vec3<float> &position() const
     {
         // Return the character position
         return body().get_position();
+    }
+    inline const min::vec3<float> project(const float length) const
+    {
+        // Project point outward from player
+        return position() + forward() * length;
     }
     inline const min::vec3<float> &projection() const
     {
@@ -484,6 +494,9 @@ class player
     }
     inline void set_target(const cgrid &grid, min::camera<float> &cam, const size_t max_dist)
     {
+        // Cache the forward vector
+        _forward = cam.get_forward();
+
         // Calculate new point to add
         _project = cam.project_point(_project_dist);
 

@@ -298,7 +298,7 @@ class missiles
                     // Clear this missiles
                     remove(i);
 
-                    // Adjust the size and current index
+                    // Decrement size and current index
                     size--;
                     i--;
                 }

@@ -192,9 +192,10 @@ class bds
 
         // Update drone and missile matrices
         const game::static_instance &instance = _world.get_instances();
-        _uniforms.update_drones(instance.get_drone_matrices());
-        _uniforms.update_drops(instance.get_drop_matrices());
-        _uniforms.update_missiles(instance.get_missile_matrices());
+        _uniforms.update_drones(instance.get_drone_matrix());
+        _uniforms.update_drops(instance.get_drop_matrix());
+        _uniforms.update_explosives(instance.get_explosive_matrix());
+        _uniforms.update_missiles(instance.get_missile_matrix());
 
         // Update md5 model bones
         if (update_bones)

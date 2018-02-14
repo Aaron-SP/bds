@@ -42,6 +42,7 @@ class static_instance
   private:
     static constexpr size_t _DRONE_LIMIT = 10;
     static constexpr size_t _DROP_LIMIT = 10;
+    static constexpr size_t _EXPLODE_LIMIT = 10;
     static constexpr size_t _MISS_LIMIT = 10;
 
     min::shader _vertex;
@@ -54,21 +55,25 @@ class static_instance
     min::texture_buffer _texture_buffer;
     GLuint _drone_tid;
     GLuint _drop_tid;
+    GLuint _explode_tid;
     GLuint _miss_tid;
 
     // Bounding box for instance model
     min::aabbox<float, min::vec3> _drone_box;
     min::aabbox<float, min::vec3> _drop_box;
+    min::aabbox<float, min::vec3> _explode_box;
     min::aabbox<float, min::vec3> _miss_box;
 
     // Positions of each instance
     std::vector<min::mat4<float>> _drone_mat;
     std::vector<min::mat4<float>> _drop_mat;
+    std::vector<min::mat4<float>> _explode_mat;
     std::vector<min::mat4<float>> _miss_mat;
 
     // Indices for each mesh
     size_t _drone_index;
     size_t _drop_index;
+    size_t _explode_index;
     size_t _miss_index;
 
     inline void load_drone_model()
@@ -126,6 +131,12 @@ class static_instance
         // Add mesh and update buffers
         _drop_index = _buffer.add_mesh(drop_mesh);
     }
+    inline void load_explode_model()
+    {
+        // Use the drop box and model for explode
+        _explode_box = _drop_box;
+        _explode_index = _drop_index;
+    }
     inline void load_missile_model()
     {
         // Load missile data from binary mesh file
@@ -149,6 +160,9 @@ class static_instance
 
         // Load drop data
         load_drop_model();
+
+        // Load explode model
+        load_explode_model();
 
         // Load missile data
         load_missile_model();
@@ -186,7 +200,7 @@ class static_instance
         const min::dds drop = min::dds(drop_file);
 
         // Load dds into texture buffer
-        _drop_tid = _texture_buffer.add_dds_texture(drop);
+        _drop_tid = _explode_tid = _texture_buffer.add_dds_texture(drop);
 
         // Load missile textures
         const min::mem_file &miss_file = memory_map::memory.get_file("data/texture/missile.dds");
@@ -199,6 +213,7 @@ class static_instance
     {
         _drone_mat.reserve(_DRONE_LIMIT);
         _drop_mat.reserve(_DROP_LIMIT);
+        _explode_mat.reserve(_EXPLODE_LIMIT);
         _miss_mat.reserve(_MISS_LIMIT);
     }
     inline void set_start_index(const GLint start_index) const
@@ -269,6 +284,32 @@ class static_instance
     {
         _drop_mat.clear();
     }
+    inline size_t add_explosive(const min::vec3<float> &p, const int8_t atlas)
+    {
+        // Check for buffer overflow
+        if (_explode_mat.size() == _EXPLODE_LIMIT)
+        {
+            throw std::runtime_error("static_instance: must change default explode count");
+        }
+
+        // Push back location
+        _explode_mat.push_back(p);
+
+        // Pack the matrix with the atlas id
+        _explode_mat.back().w(atlas + 2.1);
+
+        // return mob id
+        return _explode_mat.size() - 1;
+    }
+    inline void clear_explosive(const size_t index)
+    {
+        // Erase matrix at iterator
+        _explode_mat.erase(_explode_mat.begin() + index);
+    }
+    inline void clear_explosives()
+    {
+        _explode_mat.clear();
+    }
     inline size_t add_missile(const min::vec3<float> &p)
     {
         // Check for buffer overflow
@@ -310,6 +351,17 @@ class static_instance
 
         // Move box to mob position
         box.set_position(_drop_mat[index].get_translation());
+
+        // Return this box for collisions
+        return box;
+    }
+    inline min::aabbox<float, min::vec3> box_explosive(const size_t index) const
+    {
+        // Create box for this mob
+        min::aabbox<float, min::vec3> box(_explode_box);
+
+        // Move box to mob position
+        box.set_position(_explode_mat[index].get_translation());
 
         // Return this box for collisions
         return box;
@@ -361,6 +413,20 @@ class static_instance
             _buffer.draw_many(GL_TRIANGLES, _drop_index, size);
         }
 
+        // Draw explosives
+        if (_explode_mat.size() > 0)
+        {
+            // Bind this texture for drawing on channel '0'
+            _texture_buffer.bind(_explode_tid, 0);
+
+            // Set the start index for drops
+            set_start_index(245);
+
+            // Draw mob instances
+            const size_t size = _explode_mat.size();
+            _buffer.draw_many(GL_TRIANGLES, _explode_index, size);
+        }
+
         // Draw missiles
         if (_miss_mat.size() > 0)
         {
@@ -368,22 +434,26 @@ class static_instance
             _texture_buffer.bind(_miss_tid, 0);
 
             // Set the start index for missiles
-            set_start_index(245);
+            set_start_index(255);
 
             // Draw missile instances
             const size_t size = _miss_mat.size();
             _buffer.draw_many(GL_TRIANGLES, _miss_index, size);
         }
     }
-    inline const std::vector<min::mat4<float>> &get_drone_matrices() const
+    inline const std::vector<min::mat4<float>> &get_drone_matrix() const
     {
         return _drone_mat;
     }
-    inline const std::vector<min::mat4<float>> &get_drop_matrices() const
+    inline const std::vector<min::mat4<float>> &get_drop_matrix() const
     {
         return _drop_mat;
     }
-    inline const std::vector<min::mat4<float>> &get_missile_matrices() const
+    inline const std::vector<min::mat4<float>> &get_explosive_matrix() const
+    {
+        return _explode_mat;
+    }
+    inline const std::vector<min::mat4<float>> &get_missile_matrix() const
     {
         return _miss_mat;
     }
@@ -402,6 +472,14 @@ class static_instance
     inline size_t drop_size() const
     {
         return _drop_mat.size();
+    }
+    inline bool explosive_full() const
+    {
+        return _explode_mat.size() == _EXPLODE_LIMIT;
+    }
+    inline size_t explosive_size() const
+    {
+        return _explode_mat.size();
     }
     inline bool missile_full() const
     {
@@ -430,6 +508,14 @@ class static_instance
     inline void update_drop_rotation(const size_t index, const min::quat<float> &r)
     {
         _drop_mat[index].set_rotation(r);
+    }
+    inline void update_explosive_position(const size_t index, const min::vec3<float> &p)
+    {
+        _explode_mat[index].set_translation(p);
+    }
+    inline void update_explosive_rotation(const size_t index, const min::quat<float> &r)
+    {
+        _explode_mat[index].set_rotation(r);
     }
     inline void update_missile_position(const size_t index, const min::vec3<float> &p)
     {
