@@ -46,7 +46,7 @@ class player
     static constexpr float _fall_threshold = -1.0;
     static constexpr float _grav_mag = 10.0;
     static constexpr float _jet_cost = 0.25;
-    static constexpr float _project_dist = 0.5;
+    static constexpr float _project_dist = 1.0;
 
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
     size_t _body_id;
@@ -425,11 +425,6 @@ class player
     {
         // Return the character position
         return body().get_position();
-    }
-    inline const min::vec3<float> project(const float length) const
-    {
-        // Project point outward from player
-        return position() + forward() * length;
     }
     inline const min::vec3<float> &projection() const
     {

@@ -474,9 +474,25 @@ class static_instance
     {
         return _drone_mat.size();
     }
+    inline static constexpr size_t max_alloc()
+    {
+        return _DRONE_LIMIT + _DROP_LIMIT + _EXPLODE_LIMIT + _MISS_LIMIT;
+    }
     inline static constexpr size_t max_drones()
     {
         return _DRONE_LIMIT;
+    }
+    inline static constexpr size_t max_drops()
+    {
+        return _DROP_LIMIT;
+    }
+    inline static constexpr size_t max_explosives()
+    {
+        return _EXPLODE_LIMIT;
+    }
+    inline static constexpr size_t max_missiles()
+    {
+        return _MISS_LIMIT;
     }
     inline bool drop_full() const
     {

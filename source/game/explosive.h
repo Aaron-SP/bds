@@ -60,7 +60,6 @@ class explosive
 class explosives
 {
   private:
-    static constexpr size_t _ex_size = 10;
     static constexpr float _rotation_rate = 2.0;
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     typedef std::function<void(min::body<float, min::vec3> &, min::body<float, min::vec3> &)> coll_call;
@@ -114,7 +113,7 @@ class explosives
     {
         // Reserve space for collision cells
         _col_cells.reserve(27);
-        _ex.reserve(_ex_size);
+        _ex.reserve(static_instance::max_explosives());
     }
 
   public:
@@ -151,8 +150,11 @@ class explosives
         // Create a box for the explosive
         const min::aabbox<float, min::vec3> box = _inst->box_explosive(inst_id);
 
+        // Store the explosive index as body data
+        const size_t index = _ex.size();
+
         // Add to physics simulation
-        const size_t body_id = _sim->add_body(box, 10.0, 3);
+        const size_t body_id = _sim->add_body(box, 10.0, 3, index);
 
         // Register player collision callback
         _sim->register_callback(body_id, _f);
@@ -167,10 +169,6 @@ class explosives
         // Create a new explosive
         _ex.emplace_back(body_id, inst_id, atlas);
 
-        // Store the explosive index as body data
-        const size_t index = _ex.size() - 1;
-        body.set_data(min::body_data(index));
-
         // Return launch success
         return true;
     }
@@ -178,7 +176,7 @@ class explosives
     {
         _f = f;
     }
-    inline void update_frame(const cgrid &grid, const float dt, const ex_call &f)
+    inline void update_frame(const cgrid &grid, const ex_call &f)
     {
         // Do explosive collisions
         const size_t size = _ex.size();

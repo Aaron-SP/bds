@@ -59,7 +59,6 @@ class drop
 class drops
 {
   private:
-    static constexpr size_t _drop_size = 10;
     static constexpr float _rotation_rate = 2.0;
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *_sim;
@@ -86,14 +85,13 @@ class drops
     {
         // Reserve space for collision cells
         _col_cells.reserve(27);
-        _drops.reserve(_drop_size);
+        _drops.reserve(static_instance::max_drops());
     }
 
   public:
     drops(physics *sim, static_instance *inst)
         : _sim(sim), _inst(inst), _angle(0.0), _oldest(0)
     {
-        // Reserve memory for collision cells
         reserve_memory();
     }
     inline size_t add(const min::vec3<float> &p, const min::vec3<float> &dir, const int8_t atlas)
@@ -102,7 +100,8 @@ class drops
         if (_inst->drop_full())
         {
             // Get oldest index to consume
-            const size_t index = (_oldest %= _drop_size)++;
+            const size_t max_drop = static_instance::max_drops();
+            const size_t index = (_oldest %= max_drop)++;
 
             // Get the old ID's
             const size_t inst_id = _drops[index].inst_id();
@@ -177,7 +176,7 @@ class drops
             body(i).set_data(min::body_data(i));
         }
     }
-    inline void update_frame(const cgrid &grid, const float dt)
+    inline void update_frame(const cgrid &grid)
     {
         // Do drop collisions
         const size_t size = _drops.size();

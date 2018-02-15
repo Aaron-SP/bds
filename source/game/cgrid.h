@@ -754,6 +754,14 @@ class cgrid
         // Return the box
         return min::aabbox<float, min::vec3>(p - half_extent, p + half_extent);
     }
+    static inline min::aabbox<float, min::vec3> missile_box(const min::vec3<float> &p)
+    {
+        // Create box at center
+        const min::vec3<float> half_extent(0.25, 0.25, 0.25);
+
+        // Return the box
+        return min::aabbox<float, min::vec3>(p - half_extent, p + half_extent);
+    }
     static inline min::aabbox<float, min::vec3> player_box(const min::vec3<float> &p)
     {
         // Create box at center
@@ -845,9 +853,24 @@ class cgrid
         const bool valid = inside(center);
         if (valid)
         {
-
             // Create box at this point
             const min::aabbox<float, min::vec3> box = explode_box(center);
+
+            // Calculate collision cells around this box
+            collision_cells(out, box, center);
+        }
+    }
+    inline void missile_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
+    {
+        // Surrounding cells
+        out.clear();
+
+        // Check if position is valid
+        const bool valid = inside(center);
+        if (valid)
+        {
+            // Create box at this point
+            const min::aabbox<float, min::vec3> box = missile_box(center);
 
             // Calculate collision cells around this box
             collision_cells(out, box, center);
