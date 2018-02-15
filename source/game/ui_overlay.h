@@ -73,12 +73,14 @@ class ui_overlay
 
         return false;
     }
-    inline void click()
+    inline bool click()
     {
         if (_bg.is_extended())
         {
-            _bg.click();
+            return _bg.click();
         }
+
+        return false;
     }
     inline void draw_opaque() const
     {

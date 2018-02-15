@@ -163,8 +163,8 @@ int main(int argc, char *argv[])
         size_t chunk = 8;
         size_t grid = 64;
         size_t view = 5;
-        size_t width = 800;
-        size_t height = 600;
+        size_t width = 1024;
+        size_t height = 768;
         bool resize = true;
 
         // Try to parse commandline args

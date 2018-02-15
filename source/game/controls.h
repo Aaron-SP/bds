@@ -632,11 +632,15 @@ class controls
         const bool pause = state->get_pause();
         if (input)
         {
-            // Play click sound
-            sound->play_click();
-
             // Do mouse click on UI
-            return ui->click();
+            if (ui->click())
+            {
+                // Play click sound
+                sound->play_click();
+            }
+
+            // Early exit
+            return;
         }
         else if (pause)
         {

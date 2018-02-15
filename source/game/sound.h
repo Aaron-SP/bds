@@ -127,7 +127,7 @@ class sound
     static constexpr float _fade_speed = 0.1;
     static constexpr float _fade_tol = 0.001;
     static constexpr float _fade_in = _fade_tol * 2.0;
-    static constexpr float _gain_adjust = 0.025;
+    static constexpr float _gain_adjust = 0.01;
 
     // FADE FRAMES
     static constexpr float _bg_ff = 50;
@@ -137,7 +137,7 @@ class sound
     static constexpr float _miss_launch_ff = 20;
 
     // GAINS
-    static constexpr float _bg_gain = 0.025;
+    static constexpr float _bg_gain = 0.05;
     static constexpr float _charge_gain = 0.35;
     static constexpr float _click_gain = 0.2;
     static constexpr float _land_gain = 0.1;

@@ -914,13 +914,18 @@ class ui_bg
         // If not extended
         return _inv->end_key();
     }
-    inline void click()
+    inline bool click()
     {
         // Click on the currently hovered icon
         if (_hovering && !_minimized)
         {
             set_click_down(_hover);
+
+            // Click happened
+            return true;
         }
+
+        return false;
     }
     inline void draw_opaque() const
     {
