@@ -41,12 +41,14 @@ class ui_overlay
           _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
           _dirty(false), _res("Low Power!"), _time(-1.0) {}
 
-    inline void action()
+    inline bool action()
     {
         if (_bg.is_extended())
         {
-            _bg.action();
+            return _bg.action();
         }
+
+        return false;
     }
     inline void click()
     {

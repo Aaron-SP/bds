@@ -30,71 +30,48 @@ namespace game
 class path_data
 {
   private:
-    min::vec3<float> _destination;
-    min::vec3<float> _direction;
-    min::vec3<float> _position;
+    min::vec3<float> _p;
+    min::vec3<float> _dest;
+    min::vec3<float> _dir;
     float _remain;
 
     inline void update_direction()
     {
         // Update direction vector
-        _direction = _destination - _position;
+        _dir = _dest - _p;
 
         // Normalize direction if needed
-        _remain = _direction.magnitude();
+        _remain = _dir.magnitude();
         if (_remain > 1E-3)
         {
             const float inv_mag = 1.0 / _remain;
-            _direction *= inv_mag;
+            _dir *= inv_mag;
         }
     }
 
   public:
-    path_data(const min::vec3<float> &p, const min::vec3<float> &d)
-        : _destination(d), _position(p), _remain(0.0)
+    path_data() {}
+    path_data(const min::vec3<float> &p, const min::vec3<float> &dest)
+        : _p(p), _dest(dest), _remain(0.0)
     {
         // Update direction
         update_direction();
     }
-    inline const min::vec3<float> &get_destination() const
+    inline const min::vec3<float> &destination() const
     {
-        return _destination;
+        return _dest;
     }
-    inline const min::vec3<float> &get_direction() const
+    inline const min::vec3<float> &direction() const
     {
-        return _direction;
+        return _dir;
     }
-    inline const min::vec3<float> &get_position() const
+    inline const min::vec3<float> &position() const
     {
-        return _position;
+        return _p;
     }
     inline float get_remain() const
     {
         return _remain;
-    }
-    inline min::vec3<float> step(const min::vec3<float> &dir, const float step_size)
-    {
-        // Calculate step
-        const min::vec3<float> step = dir * step_size;
-
-        // return new position
-        return _position + step;
-    }
-    inline void update(const min::vec3<float> &p)
-    {
-        // Update the position
-        _position = p;
-
-        // Update the direction
-        update_direction();
-    }
-    inline void update_destination(const min::vec3<float> &p)
-    {
-        // Update destination
-        _destination = p;
-
-        // Update the direction
-        update_direction();
     }
 };
 
@@ -107,10 +84,12 @@ class path
     min::bezier_deriv<float, min::vec3> _curve;
     min::vec3<float> _target;
     min::vec3<float> _last;
+    path_data _data;
     bool _bezier_interp;
     float _curve_dist;
     float _curve_interp;
     size_t _path_index;
+    bool _is_dead;
 
     inline void accumulate(const min::vec3<float> &p)
     {
@@ -124,11 +103,10 @@ class path
         // Reset last point
         _last = p;
     }
-
-    inline min::vec3<float> calculate_direction(const path_data &data) const
+    inline min::vec3<float> calculate_direction() const
     {
         // Current position
-        const min::vec3<float> &p = data.get_position();
+        const min::vec3<float> &p = _data.position();
 
         // Bezier interpolation instead of linear?
         min::vec3<float> target;
@@ -143,12 +121,12 @@ class path
         }
 
         // Normalize direction vector and provide a fallback
-        return target.normalize_safe(data.get_direction());
+        return target.normalize_safe(_data.direction());
     }
-    inline void expire_path(const path_data &data)
+    inline void expire_path()
     {
         // Current position
-        const min::vec3<float> &p = data.get_position();
+        const min::vec3<float> &p = _data.position();
 
         // Calculate the expire distance
         const min::vec3<float> expire_vec = _target - p;
@@ -229,7 +207,10 @@ class path
     }
 
   public:
-    path() : _bezier_interp(false), _curve_dist(0.0), _curve_interp(0.0), _path_index(0)
+    path()
+        : _bezier_interp(false),
+          _curve_dist(0.0), _curve_interp(0.0),
+          _path_index(0), _is_dead(true)
     {
         // Reserve space for path
         _path.reserve(100);
@@ -238,11 +219,23 @@ class path
     {
         _path.clear();
     }
-    const min::vec3<float> step(cgrid &grid, const path_data &data)
+    inline float get_remain() const
+    {
+        return _data.get_remain();
+    }
+    inline bool is_dead() const
+    {
+        return _is_dead;
+    }
+    inline void set_dead(const bool flag)
+    {
+        _is_dead = flag;
+    }
+    inline const min::vec3<float> step(cgrid &grid)
     {
         // Get data points
-        const min::vec3<float> &p = data.get_position();
-        const min::vec3<float> &dest = data.get_destination();
+        const min::vec3<float> &p = _data.position();
+        const min::vec3<float> &dest = _data.destination();
 
         // If we need to compute a path
         if (_path.size() == 0)
@@ -274,20 +267,21 @@ class path
             accumulate(p);
 
             // Calculate direction
-            const min::vec3<float> out = calculate_direction(data);
+            const min::vec3<float> out = calculate_direction();
 
             // Check if path has expired
-            expire_path(data);
+            expire_path();
 
             return out;
         }
 
         // Failure fallback
-        return data.get_direction();
+        return _data.direction();
     }
-    inline const std::vector<min::vec3<float>> &get_path() const
+    inline void update(const min::vec3<float> &p, const min::vec3<float> &dest)
     {
-        return _path;
+        // Assign new data
+        _data = path_data(p, dest);
     }
 };
 }

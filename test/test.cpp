@@ -16,8 +16,6 @@ You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <iostream>
-#include <tcgrid.h>
-#include <tpath.h>
 #include <tthread_pool.h>
 
 int main()
@@ -25,8 +23,6 @@ int main()
     try
     {
         bool out = true;
-        out = out && test_cgrid();
-        out = out && test_path();
         out = out && test_thread_pool();
         if (out)
         {

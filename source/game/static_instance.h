@@ -258,6 +258,15 @@ class static_instance
         // return mob id
         return _drone_mat.size() - 1;
     }
+    inline void clear_drone(const size_t index)
+    {
+        // Erase matrix at iterator
+        _drone_mat.erase(_drone_mat.begin() + index);
+    }
+    inline void clear_drones()
+    {
+        _drone_mat.clear();
+    }
     inline size_t add_drop(const min::vec3<float> &p, const int8_t atlas)
     {
         // Check for buffer overflow
@@ -464,6 +473,10 @@ class static_instance
     inline size_t drone_size() const
     {
         return _drone_mat.size();
+    }
+    inline static constexpr size_t max_drones()
+    {
+        return _DRONE_LIMIT;
     }
     inline bool drop_full() const
     {

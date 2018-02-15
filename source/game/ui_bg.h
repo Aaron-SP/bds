@@ -884,13 +884,19 @@ class ui_bg
         position_ui(min::vec2<float>());
     }
 
-    inline void action()
+    inline bool action()
     {
         if (_hovering && !_minimized)
         {
             // Use the hover id to do action on ui element
             _inv->decay(_hover.index());
+
+            // Action happened
+            return true;
         }
+
+        // No action
+        return false;
     }
     inline size_t bg_text_size() const
     {

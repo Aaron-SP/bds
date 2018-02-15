@@ -136,8 +136,11 @@ class drops
         // Create a box for the drop
         const min::aabbox<float, min::vec3> box = _inst->box_drop(inst_id);
 
+        // Store the drop index as body data
+        const size_t index = _drops.size();
+
         // Add to physics simulation
-        const size_t body_id = _sim->add_body(box, 10.0, 2);
+        const size_t body_id = _sim->add_body(box, 10.0, 2, index);
 
         // Get the physics body for editing
         min::body<float, min::vec3> &body = _sim->get_body(body_id);
@@ -149,10 +152,6 @@ class drops
         // Create a new drop
         _drops.emplace_back(body_id, inst_id, atlas);
 
-        // Store the drop index as body data
-        const size_t index = _drops.size() - 1;
-        body.set_data(min::body_data(index));
-
         // Return the drop index
         return _drops.size() - 1;
     }
@@ -162,7 +161,7 @@ class drops
     }
     inline void remove(const size_t index)
     {
-        // Clear drops at index
+        // Clear drop at index
         _inst->clear_drop(_drops[index].inst_id());
         _sim->clear_body(_drops[index].body_id());
         _drops.erase(_drops.begin() + index);

@@ -34,35 +34,58 @@ class drone
   private:
     size_t _body_id;
     size_t _inst_id;
-    path_data _data;
-    path _path;
+    size_t _path_id;
+    std::vector<path> *_paths;
+
+    inline path &get_path()
+    {
+        return (*_paths)[_path_id];
+    }
+    inline const path &get_path() const
+    {
+        return (*_paths)[_path_id];
+    }
 
   public:
-    drone(const size_t body_id, const size_t inst_id, const min::vec3<float> &p, const min::vec3<float> &dest)
-        : _body_id(body_id), _inst_id(inst_id), _data(p, dest) {}
-    size_t body_id() const
+    drone(const size_t body_id, const size_t inst_id,
+          const size_t path_id, std::vector<path> *const vp,
+          const min::vec3<float> &p, const min::vec3<float> &dest)
+        : _body_id(body_id), _inst_id(inst_id),
+          _path_id(path_id), _paths(vp)
+    {
+        // Reset path and update with new info
+        get_path().set_dead(false);
+        get_path().update(p, dest);
+    }
+    ~drone()
+    {
+        // Destroy path on destruction
+        get_path().clear();
+        get_path().set_dead(true);
+    }
+    inline size_t body_id() const
     {
         return _body_id;
     }
-    size_t inst_id() const
+    inline void dec_inst()
+    {
+        _inst_id--;
+    }
+    inline size_t inst_id() const
     {
         return _inst_id;
     }
-    path_data &get_data()
+    inline float get_remain() const
     {
-        return _data;
+        return get_path().get_remain();
     }
-    const path_data &get_data() const
+    inline min::vec3<float> step(cgrid &grid, const float speed)
     {
-        return _data;
+        return get_path().step(grid) * speed;
     }
-    path &get_path()
+    inline void update(const min::vec3<float> &p, const min::vec3<float> &dest)
     {
-        return _path;
-    }
-    const path &get_path() const
-    {
-        return _path;
+        get_path().update(p, dest);
     }
 };
 
@@ -70,12 +93,15 @@ class drones
 {
   private:
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
-    static constexpr size_t _drone_size = 1;
+    typedef std::function<void(min::body<float, min::vec3> &, min::body<float, min::vec3> &)> coll_call;
     physics *_sim;
     static_instance *_inst;
     std::vector<min::aabbox<float, min::vec3>> _col_cells;
     std::vector<drone> _drones;
     min::vec3<float> _dest;
+    std::vector<path> _paths;
+    size_t _path_old;
+    coll_call _f;
     bool _disable;
 
     inline min::body<float, min::vec3> &body(const size_t index)
@@ -86,7 +112,32 @@ class drones
     {
         return _sim->get_body(_drones[index].body_id());
     }
-    inline float path_speed(const float remain)
+    inline size_t get_idle_path_id()
+    {
+        // Output id
+        size_t id = 0;
+
+        // Scan for unused path
+        const size_t size = _paths.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            // Start at the oldest index
+            const size_t index = (_path_old %= size)++;
+
+            // If index is unused
+            if (_paths[index].is_dead())
+            {
+                // Assign id for use
+                id = index;
+
+                // Break out since found
+                break;
+            }
+        }
+
+        return id;
+    }
+    inline static float path_speed(const float remain)
     {
         // Calculate speed slowing down as approaching goal
         return 2.75 * ((remain - 3.0) / (remain + 3.0) + 1.1);
@@ -97,10 +148,10 @@ class drones
         drone &d = _drones[index];
 
         // Get remaining distance
-        const float remain = d.get_data().get_remain();
+        const float remain = d.get_remain();
 
         // Calculate the speed of the next step
-        const min::vec3<float> step = d.get_path().step(grid, d.get_data()) * path_speed(remain);
+        const min::vec3<float> step = d.step(grid, path_speed(remain));
 
         // Add velocity to the body
         body(index).set_linear_velocity(step);
@@ -114,34 +165,72 @@ class drones
     {
         // Reserve space for collision cells
         _col_cells.reserve(27);
-        _drones.reserve(_drone_size);
+        _drones.reserve(static_instance::max_drones());
     }
 
   public:
     drones(physics *sim, static_instance *inst)
-        : _sim(sim), _inst(inst), _disable(false)
+        : _sim(sim), _inst(inst), _paths(static_instance::max_drones()),
+          _path_old(0), _f(nullptr), _disable(false)
     {
         // Reserve memory for collision cells
         reserve_memory();
     }
-    inline size_t add(const min::vec3<float> &p)
+    inline void remove(const size_t index)
     {
+        // Clear drone at index
+        _inst->clear_drone(_drones[index].inst_id());
+        _sim->clear_body(_drones[index].body_id());
+        _drones.erase(_drones.begin() + index);
+
+        // Adjust the remaining drone indices
+        const size_t size = _drones.size();
+        for (size_t i = index; i < size; i++)
+        {
+            // Adjust the instance id
+            _drones[i].dec_inst();
+
+            // Adjust the body data index
+            body(i).set_data(min::body_data(i));
+        }
+    }
+    inline void set_collision_callback(const coll_call &f)
+    {
+        _f = f;
+    }
+    inline void set_destination(const min::vec3<float> &p)
+    {
+        _dest = p;
+    }
+    inline bool spawn(const min::vec3<float> &p)
+    {
+        // If full fail spawn
+        if (_inst->drone_full())
+        {
+            return false;
+        }
+
         // Create a drone
         const size_t inst_id = _inst->add_drone(p);
 
         // Add to physics simulation
         const min::aabbox<float, min::vec3> box = _inst->box_drone(inst_id);
-        const size_t body_id = _sim->add_body(box, 10.0, 1);
+
+        // Get next index for body
+        const size_t index = _drones.size();
+        const size_t body_id = _sim->add_body(box, 10.0, 1, index);
+
+        // Register player collision callback
+        _sim->register_callback(body_id, _f);
+
+        // Get idle path
+        const size_t path_id = get_idle_path_id();
 
         // Add path and path data for drone
-        _drones.emplace_back(body_id, inst_id, p, _dest);
+        _drones.emplace_back(body_id, inst_id, path_id, &_paths, p, _dest);
 
-        // Return the drone index
-        return _drones.size() - 1;
-    }
-    inline void set_destination(const min::vec3<float> &p)
-    {
-        _dest = p;
+        // Spawned a drone
+        return true;
     }
     inline void warp(const size_t index, const min::vec3<float> &p)
     {
@@ -184,7 +273,7 @@ class drones
         {
             // Update the path data position
             const min::vec3<float> &p = body(i).get_position();
-            _drones[i].get_data() = path_data(p, _dest);
+            _drones[i].update(p, _dest);
 
             // Update the instance matrix
             const size_t inst_id = _drones[i].inst_id();

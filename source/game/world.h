@@ -107,14 +107,6 @@ class world
         // return center position
         return center;
     }
-    inline min::vec3<float> ray_spawn(const min::vec3<float> &p)
-    {
-        // Create a ray point down
-        const min::ray<float, min::vec3> r(p, p - min::vec3<float>::up());
-
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        return _grid.ray_trace_prev(r, _ray_max_dist);
-    }
     inline size_t character_load(const load_state &state)
     {
         // Get spawn point
@@ -141,74 +133,94 @@ class world
         // Return the character body id
         return _char_id;
     }
-    inline std::tuple<bool, float, float> in_range_explode(const min::vec3<float> &p1, const min::vec3<float> &p2, const min::vec3<unsigned> &scale) const
+    inline auto explode_callback()
     {
-        // Calculate the size of the explosion
-        const float ex_squared_radius = scale.dot(scale);
+        // On collision explode callback
+        return [this](const min::vec3<float> &point,
+                      const min::vec3<float> &dir,
+                      const min::vec3<unsigned> &scale,
+                      const int8_t value) {
 
-        // Calculate squared distance from explosion center
-        const min::vec3<float> dp = p2 - p1;
-        const float sq_dist = dp.dot(dp);
+            // Play missile explosion sound
+            this->_sound->play_miss_ex(point);
+
+            // Explode the block
+            this->explode_anim(point, dir, scale, value, 100.0);
+        };
+    }
+    inline auto explode_block_callback()
+    {
+        // On collision explode callback
+        return [this](const min::vec3<float> &point,
+                      const min::vec3<float> &dir,
+                      const min::vec3<unsigned> &scale,
+                      const int8_t value) {
+
+            // Play missile explosion sound
+            this->_sound->play_miss_ex(point);
+
+            // Explode the block
+            this->explode_block(point, dir, scale, value, 100.0);
+        };
+    }
+    inline void explode_anim(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
+    {
+        // Add a drop
+        _drops.add(point, dir, value);
+
+        // Randomly drop a powerup
+        const size_t ran_drop = random_drop();
+        if (ran_drop < 4)
+        {
+            _drops.add(point, dir, id_value(block_id::CRYSTAL_R) + ran_drop);
+        }
+
+        // Calculate explosion speed
+        const min::vec3<float> speed = dir * _explode_speed;
+
+        // Add particle effects
+        _particles->load_static_explode(point, speed, _explode_time, size);
+
+        // Get player position
+        const min::vec3<float> &p = _player.position();
 
         // Check if character is too close to the explosion
-        return {sq_dist < ex_squared_radius, ex_squared_radius, sq_dist};
+        const auto pack = in_range_explode(p, point, scale);
+        const bool in_range = std::get<0>(pack);
+        const float ex_size = std::get<1>(pack);
+        const float sq_dist = std::get<2>(pack);
+
+        // If block is lava, play exploding sound
+        // Prefer stereo if close to the explosion
+        float power = 115.5 * ex_size;
+        if (in_range && value == id_value(block_id::SODIUM))
+        {
+            // Play explode sound
+            power = 5000.0;
+            _sound->play_explode_stereo(point);
+        }
+        else if (value == id_value(block_id::SODIUM))
+        {
+            // Play explode sound
+            _sound->play_explode_mono(point);
+        }
+
+        // If explode hasn't been flagged yet
+        if (!_player.is_exploded() && in_range)
+        {
+            _player.explode(dir, sq_dist, ex_size, power, value);
+        }
     }
     inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
     {
         // Offset explosion radius for geometry removal
         const min::vec3<float> center = center_radius(point, scale);
 
-        // Try to remove geometry from the grid
+        // If we removed geometry do explode animation
         const unsigned removed = _grid.set_geometry(center, scale, _preview_offset, -1);
-
-        // If we removed geometry, play particles
         if (removed > 0)
         {
-            // Add a drop
-            _drops.add(point, dir, value);
-
-            // Randomly drop a powerup
-            const size_t ran_drop = random_drop();
-            if (ran_drop < 4)
-            {
-                _drops.add(point, dir, id_value(block_id::CRYSTAL_R) + ran_drop);
-            }
-
-            // Calculate explosion speed
-            const min::vec3<float> speed = dir * _explode_speed;
-
-            // Add particle effects
-            _particles->load_static_explode(point, speed, _explode_time, size);
-
-            // Get player position
-            const min::vec3<float> &p = _player.position();
-
-            // Check if character is too close to the explosion
-            const auto pack = in_range_explode(p, point, scale);
-            const bool in_range = std::get<0>(pack);
-            const float ex_size = std::get<1>(pack);
-            const float sq_dist = std::get<2>(pack);
-
-            // If block is lava, play exploding sound
-            // Prefer stereo if close to the explosion
-            float power = 115.5 * ex_size;
-            if (in_range && value == id_value(block_id::SODIUM))
-            {
-                // Play explode sound
-                power = 5000.0;
-                _sound->play_explode_stereo(point);
-            }
-            else if (value == id_value(block_id::SODIUM))
-            {
-                // Play explode sound
-                _sound->play_explode_mono(point);
-            }
-
-            // If explode hasn't been flagged yet
-            if (!_player.is_exploded() && in_range)
-            {
-                _player.explode(dir, sq_dist, ex_size, power, value);
-            }
+            explode_anim(point, dir, scale, value, size);
         }
     }
     // Generates the preview geometry and adds it to preview buffer
@@ -223,17 +235,37 @@ class world
         // Upload preview geometry
         _terrain.upload_preview(_terr_mesh);
     }
+    inline std::tuple<bool, float, float> in_range_explode(const min::vec3<float> &p1, const min::vec3<float> &p2, const min::vec3<unsigned> &scale) const
+    {
+        // Calculate the size of the explosion
+        const float ex_squared_radius = scale.dot(scale);
+
+        // Calculate squared distance from explosion center
+        const min::vec3<float> dp = p2 - p1;
+        const float sq_dist = dp.dot(dp);
+
+        // Check if character is too close to the explosion
+        return {sq_dist < ex_squared_radius, ex_squared_radius, sq_dist};
+    }
     inline size_t random_drop()
     {
         return _drop_dist(_gen);
     }
-    inline min::vec3<float> random_point()
+    inline min::vec3<float> random_spawn()
     {
         const float x = _grid_dist(_gen);
-        const float y = _grid_dist(_gen);
+        const float y = 50.0;
         const float z = _grid_dist(_gen);
 
         return min::vec3<float>(x, y, z);
+    }
+    inline min::vec3<float> ray_spawn(const min::vec3<float> &p)
+    {
+        // Create a ray point down
+        const min::ray<float, min::vec3> r(p, p - min::vec3<float>::up());
+
+        // Trace a ray to the destination point to find placement position, return point is snapped
+        return _grid.ray_trace_prev(r, _ray_max_dist);
     }
     inline void reserve_memory(const size_t view_chunk_size)
     {
@@ -253,8 +285,9 @@ class world
         const auto f = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
 
             // Get other body id, b1 is player body
+            // 1 is drone
+            // 2 is drop
             const size_t id = b2.get_id();
-
             if (id == 1)
             {
                 // Player collided with a drone
@@ -289,6 +322,40 @@ class world
 
         // Register player collision callback
         _simulation.register_callback(_char_id, f);
+
+        // Drone collision callback
+        const auto g = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
+
+            // Get other body id, b1 is drone
+            // 3 is grenade
+            if (b2.get_id() == 3)
+            {
+                // Get the drone index from the body
+                const size_t drone_index = b1.get_data().index;
+
+                // Remove this drone
+                _drones.remove(drone_index);
+            }
+        };
+
+        _drones.set_collision_callback(g);
+
+        // Drone collision callback
+        const auto h = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
+
+            // Get other body id, b1 is explosive
+            // 1 is drone
+            if (b2.get_id() == 1)
+            {
+                // Get the explode index from the body
+                const size_t exp_index = b1.get_data().index;
+
+                // Remove this drone
+                _explosives.explode(exp_index, id_value(block_id::SODIUM), explode_callback());
+            }
+        };
+
+        _explosives.set_collision_callback(h);
     }
     inline void update_all_chunks()
     {
@@ -334,16 +401,7 @@ class world
         };
 
         // On collision explode callback
-        const auto explode_ex = [this](const min::vec3<float> &point,
-                                       const min::vec3<float> &dir,
-                                       const min::vec3<unsigned> &scale,
-                                       const int8_t value) {
-            // Play missile explosion sound
-            this->_sound->play_miss_ex(point);
-
-            // Explode the block
-            this->explode_block(point, dir, scale, value, 100.0);
-        };
+        const auto explode_ex = explode_block_callback();
 
         // Send drones after the player
         _drones.set_destination(p);
@@ -418,8 +476,8 @@ class world
         // Update chunks
         update_all_chunks();
 
-        // Add a drone at random location
-        _drones.add(random_point());
+        // Spawn maximum drones
+        spawn_drones();
     }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {
@@ -668,6 +726,12 @@ class world
                 // Regenerate the preview mesh
                 generate_preview();
             }
+        }
+    }
+    inline void spawn_drones()
+    {
+        while (_drones.spawn(random_spawn()))
+        {
         }
     }
     void update(min::camera<float> &cam, const float dt)
