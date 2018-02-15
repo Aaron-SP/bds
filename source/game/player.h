@@ -46,7 +46,7 @@ class player
     static constexpr float _fall_threshold = -1.0;
     static constexpr float _grav_mag = 10.0;
     static constexpr float _jet_cost = 0.25;
-    static constexpr float _project_dist = 1.0;
+    static constexpr float _project_dist = 1.5;
 
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
     size_t _body_id;

@@ -673,7 +673,7 @@ class controls
                 else
                 {
                     sound->play_voice_resource();
-                    ui->set_ui_error_resource();
+                    ui->set_alert_resource();
                 }
             }
             else if (skill.is_grapple_mode())
@@ -701,7 +701,7 @@ class controls
                 else
                 {
                     sound->play_voice_resource();
-                    ui->set_ui_error_resource();
+                    ui->set_alert_resource();
                 }
             }
             else if (skill.is_missile_mode() && skill.is_off_cooldown())
@@ -715,7 +715,7 @@ class controls
                 else
                 {
                     sound->play_voice_resource();
-                    ui->set_ui_error_resource();
+                    ui->set_alert_resource();
                 }
             }
             else if (skill.is_scan_mode())
@@ -734,7 +734,7 @@ class controls
                 else
                 {
                     sound->play_voice_resource();
-                    ui->set_ui_error_resource();
+                    ui->set_alert_resource();
                 }
             }
         }
@@ -872,7 +872,7 @@ class controls
                     else
                     {
                         sound->play_voice_resource();
-                        ui->set_ui_error_resource();
+                        ui->set_alert_resource();
                     }
 
                     // Stop the charge sound

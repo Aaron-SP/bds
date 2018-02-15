@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __GAME_HEADER__
 
 #include <game/controls.h>
+#include <game/events.h>
 #include <game/particle.h>
 #include <game/sound.h>
 #include <game/state.h>
@@ -53,6 +54,7 @@ class bds
     game::character _character;
     game::state _state;
     game::world _world;
+    game::events _events;
     game::ui_overlay _ui;
     game::controls _controls;
     game::title _title;
@@ -362,6 +364,9 @@ class bds
                 // Must update state properties, camera before drawing world
                 _state.update(player.position(), center, _win.get_width(), _win.get_height());
             }
+
+            // Update the game events
+            _events.update(_world, _ui, dt);
 
             // Update the world state
             _world.update(camera, dt);

@@ -36,14 +36,16 @@ class ui_text
     static constexpr size_t _ui_font_size = 14;
     static constexpr size_t _console = 0;
     static constexpr size_t _ui = _console + 1;
-    static constexpr size_t _error = _ui + 2;
-    static constexpr size_t _debug = _error + 1;
+    static constexpr size_t _alert = _ui + 2;
+    static constexpr size_t _debug = _alert + 1;
     static constexpr size_t _hover = _debug + 11;
     static constexpr size_t _end = _hover + 1;
-    static constexpr float _y_console = 100.0;
-    static constexpr float _y_error = 180.0;
+    static constexpr float _x_alert_wrap = 600.0;
+    static constexpr float _y_alert_wrap = _font_size;
+    static constexpr float _y_alert = 180.0;
     static constexpr float _x_console_wrap = 400.0;
     static constexpr float _y_console_wrap = _font_size;
+    static constexpr float _y_console = 100.0;
     static constexpr float _x_health = 248.0;
     static constexpr float _x_energy = 200.0;
     static constexpr float _y_ui = 150.0;
@@ -64,7 +66,7 @@ class ui_text
     std::ostringstream _stream;
     bool _draw_console;
     bool _draw_debug;
-    bool _draw_error;
+    bool _draw_alert;
     bool _draw_ui;
     bool _draw_hover;
 
@@ -98,8 +100,8 @@ class ui_text
         _text.set_text_location(_ui, w2 - _x_health, _y_ui);
         _text.set_text_location(_ui + 1, w2 + _x_energy, _y_ui);
 
-        // Position error element
-        _text.set_text_center(_error, w2, height - _y_error);
+        // Position alert element
+        _text.set_text_center(_alert, w2, height - _y_alert);
 
         // Rescale all debug text
         uint16_t y = height - 20;
@@ -129,7 +131,7 @@ class ui_text
           _prog(_vertex, _fragment),
           _text("data/fonts/open_sans.ttf", _font_size),
           _text_bg("data/fonts/open_sans.ttf", _ui_font_size),
-          _draw_console(false), _draw_debug(false), _draw_error(false),
+          _draw_console(false), _draw_debug(false), _draw_alert(false),
           _draw_ui(false), _draw_hover(false)
     {
         // Update the text buffer screen dimensions
@@ -147,16 +149,16 @@ class ui_text
         }
 
         // Add 2 ui entries
-        for (size_t i = _ui; i < _error; i++)
+        for (size_t i = _ui; i < _alert; i++)
         {
             add_text("", 0, 0);
         }
 
-        // Add 1 error entry
-        for (size_t i = _error; i < _debug; i++)
+        // Add 1 alert entry
+        for (size_t i = _alert; i < _debug; i++)
         {
             add_text("", 0, 0);
-            _text.set_line_wrap(i, _x_console_wrap, _y_console_wrap);
+            _text.set_line_wrap(i, _x_alert_wrap, _y_alert_wrap);
         }
 
         // Add 11 debug entries
@@ -178,28 +180,28 @@ class ui_text
     void draw(const size_t bg_size) const
     {
         // Minimize draw calls by lumping togetherness
-        if (_draw_console && _draw_ui && _draw_error && _draw_debug)
+        if (_draw_console && _draw_ui && _draw_alert && _draw_debug)
         {
             bind();
             _text.draw(_console, _hover - 1);
         }
-        else if (_draw_console && _draw_ui && _draw_error && !_draw_debug)
+        else if (_draw_console && _draw_ui && _draw_alert && !_draw_debug)
         {
             bind();
             _text.draw(_console, _debug - 1);
         }
-        else if (_draw_console && _draw_ui && !_draw_error && !_draw_debug)
+        else if (_draw_console && _draw_ui && !_draw_alert && !_draw_debug)
         {
             bind();
-            _text.draw(_console, _error - 1);
+            _text.draw(_console, _alert - 1);
         }
-        else if (_draw_console && _draw_ui && !_draw_error && _draw_debug)
+        else if (_draw_console && _draw_ui && !_draw_alert && _draw_debug)
         {
             bind();
-            _text.draw(_console, _error - 1);
+            _text.draw(_console, _alert - 1);
             _text.draw(_debug, _hover - 1);
         }
-        else if (_draw_console && !_draw_ui && !_draw_error && !_draw_debug)
+        else if (_draw_console && !_draw_ui && !_draw_alert && !_draw_debug)
         {
             bind();
             _text.draw(_console);
@@ -214,11 +216,11 @@ class ui_text
             }
             if (_draw_ui)
             {
-                _text.draw(_ui, _error - 1);
+                _text.draw(_ui, _alert - 1);
             }
-            if (_draw_error)
+            if (_draw_alert)
             {
-                _text.draw(_error, _debug - 1);
+                _text.draw(_alert, _debug - 1);
             }
             if (_draw_debug)
             {
@@ -257,9 +259,9 @@ class ui_text
     {
         _draw_debug = flag;
     }
-    inline void set_draw_error(const bool flag)
+    inline void set_draw_alert(const bool flag)
     {
-        _draw_error = flag;
+        _draw_alert = flag;
     }
     inline void set_draw_hover(const bool flag)
     {
@@ -410,22 +412,22 @@ class ui_text
         _stream << static_cast<int>(std::round(energy));
         update_text(_ui + 1, _stream.str());
     }
-    inline void update_ui_error(const std::string &error)
+    inline void update_ui_alert(const std::string &alert)
     {
-        // Update the error text
-        update_text(_error, error);
+        // Update the alert text
+        update_text(_alert, alert);
 
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();
 
         // Position the console elements
         const uint16_t w2 = (size.first / 2);
-        _text.set_text_center(_error, w2, size.second - _y_error);
+        _text.set_text_center(_alert, w2, size.second - _y_alert);
     }
-    inline void update_hover(const min::vec2<float> &p, const std::string &error)
+    inline void update_hover(const min::vec2<float> &p, const std::string &hover)
     {
-        // Update the error text
-        update_text(_hover, error);
+        // Update the hover text
+        update_text(_hover, hover);
 
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();

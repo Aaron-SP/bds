@@ -32,14 +32,37 @@ class ui_overlay
     ui_text _text;
     ui_bg _bg;
     bool _dirty;
+    const std::string _ast;
+    const std::string _peace;
     const std::string _res;
+    const std::string _swarm;
     float _time;
+
+    inline void set_ui_alert(const std::string &str, const float time)
+    {
+        // Flag dirty
+        _dirty = true;
+
+        // Enable drawing alert text
+        _text.set_draw_alert(true);
+
+        // Show resource message
+        _text.update_ui_alert(str);
+
+        // Add some time on the clock
+        _time = time;
+    }
 
   public:
     ui_overlay(const uniforms &uniforms, inventory *const inv, stats *const stat, const uint16_t width, const uint16_t height)
         : _text(width, height),
           _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
-          _dirty(false), _res("Low Power!"), _time(-1.0) {}
+          _dirty(false),
+          _ast("Incoming asteroids, take cover!"),
+          _peace("Everything seems peaceful!"),
+          _res("Low Power!"),
+          _swarm("Space pirates have invaded your planet!"),
+          _time(-1.0) {}
 
     inline bool action()
     {
@@ -213,19 +236,21 @@ class ui_overlay
         // Set text screen dimensions
         _text.set_screen(p, width, height);
     }
-    inline void set_ui_error_resource()
+    inline void set_alert_asteroid()
     {
-        // Flag dirty
-        _dirty = true;
-
-        // Enable drawing error text
-        _text.set_draw_error(true);
-
-        // Show resource message
-        _text.update_ui_error(_res);
-
-        // Add some time on the clock
-        _time = 2.0;
+        set_ui_alert(_ast, 86400.0);
+    }
+    inline void set_alert_peace()
+    {
+        set_ui_alert(_peace, 2.0);
+    }
+    inline void set_alert_resource()
+    {
+        set_ui_alert(_res, 2.0);
+    }
+    inline void set_alert_swarm()
+    {
+        set_ui_alert(_swarm, 86400.0);
     }
     inline ui_text &text()
     {
@@ -272,8 +297,8 @@ class ui_overlay
             _time -= dt;
             if (_time < 0.0)
             {
-                // Disable error text
-                _text.set_draw_error(false);
+                // Disable alert text
+                _text.set_draw_alert(false);
             }
         }
     }

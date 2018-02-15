@@ -118,11 +118,11 @@ class sound
 {
   private:
     static constexpr size_t _bg_sounds = 2;
+    static constexpr size_t _miss_limit = 10;
     static constexpr size_t _sounds = 21;
     static constexpr size_t _voice_sounds = 6;
-    static constexpr size_t _max_delay = 120;
-    static constexpr size_t _miss_limit = 10;
     static constexpr float _land_threshold = 3.0;
+    static constexpr float _max_delay = 120.0;
     static constexpr float _max_speed = 10.0;
     static constexpr float _fade_speed = 0.1;
     static constexpr float _fade_tol = 0.001;
@@ -180,7 +180,7 @@ class sound
     float _v_delay;
     bool _v_enable;
     std::uniform_int_distribution<size_t> _int_dist;
-    std::uniform_real_distribution<double> _real_dist;
+    std::uniform_real_distribution<float> _real_dist;
     std::mt19937 _gen;
 
     inline sound_info &bg_info()
@@ -487,7 +487,7 @@ class sound
         : _music(_bg_sounds), _bg_delay(30.0), _bg_enable(false),
           _miss(_miss_limit), _miss_old(0),
           _voice(_voice_sounds), _v_head(0), _v_delay(1.0), _v_enable(true),
-          _int_dist(0, 1), _real_dist(0, _max_delay),
+          _int_dist(0, 1), _real_dist(0.0, _max_delay),
           _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
     {
         // Reserve memory for sources and buffers

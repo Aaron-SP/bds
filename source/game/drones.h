@@ -201,6 +201,10 @@ class drones
     {
         _dest = p;
     }
+    inline size_t size() const
+    {
+        return _drones.size();
+    }
     inline bool spawn(const min::vec3<float> &p)
     {
         // If full fail spawn

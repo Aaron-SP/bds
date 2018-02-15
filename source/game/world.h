@@ -132,6 +132,14 @@ class world
         // Return the character body id
         return _char_id;
     }
+    inline min::vec3<float> event_spawn()
+    {
+        const float x = _grid_dist(_gen);
+        const float y = 50.0;
+        const float z = _grid_dist(_gen);
+
+        return min::vec3<float>(x, y, z);
+    }
     inline auto ex_player_call(const min::vec3<float> &p)
     {
         // Block explosion callback
@@ -268,14 +276,6 @@ class world
     inline size_t random_drop()
     {
         return _drop_dist(_gen);
-    }
-    inline min::vec3<float> random_spawn()
-    {
-        const float x = _grid_dist(_gen);
-        const float y = 50.0;
-        const float z = _grid_dist(_gen);
-
-        return min::vec3<float>(x, y, z);
     }
     inline min::vec3<float> ray_spawn(const min::vec3<float> &p)
     {
@@ -494,9 +494,6 @@ class world
 
         // Update chunks
         update_all_chunks();
-
-        // Spawn maximum drones
-        spawn_drones();
     }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {
@@ -600,10 +597,6 @@ class world
     inline const player &get_player() const
     {
         return _player;
-    }
-    inline drones &get_drones()
-    {
-        return _drones;
     }
     inline const drones &get_drones() const
     {
@@ -744,9 +737,14 @@ class world
             }
         }
     }
+    inline void spawn_asteroid()
+    {
+        const min::vec3<float> down(0.0, -1.0, 0.0);
+        _explosives.launch(event_spawn(), down, id_value(block_id::SODIUM));
+    }
     inline void spawn_drones()
     {
-        while (_drones.spawn(random_spawn()))
+        while (_drones.spawn(event_spawn()))
         {
         }
     }
