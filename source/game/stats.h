@@ -29,22 +29,25 @@ class stats
   private:
     static constexpr float _health_regen = 1.0 / 180.0;
     static constexpr float _energy_regen = 2.0 / 180.0;
-    static constexpr size_t _max_stats = 6;
+    static constexpr size_t _max_stats = 7;
     float _max_energy;
     float _energy;
     bool _low_energy;
+    float _max_exp;
+    float _exp;
     float _max_health;
     float _health;
     bool _low_health;
     bool _dead;
+    bool _dirty;
     std::array<uint16_t, _max_stats> _stats;
 
   public:
     static std::array<std::string, _max_stats> stat_str;
     stats()
-        : _max_energy(100.0), _energy(_max_energy), _low_energy(false),
-          _max_health(100.0), _health(_max_health), _low_health(false), _dead(false),
-          _stats{5, 5, 5, 5, 5, 5} {}
+        : _max_energy(100.0), _energy(_max_energy), _low_energy(false), _max_exp(1000.0), _exp(0.0),
+          _max_health(100.0), _health(_max_health), _low_health(false), _dead(false), _dirty(false),
+          _stats{5, 5, 5, 5, 5, 5, 1} {}
 
     inline void add_energy(const float energy)
     {
@@ -58,6 +61,19 @@ class stats
             {
                 _energy = _max_energy;
             }
+        }
+    }
+    inline void add_experience(const float exp)
+    {
+        _exp += exp;
+
+        // If experience overflow
+        if (_exp >= _max_exp)
+        {
+            _exp -= _max_exp;
+
+            // Level up
+            level_up();
         }
     }
     inline void add_health(const float health)
@@ -113,6 +129,14 @@ class stats
             _low_energy = true;
         }
     }
+    inline void clean()
+    {
+        _dirty = false;
+    }
+    inline bool dirty() const
+    {
+        return _dirty;
+    }
     inline float get_energy() const
     {
         return _energy;
@@ -120,6 +144,14 @@ class stats
     inline float get_energy_percent() const
     {
         return _energy / _max_energy;
+    }
+    inline float get_experience() const
+    {
+        return _exp;
+    }
+    inline float get_experience_percent() const
+    {
+        return _exp / _max_exp;
     }
     inline float get_health() const
     {
@@ -163,6 +195,9 @@ class stats
         _energy = _max_energy;
         _low_energy = false;
 
+        // Reset experience
+        _exp = 0.0;
+
         // Reset health
         _health = _max_health;
         _low_health = false;
@@ -204,10 +239,21 @@ class stats
     {
         return _stats[5];
     }
+    uint16_t level() const
+    {
+        return _stats[6];
+    }
+    void level_up()
+    {
+        _stats[6]++;
+
+        // Set dirty flag
+        _dirty = true;
+    }
 };
 
 // Initialize public static string stats
-std::array<std::string, stats::str_size()> stats::stat_str = {"Force", "Dynamism", "Tenacity", "Tranquility", "Vision", "Zeal"};
+std::array<std::string, stats::str_size()> stats::stat_str = {"Force", "Dynamism", "Tenacity", "Tranquility", "Vision", "Zeal", "Level"};
 }
 
 #endif

@@ -63,7 +63,7 @@ class explosives
     static constexpr float _rotation_rate = 2.0;
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     typedef std::function<void(min::body<float, min::vec3> &, min::body<float, min::vec3> &)> coll_call;
-    typedef std::function<void(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const int8_t value)> ex_call;
+    typedef std::function<void(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const int8_t value)> ex_call;
     physics *_sim;
     static_instance *_inst;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
@@ -85,11 +85,6 @@ class explosives
     {
         // Return the explosive position
         return body(index).get_position();
-    }
-    inline const min::vec3<float> &velocity(const size_t index) const
-    {
-        // Return the explosive position
-        return body(index).get_linear_velocity();
     }
     inline void remove(const size_t index)
     {
@@ -127,11 +122,8 @@ class explosives
 
     inline void explode(const size_t index, const int8_t atlas, const ex_call &f)
     {
-        // Get direction opposing body velocity
-        const min::vec3<float> v = min::vec3<float>(velocity(index)).normalize() * -1.0;
-
         // Call the explosion callback function
-        f(position(index), v, _scale, atlas);
+        f(position(index), _scale, atlas);
 
         // Blow up the grenade
         remove(index);

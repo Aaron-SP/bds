@@ -97,12 +97,25 @@ enum class item_id : uint8_t
     FOOD_GR_PEP = 116
 };
 
+enum class skill_id : uint8_t
+{
+    BEAM = 1,
+    MISSILE = 2,
+    GRAPPLE = 3,
+    JET = 4,
+    SCAN = 5,
+    GRENADE = 6
+};
+
 inline constexpr int8_t id_value(const block_id id)
 {
     return static_cast<int8_t>(id);
 }
-
 inline constexpr uint8_t id_value(const item_id id)
+{
+    return static_cast<uint8_t>(id);
+}
+inline constexpr uint8_t id_value(const skill_id id)
 {
     return static_cast<uint8_t>(id);
 }

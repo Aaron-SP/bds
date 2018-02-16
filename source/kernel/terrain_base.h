@@ -92,7 +92,7 @@ class terrain_base
                     {
                         if (dope(gen) == 0)
                         {
-                            write[index] = game::id_value(game::block_id::IRON);
+                            write[index] = game::id_value(game::block_id::SILVER);
                         }
                         else
                         {
@@ -103,7 +103,7 @@ class terrain_base
                     {
                         if (dope(gen) == 0)
                         {
-                            write[index] = game::id_value(game::block_id::SILVER);
+                            write[index] = game::id_value(game::block_id::IRON);
                         }
                         else
                         {

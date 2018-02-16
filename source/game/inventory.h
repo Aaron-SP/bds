@@ -75,35 +75,35 @@ class inv_id
     }
     inline inv_id bg_store_index() const
     {
-        return inv_id(_id + 5);
+        return inv_id(_id + 6);
     }
     inline inv_id store_index() const
     {
-        return inv_id(_id + 13);
+        return inv_id(_id + 14);
     }
     inline inv_id bg_key_index() const
     {
-        return inv_id(_id + 13);
+        return inv_id(_id + 14);
     }
     inline inv_id key_index() const
     {
-        return inv_id(_id + 21);
+        return inv_id(_id + 22);
     }
     inline inv_id bg_ex_index() const
     {
-        return inv_id(_id + 21);
+        return inv_id(_id + 22);
     }
     inline inv_id ex_index() const
     {
-        return inv_id(_id + 45);
+        return inv_id(_id + 46);
     }
     inline inv_id bg_cube_index() const
     {
-        return inv_id(_id + 46);
+        return inv_id(_id + 47);
     }
     inline inv_id cube_index() const
     {
-        return inv_id(_id + 55);
+        return inv_id(_id + 56);
     }
     inline inv_id to_key() const
     {
@@ -217,11 +217,36 @@ class item
 class inventory
 {
   private:
+    class craft_item
+    {
+      private:
+        size_t _index;
+        item _item;
+
+      public:
+        craft_item() : _index(0), _item() {}
+        craft_item(const size_t index, const item &it) : _index(index), _item(it) {}
+        const size_t index() const
+        {
+            return _index;
+        }
+        const item &item() const
+        {
+            return _item;
+        }
+        bool operator<(const craft_item &other) const
+        {
+            return (_item.id() < other.item().id());
+        }
+    };
+
     static constexpr size_t _max_slots = 49;
     static constexpr size_t _max_strings = 117;
+    static constexpr size_t _cube_size = 9;
     std::array<item, _max_slots> _inv;
     std::array<std::string, _max_strings> _inv_desc;
     std::vector<inv_id> _update;
+    std::array<craft_item, _cube_size> _craft;
 
     inline bool decay(const uint8_t index, const uint8_t consume_id, const uint8_t add_id, uint8_t &count)
     {
@@ -242,11 +267,52 @@ class inventory
 
         return false;
     }
+    inline void consume(const size_t index, item &it, uint8_t &count)
+    {
+        // Consume the inventory count
+        it.consume(count);
+
+        // Set the remaining count
+        count = it.count();
+
+        // If count is zero set empty ID
+        if (it.count() == 0)
+        {
+            it.empty();
+        }
+
+        // Store update index
+        _update.emplace_back(index);
+    }
+    inline bool consume2(
+        const size_t index_1, const uint8_t id_1, uint8_t &count_1,
+        const size_t index_2, const uint8_t id_2, uint8_t &count_2)
+    {
+        // Get the current item
+        item &it_1 = _inv[index_1];
+        item &it_2 = _inv[index_2];
+
+        const bool it1_pass = (it_1.id() == id_1) && (it_1.count() >= count_1);
+        const bool it2_pass = (it_2.id() == id_2) && (it_2.count() >= count_2);
+
+        // Are these the items we want?
+        if (it1_pass && it2_pass)
+        {
+            // Consume both resources
+            consume(index_1, it_1, count_1);
+            consume(index_2, it_2, count_2);
+
+            // Return that we consumed the resource
+            return true;
+        }
+
+        return false;
+    }
     inline void load_strings()
     {
         _inv_desc[0] = "Empty";
         _inv_desc[1] = "Charge Beam";
-        _inv_desc[2] = "Missiles";
+        _inv_desc[2] = "Missile Launcher";
         _inv_desc[3] = "Grapple Hook";
         _inv_desc[4] = "Jet Pack";
         _inv_desc[5] = "Pending Scan";
@@ -336,7 +402,7 @@ class inventory
     }
 
   public:
-    inventory() : _inv{}, _inv_desc{}
+    inventory() : _inv{}, _inv_desc{}, _craft{}
     {
         // Load inv` strings
         load_strings();
@@ -350,7 +416,6 @@ class inventory
         _inv[begin_store() + 2] = item(3, 1);
         _inv[begin_store() + 3] = item(4, 1);
         _inv[begin_store() + 4] = item(5, 1);
-        _inv[begin_store() + 5] = item(6, 1);
     }
     inline const item &operator[](const size_t index) const
     {
@@ -456,7 +521,7 @@ class inventory
     }
     inline static size_t end_cube()
     {
-        return 49;
+        return begin_cube() + _cube_size;
     }
     inline static size_t size()
     {
@@ -465,35 +530,6 @@ class inventory
     inline void clean()
     {
         _update.clear();
-    }
-    inline bool consume(const size_t index, const uint8_t id, uint8_t &count)
-    {
-        // Get the current item
-        item &it = _inv[index];
-
-        // Is this the item I want?
-        if (it.id() == id && it.count() >= count)
-        {
-            // Consume the inventory count
-            it.consume(count);
-
-            // Set the remaining count
-            count = it.count();
-
-            // If count is zero set empty ID
-            if (it.count() == 0)
-            {
-                it.empty();
-            }
-
-            // Store update index
-            _update.emplace_back(index);
-
-            // Return that we consumed the resource
-            return true;
-        }
-
-        return false;
     }
     inline bool consume(const uint8_t id, uint8_t &count)
     {
@@ -509,6 +545,78 @@ class inventory
         }
 
         // Return that we failed to consume
+        return false;
+    }
+    inline bool consume(const size_t index, const uint8_t id, uint8_t &count)
+    {
+        // Get the current item
+        item &it = _inv[index];
+
+        // Is this the item I want?
+        if (it.id() == id && it.count() >= count)
+        {
+            consume(index, it, count);
+
+            // Return that we consumed the resource
+            return true;
+        }
+
+        return false;
+    }
+    inline bool recipe_2()
+    {
+        // Sort the crafting array by ID
+        std::sort(_craft.begin(), _craft.end(), std::less<craft_item>());
+
+        // Get indices in sorted order
+        const size_t lower = _craft[0].index();
+        const size_t higher = _craft[1].index();
+        uint8_t low_count = 4;
+        uint8_t hight_count = 4;
+
+        // Try to craft a recipe
+        if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::BLK_K), hight_count))
+        {
+            // Craft a missile
+            uint8_t add_count = 32;
+            return add(id_value(skill_id::MISSILE), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::BLK_NA), hight_count))
+        {
+            // Craft a grenade launcher
+            uint8_t add_count = 32;
+            return add(id_value(skill_id::GRENADE), add_count);
+        }
+
+        // Failed to craft item
+        return false;
+    }
+    inline bool craft()
+    {
+        size_t craft_size = 0;
+        const size_t begin = begin_cube();
+
+        // Copy non-empty items into crafting slots
+        const size_t size = _craft.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            const size_t index = begin + i;
+            const item &it = _inv[index];
+            if (it.id() != 0)
+            {
+                _craft[craft_size++] = craft_item(index, it);
+            }
+        }
+
+        // First recipe
+        switch (craft_size)
+        {
+        case 2:
+            return recipe_2();
+            break;
+        }
+
+        // Return that we failed to craft
         return false;
     }
     inline bool decay(const size_t index)
@@ -573,7 +681,7 @@ class inventory
     {
         // Write inventory data into stream
         const size_t start = begin_key();
-        const size_t end = end_extend();
+        const size_t end = end_cube();
         for (size_t i = start; i < end; i++)
         {
             _inv[i] = inv[i];
@@ -608,11 +716,9 @@ class inventory
 
         // Create items in the store
         _inv[begin_store()] = item(1, 1);
-        _inv[begin_store() + 1] = item(2, 1);
-        _inv[begin_store() + 2] = item(3, 1);
-        _inv[begin_store() + 3] = item(4, 1);
-        _inv[begin_store() + 4] = item(5, 1);
-        _inv[begin_store() + 5] = item(6, 1);
+        _inv[begin_store() + 1] = item(3, 1);
+        _inv[begin_store() + 2] = item(4, 1);
+        _inv[begin_store() + 3] = item(5, 1);
 
         // Flag all dirty
         _update.resize(_inv.size());
@@ -651,10 +757,30 @@ class inventory
     }
     inline void swap(const size_t one, const size_t two)
     {
-        // Only swap if failed to stack
-        if (!stack(one, two))
+        // If swapping with store
+        if (one >= begin_store() && one < end_store())
         {
-            // Swap items
+            if (_inv[two].id() == 0)
+            {
+                _inv[two] = _inv[one];
+
+                // Store update index
+                _update.emplace_back(two);
+            }
+        }
+        else if (two >= begin_store() && two < end_store())
+        {
+            if (_inv[one].id() == 0)
+            {
+                _inv[one] = _inv[two];
+
+                // Store update index
+                _update.emplace_back(one);
+            }
+        }
+        else if (!stack(one, two))
+        {
+            // Only swap items if failed to stack
             const item swap = _inv[one];
             _inv[one] = _inv[two];
             _inv[two] = swap;

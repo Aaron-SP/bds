@@ -69,7 +69,7 @@ class missiles
   private:
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     typedef std::function<void(min::body<float, min::vec3> &, min::body<float, min::vec3> &)> coll_call;
-    typedef std::function<void(const min::vec3<float> &point, const min::vec3<float> &direction, const min::vec3<unsigned> &scale, const int8_t value)> ex_call;
+    typedef std::function<void(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const int8_t value)> ex_call;
     physics *_sim;
     static_instance *_inst;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
@@ -139,11 +139,8 @@ class missiles
         // Stop playing launch sound
         _sound->stop_miss_launch(_miss[index].sound_id());
 
-        // Get direction opposing body velocity
-        const min::vec3<float> v = min::vec3<float>(velocity(index)).normalize() * -1.0;
-
         // Call the explosion callback function
-        f(position(index), v, _scale, atlas);
+        f(position(index), _scale, atlas);
 
         // Blow up the grenade
         remove(index);

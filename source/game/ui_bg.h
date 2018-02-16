@@ -43,6 +43,7 @@ class ui_bg
   private:
     constexpr static float _to_x = 8.0;
     constexpr static float _to_y = -16.0;
+    constexpr static size_t _text_size = 20;
     // OpenGL stuff
     min::shader _vertex;
     min::shader _fragment;
@@ -296,7 +297,7 @@ class ui_bg
         for (size_t i = 0; i < size; i++)
         {
             // Get stat text position
-            const min::vec2<float> p = _assets.stat_position(i, 20);
+            const min::vec2<float> p = _assets.stat_position(i, _text_size);
 
             // Add stat descriptor and value text
             _text->add_text(_stat->str(i), p.x(), p.y());
@@ -308,7 +309,7 @@ class ui_bg
             clear_stream();
             _stream << value;
 
-            // Set stat text
+            // Set stat text at offset
             const size_t dx = stat_offset(value);
             _text->add_text(_stream.str(), p.x() + dx, p.y());
         }
@@ -432,8 +433,11 @@ class ui_bg
             _assets.load_cursor_aim();
         }
 
-        // Load health meter
+        // Load energy meter
         _assets.load_energy_meter();
+
+        // Load experience meter
+        _assets.load_exp_meter();
 
         // Load health meter
         _assets.load_health_meter();
@@ -883,13 +887,21 @@ class ui_bg
         // Reposition all ui on the screen
         position_ui(min::vec2<float>());
     }
-
     inline bool action()
     {
         if (_hovering && !_minimized)
         {
-            // Use the hover id to do action on ui element
-            _inv->decay(_hover.index());
+            // Check if index is in cube panel
+            const size_t index = _hover.index();
+            if (index >= _inv->begin_cube() && index < _inv->end_cube())
+            {
+                return _inv->craft();
+            }
+            else
+            {
+                // Do action on non-cube ui element
+                _inv->decay(index);
+            }
 
             // Action happened
             return true;
@@ -1115,6 +1127,10 @@ class ui_bg
     {
         _assets.set_energy(energy);
     }
+    inline void set_exp(const float exp)
+    {
+        _assets.set_experience(exp);
+    }
     inline void set_health(const float health)
     {
         _assets.set_health(health);
@@ -1233,9 +1249,50 @@ class ui_bg
                 // Update the slot
                 update_inv_slot(i, it);
             }
+        }
 
+        // Update the stats
+        if (_stat->dirty())
+        {
+            // Calculate text offset
+            const size_t bs = _inv->begin_store();
+            const size_t ec = _inv->end_cube();
+            const size_t t_off = ec - bs;
+
+            // Add stat text
+            const size_t size = _stat->str_size();
+            for (size_t i = 0; i < size; i++)
+            {
+                // Get stat text position
+                const min::vec2<float> p = _assets.stat_position(i, _text_size);
+
+                // Get text buffer offset
+                const size_t index = t_off + i * 2;
+
+                // Add stat descriptor and value text
+                _text->set_text(_stat->str(i), index, p.x(), p.y());
+
+                // Get stat value
+                const uint16_t value = _stat->value(i);
+
+                // Create string from value
+                clear_stream();
+                _stream << value;
+
+                // Set stat text at offset
+                const size_t dx = stat_offset(value);
+                _text->set_text(_stream.str(), index + 1, p.x() + dx, p.y());
+            }
+        }
+
+        // Upload text if updated
+        if (_inv->dirty() || _stat->dirty())
+        {
             // Flag inventory clean state
             _inv->clean();
+
+            // Flag stat clean state
+            _stat->clean();
 
             // Upload the new text
             upload_text();

@@ -140,10 +140,10 @@ class world
 
         return min::vec3<float>(x, y, z);
     }
-    inline auto ex_player_call(const min::vec3<float> &p)
+    inline auto ex_player_call()
     {
         // Block explosion callback
-        return [this, p](const std::pair<min::aabbox<float, min::vec3>, int8_t> &cell) {
+        return [this](const std::pair<min::aabbox<float, min::vec3>, int8_t> &cell) {
 
             // Check for exploding mines
             if (cell.second == id_value(block_id::SODIUM))
@@ -151,11 +151,8 @@ class world
                 // Get box center for explosion point
                 const min::vec3<float> point = cell.first.get_center();
 
-                // Calculate position and direction
-                const min::vec3<float> dir = (p - point).normalize();
-
                 // Explode the block with radius
-                this->explode_block(point, dir, _ex_radius, cell.second, 100.0);
+                this->explode_block(point, _ex_radius, cell.second, 100.0);
             }
         };
     }
@@ -163,12 +160,14 @@ class world
     {
         // On collision explode callback
         return [this](const min::vec3<float> &point,
-                      const min::vec3<float> &dir,
                       const min::vec3<unsigned> &scale,
                       const int8_t value) {
 
             // Play missile explosion sound
             this->_sound->play_miss_ex(point);
+
+            // Calculate direction
+            const min::vec3<float> dir = (this->_player.position() - point).normalize();
 
             // Explode the block
             this->explode_anim(point, dir, scale, value, 100.0);
@@ -178,7 +177,6 @@ class world
     {
         // On collision explode callback
         return [this](const min::vec3<float> &point,
-                      const min::vec3<float> &dir,
                       const min::vec3<unsigned> &scale,
                       const int8_t value) {
 
@@ -186,7 +184,7 @@ class world
             this->_sound->play_miss_ex(point);
 
             // Explode the block
-            this->explode_block(point, dir, scale, value, 100.0);
+            this->explode_block(point, scale, value, 100.0);
         };
     }
     inline void explode_anim(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
@@ -237,7 +235,7 @@ class world
             _player.explode(dir, sq_dist, ex_size, power, value);
         }
     }
-    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
+    inline void explode_block(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
     {
         // Offset explosion radius for geometry removal
         const min::vec3<float> center = center_radius(point, scale);
@@ -246,6 +244,10 @@ class world
         const unsigned removed = _grid.set_geometry(center, scale, _preview_offset, -1);
         if (removed > 0)
         {
+            // Calculate direction
+            const min::vec3<float> dir = (_player.position() - point).normalize();
+
+            // Do explode animation
             explode_anim(point, dir, scale, value, size);
         }
     }
@@ -353,6 +355,9 @@ class world
 
                 // Remove this drone
                 this->_drones.remove(drone_index);
+
+                // Add player experience
+                _player.get_stats().add_experience(100.0);
             }
         };
 
@@ -368,7 +373,7 @@ class world
                 const size_t exp_index = b1.get_data().index;
 
                 // Remove this drone
-                this->_explosives.explode(exp_index, id_value(block_id::SODIUM), this->ex_anim_call());
+                this->_explosives.explode(exp_index, id_value(block_id::IRON), this->ex_anim_call());
             }
         };
 
@@ -384,7 +389,7 @@ class world
                 const size_t miss_index = b1.get_data().index;
 
                 // Remove this drone
-                this->_missiles.explode(miss_index, id_value(block_id::SODIUM), this->ex_anim_call());
+                this->_missiles.explode(miss_index, id_value(block_id::IRON), this->ex_anim_call());
             }
         };
 
@@ -426,7 +431,7 @@ class world
         for (size_t i = 0; i < steps; i++)
         {
             // Update the player on this frame
-            _player.update_frame(_grid, friction, ex_player_call(p));
+            _player.update_frame(_grid, friction, ex_player_call());
 
             // Update drones on this frame
             _drones.update_frame(_grid);
@@ -556,11 +561,8 @@ class world
                 ex_scale = _ex_radius;
             }
 
-            // Get direction for particle spray
-            const min::vec3<float> direction = (_player.position() - target).normalize();
-
             // Explode block
-            explode_block(target, direction, ex_scale, value, size);
+            explode_block(target, ex_scale, value, size);
         }
 
         // return the block atlas id

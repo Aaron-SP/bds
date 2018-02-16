@@ -363,6 +363,10 @@ class controls
                 // Play selection sound
                 _sound->play_click();
             }
+            else
+            {
+                play.set_mode(play_mode::none);
+            }
 
             // Choose action
             if (is_block)
@@ -408,8 +412,8 @@ class controls
                     play.set_mode(play_mode::gun);
                     skill.set_grenade_mode();
                     break;
-                    break;
                 default:
+                    play.set_mode(play_mode::none);
                     break;
                 }
             }
@@ -812,6 +816,10 @@ class controls
                     world->set_edit_mode(false);
                 }
             }
+            else
+            {
+                world->set_edit_mode(false);
+            }
         }
         else if (play.is_action_mode())
         {
@@ -901,18 +909,34 @@ class controls
                 }
                 else if (skill.is_missile_mode())
                 {
-                    // Launch a missile
-                    const bool launched = world->launch_missile();
-                    if (launched)
+                    uint8_t count = 1;
+                    const inv_id id = ui->get_selected();
+                    const bool consumed = inv.consume(id.index(), id_value(skill_id::MISSILE), count);
+                    if (consumed)
                     {
-                        // Activate shoot animation
-                        character->set_animation_shoot();
+                        // Ran out of ammo
+                        if (count == 0)
+                        {
+                            play.set_mode(play_mode::none);
+                        }
 
-                        // Start gun cooldown timer
-                        skill.start_cooldown();
+                        // Launch a missile
+                        const bool launched = world->launch_missile();
+                        if (launched)
+                        {
+                            // Activate shoot animation
+                            character->set_animation_shoot();
 
-                        // Consume energy
-                        stat.consume_energy(_missile_cost);
+                            // Start gun cooldown timer
+                            skill.start_cooldown();
+
+                            // Consume energy
+                            stat.consume_energy(_missile_cost);
+                        }
+                    }
+                    else
+                    {
+                        play.set_mode(play_mode::none);
                     }
 
                     // Unlock the gun if missile mode
@@ -933,21 +957,37 @@ class controls
                 }
                 else if (skill.is_grenade_mode())
                 {
-                    // Launch an explosive
-                    const bool launched = world->launch_explosive();
-                    if (launched)
+                    uint8_t count = 1;
+                    const inv_id id = ui->get_selected();
+                    const bool consumed = inv.consume(id.index(), id_value(skill_id::GRENADE), count);
+                    if (consumed)
                     {
-                        // Activate shoot animation
-                        character->set_animation_shoot();
+                        // Ran out of ammo
+                        if (count == 0)
+                        {
+                            play.set_mode(play_mode::none);
+                        }
 
-                        // Play the shot sound
-                        sound->play_shot();
+                        // Launch an explosive
+                        const bool launched = world->launch_explosive();
+                        if (launched)
+                        {
+                            // Activate shoot animation
+                            character->set_animation_shoot();
 
-                        // Start gun cooldown timer
-                        skill.start_cooldown();
+                            // Play the shot sound
+                            sound->play_shot();
 
-                        // Consume energy
-                        stat.consume_energy(_grenade_cost);
+                            // Start gun cooldown timer
+                            skill.start_cooldown();
+
+                            // Consume energy
+                            stat.consume_energy(_grenade_cost);
+                        }
+                    }
+                    else
+                    {
+                        play.set_mode(play_mode::none);
                     }
 
                     // Unlock the gun if grenade mode
@@ -1096,10 +1136,14 @@ class controls
 
         // Get health and energy
         const float energy = stat.get_energy_percent();
+        const float exp = stat.get_experience_percent();
         const float health = stat.get_health_percent();
 
         // Update the ui energy bar
         _ui->set_energy(energy);
+
+        // Update the ui experience bar
+        _ui->set_experience(exp);
 
         // Update the ui health bar
         _ui->set_health(health);

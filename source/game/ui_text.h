@@ -49,10 +49,10 @@ class ui_text
     static constexpr float _x_health = 248.0;
     static constexpr float _x_energy = 200.0;
     static constexpr float _y_ui = 150.0;
-    static constexpr float _s_hover_x = 176.0;
-    static constexpr float _s_hover_y = 124.0;
+    static constexpr float _s_hover_x = 320.0;
+    static constexpr float _s_hover_y = 190.0;
     static constexpr float _hover_dx = _s_hover_x * 0.5 - 1.0;
-    static constexpr float _hover_dy = 95.0;
+    static constexpr float _hover_dy = _s_hover_y - 30.0;
 
     // Text OpenGL stuff
     min::shader _vertex;

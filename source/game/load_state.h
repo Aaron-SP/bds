@@ -96,7 +96,7 @@ class load_state
 
             // Load inventory data from stream
             const size_t start = inventory::begin_key();
-            const size_t end = inventory::end_extend();
+            const size_t end = inventory::end_cube();
             for (size_t i = start; i < end; i++)
             {
                 const uint8_t id = min::read_le<uint8_t>(stream, next);
@@ -125,7 +125,7 @@ class load_state
 
         // Write inventory data into stream
         const size_t start = inv.begin_key();
-        const size_t end = inv.end_extend();
+        const size_t end = inv.end_cube();
         for (size_t i = start; i < end; i++)
         {
             const item &it = inv[i];

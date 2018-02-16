@@ -202,6 +202,10 @@ class ui_overlay
     {
         _bg.set_energy(energy);
     }
+    inline void set_experience(const float exp)
+    {
+        _bg.set_exp(exp);
+    }
     inline void set_health(const float health)
     {
         _bg.set_health(health);
@@ -244,7 +248,7 @@ class ui_overlay
     }
     inline void set_alert_peace()
     {
-        set_ui_alert(_peace, 2.0);
+        set_ui_alert(_peace, 5.0);
     }
     inline void set_alert_resource()
     {
