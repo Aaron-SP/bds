@@ -241,7 +241,7 @@ class inventory
     };
 
     static constexpr size_t _max_slots = 49;
-    static constexpr size_t _max_strings = 117;
+    static constexpr size_t _max_strings = 121;
     static constexpr size_t _cube_size = 9;
     std::array<item, _max_slots> _inv;
     std::array<std::string, _max_strings> _inv_desc;
@@ -256,7 +256,7 @@ class inventory
         if (consume(index, consume_id, count))
         {
             // Reset count and add value
-            count = 1;
+            count = 4;
 
             // If we couldn't add the item rollback consume
             if (!add(add_id, count))
@@ -391,14 +391,18 @@ class inventory
         _inv_desc[106] = "Nitric Acid [HNO3]";
         _inv_desc[107] = "Phosphoric Acid [H3PO4]";
         _inv_desc[108] = "Sulfuric Acid [H2SO4]";
-        _inv_desc[109] = "Sodium Battery";
-        _inv_desc[110] = "Plasma Shield";
-        _inv_desc[111] = "???";
-        _inv_desc[112] = "???";
-        _inv_desc[113] = "Tomato";
-        _inv_desc[114] = "Eggplant";
-        _inv_desc[115] = "Red Pepper";
-        _inv_desc[116] = "Green Pepper";
+        _inv_desc[109] = "Potassium Nitrate";
+        _inv_desc[110] = "Rust";
+        _inv_desc[111] = "Sulphur";
+        _inv_desc[112] = "Salt";
+        _inv_desc[113] = "Charcoal";
+        _inv_desc[114] = "Red Phosphorus";
+        _inv_desc[115] = "Urea";
+        _inv_desc[116] = "Bat Guano";
+        _inv_desc[117] = "Tomato";
+        _inv_desc[118] = "Eggplant";
+        _inv_desc[119] = "Red Pepper";
+        _inv_desc[120] = "Green Pepper";
     }
 
   public:
@@ -412,10 +416,9 @@ class inventory
 
         // Create items in the store
         _inv[begin_store()] = item(1, 1);
-        _inv[begin_store() + 1] = item(2, 1);
-        _inv[begin_store() + 2] = item(3, 1);
-        _inv[begin_store() + 3] = item(4, 1);
-        _inv[begin_store() + 4] = item(5, 1);
+        _inv[begin_store() + 1] = item(3, 1);
+        _inv[begin_store() + 2] = item(4, 1);
+        _inv[begin_store() + 3] = item(5, 1);
     }
     inline const item &operator[](const size_t index) const
     {
@@ -575,17 +578,100 @@ class inventory
         uint8_t hight_count = 4;
 
         // Try to craft a recipe
-        if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::BLK_K), hight_count))
+        if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::CAT_H), hight_count))
         {
-            // Craft a missile
+            uint8_t add_count = 4;
+            return add(id_value(item_id::POWD_RUST), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::POWD_KNO3), low_count, higher, id_value(item_id::POWD_CHARCOAL), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(skill_id::GRENADE), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::CAT_K), low_count, higher, id_value(item_id::AN_NO3), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::POWD_KNO3), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::CAT_NA), low_count, higher, id_value(item_id::AN_CL), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::POWD_SALT), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_WOOD1), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::POWD_CHARCOAL), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_WOOD2), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::POWD_CHARCOAL), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::SHARD_R), low_count, higher, id_value(item_id::AN_PHOS), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::POWD_RED_PHOS), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::CAT_NH4), low_count, higher, id_value(item_id::POWD_CHARCOAL), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::POWD_UREA), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_DIRT1), low_count, higher, id_value(item_id::AN_SULPH), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::POWD_SULPHUR), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_DIRT2), low_count, higher, id_value(item_id::AN_SULPH), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::POWD_SULPHUR), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_CA), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::BAR_CA), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_CU), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::BAR_CU), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::BAR_FE), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_MG), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::BAR_MG), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_K), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::BAR_K), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_NA), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::BAR_NA), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_AU), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::BAR_AU), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BLK_SI), low_count, higher, id_value(item_id::SHARD_R), hight_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::BAR_SI), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::BAR_FE), low_count, higher, id_value(item_id::BAR_NA), hight_count))
+        {
             uint8_t add_count = 32;
             return add(id_value(skill_id::MISSILE), add_count);
-        }
-        else if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::BLK_NA), hight_count))
-        {
-            // Craft a grenade launcher
-            uint8_t add_count = 32;
-            return add(id_value(skill_id::GRENADE), add_count);
         }
 
         // Failed to craft item
@@ -630,12 +716,8 @@ class inventory
         {
         case item_id::BLK_FE:
             return decay(index, id_value(item_id::BLK_FE), id_value(item_id::CAT_FE), count);
-        case item_id::BLK_SI:
-            return decay(index, id_value(item_id::BLK_SI), id_value(item_id::BAR_SI), count);
         case item_id::BLK_MG:
             return decay(index, id_value(item_id::BLK_MG), id_value(item_id::CAT_MG), count);
-        case item_id::BLK_AU:
-            return decay(index, id_value(item_id::BLK_AU), id_value(item_id::BAR_AU), count);
         case item_id::BLK_CU:
             return decay(index, id_value(item_id::BLK_CU), id_value(item_id::CAT_CU), count);
         case item_id::BLK_NA:
@@ -652,6 +734,8 @@ class inventory
             return decay(index, id_value(item_id::BLK_CRYS_G), id_value(item_id::SHARD_G), count);
         case item_id::BLK_K:
             return decay(index, id_value(item_id::BLK_K), id_value(item_id::CAT_K), count);
+        case item_id::POWD_GUANO:
+            return decay(index, id_value(item_id::POWD_GUANO), id_value(item_id::POWD_KNO3), count);
         case item_id::BLK_TOM:
             return decay(index, id_value(item_id::BLK_TOM), id_value(item_id::FOOD_TOM), count);
         case item_id::BLK_EGGP:

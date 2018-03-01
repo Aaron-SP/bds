@@ -91,18 +91,6 @@ class path
     size_t _path_index;
     bool _is_dead;
 
-    inline void accumulate(const min::vec3<float> &p)
-    {
-        // Calculate the distance from the start point
-        const min::vec3<float> accum_vec = p - _last;
-        const float accum_dist = accum_vec.dot(accum_vec);
-
-        // Increment the interpolation distance constant
-        _curve_interp += std::sqrt(accum_dist / _curve_dist);
-
-        // Reset last point
-        _last = p;
-    }
     inline min::vec3<float> calculate_direction() const
     {
         // Current position
@@ -243,36 +231,56 @@ class path
             // Update path vector
             grid.path(_path, p, dest);
 
-            // Reset path index
-            _path_index = 0;
-
-            // Reset last point
-            _last = p;
-
-            // Reset the bezier curve if have enough points
-            if (_path.size() >= 3)
+            // If we got a path from grid
+            if (_path.size() > 0)
             {
-                set_bezier_interpolation(p);
+                // Reset path index
+                _path_index = 0;
+
+                // Reset last point
+                _last = p;
+
+                // Reset the bezier curve if have enough points
+                if (_path.size() >= 3)
+                {
+                    set_bezier_interpolation(p);
+                }
+                else
+                {
+                    set_linear_interpolation();
+                }
+
+                // Calculate direction
+                return calculate_direction();
+            }
+        }
+        else
+        {
+            // Calculate the distance from the last point
+            const min::vec3<float> accum_vec = p - _last;
+            const float accum_dist = accum_vec.dot(accum_vec);
+
+            // Check if we got stuck and reset path
+            if (accum_dist < 1E-5)
+            {
+                _path.clear();
             }
             else
             {
-                set_linear_interpolation();
+                // Increment the interpolation distance constant
+                _curve_interp += std::sqrt(accum_dist / _curve_dist);
+
+                // Reset last point
+                _last = p;
+
+                // Calculate direction
+                const min::vec3<float> out = calculate_direction();
+
+                // Check if path has expired
+                expire_path();
+
+                return out;
             }
-        }
-
-        // If we got a path use it
-        if (_path.size() > 0)
-        {
-            // Accumulate interpolation
-            accumulate(p);
-
-            // Calculate direction
-            const min::vec3<float> out = calculate_direction();
-
-            // Check if path has expired
-            expire_path();
-
-            return out;
         }
 
         // Failure fallback

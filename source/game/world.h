@@ -216,11 +216,11 @@ class world
 
         // If block is lava, play exploding sound
         // Prefer stereo if close to the explosion
-        float power = 115.5 * ex_size;
+        float power = 50.0 * ex_size;
         if (in_range && value == id_value(block_id::SODIUM))
         {
             // Play explode sound
-            power = 5000.0;
+            power *= 2.0;
             _sound->play_explode_stereo(point);
         }
         else if (value == id_value(block_id::SODIUM))
@@ -275,6 +275,45 @@ class world
         // Check if character is too close to the explosion
         return {sq_dist < ex_squared_radius, ex_squared_radius, sq_dist};
     }
+    inline void item_extra(inventory &inv, const int8_t atlas)
+    {
+        // Add extra pickup to inventory
+        uint8_t count = 1;
+        switch (atlas)
+        {
+        case id_value(block_id::GRASS1):
+            inv.add(id_value(item_id::AN_PHOS), count);
+            break;
+        case id_value(block_id::GRASS2):
+            inv.add(id_value(item_id::AN_SULPH), count);
+            break;
+        case id_value(block_id::DIRT1):
+            inv.add(id_value(item_id::CAT_NH4), count);
+            break;
+        case id_value(block_id::DIRT2):
+            inv.add(id_value(item_id::AN_NO3), count);
+            break;
+        case id_value(block_id::SAND1):
+            inv.add(id_value(item_id::CAT_NA), count);
+            break;
+        case id_value(block_id::SAND2):
+            inv.add(id_value(item_id::CAT_CA), count);
+            break;
+        case id_value(block_id::IRON):
+            inv.add(id_value(item_id::POWD_RUST), count);
+            break;
+        case id_value(block_id::WOOD1):
+        case id_value(block_id::WOOD2):
+            inv.add(id_value(item_id::POWD_CHARCOAL), count);
+            break;
+        case id_value(block_id::LEAF1):
+        case id_value(block_id::LEAF2):
+        case id_value(block_id::LEAF3):
+        case id_value(block_id::LEAF4):
+            inv.add(id_value(item_id::POWD_GUANO), count);
+            break;
+        }
+    }
     inline size_t random_drop()
     {
         return _drop_dist(_gen);
@@ -321,8 +360,11 @@ class world
                 // Get the player inventory
                 inventory &inv = this->_player.get_inventory();
 
+                // Get block atlas id
+                const int8_t atlas = this->_drops.atlas(index);
+
                 // Get the atlas id from the drop
-                const uint8_t inv_id = inv.id_from_atlas(this->_drops.atlas(index));
+                const uint8_t inv_id = inv.id_from_atlas(atlas);
 
                 // Add drop to inventory
                 uint8_t count = 1;
@@ -331,6 +373,12 @@ class world
                 // If we picked it up
                 if (count == 0)
                 {
+                    // Calculate random extra item
+                    if (random_drop() < 8)
+                    {
+                        item_extra(inv, atlas);
+                    }
+
                     // Play the pickup sound
                     this->_sound->play_pickup();
 
@@ -417,6 +465,7 @@ class world
         // Friction Coefficient
         const size_t steps = std::round(dt / _time_step);
         const float friction = -10.0 / steps;
+        const float drop_friction = friction * 0.5;
 
         // Solve the physics simulation
         const min::vec3<float> &p = _player.position();
@@ -437,7 +486,7 @@ class world
             _drones.update_frame(_grid);
 
             // Update drops on this frame
-            _drops.update_frame(_grid);
+            _drops.update_frame(_grid, drop_friction);
 
             // Update explosives on this frame
             _explosives.update_frame(_grid, ex_call);

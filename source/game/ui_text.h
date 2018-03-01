@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __UI_TEXT__
 
 #include <game/memory_map.h>
+#include <game/ui_config.h>
 #include <iomanip>
 #include <min/program.h>
 #include <min/shader.h>
@@ -32,27 +33,18 @@ namespace game
 class ui_text
 {
   private:
-    static constexpr size_t _font_size = 28;
-    static constexpr size_t _ui_font_size = 14;
     static constexpr size_t _console = 0;
     static constexpr size_t _ui = _console + 1;
     static constexpr size_t _alert = _ui + 2;
     static constexpr size_t _debug = _alert + 1;
     static constexpr size_t _hover = _debug + 11;
     static constexpr size_t _end = _hover + 1;
-    static constexpr float _x_alert_wrap = 600.0;
-    static constexpr float _y_alert_wrap = _font_size;
-    static constexpr float _y_alert = 180.0;
-    static constexpr float _x_console_wrap = 400.0;
-    static constexpr float _y_console_wrap = _font_size;
-    static constexpr float _y_console = 100.0;
-    static constexpr float _x_health = 248.0;
-    static constexpr float _x_energy = 200.0;
-    static constexpr float _y_ui = 150.0;
-    static constexpr float _s_hover_x = 320.0;
-    static constexpr float _s_hover_y = 190.0;
+
+    // Hover
     static constexpr float _hover_dx = _s_hover_x * 0.5 - 1.0;
     static constexpr float _hover_dy = _s_hover_y - 30.0;
+    static constexpr float _ui_health_dx = _health_dx - _font_size * 3.0;
+    static constexpr float _ui_energy_dx = _energy_dx + _font_size;
 
     // Text OpenGL stuff
     min::shader _vertex;
@@ -94,14 +86,14 @@ class ui_text
     {
         // Position the console element
         const uint16_t w2 = (width / 2);
-        _text.set_text_center(_console, w2, _y_console);
+        _text.set_text_center(_console, w2, _console_dy);
 
         // Position the ui elements
-        _text.set_text_location(_ui, w2 - _x_health, _y_ui);
-        _text.set_text_location(_ui + 1, w2 + _x_energy, _y_ui);
+        _text.set_text_location(_ui, w2 + _ui_health_dx, _y_ui_text);
+        _text.set_text_location(_ui + 1, w2 + _ui_energy_dx, _y_ui_text);
 
         // Position alert element
-        _text.set_text_center(_alert, w2, height - _y_alert);
+        _text.set_text_center(_alert, w2, height + _alert_dy);
 
         // Rescale all debug text
         uint16_t y = height - 20;
@@ -394,7 +386,7 @@ class ui_text
 
         // Position the console elements
         const uint16_t w2 = (size.first / 2);
-        _text.set_text_center(_console, w2, _y_console);
+        _text.set_text_center(_console, w2, _console_dy);
     }
     inline void update_ui(const float health, const float energy)
     {
@@ -422,7 +414,7 @@ class ui_text
 
         // Position the console elements
         const uint16_t w2 = (size.first / 2);
-        _text.set_text_center(_alert, w2, size.second - _y_alert);
+        _text.set_text_center(_alert, w2, size.second + _alert_dy);
     }
     inline void update_hover(const min::vec2<float> &p, const std::string &hover)
     {

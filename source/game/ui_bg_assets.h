@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define _UI_BACKGROUND_ASSETS__
 
 #include <game/inventory.h>
+#include <game/ui_config.h>
 #include <min/aabbox.h>
 #include <min/vec2.h>
 #include <stdexcept>
@@ -86,56 +87,23 @@ class ui_bg_assets
     static constexpr float _y_hover_uv = 574.0 / _image_size;
 
     // Scale sizes
-    static constexpr float _s_bg = 40.0;
-    static constexpr float _s_fg = 32.0;
     static constexpr float _s_uv = 32.0 / _image_size;
     static constexpr float _s_health_x = 32.0;
     static constexpr float _s_health_y = 96.0;
     static constexpr float _s_energy_x = 32.0;
     static constexpr float _s_energy_y = 96.0;
-    static constexpr float _s_exp_x = 400.0;
-    static constexpr float _s_exp_y = 8.0;
     static constexpr float _s_stat_x = 680.0;
     static constexpr float _s_stat_y = 380.0;
     static constexpr float _s_stat_uv_x = _s_stat_x / _image_size;
     static constexpr float _s_stat_uv_y = _s_stat_y / _image_size;
-    static constexpr float _s_hover_x = 320.0;
-    static constexpr float _s_hover_y = 190.0;
     static constexpr float _s_hover_uv_x = _s_hover_x / _image_size;
     static constexpr float _s_hover_uv_y = _s_hover_y / _image_size;
-
-    // Inventory pixel scale
-    static constexpr float _s_inv = 16.0;
 
     // Menu sizes
     static constexpr float _s_menu_x = 504.0;
     static constexpr float _s_menu_y = 124.0;
     static constexpr float _s_menu_uv_x = 504.0 / _image_size;
     static constexpr float _s_menu_uv_y = 124.0 / _image_size;
-
-    // Console sizes
-    static constexpr float _s_console_x = 400.0;
-    static constexpr float _s_console_y = 40.0;
-
-    // Placement values
-    static constexpr size_t _num_buttons = 8;
-    static constexpr size_t _num_half_buttons = _num_buttons / 2;
-    static constexpr float _cube_dx = -42.0;
-    static constexpr float _cube_dy = 518;
-    static constexpr float _cube_space = 42;
-    static constexpr float _exp_dx = -192.0;
-    static constexpr float _exp_dy = 136.0;
-    static constexpr float _stat_dx = 0.0;
-    static constexpr float _stat_dy = 458.0;
-    static constexpr float _stat_text_dx = 114.0;
-    static constexpr float _stat_text_dy = 597.0;
-    static constexpr float _store_dy = 48.0;
-    static constexpr float _tool_dy = 48.0;
-    static constexpr float _tool_space = 48.0;
-    static constexpr float _tool_start = -_tool_space * _num_half_buttons + _tool_space / 2;
-    static constexpr float _energy_dx = _tool_space * _num_half_buttons + _tool_space / 2 + 4.0;
-    static constexpr float _health_dx = _tool_start - _tool_space - 4.0;
-    static constexpr float _y_console = 100.0;
 
     // Number of ui elements, 3 + 3 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 1
     static constexpr size_t _base = 38;
@@ -315,7 +283,7 @@ class ui_bg_assets
     }
     inline void load_console_bg()
     {
-        const min::vec2<float> p(_center_w, _y_console);
+        const min::vec2<float> p(_center_w, _console_dy);
         const min::vec2<float> scale(_s_console_x, _s_console_y);
         const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
 

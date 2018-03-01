@@ -76,6 +76,18 @@ class drops
     {
         return _sim->get_body(_drops[index].body_id());
     }
+    inline void force(const size_t index, const min::vec3<float> &f)
+    {
+        // Get the drop body
+        min::body<float, min::vec3> &b = body(index);
+
+        // Apply force to the body per mass
+        b.add_force(f * b.get_mass());
+    }
+    inline float mass(const size_t index) const
+    {
+        return body(index).get_mass();
+    }
     inline const min::vec3<float> &position(const size_t index) const
     {
         // Return the drop position
@@ -86,6 +98,11 @@ class drops
         // Reserve space for collision cells
         _col_cells.reserve(27);
         _drops.reserve(static_instance::max_drops());
+    }
+    inline const min::vec3<float> &velocity(const size_t index) const
+    {
+        // Return the drop velocity
+        return body(index).get_linear_velocity();
     }
 
   public:
@@ -176,7 +193,7 @@ class drops
             body(i).set_data(min::body_data(i));
         }
     }
-    inline void update_frame(const cgrid &grid)
+    inline void update_frame(const cgrid &grid, const float friction)
     {
         // Do drop collisions
         const size_t size = _drops.size();
@@ -191,6 +208,13 @@ class drops
             {
                 _sim->collide(body, cell);
             }
+
+            // Add friction force
+            const min::vec3<float> &vel = velocity(i);
+            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
+
+            // Add friction force opposing lateral motion
+            force(i, xz * friction);
         }
     }
     inline void update(const cgrid &grid)

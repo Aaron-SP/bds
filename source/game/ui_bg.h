@@ -41,9 +41,10 @@ namespace game
 class ui_bg
 {
   private:
-    constexpr static float _to_x = 8.0;
-    constexpr static float _to_y = -16.0;
     constexpr static size_t _text_size = 20;
+    constexpr static float _inv_ui_dx = (_s_fg - _ui_font_size) * 0.5;
+    constexpr static float _inv_ui_dy = -(_s_fg / 2.0);
+
     // OpenGL stuff
     min::shader _vertex;
     min::shader _fragment;
@@ -211,7 +212,7 @@ class ui_bg
             _stream << static_cast<int>((*_inv)[i].count());
 
             // Add text for each box
-            _text->add_text(_stream.str(), p.x() + _to_x, p.y() + _to_y);
+            _text->add_text(_stream.str(), p.x() + _inv_ui_dx, p.y() + _inv_ui_dy);
         }
 
         // Get start and end of keys
@@ -237,7 +238,7 @@ class ui_bg
             _stream << static_cast<int>((*_inv)[i].count());
 
             // Add text for each box
-            _text->add_text(_stream.str(), p.x() + _to_x, p.y() + _to_y);
+            _text->add_text(_stream.str(), p.x() + _inv_ui_dx, p.y() + _inv_ui_dy);
         }
 
         // Get start and end of keys
@@ -263,7 +264,7 @@ class ui_bg
             _stream << static_cast<int>((*_inv)[i].count());
 
             // Add text for each box
-            _text->add_text(_stream.str(), p.x() + _to_x, p.y() + _to_y);
+            _text->add_text(_stream.str(), p.x() + _inv_ui_dx, p.y() + _inv_ui_dy);
         }
 
         // Get start and end of keys
@@ -289,7 +290,7 @@ class ui_bg
             _stream << static_cast<int>((*_inv)[i].count());
 
             // Add text for each box
-            _text->add_text(_stream.str(), p.x() + _to_x, p.y() + _to_y);
+            _text->add_text(_stream.str(), p.x() + _inv_ui_dx, p.y() + _inv_ui_dy);
         }
 
         // Add stat text

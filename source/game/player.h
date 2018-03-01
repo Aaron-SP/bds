@@ -268,7 +268,7 @@ class player
 
             // Calculate damage
             const float inv_sq = 1.0 / sq_dist;
-            const float mult = power * size * inv_sq * 0.0005;
+            const float mult = power * size * inv_sq * 0.001;
             const float damage = (mult * 2.0) - (mult * inv_sq);
             _stats.consume_health(damage);
 
@@ -281,8 +281,11 @@ class player
     }
     inline void force(const min::vec3<float> &f)
     {
+        // Get the drop body
+        min::body<float, min::vec3> &b = body();
+
         // Apply force to the body per mass
-        body().add_force(f * mass());
+        b.add_force(f * b.get_mass());
     }
     inline int8_t get_explode_id() const
     {
@@ -396,10 +399,6 @@ class player
     inline const min::vec3<float> &land_velocity() const
     {
         return _land_vel;
-    }
-    inline float mass() const
-    {
-        return body().get_mass();
     }
     inline void move(const min::vec3<float> &vel)
     {
