@@ -260,27 +260,19 @@ class path
             const min::vec3<float> accum_vec = p - _last;
             const float accum_dist = accum_vec.dot(accum_vec);
 
-            // Check if we got stuck and reset path
-            if (accum_dist < 1E-5)
-            {
-                _path.clear();
-            }
-            else
-            {
-                // Increment the interpolation distance constant
-                _curve_interp += std::sqrt(accum_dist / _curve_dist);
+            // Increment the interpolation distance constant
+            _curve_interp += std::sqrt(accum_dist / _curve_dist);
 
-                // Reset last point
-                _last = p;
+            // Reset last point
+            _last = p;
 
-                // Calculate direction
-                const min::vec3<float> out = calculate_direction();
+            // Calculate direction
+            const min::vec3<float> out = calculate_direction();
 
-                // Check if path has expired
-                expire_path();
+            // Check if path has expired
+            expire_path();
 
-                return out;
-            }
+            return out;
         }
 
         // Failure fallback

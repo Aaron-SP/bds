@@ -75,6 +75,10 @@ class drone
     {
         return _inst_id;
     }
+    inline void expire_path()
+    {
+        get_path().clear();
+    }
     inline float get_remain() const
     {
         return get_path().get_remain();
@@ -97,9 +101,9 @@ class drones
     physics *_sim;
     static_instance *_inst;
     std::vector<min::aabbox<float, min::vec3>> _col_cells;
-    std::vector<drone> _drones;
     min::vec3<float> _dest;
     std::vector<path> _paths;
+    std::vector<drone> _drones;
     size_t _path_old;
     coll_call _f;
     bool _disable;
@@ -142,7 +146,7 @@ class drones
         // Calculate speed slowing down as approaching goal
         return 2.75 * ((remain - 3.0) / (remain + 3.0) + 1.1);
     }
-    inline void path(cgrid &grid, const size_t index)
+    inline void step_path(cgrid &grid, const size_t index)
     {
         // Get the drone
         drone &d = _drones[index];
@@ -249,11 +253,20 @@ class drones
             // Get all cells that could collide
             grid.drone_collision_cells(_col_cells, position(i));
 
+            // Collision flag
+            bool hit = false;
+
             // Solve static collisions
             const size_t body = _drones[i].body_id();
             for (const auto &cell : _col_cells)
             {
-                _sim->collide(body, cell);
+                hit = hit || _sim->collide(body, cell);
+            }
+
+            // If we got a hit
+            if (hit)
+            {
+                _drones[i].expire_path();
             }
         }
     }
@@ -267,7 +280,7 @@ class drones
         {
             for (size_t i = 0; i < size; i++)
             {
-                path(grid, i);
+                step_path(grid, i);
             }
         }
 

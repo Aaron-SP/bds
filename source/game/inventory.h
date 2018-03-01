@@ -230,13 +230,13 @@ class inventory
         {
             return _index;
         }
-        const item &item() const
+        const item &get_item() const
         {
             return _item;
         }
         bool operator<(const craft_item &other) const
         {
-            return (_item.id() < other.item().id());
+            return (_item.id() < other.get_item().id());
         }
     };
 
