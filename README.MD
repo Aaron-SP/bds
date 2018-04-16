@@ -1,5 +1,5 @@
 # Beyond Dying Skies
-## Repository for the Minimal Graphics Library Fractal Explorer
+## Repository for the Beyond Dying Skies PC game, Linux and Windows versions.
 
 Verify a bin directory exists before compiling with the makefile. 
 - 'mkdir -p bin'
