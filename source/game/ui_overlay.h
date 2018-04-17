@@ -32,8 +32,8 @@ class ui_overlay
     ui_text _text;
     ui_bg _bg;
     bool _dirty;
-    const std::string _ast;
     const std::string _action_fail;
+    const std::string _ast;
     const std::string _peace;
     const std::string _res;
     const std::string _swarm;
@@ -155,10 +155,11 @@ class ui_overlay
         if (overlap)
         {
             // Get the hover text
-            const std::string &str = _bg.get_hover_string();
+            const std::string &name = _bg.get_hover_name();
+            const std::string &info = _bg.get_hover_info();
 
             // Update the hover text
-            _text.update_hover(p, str);
+            _text.update_hover(p, name, info);
 
             // Enable drawing hover text
             _text.set_draw_hover(true);

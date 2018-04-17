@@ -38,11 +38,13 @@ class ui_text
     static constexpr size_t _alert = _ui + 2;
     static constexpr size_t _debug = _alert + 1;
     static constexpr size_t _hover = _debug + 11;
-    static constexpr size_t _end = _hover + 1;
+    static constexpr size_t _end = _hover + 2;
 
     // Hover
-    static constexpr float _hover_dx = _s_hover_x * 0.5 - 1.0;
-    static constexpr float _hover_dy = _s_hover_y - 30.0;
+    static constexpr float _hover_info_dx = (_s_hover_bg_x - _s_hover_text_x) * 0.5;
+    static constexpr float _hover_info_dy = _s_hover_text_y - 90.0;
+    static constexpr float _hover_name_dx = _s_hover_bg_x * 0.5 - 1.0;
+    static constexpr float _hover_name_dy = _s_hover_text_y - 30.0;
     static constexpr float _ui_health_dx = _health_dx - _font_size * 3.0;
     static constexpr float _ui_energy_dx = _energy_dx + _font_size;
 
@@ -104,8 +106,9 @@ class ui_text
             y -= _font_size;
         }
 
-        // Position the hover element
-        _text.set_text_location(_hover, p.x() + _hover_dx, p.y() + _hover_dy);
+        // Position the hover elements
+        _text.set_text_location(_hover, p.x() + _hover_name_dx, p.y() + _hover_name_dy);
+        _text.set_text_location(_hover + 1, p.x() + _hover_info_dx, p.y() + _hover_info_dy);
     }
     inline void reserve_memory()
     {
@@ -159,12 +162,15 @@ class ui_text
             add_text("", 0, 0);
         }
 
-        // Add 1 hover entries
+        // Add 2 hover entries
         for (size_t i = _hover; i < _end; i++)
         {
             add_text("", 0, 0);
-            _text.set_line_wrap(i, _s_hover_x, _s_hover_y);
         }
+
+        // Set hover text line wrapping
+        _text.set_line_wrap(_hover, _s_hover_bg_x, _y_hover_wrap);
+        _text.set_line_wrap(_hover + 1, _s_hover_text_x, _y_hover_wrap);
 
         // Reposition all of the text
         reposition_text(min::vec2<float>(), width, height);
@@ -416,24 +422,30 @@ class ui_text
         const uint16_t w2 = (size.first / 2);
         _text.set_text_center(_alert, w2, size.second + _alert_dy);
     }
-    inline void update_hover(const min::vec2<float> &p, const std::string &hover)
+    inline void update_hover(const min::vec2<float> &p, const std::string &name, const std::string &info)
     {
         // Update the hover text
-        update_text(_hover, hover);
+        update_text(_hover, name);
+        update_text(_hover + 1, info);
 
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();
-        const uint16_t h2 = (size.second / 2);
+        const uint16_t half_height = size.second / 2;
 
         // Calculate hover y offset to avoid off screen issues
-        const float hover_dy = (p.y() > h2) ? _hover_dy - _s_hover_y : _hover_dy;
+        const float hover_offset = (p.y() > half_height) ? -_s_hover_text_y : 0.0;
 
-        // Calculate text location
-        const float x = p.x() + _hover_dx;
-        const float y = p.y() + hover_dy;
+        // Calculate name location and position element
+        const float hover_name_dy = _hover_name_dy + hover_offset;
+        const float x_name = p.x() + _hover_name_dx;
+        const float y_name = p.y() + hover_name_dy;
+        _text.set_text_center(_hover, x_name, y_name);
 
-        // Position the hover element
-        _text.set_text_center(_hover, x, y);
+        // Calculate info location and position element
+        const float hover_info_dy = _hover_info_dy + hover_offset;
+        const float x_info = p.x() + _hover_info_dx;
+        const float y_info = p.y() + hover_info_dy;
+        _text.set_text_location(_hover + 1, x_info, y_info);
     }
     inline void upload() const
     {

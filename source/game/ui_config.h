@@ -36,8 +36,10 @@ static constexpr float _tool_space = _s_bg + 8.0;
 static constexpr float _tool_start = -_tool_space * _num_half_buttons + _tool_space / 2;
 
 // Hover
-static constexpr float _s_hover_x = 320.0;
-static constexpr float _s_hover_y = 190.0;
+static constexpr float _s_hover_bg_x = 320.0;
+static constexpr float _s_hover_bg_y = 190.0;
+static constexpr float _s_hover_text_x = 260.0;
+static constexpr float _s_hover_text_y = 190.0;
 
 // Console and UI Text
 static constexpr size_t _font_size = 28;
@@ -47,6 +49,7 @@ static constexpr float _s_console_x = 400.0;
 static constexpr float _s_console_y = 40.0;
 static constexpr float _x_console_wrap = _s_console_x;
 static constexpr float _y_console_wrap = _font_size;
+static constexpr float _y_hover_wrap = _font_size;
 static constexpr float _y_ui_text = _console_dy + 24.0;
 static constexpr float _energy_dx = (_tool_space * _num_half_buttons) + (_tool_space * 0.5) + 4.0;
 static constexpr float _health_dx = _tool_start - _tool_space - 4.0;

@@ -90,7 +90,7 @@ class controls
 
         // Enable the console and set default message
         _ui->enable_console();
-        _ui->set_console_string(inv.get_string(inv.get_key(0)));
+        _ui->set_console_string(inv.get_name(inv.get_key(0)));
 
         // Get access to the keyboard
         auto &keyboard = _window->get_keyboard();
@@ -348,7 +348,7 @@ class controls
             _ui->set_key_down(index);
 
             // Set the console string from item
-            _ui->set_console_string(inv.get_string(it));
+            _ui->set_console_string(inv.get_name(it));
 
             // Cancel edit mode
             if (!is_block)
@@ -947,7 +947,7 @@ class controls
                     // Scan the block on this ray
                     const int8_t atlas = play.get_target_value();
                     const item it(inv.id_from_atlas(atlas), 1);
-                    const std::string &text = inv.get_string(it);
+                    const std::string &text = inv.get_name(it);
 
                     // Set the console text
                     ui->set_console_string(text);

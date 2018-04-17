@@ -990,9 +990,13 @@ class ui_bg
             draw_transparent_ui();
         }
     }
-    inline const std::string &get_hover_string() const
+    inline const std::string &get_hover_info() const
     {
-        return _inv->get_string((*_inv)[_hover.index()]);
+        return _inv->get_info((*_inv)[_hover.index()]);
+    }
+    inline const std::string &get_hover_name() const
+    {
+        return _inv->get_name((*_inv)[_hover.index()]);
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {

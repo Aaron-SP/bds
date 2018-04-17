@@ -96,8 +96,8 @@ class ui_bg_assets
     static constexpr float _s_stat_y = 380.0;
     static constexpr float _s_stat_uv_x = _s_stat_x / _image_size;
     static constexpr float _s_stat_uv_y = _s_stat_y / _image_size;
-    static constexpr float _s_hover_uv_x = _s_hover_x / _image_size;
-    static constexpr float _s_hover_uv_y = _s_hover_y / _image_size;
+    static constexpr float _s_hover_uv_x = _s_hover_bg_x / _image_size;
+    static constexpr float _s_hover_uv_y = _s_hover_bg_y / _image_size;
 
     // Menu sizes
     static constexpr float _s_menu_x = 504.0;
@@ -387,14 +387,14 @@ class ui_bg_assets
     inline void load_bg_hover(const min::vec2<float> &p)
     {
         // Load hover rect at position
-        const min::vec2<float> scale(_s_hover_x, _s_hover_y);
+        const min::vec2<float> scale(_s_hover_bg_x, _s_hover_bg_y);
         const min::vec4<float> coord(_x_hover_uv, _y_hover_uv, _s_hover_uv_x, _s_hover_uv_y);
 
         // Calculate hover y offset to avoid off screen issues
-        const float hover_dy = (p.y() > _center_h) ? _s_hover_y * -0.5 : _s_hover_y * 0.5;
+        const float hover_dy = (p.y() > _center_h) ? _s_hover_bg_y * -0.5 : _s_hover_bg_y * 0.5;
 
         // Offset position by half width of rect
-        const min::vec2<float> off = min::vec2<float>(p.x() + _s_hover_x * 0.5, p.y() + hover_dy);
+        const min::vec2<float> off = min::vec2<float>(p.x() + _s_hover_bg_x * 0.5, p.y() + hover_dy);
 
         set_rect(105, off, scale, coord);
     }
