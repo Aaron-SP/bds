@@ -33,6 +33,7 @@ class ui_overlay
     ui_bg _bg;
     bool _dirty;
     const std::string _ast;
+    const std::string _action_fail;
     const std::string _peace;
     const std::string _res;
     const std::string _swarm;
@@ -58,6 +59,7 @@ class ui_overlay
         : _text(width, height),
           _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
           _dirty(false),
+          _action_fail("Can't use or craft that item!"),
           _ast("Incoming asteroids, take cover!"),
           _peace("Everything seems peaceful!"),
           _res("Low Power!"),
@@ -68,7 +70,15 @@ class ui_overlay
     {
         if (_bg.is_extended())
         {
-            return _bg.action();
+            // Check if we failed action
+            const bool action = _bg.action();
+            if (!action)
+            {
+                set_alert_action_fail();
+            }
+
+            // Return action status
+            return action;
         }
 
         return false;
@@ -241,6 +251,10 @@ class ui_overlay
 
         // Set text screen dimensions
         _text.set_screen(p, width, height);
+    }
+    inline void set_alert_action_fail()
+    {
+        set_ui_alert(_action_fail, 2.0);
     }
     inline void set_alert_asteroid()
     {

@@ -892,20 +892,18 @@ class ui_bg
     {
         if (_hovering && !_minimized)
         {
-            // Check if index is in cube panel
-            const size_t index = _hover.index();
-            if (index >= _inv->begin_cube() && index < _inv->end_cube())
+            // Check if index is in cube craft panel
+            const size_t hover_index = _hover.index();
+            if (hover_index >= _inv->begin_cube() && hover_index < _inv->end_cube())
             {
-                return _inv->craft();
+                // Craft recipe
+                return _inv->craft(hover_index);
             }
             else
             {
-                // Do action on non-cube ui element
-                _inv->decay(index);
+                // Decay item
+                return _inv->decay(hover_index);
             }
-
-            // Action happened
-            return true;
         }
 
         // No action
@@ -1225,7 +1223,16 @@ class ui_bg
     }
     inline void toggle_draw_ex()
     {
+        // Toggle draw_ex flag
         _assets.toggle_draw_ex();
+
+        // If we are closing the extended overlay
+        if (!_assets.get_draw_ex())
+        {
+            // Untoggle hover and select
+            unselect_hover();
+            unselect_click();
+        }
     }
     inline void update()
     {

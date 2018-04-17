@@ -288,7 +288,7 @@ class world
             inv.add(id_value(item_id::AN_SULPH), count);
             break;
         case id_value(block_id::DIRT1):
-            inv.add(id_value(item_id::CAT_NH4), count);
+            inv.add(id_value(item_id::CAT_K), count);
             break;
         case id_value(block_id::DIRT2):
             inv.add(id_value(item_id::AN_NO3), count);
@@ -297,7 +297,7 @@ class world
             inv.add(id_value(item_id::CAT_NA), count);
             break;
         case id_value(block_id::SAND2):
-            inv.add(id_value(item_id::CAT_CA), count);
+            inv.add(id_value(item_id::CAT_FE), count);
             break;
         case id_value(block_id::IRON):
             inv.add(id_value(item_id::POWD_RUST), count);
