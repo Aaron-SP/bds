@@ -59,12 +59,6 @@ class drone
         get_path().set_dead(false);
         get_path().update(p, dest);
     }
-    ~drone()
-    {
-        // Destroy path on destruction
-        get_path().clear();
-        get_path().set_dead(true);
-    }
     inline size_t body_id() const
     {
         return _body_id;
@@ -100,6 +94,10 @@ class drone
     inline bool is_pathing() const
     {
         return _idle == 0;
+    }
+    inline size_t path_id() const
+    {
+        return _path_id;
     }
     inline void set_idle(const size_t N)
     {
@@ -178,6 +176,11 @@ class drones
     }
     inline void remove(const size_t index)
     {
+        // Get path id to set dead flag
+        const size_t path_id = _drones[index].path_id();
+        _paths[path_id].clear();
+        _paths[path_id].set_dead(true);
+
         // Clear drone at index
         _inst->clear_drone(_drones[index].inst_id());
         _sim->clear_body(_drones[index].body_id());

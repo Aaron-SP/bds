@@ -110,7 +110,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.214");
+        _ui.text().set_debug_version("VERSION: 0.1.215");
     }
     void update_die_respawn(const float dt)
     {
