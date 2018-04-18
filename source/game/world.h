@@ -596,8 +596,8 @@ class world
             // Get the body
             const min::body<float, min::vec3> &b = _simulation.get_body(map[hits[i].first]);
 
-            // Check if body is a drone
-            if (b.get_id() == 1)
+            // Check if body isn't dead and if body is a drone
+            if (!b.is_dead() && b.get_id() == 1)
             {
                 // Get the drone index from the body
                 const size_t drone_index = b.get_data().index;

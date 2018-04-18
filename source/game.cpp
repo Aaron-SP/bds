@@ -49,11 +49,15 @@ void show_title(bds &game, min::loop_sync &sync, const size_t frames)
         // Make console message blink
         game.blink_console_message();
 
-        // Check for OpenGL errors
+        // Check for OpenGL errors, this won't break out if error found
+        // We want to flush out any non-fatal error before starting
         if (game.check_gl_error())
         {
-            std::cout << "OpenGL errors detected in show_title, quitting" << std::endl;
-            break;
+            std::cout << "OpenGL errors detected in show_title" << std::endl;
+        }
+        else if (game.check_al_error())
+        {
+            std::cout << "OpenAL errors detected in show_game" << std::endl;
         }
     }
 }
