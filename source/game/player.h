@@ -59,6 +59,7 @@ class player
     float _hook_length;
     min::vec3<float> _forward;
     min::vec3<float> _project;
+    min::ray<float, min::vec3> _ray;
     min::vec3<float> _target;
     size_t _target_key;
     int8_t _target_value;
@@ -430,6 +431,10 @@ class player
         // Return the character position
         return _project;
     }
+    inline const min::ray<float, min::vec3> &ray() const
+    {
+        return _ray;
+    }
     inline void reset_explode()
     {
         _exploded = false;
@@ -494,11 +499,11 @@ class player
         // Calculate new point to add
         _project = cam.project_point(_project_dist);
 
-        // Create a ray from camera to destination
-        const min::ray<float, min::vec3> r(cam.get_position(), _project);
+        // Cache ray from camera to destination
+        _ray = min::ray<float, min::vec3>(cam.get_position(), _project);
 
         // Trace a ray to the destination point to find placement position, return point is snapped
-        _target_valid = grid.ray_trace_last_key(r, max_dist, _target, _target_key, _target_value);
+        _target_valid = grid.ray_trace_last_key(_ray, max_dist, _target, _target_key, _target_value);
     }
     inline const min::vec3<float> &velocity() const
     {

@@ -401,11 +401,15 @@ class world
                 // Get the drone index from the body
                 const size_t drone_index = b1.get_data().index;
 
-                // Remove this drone
-                this->_drones.remove(drone_index);
+                // Get damage from body type, 4 is missile
+                const float dam = (b2_id == 4) ? 100.0 : 50.0;
 
-                // Add player experience
-                _player.get_stats().add_experience(100.0);
+                // Remove this drone
+                if (this->_drones.damage(drone_index, this->_player.forward(), dam))
+                {
+                    // Add player experience
+                    this->_player.get_stats().add_experience(100.0);
+                }
             }
         };
 
@@ -578,16 +582,58 @@ class world
         // Draw the sky, uses geometry VAO -- HACK!
         _sky.draw();
     }
-    int8_t explode_ray(const min::vec3<unsigned> &scale,
-                       const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
+    int8_t explode_ray(const min::vec3<unsigned> &ex_scale,
+                       const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float ex_size = 100.0)
     {
+        // Check for collisions with a physics body
+        const std::vector<uint16_t> &map = _simulation.get_index_map();
+        const std::vector<std::pair<uint16_t, min::vec3<float>>> &hits = _simulation.get_collisions(_player.ray());
+
+        // Iterate through all the hits
+        const size_t size = hits.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            // Get the body
+            const min::body<float, min::vec3> &b = _simulation.get_body(map[hits[i].first]);
+
+            // Check if body is a drone
+            if (b.get_id() == 1)
+            {
+                // Get the drone index from the body
+                const size_t drone_index = b.get_data().index;
+
+                // Cache the drone position, no reference here
+                const min::vec3<float> p = _drones.position(drone_index);
+
+                // Drone may be removed, do not used drone index after this!!!
+                const min::vec3<float> flip = _player.forward() * -1.0;
+                if (_drones.damage(drone_index, _player.forward(), 25.0))
+                {
+                    // Add player experience
+                    _player.get_stats().add_experience(100.0);
+
+                    // Do explode animation for sodium
+                    explode_anim(p, flip, ex_scale, id_value(block_id::SODIUM), ex_size);
+                }
+                else
+                {
+                    // Do explode animation
+                    explode_anim(p, flip, _ex_radius, id_value(block_id::IRON), ex_size);
+                }
+
+                // Exit out early
+                return 0;
+            }
+        }
+
+        // Check if ray points to a valid target
         if (!_player.is_target_valid())
         {
             return -2;
         }
 
         // Use player's target as ray destination
-        const min::vec3<float> target = _player.get_target();
+        const min::vec3<float> &target = _player.get_target();
         const int8_t value = _player.get_target_value();
 
         // Get the atlas of target block, remove if hit
@@ -603,15 +649,15 @@ class world
                 f(target, body);
             }
 
-            // If block is lava override explode scale
-            min::vec3<unsigned> ex_scale = scale;
+            // Explode block
             if (value == id_value(block_id::SODIUM))
             {
-                ex_scale = _ex_radius;
+                explode_block(target, _ex_radius, value, ex_size);
             }
-
-            // Explode block
-            explode_block(target, ex_scale, value, size);
+            else
+            {
+                explode_block(target, ex_scale, value, ex_size);
+            }
         }
 
         // return the block atlas id
@@ -838,11 +884,8 @@ class world
             }
         }
 
-        // Calculate new placemark point
-        const min::vec3<float> dest = cam.project_point(3.0);
-
-        // Create a ray from camera to destination
-        const min::ray<float, min::vec3> r(cam.get_position(), dest);
+        // Get ray from camera to destination
+        const min::ray<float, min::vec3> &r = _player.ray();
 
         // Trace a ray to the destination point to find placement position, return point is snapped
         _preview = _grid.ray_trace_prev(r, 6);

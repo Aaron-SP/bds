@@ -1026,7 +1026,7 @@ class ui_bg
             }
 
             // Search for overlapping cells
-            const std::vector<size_t> &map = _grid.get_index_map();
+            const std::vector<uint16_t> &map = _grid.get_index_map();
             const std::vector<uint16_t> &hits = _grid.point_inside(p);
 
             // Set hover if overlapping

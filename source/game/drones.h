@@ -36,6 +36,8 @@ class drone
     size_t _inst_id;
     size_t _path_id;
     std::vector<path> *_paths;
+    size_t _idle;
+    float _health;
 
     inline path &get_path()
     {
@@ -51,7 +53,7 @@ class drone
           const size_t path_id, std::vector<path> *const vp,
           const min::vec3<float> &p, const min::vec3<float> &dest)
         : _body_id(body_id), _inst_id(inst_id),
-          _path_id(path_id), _paths(vp)
+          _path_id(path_id), _paths(vp), _idle(0), _health(100.0)
     {
         // Reset path and update with new info
         get_path().set_dead(false);
@@ -67,21 +69,41 @@ class drone
     {
         return _body_id;
     }
+    inline bool damage(const float d)
+    {
+        // Decriment health
+        _health -= d;
+
+        // Return if dead
+        return _health <= 0.0;
+    }
+    inline void dec_idle()
+    {
+        _idle--;
+    }
     inline void dec_inst()
     {
         _inst_id--;
     }
-    inline size_t inst_id() const
+    inline float get_remain() const
     {
-        return _inst_id;
+        return get_path().get_remain();
     }
     inline void expire_path()
     {
         get_path().clear();
     }
-    inline float get_remain() const
+    inline size_t inst_id() const
     {
-        return get_path().get_remain();
+        return _inst_id;
+    }
+    inline bool is_pathing() const
+    {
+        return _idle == 0;
+    }
+    inline void set_idle(const size_t N)
+    {
+        _idle = N;
     }
     inline min::vec3<float> step(cgrid &grid, const float speed)
     {
@@ -141,43 +163,18 @@ class drones
 
         return id;
     }
+    inline void force(const size_t index, const min::vec3<float> &f)
+    {
+        // Get the drop body
+        min::body<float, min::vec3> &b = body(index);
+
+        // Apply force to the body per mass
+        b.add_force(f * b.get_mass());
+    }
     inline static float path_speed(const float remain)
     {
         // Calculate speed slowing down as approaching goal
         return 2.75 * ((remain - 3.0) / (remain + 3.0) + 1.1);
-    }
-    inline void step_path(cgrid &grid, const size_t index)
-    {
-        // Get the drone
-        drone &d = _drones[index];
-
-        // Get remaining distance
-        const float remain = d.get_remain();
-
-        // Calculate the speed of the next step
-        const min::vec3<float> step = d.step(grid, path_speed(remain));
-
-        // Add velocity to the body
-        body(index).set_linear_velocity(step);
-    }
-    inline const min::vec3<float> &position(const size_t index) const
-    {
-        // Return the drone position
-        return body(index).get_position();
-    }
-    inline void reserve_memory()
-    {
-        // Reserve space for collision cells
-        _col_cells.reserve(27);
-        _drones.reserve(static_instance::max_drones());
-    }
-
-  public:
-    drones(physics *sim, static_instance *inst)
-        : _sim(sim), _inst(inst), _paths(static_instance::max_drones()),
-          _path_old(0), _f(nullptr), _disable(false)
-    {
-        reserve_memory();
     }
     inline void remove(const size_t index)
     {
@@ -196,6 +193,72 @@ class drones
             // Adjust the body data index
             body(i).set_data(min::body_data(i));
         }
+    }
+    inline void reserve_memory()
+    {
+        // Reserve space for collision cells
+        _col_cells.reserve(27);
+        _drones.reserve(static_instance::max_drones());
+    }
+    inline void step_path(cgrid &grid, const size_t index)
+    {
+        // Get the drone
+        drone &d = _drones[index];
+
+        // Get remaining distance
+        const float remain = d.get_remain();
+
+        // Only path if not idling
+        if (d.is_pathing())
+        {
+            // Calculate the speed of the next step
+            const min::vec3<float> step = d.step(grid, path_speed(remain));
+
+            // Add velocity to the body
+            body(index).set_linear_velocity(step);
+        }
+        else
+        {
+            // Decrement idle frame count
+            d.dec_idle();
+        }
+    }
+
+  public:
+    drones(physics *sim, static_instance *inst)
+        : _sim(sim), _inst(inst), _paths(static_instance::max_drones()),
+          _path_old(0), _f(nullptr), _disable(false)
+    {
+        reserve_memory();
+    }
+    inline bool damage(const size_t index, const min::vec3<float> &dir, const float dam)
+    {
+        // Get the drone
+        drone &d = _drones[index];
+
+        // Apply a force on the drone body when hit
+        force(index, dir * (dam * 40.0));
+
+        // Knock the drone offline for N frame
+        d.set_idle(60);
+
+        // Do damage and return if dead
+        if (d.damage(dam))
+        {
+            // Remove drone
+            remove(index);
+
+            // Return remove
+            return true;
+        }
+
+        // Return no remove
+        return false;
+    }
+    inline const min::vec3<float> &position(const size_t index) const
+    {
+        // Return the drone position
+        return body(index).get_position();
     }
     inline void set_collision_callback(const coll_call &f)
     {
