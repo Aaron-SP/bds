@@ -291,7 +291,7 @@ class world
             inv.add(id_value(item_id::CAT_K), count);
             break;
         case id_value(block_id::DIRT2):
-            inv.add(id_value(item_id::AN_NO3), count);
+            inv.add(id_value(item_id::CAT_NH4), count);
             break;
         case id_value(block_id::SAND1):
             inv.add(id_value(item_id::CAT_NA), count);

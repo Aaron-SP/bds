@@ -316,6 +316,34 @@ class inventory
 
         return false;
     }
+    inline bool consume3(
+        const size_t index_1, const uint8_t id_1, uint8_t &count_1,
+        const size_t index_2, const uint8_t id_2, uint8_t &count_2,
+        const size_t index_3, const uint8_t id_3, uint8_t &count_3)
+    {
+        // Get the current item
+        item &it_1 = _inv[index_1];
+        item &it_2 = _inv[index_2];
+        item &it_3 = _inv[index_3];
+
+        const bool it1_pass = (it_1.id() == id_1) && (it_1.count() >= count_1);
+        const bool it2_pass = (it_2.id() == id_2) && (it_2.count() >= count_2);
+        const bool it3_pass = (it_3.id() == id_3) && (it_3.count() >= count_3);
+
+        // Are these the items we want?
+        if ((it1_pass && it2_pass) && it3_pass)
+        {
+            // Consume both resources
+            consume(index_1, it_1, count_1);
+            consume(index_2, it_2, count_2);
+            consume(index_3, it_3, count_3);
+
+            // Return that we consumed the resource
+            return true;
+        }
+
+        return false;
+    }
     inline void load_strings()
     {
         _inv_name[0] = "Empty";
@@ -445,9 +473,7 @@ class inventory
 
         // Create items in the store
         _inv[begin_store()] = item(1, 1);
-        _inv[begin_store() + 1] = item(3, 1);
-        _inv[begin_store() + 2] = item(4, 1);
-        _inv[begin_store() + 3] = item(5, 1);
+        _inv[begin_store() + 1] = item(5, 1);
     }
     inline const item &operator[](const size_t index) const
     {
@@ -629,16 +655,6 @@ class inventory
         }
 
         // Blue shard recipes
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_NH4), high_count))
-        {
-            uint8_t add_count = 4;
-            return add(id_value(item_id::POWD_UREA), add_count);
-        }
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::AN_NO3), high_count))
-        {
-            uint8_t add_count = 4;
-            return add(id_value(item_id::POWD_UREA), add_count);
-        }
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_CA), high_count))
         {
             uint8_t add_count = 4;
@@ -742,6 +758,49 @@ class inventory
         // Failed to craft item
         return false;
     }
+    inline bool recipe_3()
+    {
+        // Sort the crafting array by ID
+        std::sort(_craft.begin(), _craft.begin() + 3, std::less<craft_item>());
+
+        // Get indices in sorted order
+        const size_t lower = _craft[0].index();
+        const size_t middle = _craft[1].index();
+        const size_t higher = _craft[2].index();
+        uint8_t low_count = 4;
+        uint8_t mid_count = 4;
+        uint8_t high_count = 4;
+
+        // Urea
+        if (consume3(lower, id_value(item_id::SHARD_B), low_count,
+                     middle, id_value(item_id::CAT_NH4), mid_count,
+                     higher, id_value(item_id::POWD_CHARCOAL), high_count))
+        {
+            uint8_t add_count = 1;
+            return add(id_value(item_id::POWD_UREA), add_count);
+        }
+
+        // Jet pack
+        else if (consume3(lower, id_value(item_id::BAR_FE), low_count,
+                          middle, id_value(item_id::POWD_KNO3), mid_count,
+                          higher, id_value(item_id::POWD_UREA), high_count))
+        {
+            uint8_t add_count = 1;
+            return add(id_value(skill_id::JET), add_count);
+        }
+
+        // Grappling Hook
+        else if (consume3(lower, id_value(item_id::BAR_FE), low_count,
+                          middle, id_value(item_id::BAR_AU), mid_count,
+                          higher, id_value(item_id::POWD_RED_PHOS), high_count))
+        {
+            uint8_t add_count = 1;
+            return add(id_value(skill_id::GRAPPLE), add_count);
+        }
+
+        // Failed to craft item
+        return false;
+    }
     inline bool craft(const size_t hover_index)
     {
         size_t craft_size = 0;
@@ -772,6 +831,9 @@ class inventory
             return decay(hover_index);
         case 2:
             return recipe_2();
+            break;
+        case 3:
+            return recipe_3();
             break;
         }
 
@@ -817,6 +879,8 @@ class inventory
             return decay(hover_index, id_value(item_id::BLK_RED_PEP), id_value(item_id::FOOD_RED_PEP), count);
         case item_id::BLK_GR_PEP:
             return decay(hover_index, id_value(item_id::BLK_GR_PEP), id_value(item_id::FOOD_GR_PEP), count);
+        case item_id::CAT_NH4:
+            return decay(hover_index, id_value(item_id::CAT_NH4), id_value(item_id::AN_NO3), count);
         default:
             return false;
         }
@@ -877,9 +941,7 @@ class inventory
 
         // Create items in the store
         _inv[begin_store()] = item(1, 1);
-        _inv[begin_store() + 1] = item(3, 1);
-        _inv[begin_store() + 2] = item(4, 1);
-        _inv[begin_store() + 3] = item(5, 1);
+        _inv[begin_store() + 1] = item(5, 1);
 
         // Flag all dirty
         _update.resize(_inv.size());

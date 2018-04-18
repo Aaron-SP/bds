@@ -990,6 +990,20 @@ class ui_bg
             draw_transparent_ui();
         }
     }
+    inline bool drop()
+    {
+        // If we are hovering
+        if (_hovering)
+        {
+            // Drop hovering inventory
+            _inv->drop(_hover.index());
+
+            // Return that we dropped the item
+            return true;
+        }
+
+        return false;
+    }
     inline const std::string &get_hover_info() const
     {
         return _inv->get_info((*_inv)[_hover.index()]);

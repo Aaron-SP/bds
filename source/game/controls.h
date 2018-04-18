@@ -132,6 +132,7 @@ class controls
         keyboard.add(min::window::key_code::KEY8);
         keyboard.add(min::window::key_code::SPACE);
         keyboard.add(min::window::key_code::TAB);
+        keyboard.add(min::window::key_code::KEYQ);
 
         // Register callback function F1
         keyboard.register_keydown(min::window::key_code::F1, controls::close_window, (void *)_window);
@@ -209,6 +210,9 @@ class controls
 
         // Register callback function TAB
         keyboard.register_keydown(min::window::key_code::TAB, controls::ui_extend, (void *)this);
+
+        // Register callback function TAB
+        keyboard.register_keydown(min::window::key_code::KEYQ, controls::drop_item, (void *)this);
     }
     static void close_window(void *ptr, double step)
     {
@@ -604,6 +608,15 @@ class controls
 
         // Hide or show the cursor
         win->display_cursor(input);
+    }
+    static void drop_item(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        ui_overlay *const ui = control->get_ui();
+
+        // Drop item if hovering
+        ui->drop();
     }
     static void left_click_down(void *ptr, const uint16_t x, const uint16_t y)
     {

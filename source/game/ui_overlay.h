@@ -125,6 +125,17 @@ class ui_overlay
         _bg.set_draw_console(false);
         _text.set_draw_console(false);
     }
+    inline bool drop()
+    {
+        // If UI is extended
+        if (is_extended())
+        {
+            return _bg.drop();
+        }
+
+        // Didn't drop anything
+        return false;
+    }
     inline void enable_console()
     {
         _bg.set_draw_console(true);
