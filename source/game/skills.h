@@ -37,7 +37,8 @@ class skills
         grapple,
         missile,
         scan,
-        grenade
+        grenade,
+        scatter
     };
 
     skill_mode _mode;
@@ -134,6 +135,10 @@ class skills
     {
         return _mode == skill_mode::scan;
     }
+    inline bool is_scatter_mode() const
+    {
+        return _mode == skill_mode::scatter;
+    }
     inline bool is_locked() const
     {
         return _locked;
@@ -169,6 +174,10 @@ class skills
     inline void set_scan_mode()
     {
         _mode = skill_mode::scan;
+    }
+    inline void set_scatter_mode()
+    {
+        _mode = skill_mode::scatter;
     }
     inline void start_charge()
     {
@@ -221,6 +230,13 @@ class skills
     inline void unlock_scan()
     {
         if (_mode == skill_mode::scan)
+        {
+            _locked = false;
+        }
+    }
+    inline void unlock_scatter()
+    {
+        if (_mode == skill_mode::scatter)
         {
             _locked = false;
         }

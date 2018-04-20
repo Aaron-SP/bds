@@ -62,14 +62,27 @@ enum class block_id : int8_t
 
 enum class item_id : uint8_t
 {
+    BLK_GRASS1 = 17,
+    BLK_GRASS2 = 18,
     BLK_DIRT1 = 19,
     BLK_DIRT2 = 20,
+    BLK_SAND1 = 21,
+    BLK_SAND2 = 22,
     BLK_FE = 23,
     BLK_SI = 24,
     BLK_WOOD1 = 25,
     BLK_WOOD2 = 26,
+    BLK_LEAF1 = 27,
+    BLK_LEAF2 = 28,
+    BLK_LEAF3 = 29,
+    BLK_LEAF4 = 30,
     BLK_MG = 31,
     BLK_AU = 32,
+    BLK_STONE1 = 33,
+    BLK_STONE2 = 34,
+    BLK_CLAY1 = 35,
+    BLK_CLAY2 = 36,
+    BLK_STONE3 = 37,
     BLK_CU = 38,
     BLK_NA = 39,
     BLK_CA = 40,
@@ -132,7 +145,8 @@ enum class skill_id : uint8_t
     GRAPPLE = 3,
     JET = 4,
     SCAN = 5,
-    GRENADE = 6
+    GRENADE = 6,
+    SCATTER = 7
 };
 
 inline constexpr int8_t id_value(const block_id id)

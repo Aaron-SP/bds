@@ -30,15 +30,16 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-class miss_emit
+class emitter
 {
-  private:
+  protected:
     min::emitter_buffer<float, GL_FLOAT> _emit;
     float _time;
     min::vec4<float> _ref;
 
   public:
-    miss_emit() : _emit(min::vec3<float>(), 25, 4, 0.0625, 0.125, 0.5), _time(-1) {}
+    emitter(const min::vec3<float> &p, const size_t emit_count, const size_t emit_periods, const float emit_freq, const float spawn_freq, const float random)
+        : _emit(p, emit_count, emit_periods, emit_freq, spawn_freq, random), _time(-1) {}
     void abort()
     {
         _time = -1;
@@ -79,12 +80,40 @@ class miss_emit
     }
 };
 
+class miss_emitter : public emitter
+{
+  public:
+    miss_emitter() : emitter(min::vec3<float>(), 25, 4, 0.0625, 0.125, 0.5) {}
+};
+
+class static_emitter : public emitter
+{
+  private:
+    bool _is_explode;
+
+  public:
+    static constexpr size_t _static_count = 1000;
+    static_emitter() : emitter(min::vec3<float>(), _static_count, 1, 0.10, 5.0, 10.0)
+    {
+        // Set the particle system gravity
+        this->_emit.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
+    }
+    bool is_explode() const
+    {
+        return _is_explode;
+    }
+    void set_explode(const bool flag)
+    {
+        _is_explode = flag;
+    }
+};
+
 class particle
 {
   private:
     static constexpr size_t _miss_limit = 10;
-    static constexpr size_t _static_count = 1000;
-    static constexpr float _inv_static_count = 1.0 / _static_count;
+    static constexpr size_t _static_limit = 10;
+    static constexpr float _inv_static_count = 1.0 / static_emitter::_static_count;
 
     // Opengl stuff
     min::shader _vertex;
@@ -98,20 +127,17 @@ class particle
 
     // Particle stuff
     min::emitter_buffer<float, GL_FLOAT> _emit;
-    min::emitter_buffer<float, GL_FLOAT> _static;
-    std::vector<miss_emit> _miss;
+    std::vector<miss_emitter> _miss;
     size_t _miss_old;
+    std::vector<static_emitter> _static;
+    size_t _static_old;
     int _attract_index;
 
     // Control
     float _charge_time;
-    float _explode_time;
-    float _line_time;
 
     // Cached camera settings
     min::vec4<float> _charge_ref;
-    min::vec4<float> _explode_ref;
-    min::vec4<float> _line_ref;
     min::vec3<float> _line_pos;
     min::vec3<float> _velocity;
 
@@ -142,14 +168,6 @@ class particle
             draw_emit();
         }
     }
-    inline void draw_miss(const size_t index) const
-    {
-        // Bind VAO
-        _miss[index].emit().bind();
-
-        // Draw the particles
-        _miss[index].emit().draw();
-    }
     inline void draw_miss_launch() const
     {
         // Bind this texture for drawing missiles
@@ -163,44 +181,34 @@ class particle
                 // Set the launch reference point
                 set_reference(_miss[i].ref());
 
-                // Draw on emit buffer
-                draw_miss(i);
+                // Bind VAO
+                _miss[i].emit().bind();
+
+                // Draw the particles
+                _miss[i].emit().draw();
             }
         }
     }
     inline void draw_static() const
     {
-        // Bind this texture for drawing
+        // Bind this texture for drawing static
         _tbuffer.bind(_dds_id, 0);
 
-        // Bind VAO
-        _static.bind();
-
-        // Draw the particles
-        _static.draw();
-    }
-    inline void draw_static_explode() const
-    {
-        // Draw explode
-        if (_explode_time > 0.0)
+        // Draw all miss launch
+        for (size_t i = 0; i < _static_limit; i++)
         {
-            // Set the explode reference point
-            set_reference(_explode_ref);
+            // Draw static
+            if (_static[i].time() > 0.0)
+            {
+                // Set the static reference point
+                set_reference(_static[i].ref());
 
-            // Draw on static buffer
-            draw_static();
-        }
-    }
-    inline void draw_static_line() const
-    {
-        // Draw draw
-        if (_line_time > 0.0)
-        {
-            // Set the explode reference point
-            set_reference(_line_ref);
+                // Bind VAO
+                _static[i].emit().bind();
 
-            // Draw on static buffer
-            draw_static();
+                // Draw the particles
+                _static[i].emit().draw();
+            }
         }
     }
     inline void load_emit(const min::vec3<float> &p, const min::vec3<float> &speed, const min::vec3<float> &wind)
@@ -266,16 +274,6 @@ class particle
         _charge_ref.y(ref.y());
         _charge_ref.z(ref.z());
     }
-    inline void set_explode_ref(const min::vec3<float> &ref, const float size)
-    {
-        _explode_ref = min::vec4<float>(ref, size);
-    }
-    inline void set_line_ref(const min::vec3<float> &ref)
-    {
-        _line_ref.x(ref.x());
-        _line_ref.y(ref.y());
-        _line_ref.z(ref.z());
-    }
 
   public:
     particle(const game::uniforms &uniforms)
@@ -283,12 +281,10 @@ class particle
           _fragment(memory_map::memory.get_file("data/shader/emitter.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _emit(min::vec3<float>(), 200, 5, 0.0625, 0.125, 0.5),
-          _static(min::vec3<float>(), _static_count, 1, 0.10, 5.0, 10.0),
           _miss(_miss_limit), _miss_old(0),
+          _static(_static_limit), _static_old(0),
           _attract_index(-1),
-          _charge_time(-1),
-          _explode_time(-1),
-          _line_time(-1)
+          _charge_time(-1)
     {
         // Load textures
         load_textures();
@@ -305,19 +301,11 @@ class particle
 
         // Set the particle gravity for charge
         _emit.set_gravity(min::vec3<float>(0.0, 0.0, 0.0));
-
-        // Set the particle gravity for explode
-        _static.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
     }
     inline void abort_charge()
     {
         // Abort particle animation
         _charge_time = -1.0;
-    }
-    inline void abort_explode()
-    {
-        // Abort particle animation
-        _explode_time = -1.0;
     }
     inline void abort_miss_launch(const size_t index)
     {
@@ -325,19 +313,22 @@ class particle
     }
     inline void abort_line()
     {
-        // Abort particle animation
-        _line_time = -1.0;
+        for (size_t i = 0; i < _static_limit; i++)
+        {
+            // Abort line animation
+            if (!_static[i].is_explode())
+            {
+                _static[i].abort();
+            }
+        }
     }
     inline void draw() const
     {
-        // Draw the explode particles
-        draw_static_explode();
+        // Draw the explode and line particles
+        draw_static();
 
         // Draw the charge particles
         draw_emit_charge();
-
-        // Draw the line particles
-        draw_static_line();
 
         // Draw missiles
         draw_miss_launch();
@@ -396,37 +387,44 @@ class particle
     }
     inline void load_static_explode(const min::vec3<float> &p, const min::vec3<float> &direction, const float time, const float size)
     {
-        // Abort line
-        abort_line();
-
         // Add time to the clock
-        _explode_time = time;
+        _static[_static_old].set_time(time);
+
+        // Set static particle type
+        _static[_static_old].set_explode(true);
 
         // Set the explode reference position
-        set_explode_ref(p, size);
+        _static[_static_old].set_ref(p);
+        _static[_static_old].w(size);
 
         // Update the start position
-        _static.set_position(p);
+        _static[_static_old].emit().set_position(p);
 
         // Set speed direction
-        _static.set_speed(direction);
+        _static[_static_old].emit().set_speed(direction);
 
         // Reset the static buffer
-        _static.reset();
+        _static[_static_old].emit().reset();
+
+        // Increment counter
+        (++_static_old) %= _static_limit;
     }
     inline void load_static_line(const min::vec3<float> &p, const float time, const float size)
     {
-        // Abort exploding
-        abort_explode();
+        // Add time to the clock
+        _static[_static_old].set_time(time);
 
-        // Add more time to the clock
-        _line_time = time;
+        // Set static particle type
+        _static[_static_old].set_explode(false);
 
         // Set the line destination
         _line_pos = p;
 
         // Set the explode reference position
-        _line_ref.w(size);
+        _static[_static_old].w(size);
+
+        // Increment counter
+        (++_static_old) %= _static_limit;
     }
     inline void set_velocity(const min::vec3<float> &velocity)
     {
@@ -443,7 +441,7 @@ class particle
     void update(min::camera<float> &cam, const double dt)
     {
         // Unbind the last VAO to prevent scrambling buffers
-        _static.unbind();
+        _static[0].emit().unbind();
 
         // Update charge
         if (_charge_time > 0.0)
@@ -474,7 +472,7 @@ class particle
             _emit.upload();
         }
 
-        // Update miss launch
+        // Update missile emitters
         for (size_t i = 0; i < _miss_limit; i++)
         {
             if (_miss[i].time() > 0.0)
@@ -490,52 +488,56 @@ class particle
             }
         }
 
-        // Update explode
-        if (_explode_time > 0.0)
+        // Update static emitters
+        for (size_t i = 0; i < _static_limit; i++)
         {
-            // Remove some of the time
-            _explode_time -= dt;
+            // Update explode
+            if (_static[i].is_explode() && _static[i].time() > 0.0)
+            {
+                // Remove some of the time
+                _static[i].time_dec(dt);
 
-            // Update the particle positions
-            _static.step(dt);
+                // Update the particle positions
+                _static[i].emit().step(dt);
 
-            // Upload data to GPU
-            _static.upload();
-        }
-        else if (_line_time > 0.0)
-        {
-            // Remove some of the time
-            _line_time -= dt;
+                // Upload data to GPU
+                _static[i].emit().upload();
+            }
+            else if (!_static[i].is_explode() && _static[i].time() > 0.0)
+            {
+                // Remove some of the time
+                _static[i].time_dec(dt);
 
-            // Calculate camera settings
-            const min::vec3<float> cam_pos = gun_position(cam);
+                // Calculate camera settings
+                const min::vec3<float> cam_pos = gun_position(cam);
 
-            // Generate particles in a line
-            size_t count = 0;
-            const min::vec3<float> spacing = (_line_pos - cam_pos) * _inv_static_count;
-            const auto f = [this, &count, &cam_pos, spacing](min::vec3<float> &position, min::vec3<float> &speed, const float inv_mass) -> void {
+                // Generate particles in a line
+                size_t count = 0;
+                const min::vec3<float> spacing = (_line_pos - cam_pos) * _inv_static_count;
+                const auto f = [this, &count, &cam_pos, spacing, i](min::vec3<float> &position, min::vec3<float> &speed, const float inv_mass) -> void {
 
-                // Calculate particle density
-                const float density = (3.75E-6 * count) + 0.00125;
+                    // Calculate particle density
+                    const float density = (3.75E-6 * count) + 0.00125;
 
-                // Calculate offset
-                const min::vec3<float> offset = (spacing * count) + (_static.random() * density);
+                    // Calculate offset
+                    const min::vec3<float> offset = (spacing * count) + (_static[i].emit().random() * density);
 
-                // Update each particle at position
-                position = cam_pos + offset;
+                    // Update each particle at position
+                    position = cam_pos + offset;
 
-                // Update counter
-                count++;
-            };
+                    // Update counter
+                    count++;
+                };
 
-            // Update the line reference
-            set_line_ref(cam_pos);
+                // Update the line reference
+                _static[i].set_ref(cam_pos);
 
-            // Update the particle positions
-            _static.set(f);
+                // Update the particle positions
+                _static[i].emit().set(f);
 
-            // Upload data to GPU
-            _static.upload();
+                // Upload data to GPU
+                _static[i].emit().upload();
+            }
         }
     }
 };

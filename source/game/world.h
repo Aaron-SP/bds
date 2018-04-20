@@ -96,6 +96,7 @@ class world
     // Random stuff
     std::uniform_int_distribution<size_t> _drop_dist;
     std::uniform_real_distribution<float> _grid_dist;
+    std::uniform_real_distribution<float> _scat_dist;
     std::mt19937 _gen;
 
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
@@ -187,7 +188,7 @@ class world
             this->explode_block(point, scale, value, 100.0);
         };
     }
-    inline void explode_anim(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
+    inline void explode_anim(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size)
     {
         // Add a drop
         _drops.add(point, dir, value);
@@ -235,7 +236,7 @@ class world
             _player.explode(dir, sq_dist, ex_size, power, value);
         }
     }
-    inline void explode_block(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const int8_t value, const float size = 100.0)
+    inline void explode_block(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const int8_t value, const float size)
     {
         // Offset explosion radius for geometry removal
         const min::vec3<float> center = center_radius(point, scale);
@@ -250,6 +251,81 @@ class world
             // Do explode animation
             explode_anim(point, dir, scale, value, size);
         }
+    }
+    bool explode_ray(const min::ray<float, min::vec3> &r,
+                     const min::vec3<float> &target,
+                     const int8_t value,
+                     const min::vec3<unsigned> &scale,
+                     const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f, const float size)
+    {
+        // Check for collisions with a physics body
+        const std::vector<uint16_t> &map = _simulation.get_index_map();
+        const std::vector<std::pair<uint16_t, min::vec3<float>>> &cols = _simulation.get_collisions(r);
+
+        // Iterate through all the hits
+        const size_t hits = cols.size();
+        for (size_t i = 0; i < hits; i++)
+        {
+            // Get the body
+            const min::body<float, min::vec3> &b = _simulation.get_body(map[cols[i].first]);
+
+            // Check if body isn't dead and if body is a drone
+            if (!b.is_dead() && b.get_id() == 1)
+            {
+                // Get the drone index from the body
+                const size_t drone_index = b.get_data().index;
+
+                // Cache the drone position, no reference here
+                const min::vec3<float> p = _drones.position(drone_index);
+
+                // Drone may be removed, do not used drone index after this!!!
+                const min::vec3<float> dir = r.get_direction();
+                const min::vec3<float> flip = dir * -1.0;
+                if (_drones.damage(drone_index, dir, 25.0))
+                {
+                    // Add player experience
+                    _player.get_stats().add_experience(100.0);
+
+                    // Do explode animation for sodium
+                    explode_anim(p, flip, _ex_radius, id_value(block_id::SODIUM), size);
+                }
+                else
+                {
+                    // Do explode animation
+                    explode_anim(p, flip, scale, id_value(block_id::IRON), size);
+                }
+
+                // Exit out early no terrain hit
+                return false;
+            }
+        }
+
+        // Get the atlas of target block, remove if hit
+        if (value >= 0)
+        {
+            // Invoke the function callback if provided
+            if (f)
+            {
+                // Get character body
+                min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+
+                // Call function callback
+                f(target, body);
+            }
+
+            // Explode block
+            if (value == id_value(block_id::SODIUM))
+            {
+                explode_block(target, _ex_radius, value, size);
+            }
+            else
+            {
+                explode_block(target, scale, value, size);
+            }
+        }
+
+        // Return terrain hit
+        return true;
     }
     // Generates the preview geometry and adds it to preview buffer
     inline void generate_preview()
@@ -539,6 +615,7 @@ class world
           _missiles(&_simulation, particles, &_instance, s),
           _drop_dist(0, 20),
           _grid_dist((grid_size * -1.0) + 1.0, grid_size - 1.0),
+          _scat_dist(-0.1, 0.1),
           _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
     {
         // Set the collision elasticity of the physics simulation
@@ -582,90 +659,53 @@ class world
         // Draw the sky, uses geometry VAO -- HACK!
         _sky.draw();
     }
-    int8_t explode_ray(const min::vec3<unsigned> &ex_scale,
-                       const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float ex_size = 100.0)
+    int8_t explode_ray(const min::vec3<unsigned> &scale,
+                       const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f,
+                       const float size)
     {
-        // Check for collisions with a physics body
-        const std::vector<uint16_t> &map = _simulation.get_index_map();
-        const std::vector<std::pair<uint16_t, min::vec3<float>>> &hits = _simulation.get_collisions(_player.ray());
-
-        // Iterate through all the hits
-        const size_t size = hits.size();
-        for (size_t i = 0; i < size; i++)
-        {
-            // Get the body
-            const min::body<float, min::vec3> &b = _simulation.get_body(map[hits[i].first]);
-
-            // Check if body isn't dead and if body is a drone
-            if (!b.is_dead() && b.get_id() == 1)
-            {
-                // Get the drone index from the body
-                const size_t drone_index = b.get_data().index;
-
-                // Cache the drone position, no reference here
-                const min::vec3<float> p = _drones.position(drone_index);
-
-                // Drone may be removed, do not used drone index after this!!!
-                const min::vec3<float> flip = _player.forward() * -1.0;
-                if (_drones.damage(drone_index, _player.forward(), 25.0))
-                {
-                    // Add player experience
-                    _player.get_stats().add_experience(100.0);
-
-                    // Do explode animation for sodium
-                    explode_anim(p, flip, ex_scale, id_value(block_id::SODIUM), ex_size);
-                }
-                else
-                {
-                    // Do explode animation
-                    explode_anim(p, flip, _ex_radius, id_value(block_id::IRON), ex_size);
-                }
-
-                // Exit out early
-                return 0;
-            }
-        }
-
-        // Check if ray points to a valid target
-        if (!_player.is_target_valid())
-        {
-            return -2;
-        }
-
         // Use player's target as ray destination
         const min::vec3<float> &target = _player.get_target();
-        const int8_t value = _player.get_target_value();
 
-        // Get the atlas of target block, remove if hit
-        if (value >= 0)
-        {
-            // Invoke the function callback if provided
-            if (f)
-            {
-                // Get character body
-                min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+        // Check if ray points to a valid target
+        const int8_t value = (_player.is_target_valid()) ? _player.get_target_value() : -2;
 
-                // Call function callback
-                f(target, body);
-            }
+        // Launch a ray along player's viewing ray
+        const bool hit = explode_ray(_player.ray(), target, value, scale, f, size);
 
-            // Explode block
-            if (value == id_value(block_id::SODIUM))
-            {
-                explode_block(target, _ex_radius, value, ex_size);
-            }
-            else
-            {
-                explode_block(target, ex_scale, value, ex_size);
-            }
-        }
-
-        // return the block atlas id
-        return value;
+        // Return the block atlas id if hit
+        return (hit) ? value : -2;
     }
-    inline int8_t explode_ray(const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f = nullptr, const float size = 100.0)
+    inline void scatter_ray(const min::vec3<unsigned> &scale,
+                            const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f,
+                            const float size)
     {
-        return explode_ray(_scale, f, size);
+        // Values for casting rays
+        min::vec3<float> target;
+        size_t target_key;
+        int8_t target_value;
+
+        // Launch N explode rays
+        for (size_t i = 0; i < 4; i++)
+        {
+            // Generate a random scatter offset
+            const float x = _scat_dist(_gen);
+            const float y = _scat_dist(_gen);
+            const float z = _scat_dist(_gen);
+            const min::vec3<float> offset(x, y, z);
+
+            // Generate a random ray from the projection
+            const min::vec3<float> dest = _player.projection() + offset;
+            const min::ray<float, min::vec3> r(_player.position(), dest);
+
+            // Trace a ray to the destination point to find placement position, return point is snapped
+            const bool target_valid = _grid.ray_trace_last_key(r, _ray_max_dist, target, target_key, target_value);
+
+            // Check if ray points to a valid target
+            const int8_t value = (target_valid) ? target_value : -2;
+
+            // Cast an explode ray on this random ray
+            explode_ray(r, target, value, scale, f, size);
+        }
     }
     inline int8_t get_atlas_id() const
     {

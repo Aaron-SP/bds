@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __CONTROLS__
 
 #include <functional>
+#include <game/id.h>
 #include <game/sound.h>
 #include <game/state.h>
 #include <game/ui_overlay.h>
@@ -35,8 +36,9 @@ namespace game
 class controls
 {
   private:
-    static constexpr float _beam_cost = 10.0;
-    static constexpr float _beam_charge_cost = 20.0;
+    static constexpr float _beam_cost = 5.0;
+    static constexpr float _beam_charge_cost = 10.0;
+    static constexpr float _scatter_cost = 20.0;
     static constexpr float _grapple_cost = 10.0;
     static constexpr float _grenade_cost = 20.0;
     static constexpr float _missile_cost = 20.0;
@@ -392,29 +394,33 @@ class controls
                 // Set skill mode
                 switch (id)
                 {
-                case 1:
+                case id_value(skill_id::BEAM):
                     play.set_mode(play_mode::gun);
                     skill.set_beam_mode();
                     break;
-                case 2:
+                case id_value(skill_id::MISSILE):
                     play.set_mode(play_mode::gun);
                     skill.set_missile_mode();
                     break;
-                case 3:
+                case id_value(skill_id::GRAPPLE):
                     play.set_mode(play_mode::gun);
                     skill.set_grapple_mode();
                     break;
-                case 4:
+                case id_value(skill_id::JET):
                     play.set_mode(play_mode::skill);
                     skill.set_jetpack_mode();
                     break;
-                case 5:
+                case id_value(skill_id::SCAN):
                     play.set_mode(play_mode::skill);
                     skill.set_scan_mode();
                     break;
-                case 6:
+                case id_value(skill_id::GRENADE):
                     play.set_mode(play_mode::gun);
                     skill.set_grenade_mode();
+                    break;
+                case id_value(skill_id::SCATTER):
+                    play.set_mode(play_mode::gun);
+                    skill.set_scatter_mode();
                     break;
                 default:
                     play.set_mode(play_mode::none);
@@ -758,6 +764,19 @@ class controls
                     ui->set_alert_resource();
                 }
             }
+            else if (skill.is_scatter_mode() && skill.is_off_cooldown())
+            {
+                if (stat.can_consume_energy(_scatter_cost))
+                {
+                    // Lock the gun in beam mode
+                    skill.lock();
+                }
+                else
+                {
+                    sound->play_voice_resource();
+                    ui->set_alert_resource();
+                }
+            }
         }
     }
     static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
@@ -855,20 +874,18 @@ class controls
                 }
                 else if (skill.is_beam_charged())
                 {
-                    // Expolode block with radius, get the ray target value
-                    min::vec3<unsigned> explode_radius(3, 3, 3);
-                    const int8_t value = world->explode_ray(explode_radius, play_ex);
-                    if (value >= 0)
-                    {
-                        // Activate shoot animation
-                        character->set_animation_shoot();
+                    // Fire a charged explosion ray
+                    const min::vec3<unsigned> radius(3, 3, 3);
+                    world->explode_ray(radius, play_ex, 100.0);
 
-                        // Start gun cooldown timer
-                        skill.start_cooldown();
+                    // Activate shoot animation
+                    character->set_animation_shoot();
 
-                        // Consume energy
-                        stat.consume_energy(_beam_charge_cost);
-                    }
+                    // Start gun cooldown timer
+                    skill.start_cooldown();
+
+                    // Consume energy
+                    stat.consume_energy(_beam_charge_cost);
 
                     // Stop the charge sound
                     sound->stop_charge();
@@ -881,18 +898,18 @@ class controls
                     // Remove block from world, get the removed block id
                     if (stat.can_consume_energy(_beam_cost))
                     {
-                        const int8_t block_id = world->explode_ray(nullptr, 20.0);
-                        if (block_id >= 0)
-                        {
-                            // Activate shoot animation
-                            character->set_animation_shoot();
+                        // Fire an explosion ray
+                        const min::vec3<unsigned> radius(1, 1, 1);
+                        world->explode_ray(radius, nullptr, 20.0);
 
-                            // Play the shot sound
-                            sound->play_shot();
+                        // Activate shoot animation
+                        character->set_animation_shoot();
 
-                            // Consume energy
-                            stat.consume_energy(_beam_cost);
-                        }
+                        // Play the shot sound
+                        sound->play_shot();
+
+                        // Consume energy
+                        stat.consume_energy(_beam_cost);
                     }
                     else
                     {
@@ -1005,6 +1022,33 @@ class controls
 
                     // Unlock the gun if grenade mode
                     skill.unlock_grenade();
+                }
+                else if (skill.is_scatter_mode())
+                {
+                    // Remove block from world, get the removed block id
+                    if (stat.can_consume_energy(_scatter_cost))
+                    {
+                        // Shot scatter
+                        const min::vec3<unsigned> radius(1, 1, 1);
+                        world->scatter_ray(radius, nullptr, 20.0);
+
+                        // Activate shoot animation
+                        character->set_animation_shoot();
+
+                        // Play the shot sound
+                        sound->play_shot();
+
+                        // Consume energy
+                        stat.consume_energy(_scatter_cost);
+                    }
+                    else
+                    {
+                        sound->play_voice_resource();
+                        ui->set_alert_resource();
+                    }
+
+                    // Unlock the gun if beam mode
+                    skill.unlock_scatter();
                 }
             }
         }
