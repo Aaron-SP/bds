@@ -121,6 +121,7 @@ class controls
         keyboard.add(min::window::key_code::KEYA);
         keyboard.add(min::window::key_code::KEYD);
         keyboard.add(min::window::key_code::KEYE);
+        keyboard.add(min::window::key_code::KEYF);
         keyboard.add(min::window::key_code::KEYZ);
         keyboard.add(min::window::key_code::KEYX);
         keyboard.add(min::window::key_code::KEYC);
@@ -165,6 +166,9 @@ class controls
 
         // Register callback function E
         keyboard.register_keydown(min::window::key_code::KEYE, controls::reset, (void *)this);
+
+        // Register callback function F
+        keyboard.register_keydown(min::window::key_code::KEYF, controls::portal, (void *)this);
 
         // Register callback function Z
         keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
@@ -588,6 +592,18 @@ class controls
 
         // Reset scale
         world->reset_scale();
+    }
+    static void portal(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get the state and world pointer
+        state *const state = control->get_state();
+        world *const world = control->get_world();
+
+        // Reset scale
+        world->portal(state->get_load_state());
     }
     static void ui_extend(void *ptr, double step)
     {
@@ -1192,9 +1208,9 @@ class controls
         }
 
         // Get health and energy
-        const float energy = stat.get_energy_percent();
-        const float exp = stat.get_experience_percent();
-        const float health = stat.get_health_percent();
+        const float energy = stat.get_energy_fraction();
+        const float exp = stat.get_experience_fraction();
+        const float health = stat.get_health_fraction();
 
         // Update the ui energy bar
         _ui->set_energy(energy);

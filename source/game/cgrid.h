@@ -372,7 +372,24 @@ class cgrid
         _chunks[key].vertex.reserve(_chunk_cells);
         _chunks[key].index.reserve(_chunk_cells);
     }
+    inline void generate_portal()
+    {
+        // Create a cgrid generator
+        cgrid_generator generator(_grid);
 
+        // Function for finding grid key index
+        const auto f = [this](const std::tuple<size_t, size_t, size_t> &t) -> size_t {
+            return grid_key_pack(t);
+        };
+
+        // Function for finding grid center
+        const auto g = [this](const size_t key) -> min::vec3<float> {
+            return grid_cell_center(key);
+        };
+
+        // Generate the cgrid data
+        generator.generate_portal(_grid, _grid_scale, _chunk_size, f, g);
+    }
     inline void generate_world()
     {
         // Create a cgrid generator
@@ -389,7 +406,7 @@ class cgrid
         };
 
         // Generate the cgrid data
-        generator.generate(_grid, _grid_scale, _chunk_size, f, g);
+        generator.generate_world(_grid, _grid_scale, _chunk_size, f, g);
     }
     inline float grid_center_square_dist(const size_t key, const min::vec3<float> &point) const
     {
@@ -1032,6 +1049,17 @@ class cgrid
         for (size_t i = 0; i < size; i++)
         {
             out.push_back(grid_cell_center(_path[i]));
+        }
+    }
+    inline void portal()
+    {
+        generate_portal();
+
+        // Update all chunks
+        const size_t chunks = _chunks.size();
+        for (size_t i = 0; i < chunks; i++)
+        {
+            chunk_update(i);
         }
     }
     inline void set_boundary_chunk(const size_t key)

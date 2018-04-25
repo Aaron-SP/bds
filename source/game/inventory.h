@@ -20,6 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <array>
 #include <game/id.h>
+#include <utility>
 #include <vector>
 
 namespace game
@@ -249,7 +250,12 @@ class inventory
     std::vector<inv_id> _update;
     std::array<craft_item, _cube_size> _craft;
 
-    inline bool decay(const uint8_t index, const uint8_t consume_id, const uint8_t add_id, uint8_t &count, const uint8_t add_count)
+    inline std::pair<bool, uint8_t> decay(const uint8_t index, const uint8_t consume_id, uint8_t &count)
+    {
+        // Only consume item do not convert
+        return std::make_pair(consume(index, consume_id, count), consume_id);
+    }
+    inline std::pair<bool, uint8_t> decay(const uint8_t index, const uint8_t consume_id, const uint8_t add_id, uint8_t &count, const uint8_t add_count)
     {
         const uint8_t old_count = count;
 
@@ -273,7 +279,7 @@ class inventory
             }
         }
 
-        return status;
+        return std::make_pair(status, consume_id);
     }
     inline void consume(const size_t index, item &it, uint8_t &count)
     {
@@ -456,13 +462,18 @@ class inventory
         _inv_name[116] = "Bat Guano";
         _inv_desc[116] = "Right click to harvest";
         _inv_name[117] = "Tomato";
-        _inv_desc[117] = "It's tender and juicy";
+        _inv_desc[117] = "Right click to eat._It's tender and juicy!";
         _inv_name[118] = "Eggplant";
-        _inv_desc[118] = "It's tender and juicy";
+        _inv_desc[118] = "Right click to eat._It's tender and juicy!";
         _inv_name[119] = "Red Pepper";
-        _inv_desc[119] = "It's tender and juicy";
+        _inv_desc[119] = "Right click to eat._It's tender and juicy!";
         _inv_name[120] = "Green Pepper";
-        _inv_desc[120] = "It's tender and juicy";
+        _inv_desc[120] = "Right click to eat._It's tender and juicy!";
+    }
+    void set_store()
+    {
+        _inv[begin_store()] = item(id_value(skill_id::BEAM), 1);
+        _inv[begin_store() + 1] = item(id_value(skill_id::SCAN), 1);
     }
 
   public:
@@ -475,8 +486,7 @@ class inventory
         _update.reserve(_max_slots);
 
         // Create items in the store
-        _inv[begin_store()] = item(id_value(skill_id::BEAM), 1);
-        _inv[begin_store() + 1] = item(id_value(skill_id::SCAN), 1);
+        set_store();
     }
     inline const item &operator[](const size_t index) const
     {
@@ -921,7 +931,7 @@ class inventory
         // Failed to craft item
         return false;
     }
-    inline bool craft(const size_t hover_index)
+    inline std::pair<bool, uint8_t> craft(const size_t hover_index)
     {
         size_t craft_size = 0;
         const size_t begin = begin_cube();
@@ -950,17 +960,17 @@ class inventory
         case 1:
             return decay(hover_index);
         case 2:
-            return recipe_2();
-            break;
+            return std::make_pair(recipe_2(), 0);
         case 3:
-            return recipe_3();
+            return std::make_pair(recipe_3(), 0);
+        default:
             break;
         }
 
         // Return that we failed to craft
-        return false;
+        return std::make_pair(false, 0);
     }
-    inline bool decay(const size_t hover_index)
+    inline std::pair<bool, uint8_t> decay(const size_t hover_index)
     {
         // Get the item
         const item &it = _inv[hover_index];
@@ -1001,11 +1011,19 @@ class inventory
             return decay(hover_index, id_value(item_id::BLK_GR_PEP), id_value(item_id::FOOD_GR_PEP), count, 4);
         case item_id::CAT_NH4:
             return decay(hover_index, id_value(item_id::CAT_NH4), id_value(item_id::AN_NO3), count, 1);
+        case item_id::FOOD_EGGP:
+            return decay(hover_index, id_value(item_id::FOOD_EGGP), count);
+        case item_id::FOOD_GR_PEP:
+            return decay(hover_index, id_value(item_id::FOOD_GR_PEP), count);
+        case item_id::FOOD_RED_PEP:
+            return decay(hover_index, id_value(item_id::FOOD_RED_PEP), count);
+        case item_id::FOOD_TOM:
+            return decay(hover_index, id_value(item_id::FOOD_TOM), count);
         default:
-            return false;
+            break;
         }
 
-        return false;
+        return std::make_pair(false, it.id());
     }
     inline bool dirty() const
     {
@@ -1060,8 +1078,7 @@ class inventory
         std::fill(_inv.begin(), _inv.end(), item());
 
         // Create items in the store
-        _inv[begin_store()] = item(id_value(skill_id::BEAM), 1);
-        _inv[begin_store() + 1] = item(id_value(skill_id::SCAN), 1);
+        set_store();
 
         // Flag all dirty
         _update.resize(_inv.size());

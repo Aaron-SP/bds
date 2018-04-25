@@ -49,7 +49,12 @@ namespace game
 class world
 {
   private:
+    static constexpr float _damage_beam = 25.0;
+    static constexpr float _damage_charge = 100.0;
+    static constexpr float _damage_ex = 50.0;
+    static constexpr float _damage_miss = 100.0;
     static constexpr float _damping = 0.1;
+    static constexpr float _explode_size = 100.0;
     static constexpr float _explode_speed = 5.0;
     static constexpr float _explode_time = 5.0;
     static constexpr float _time_step = 1.0 / 180.0;
@@ -113,25 +118,40 @@ class world
         const min::vec3<float> &p = state.get_spawn();
 
         // Spawn character position
-        const min::vec3<float> spawned = ray_spawn(p);
+        const min::vec3<float> spawn = ray_spawn(p);
 
         // Create the physics body
-        _char_id = _simulation.add_body(cgrid::player_box(spawned), 10.0);
+        _char_id = _simulation.add_body(cgrid::player_box(spawn), 10.0);
 
         // Update recent chunk
-        _grid.update_current_chunk(spawned);
-
-        // Set scale to 3x3x3
-        _scale = min::vec3<unsigned>(3, 3, 3);
+        _grid.update_current_chunk(spawn);
 
         // Remove geometry around player, requires position snapped to grid and calculated direction vector
-        _grid.set_geometry(spawned, _scale, _preview_offset, -1);
-
-        // Reset scale to default value
-        _scale = min::vec3<unsigned>(1, 1, 1);
+        _grid.set_geometry(spawn, min::vec3<unsigned>(3, 3, 3), min::vec3<int>(1, 1, 1), -1);
 
         // Return the character body id
         return _char_id;
+    }
+    inline void drone_damage(const size_t drone_index, const min::vec3<unsigned> &scale, const min::vec3<float> &dir, const float size, const float damage)
+    {
+        // Cache the drone position, no reference here
+        const min::vec3<float> p = _drones.position(drone_index);
+
+        // Drone may be removed, do not used drone index after this!!!
+        const min::vec3<float> flip = dir * -1.0;
+        if (_drones.damage(drone_index, dir, damage))
+        {
+            // Add player experience
+            _player.get_stats().add_experience(100.0);
+
+            // Do explode animation for sodium
+            explode_anim(p, flip, _ex_radius, id_value(block_id::SODIUM), size);
+        }
+        else
+        {
+            // Do explode animation
+            explode_anim(p, flip, scale, id_value(block_id::IRON), size);
+        }
     }
     inline min::vec3<float> event_spawn()
     {
@@ -153,7 +173,7 @@ class world
                 const min::vec3<float> point = cell.first.get_center();
 
                 // Explode the block with radius
-                this->explode_block(point, _ex_radius, cell.second, 100.0);
+                this->explode_block(point, _ex_radius, cell.second, _explode_size);
             }
         };
     }
@@ -185,7 +205,7 @@ class world
             this->_sound->play_miss_ex(point);
 
             // Explode the block
-            this->explode_block(point, scale, value, 100.0);
+            this->explode_block(point, scale, value, _explode_size);
         };
     }
     inline void explode_anim(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size)
@@ -275,25 +295,15 @@ class world
                 // Get the drone index from the body
                 const size_t drone_index = b.get_data().index;
 
-                // Cache the drone position, no reference here
-                const min::vec3<float> p = _drones.position(drone_index);
+                // Get the explosion direction, cache
+                const min::vec3<float> &dir = r.get_direction();
 
-                // Drone may be removed, do not used drone index after this!!!
-                const min::vec3<float> dir = r.get_direction();
-                const min::vec3<float> flip = dir * -1.0;
-                if (_drones.damage(drone_index, dir, 25.0))
-                {
-                    // Add player experience
-                    _player.get_stats().add_experience(100.0);
+                // Choose between charge and beam damage from explosion size
+                // LEAKY ABSTRACTION LOOK IN CONTROLS!!!
+                const float damage = (size > 25.0) ? _damage_charge : _damage_beam;
 
-                    // Do explode animation for sodium
-                    explode_anim(p, flip, _ex_radius, id_value(block_id::SODIUM), size);
-                }
-                else
-                {
-                    // Do explode animation
-                    explode_anim(p, flip, scale, id_value(block_id::IRON), size);
-                }
+                // Do damage to the drone
+                drone_damage(drone_index, scale, dir, size, damage);
 
                 // Exit out early no terrain hit
                 return false;
@@ -467,30 +477,6 @@ class world
         // Register player collision callback
         _simulation.register_callback(_char_id, f);
 
-        // Drone collision callback
-        const auto g = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
-
-            // Get other body id, b1 is drone, 3 is grenade, 4 is missile
-            const size_t b2_id = b2.get_id();
-            if (b2_id == 3 || b2_id == 4)
-            {
-                // Get the drone index from the body
-                const size_t drone_index = b1.get_data().index;
-
-                // Get damage from body type, 4 is missile
-                const float dam = (b2_id == 4) ? 100.0 : 50.0;
-
-                // Remove this drone
-                if (this->_drones.damage(drone_index, this->_player.forward(), dam))
-                {
-                    // Add player experience
-                    this->_player.get_stats().add_experience(100.0);
-                }
-            }
-        };
-
-        _drones.set_collision_callback(g);
-
         // Explosive collision callback
         const auto h = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
 
@@ -500,8 +486,17 @@ class world
                 // Get the explode index from the body
                 const size_t exp_index = b1.get_data().index;
 
-                // Remove this drone
+                // Remove this explosive
                 this->_explosives.explode(exp_index, id_value(block_id::IRON), this->ex_anim_call());
+
+                // Get the drone index from the body
+                const size_t drone_index = b2.get_data().index;
+
+                // Get the explosion direction
+                const min::vec3<float> dir = (b2.get_position() - b1.get_position()).normalize();
+
+                // Do damage to the drone
+                drone_damage(drone_index, _ex_radius, dir, _explode_size, _damage_ex);
             }
         };
 
@@ -516,8 +511,17 @@ class world
                 // Get the explode index from the body
                 const size_t miss_index = b1.get_data().index;
 
-                // Remove this drone
+                // Remove this missile
                 this->_missiles.explode(miss_index, id_value(block_id::IRON), this->ex_anim_call());
+
+                // Get the drone index from the body
+                const size_t drone_index = b2.get_data().index;
+
+                // Get the explosion direction
+                const min::vec3<float> dir = (b2.get_position() - b1.get_position()).normalize();
+
+                // Do damage to the drone
+                drone_damage(drone_index, _ex_radius, dir, _explode_size, _damage_miss);
             }
         };
 
@@ -772,6 +776,26 @@ class world
 
         // Launch a missile in front of player
         return _missiles.launch_missile(p, dir);
+    }
+    inline void portal(const load_state &state)
+    {
+        // Get default spawn point
+        const min::vec3<float> &p = state.get_top();
+
+        // Generate a new world in grid
+        _grid.portal();
+
+        // Spawn character position
+        const min::vec3<float> spawn = ray_spawn(p);
+
+        // Warp player
+        _player.warp(spawn);
+
+        // Remove geometry around player, requires position snapped to grid and calculated direction vector
+        _grid.set_geometry(spawn, min::vec3<unsigned>(3, 3, 3), min::vec3<int>(1, 1, 1), -1);
+
+        // Update chunks
+        update_all_chunks();
     }
     inline void respawn(const min::vec3<float> &p)
     {

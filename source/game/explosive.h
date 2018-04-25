@@ -122,8 +122,11 @@ class explosives
 
     inline void explode(const size_t index, const int8_t atlas, const ex_call &f)
     {
-        // Call the explosion callback function
-        f(position(index), _scale, atlas);
+        // Call the explosion callback function if available
+        if (f)
+        {
+            f(position(index), _scale, atlas);
+        }
 
         // Blow up the grenade
         remove(index);

@@ -33,6 +33,7 @@ class load_state
     min::vec3<float> _default_spawn;
     min::vec3<float> _look;
     min::vec3<float> _spawn;
+    min::vec3<float> _top;
     std::vector<item> _inv;
     bool _loaded;
 
@@ -142,6 +143,7 @@ class load_state
         : _default_look(1.0, grid_size * 0.75, 0.0),
           _default_spawn(0.0, grid_size * 0.75, 0.0),
           _look(_default_look), _spawn(_default_spawn),
+          _top(0.0, grid_size - 1.0, 0.0),
           _inv(inventory::size()), _loaded(false)
     {
         // Check that we loaded a valid point
@@ -169,6 +171,10 @@ class load_state
     inline const min::vec3<float> &get_spawn() const
     {
         return _spawn;
+    }
+    inline const min::vec3<float> &get_top() const
+    {
+        return _top;
     }
     inline bool is_loaded() const
     {

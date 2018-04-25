@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _UI_BACKGROUND_ASSETS__
 #define _UI_BACKGROUND_ASSETS__
 
+#include <algorithm>
 #include <game/inventory.h>
 #include <game/ui_config.h>
 #include <min/aabbox.h>
@@ -347,25 +348,40 @@ class ui_bg_assets
     }
     inline void load_health_meter()
     {
-        const float y_height = _s_health_y * _health;
+        const float health = std::min<float>(1.25, _health);
+        const float y_height = _s_health_y * health;
         const float y_offset = (y_height - _s_health_x) * 0.5 + _tool_dy;
         const min::vec2<float> p(_center_w + _health_dx, y_offset);
         const min::vec2<float> scale(_s_health_x, y_height);
-        const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
 
-        // Load rect at position
-        set_rect(3, p, scale, red_coord);
+        // Load rect at position depending on health
+        if (_health > 1.0)
+        {
+            set_rect(3, p, scale, min::vec4<float>(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv));
+        }
+        else
+        {
+            set_rect(3, p, scale, min::vec4<float>(_x_red_uv, _y_red_uv, _s_uv, _s_uv));
+        }
     }
     inline void load_energy_meter()
     {
-        const float y_height = _s_energy_y * _energy;
+        const float energy = std::min<float>(1.25, _energy);
+        const float y_height = _s_energy_y * energy;
         const float y_offset = (y_height - _s_energy_x) * 0.5 + _tool_dy;
         const min::vec2<float> p(_center_w + _energy_dx, y_offset);
         const min::vec2<float> scale(_s_energy_x, y_height);
         const min::vec4<float> blue_coord(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv);
 
-        // Load rect at position
-        set_rect(4, p, scale, blue_coord);
+        // Load rect at position depending on energy
+        if (_energy > 1.0)
+        {
+            set_rect(4, p, scale, min::vec4<float>(_x_light_blue_uv, _y_light_blue_uv, _s_uv, _s_uv));
+        }
+        else
+        {
+            set_rect(4, p, scale, min::vec4<float>(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv));
+        }
     }
     inline void load_exp_meter()
     {

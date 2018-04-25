@@ -77,3 +77,6 @@ tests64:
 clean:
 	rm -f *.txt
 	rm -f bin/*
+clear:
+	rm -f bin/state
+	rm -f bin/world.bmesh

@@ -139,8 +139,11 @@ class missiles
         // Stop playing launch sound
         _sound->stop_miss_launch(_miss[index].sound_id());
 
-        // Call the explosion callback function
-        f(position(index), _scale, atlas);
+        // Call the explosion callback function if available
+        if (f)
+        {
+            f(position(index), _scale, atlas);
+        }
 
         // Blow up the grenade
         remove(index);

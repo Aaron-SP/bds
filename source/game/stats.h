@@ -27,6 +27,8 @@ namespace game
 class stats
 {
   private:
+    static constexpr float _health_consume = 0.1 / 180.0;
+    static constexpr float _energy_consume = 0.1 / 180.0;
     static constexpr float _health_regen = 1.0 / 180.0;
     static constexpr float _energy_regen = 2.0 / 180.0;
     static constexpr size_t _max_stats = 7;
@@ -51,17 +53,7 @@ class stats
 
     inline void add_energy(const float energy)
     {
-        // Absorb this amount of energy if not full
-        if (_energy < _max_energy)
-        {
-            _energy += energy;
-
-            // Cap energy at max_energy
-            if (_energy > _max_energy)
-            {
-                _energy = _max_energy;
-            }
-        }
+        _energy += energy;
     }
     inline void add_experience(const float exp)
     {
@@ -78,16 +70,7 @@ class stats
     }
     inline void add_health(const float health)
     {
-        if (_health < _max_health)
-        {
-            _health += health;
-
-            // Cap health at health_cap;
-            if (_health > _max_health)
-            {
-                _health = _max_health;
-            }
-        }
+        _health += health;
     }
     inline void consume_health(const float health)
     {
@@ -141,7 +124,7 @@ class stats
     {
         return _energy;
     }
-    inline float get_energy_percent() const
+    inline float get_energy_fraction() const
     {
         return _energy / _max_energy;
     }
@@ -149,7 +132,7 @@ class stats
     {
         return _exp;
     }
-    inline float get_experience_percent() const
+    inline float get_experience_fraction() const
     {
         return _exp / _max_exp;
     }
@@ -157,7 +140,7 @@ class stats
     {
         return _health;
     }
-    inline float get_health_percent() const
+    inline float get_health_fraction() const
     {
         return _health / _max_health;
     }
@@ -175,11 +158,61 @@ class stats
     }
     void regen_energy()
     {
-        add_energy(_energy_regen * regen());
+        // Absorb this amount of energy if not full
+        if (_energy < _max_energy)
+        {
+            // Calculate energy change
+            const float energy = _energy_regen * regen();
+            _energy += energy;
+
+            // Cap energy at max_energy
+            if (_energy > _max_energy)
+            {
+                _energy = _max_energy;
+            }
+        }
+        // Consume energy if over full
+        else if (_energy > _max_energy)
+        {
+            // Calculate energy change
+            const float energy = _energy_consume * regen();
+            _energy -= energy;
+
+            // Cap energy at max_energy
+            if (_energy < _max_energy)
+            {
+                _energy = _max_energy;
+            }
+        }
     }
     void regen_health()
     {
-        add_health(_health_regen * regen());
+        // Absorb this amount of health if not full
+        if (_health < _max_health)
+        {
+            // Calculate health change
+            const float health = _health_regen * regen();
+            _health += health;
+
+            // Cap health at max_health
+            if (_health > _max_health)
+            {
+                _health = _max_health;
+            }
+        }
+        // Consume health if over full
+        else if (_health > _max_health)
+        {
+            // Calculate health change
+            const float health = _health_consume * regen();
+            _health -= health;
+
+            // Cap health at max_health
+            if (_health < _max_health)
+            {
+                _health = _max_health;
+            }
+        }
     }
     inline void reset_low_energy()
     {

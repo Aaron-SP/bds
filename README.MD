@@ -68,7 +68,7 @@ The '-fps' flag is an optional parameter for controlling the target playback fra
 - Example: 'bin/game -fps 45' will render 45 frames per second.
 
 #### -chunk flag
-The '-chunk' flag is an optional parameter for controlling the size of each chunk. The default is 8 and must be an even divisible factor of the grid size, and greater than or equal to 2. Smaller chunk sizes allow the GPU to drop more terrain fragment calculations due to the early fragment test. High chunk sizes can greater diminish performance on lesser hardware. Chunk sizes too small however can drastically increase the number of draw calls per frame.
+The '-chunk' flag is an optional parameter for controlling the size of each chunk. The default is 8 and must be an even divisible factor of the grid size, and greater than or equal to 2. Smaller chunk sizes allow the GPU to drop more terrain fragment calculations due to the early fragment test. High chunk sizes can greatly diminish performance on lesser hardware. Chunk sizes too small however can drastically increase the number of draw calls per frame.
 - Example: 'bin/game -chunk 8' produce chunks of size 8 x 8 x 8.
 
 #### -grid flag
@@ -78,7 +78,7 @@ Any previous saves will be deleted upon resizing the game grid to avoid crashing
 
 #### -view flag
 The '-view' flag is an optional parameter for controlling how many chunks are viewable on the screen. The default is 5 and must be an odd number greater than one.
-- Example: 'bin/game -view 15' will render 15 chunks on each side of the player, (7 * 2) + 1 = 15.
+- Example: 'bin/game -view 15' will render 7 chunks on each side of the player, (7 * 2) + 1 = 15.
 
 #### -width flag and -height flag
 The '-width' and '-height' flag changes the default window dimensions.

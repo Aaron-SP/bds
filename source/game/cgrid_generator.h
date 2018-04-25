@@ -22,13 +22,12 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <game/work_queue.h>
 #include <kernel/brownian_grow.h>
-#include <kernel/mandelbulb.h>
+#include <kernel/mandelbulb_asym.h>
+#include <kernel/mandelbulb_sym.h>
 #include <kernel/terrain_base.h>
 #include <kernel/terrain_height.h>
 #include <min/vec3.h>
 #include <random>
-#include <sstream>
-#include <string>
 
 namespace game
 {
@@ -37,61 +36,38 @@ class cgrid_generator
 {
   private:
     std::vector<int8_t> _back;
-    int _radius;
-    int _seed;
-    int _years;
 
-    inline void load_config()
+    inline void clear_grid(std::vector<int8_t> &grid)
     {
-        std::string line;
-        std::ifstream file("data/config/gen.config");
-        if (file.is_open())
+        // Parallelize on copying buffers
+        const auto work = [this, &grid](std::mt19937 &gen, const size_t i) {
+            grid[i] = -1;
+        };
+
+        // Convert cells to mesh in parallel
+        work_queue::worker.run(work, 0, grid.size());
+    }
+    inline size_t count_grid(std::vector<int8_t> &grid)
+    {
+        // Out variable
+        size_t count = 0;
+
+        // Count all active cells in grid
+        const size_t size = grid.size();
+        for (size_t i = 0; i < size; i++)
         {
-            // Read seed density
-            getline(file, line);
-            std::stringstream ss(line);
-            ss >> _radius;
-            if (ss.fail())
+            if (grid[i] != -1)
             {
-                _radius = 10;
+                count++;
             }
-
-            // Read seed
-            getline(file, line);
-            ss.clear();
-            ss.str(line);
-            ss >> _seed;
-            if (ss.fail())
-            {
-                _seed = 1000;
-            }
-
-            // Read length
-            getline(file, line);
-            ss.clear();
-            ss.str(line);
-            ss >> _years;
-            if (ss.fail())
-            {
-                _years = 100;
-            }
-
-            // Close the file
-            file.close();
         }
+
+        // Return count;
+        return count;
     }
 
   public:
-    cgrid_generator(const std::vector<int8_t> &grid)
-        : _back(grid.size(), -1), _seed(100), _years(20)
-    {
-        // Load the terrain config file
-        load_config();
-
-        std::cout << "RADIUS: " << _radius << std::endl;
-        std::cout << "SEED: " << _seed << std::endl;
-        std::cout << "YEARS: " << _years << std::endl;
-    }
+    cgrid_generator(const std::vector<int8_t> &grid) : _back(grid.size(), -1) {}
     inline void copy(std::vector<int8_t> &grid) const
     {
         // Parallelize on copying buffers
@@ -102,9 +78,9 @@ class cgrid_generator
         // Convert cells to mesh in parallel
         work_queue::worker.run(work, 0, grid.size());
     }
-    void generate(std::vector<int8_t> &grid, const size_t scale, const size_t chunk_size,
-                  const std::function<size_t(const std::tuple<size_t, size_t, size_t> &)> &grid_key_unpack,
-                  const std::function<min::vec3<float>(const size_t)> &grid_cell_center)
+    void generate_world(std::vector<int8_t> &grid, const size_t scale, const size_t chunk_size,
+                        const std::function<size_t(const std::tuple<size_t, size_t, size_t> &)> &grid_key_unpack,
+                        const std::function<min::vec3<float>(const size_t)> &grid_cell_center)
     {
         // Wake up the threads for processing
         work_queue::worker.wake();
@@ -120,16 +96,59 @@ class cgrid_generator
         // Copy data from back to front buffer
         copy(grid);
 
-        // Simulates growing
-        //kernel::brownian_grow grow(scale, _radius, _seed, _back);
-        //grow.generate(work_queue::worker, grid, _back, _years);
-        // Copy data from front to back
-        //copy(grid);
+        // Put the threads back to sleep
+        work_queue::worker.sleep();
+    }
+    void generate_portal(std::vector<int8_t> &grid, const size_t scale, const size_t chunk_size,
+                         const std::function<size_t(const std::tuple<size_t, size_t, size_t> &)> &grid_key_unpack,
+                         const std::function<min::vec3<float>(const size_t)> &grid_cell_center)
+    {
+        // Wake up the threads for processing
+        work_queue::worker.wake();
 
-        // generate mandelbulb world using mandelbulb generator
-        // kernel::mandelbulb().generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
-        //     return grid_cell_center(i);
-        // });
+        // Count active cells in grid
+        size_t count = 0;
+
+        // Calculate total grid volume
+        const float inv_scale3 = 1.0 / (scale * scale * scale);
+
+        // Choose between terrain generators
+        std::mt19937 rng;
+        std::uniform_int_distribution<int> choose(1, 2);
+        if (choose(rng) % 2 == 0)
+        {
+            // Filter all dead worlds less than 10% filled
+            while (count * inv_scale3 < 0.20)
+            {
+                // Clear out the old grid
+                clear_grid(grid);
+
+                // generate mandelbulb world using mandelbulb generator
+                kernel::mandelbulb_sym(rng).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
+                    return grid_cell_center(i);
+                });
+
+                // Update count
+                count = count_grid(grid);
+            }
+        }
+        else
+        {
+            // Filter all dead worlds less than 10% filled
+            while (count * inv_scale3 < 0.20)
+            {
+                // Clear out the old grid
+                clear_grid(grid);
+
+                // generate mandelbulb world using mandelbulb generator
+                kernel::mandelbulb_asym(rng).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
+                    return grid_cell_center(i);
+                });
+
+                // Update count
+                count = count_grid(grid);
+            }
+        }
 
         // Put the threads back to sleep
         work_queue::worker.sleep();

@@ -896,16 +896,33 @@ class ui_bg
         {
             // Check if index is in cube craft panel
             const size_t hover_index = _hover.index();
-            if (hover_index >= _inv->begin_cube() && hover_index < _inv->end_cube())
+
+            // Choose between crafting and decaying
+            const std::pair<bool, uint8_t> p = (hover_index >= _inv->begin_cube() && hover_index < _inv->end_cube())
+                                                   ? _inv->craft(hover_index)
+                                                   : _inv->decay(hover_index);
+
+            // If decaying food add stat points
+            const item_id it_id = static_cast<item_id>(p.second);
+            if (p.first)
             {
-                // Craft recipe
-                return _inv->craft(hover_index);
+                switch (it_id)
+                {
+                case item_id::FOOD_EGGP:
+                case item_id::FOOD_GR_PEP:
+                    _stat->add_energy(25.0);
+                    break;
+                case item_id::FOOD_RED_PEP:
+                case item_id::FOOD_TOM:
+                    _stat->add_health(25.0);
+                    break;
+                default:
+                    break;
+                }
             }
-            else
-            {
-                // Decay item
-                return _inv->decay(hover_index);
-            }
+
+            // Return decay status
+            return p.first;
         }
 
         // No action
