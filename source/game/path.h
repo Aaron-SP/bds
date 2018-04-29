@@ -90,6 +90,7 @@ class path
     float _curve_interp;
     size_t _path_index;
     bool _is_dead;
+    bool _is_stuck;
 
     inline min::vec3<float> calculate_direction() const
     {
@@ -198,7 +199,8 @@ class path
     path()
         : _bezier_interp(false),
           _curve_dist(0.0), _curve_interp(0.0),
-          _path_index(0), _is_dead(true)
+          _path_index(0),
+          _is_dead(true), _is_stuck(false)
     {
         // Reserve space for path
         _path.reserve(100);
@@ -207,6 +209,10 @@ class path
     {
         _path.clear();
     }
+    inline void clear_stuck()
+    {
+        _is_stuck = false;
+    }
     inline float get_remain() const
     {
         return _data.get_remain();
@@ -214,6 +220,10 @@ class path
     inline bool is_dead() const
     {
         return _is_dead;
+    }
+    inline bool is_stuck() const
+    {
+        return _is_stuck;
     }
     inline void set_dead(const bool flag)
     {
@@ -252,6 +262,11 @@ class path
 
                 // Calculate direction
                 return calculate_direction();
+            }
+            else
+            {
+                // Flag that we are stuck
+                _is_stuck = true;
             }
         }
         else

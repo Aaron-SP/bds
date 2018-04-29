@@ -35,25 +35,17 @@ class drone
     size_t _body_id;
     size_t _inst_id;
     size_t _path_id;
+    size_t _sound_id;
     std::vector<path> *_paths;
     size_t _idle;
     float _health;
 
-    inline path &get_path()
-    {
-        return (*_paths)[_path_id];
-    }
-    inline const path &get_path() const
-    {
-        return (*_paths)[_path_id];
-    }
-
   public:
     drone(const size_t body_id, const size_t inst_id,
-          const size_t path_id, std::vector<path> *const vp,
+          const size_t path_id, const size_t sound_id, std::vector<path> *const vp,
           const min::vec3<float> &p, const min::vec3<float> &dest)
-        : _body_id(body_id), _inst_id(inst_id),
-          _path_id(path_id), _paths(vp), _idle(0), _health(100.0)
+        : _body_id(body_id), _inst_id(inst_id), _path_id(path_id),
+          _sound_id(sound_id), _paths(vp), _idle(0), _health(100.0)
     {
         // Reset path and update with new info
         get_path().set_dead(false);
@@ -79,13 +71,13 @@ class drone
     {
         _inst_id--;
     }
-    inline float get_remain() const
+    inline path &get_path()
     {
-        return get_path().get_remain();
+        return (*_paths)[_path_id];
     }
-    inline void expire_path()
+    inline const path &get_path() const
     {
-        get_path().clear();
+        return (*_paths)[_path_id];
     }
     inline size_t inst_id() const
     {
@@ -103,13 +95,13 @@ class drone
     {
         _idle = N;
     }
+    inline size_t sound_id() const
+    {
+        return _sound_id;
+    }
     inline min::vec3<float> step(cgrid &grid, const float speed)
     {
         return get_path().step(grid) * speed;
-    }
-    inline void update(const min::vec3<float> &p, const min::vec3<float> &dest)
-    {
-        get_path().update(p, dest);
     }
 };
 
@@ -120,6 +112,7 @@ class drones
     typedef std::function<void(min::body<float, min::vec3> &, min::body<float, min::vec3> &)> coll_call;
     physics *_sim;
     static_instance *_inst;
+    sound *_sound;
     std::vector<min::aabbox<float, min::vec3>> _col_cells;
     min::vec3<float> _dest;
     std::vector<path> _paths;
@@ -172,7 +165,7 @@ class drones
     inline static float path_speed(const float remain)
     {
         // Calculate speed slowing down as approaching goal
-        return 2.75 * ((remain - 3.0) / (remain + 3.0) + 1.1);
+        return 3.75 * ((remain - 3.0) / (remain + 3.0) + 1.1);
     }
     inline void remove(const size_t index)
     {
@@ -184,6 +177,7 @@ class drones
         // Clear drone at index
         _inst->clear_drone(_drones[index].inst_id());
         _sim->clear_body(_drones[index].body_id());
+        _sound->stop_drone(_drones[index].sound_id());
         _drones.erase(_drones.begin() + index);
 
         // Adjust the remaining drone indices
@@ -203,36 +197,34 @@ class drones
         _col_cells.reserve(27);
         _drones.reserve(static_instance::max_drones());
     }
-    inline void step_path(cgrid &grid, const size_t index)
-    {
-        // Get the drone
-        drone &d = _drones[index];
-
-        // Get remaining distance
-        const float remain = d.get_remain();
-
-        // Only path if not idling
-        if (d.is_pathing())
-        {
-            // Calculate the speed of the next step
-            const min::vec3<float> step = d.step(grid, path_speed(remain));
-
-            // Add velocity to the body
-            body(index).set_linear_velocity(step);
-        }
-        else
-        {
-            // Decrement idle frame count
-            d.dec_idle();
-        }
-    }
 
   public:
-    drones(physics *sim, static_instance *inst)
-        : _sim(sim), _inst(inst), _paths(static_instance::max_drones()),
-          _path_old(0), _f(nullptr), _disable(false)
+    drones(physics *const sim, static_instance *const inst, sound *const s)
+        : _sim(sim), _inst(inst), _sound(s),
+          _paths(static_instance::max_drones()), _path_old(0),
+          _f(nullptr), _disable(false)
     {
         reserve_memory();
+    }
+    inline void clear()
+    {
+        // Kill all the drones
+        const size_t size = _drones.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            // Get path id to set dead flag
+            const size_t path_id = _drones[i].path_id();
+            _paths[path_id].clear();
+            _paths[path_id].set_dead(true);
+
+            // Clear drone at index
+            _inst->clear_drone(_drones[i].inst_id());
+            _sim->clear_body(_drones[i].body_id());
+            _sound->stop_drone(_drones[i].sound_id());
+        }
+
+        // Clear all the drones
+        _drones.clear();
     }
     inline bool damage(const size_t index, const min::vec3<float> &dir, const float dam)
     {
@@ -240,10 +232,10 @@ class drones
         drone &d = _drones[index];
 
         // Apply a force on the drone body when hit
-        force(index, dir * (dam * 40.0));
+        force(index, dir * (dam * 100.0));
 
-        // Knock the drone offline for N frame
-        d.set_idle(60);
+        // Knock the drone offline for 180 physics frames == 1 sec
+        d.set_idle(180);
 
         // Do damage and return if dead
         if (d.damage(dam))
@@ -299,8 +291,14 @@ class drones
         // Get idle path
         const size_t path_id = get_idle_path_id();
 
+        // Get idle sound id
+        const size_t sound_id = _sound->get_idle_drone_id();
+
+        // Play the launch sound
+        _sound->play_drone(sound_id, p);
+
         // Add path and path data for drone
-        _drones.emplace_back(body_id, inst_id, path_id, &_paths, p, _dest);
+        _drones.emplace_back(body_id, inst_id, path_id, sound_id, &_paths, p, _dest);
 
         // Spawned a drone
         return true;
@@ -310,35 +308,9 @@ class drones
         // Warp character to new position
         body(index).set_position(p);
     }
-    inline void update_frame(const cgrid &grid)
+    inline void update_frame(cgrid &grid, const std::function<min::vec3<float>(void)> &respawn)
     {
         // Do drone collisions
-        const size_t size = _drones.size();
-        for (size_t i = 0; i < size; i++)
-        {
-            // Get all cells that could collide
-            grid.drone_collision_cells(_col_cells, position(i));
-
-            // Collision flag
-            bool hit = false;
-
-            // Solve static collisions
-            const size_t body = _drones[i].body_id();
-            for (const auto &cell : _col_cells)
-            {
-                hit = hit || _sim->collide(body, cell);
-            }
-
-            // If we got a hit
-            if (hit)
-            {
-                _drones[i].expire_path();
-            }
-        }
-    }
-    inline void update(cgrid &grid)
-    {
-        // Get number of drones created
         const size_t size = _drones.size();
 
         // Update drone paths
@@ -346,20 +318,99 @@ class drones
         {
             for (size_t i = 0; i < size; i++)
             {
-                step_path(grid, i);
+                // Get the drone
+                drone &d = _drones[i];
+
+                // Only path if not idling
+                if (d.is_pathing())
+                {
+                    // Get remaining distance
+                    const float remain = d.get_path().get_remain();
+
+                    // Calculate the speed of the next step
+                    const min::vec3<float> step = d.step(grid, path_speed(remain));
+
+                    // Add velocity to the body
+                    body(i).set_linear_velocity(step);
+
+                    // Update the path data position
+                    const min::vec3<float> &p = body(i).get_position();
+                    d.get_path().update(p, _dest);
+                }
+                else
+                {
+                    // Decrement idle frame count
+                    d.dec_idle();
+                }
             }
         }
 
-        // Update all drone positions
+        // Update drone collisions
         for (size_t i = 0; i < size; i++)
         {
-            // Update the path data position
-            const min::vec3<float> &p = body(i).get_position();
-            _drones[i].update(p, _dest);
+            // Get the drone
+            drone &d = _drones[i];
 
-            // Update the instance matrix
+            // Check if drone is stuck
+            // Stuck theory
+            // 1) A stuck drone will receive a zero path while searching in the grid
+            // 2) A zero path triggers the stuck flag
+            // 3) We warp the drone below to resolve the issue and clear the flag
+            if (d.get_path().is_stuck())
+            {
+                // Respawn the body
+                body(i).set_position(respawn());
+
+                // Clear stuck flag
+                d.get_path().clear_stuck();
+            }
+
+            // Get all cells that could collide
+            grid.drone_collision_cells(_col_cells, position(i));
+
+            // Collision flag
+            bool hit = false;
+
+            // Solve static collisions
+            const size_t body = d.body_id();
+            for (const auto &cell : _col_cells)
+            {
+                // Collide with the cell
+                const bool status = _sim->collide(body, cell);
+
+                // Register hit flag
+                hit = hit || status;
+            }
+
+            // If we got a hit
+            if (hit)
+            {
+                d.get_path().clear();
+            }
+        }
+    }
+    inline void update(cgrid &grid, const min::vec3<float> &look_at)
+    {
+        // Update all drone positions
+        const size_t size = _drones.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            // Get instance and sound id
             const size_t inst_id = _drones[i].inst_id();
+
+            // Update drone instance position
+            const min::vec3<float> &p = body(i).get_position();
             _inst->update_drone_position(inst_id, p);
+
+            // Update drone instance rotation
+            const min::vec3<float> x(1.0, 0.0, 0.0);
+            const min::vec3<float> dir = (look_at - p).normalize();
+            const min::quat<float> q(x, dir);
+            _inst->update_drone_rotation(inst_id, q);
+
+            // Update the drone sound position
+            const size_t sound_id = _drones[i].sound_id();
+            _sound->update_drone(sound_id, p);
         }
     }
 };

@@ -38,6 +38,7 @@ class skills
         missile,
         scan,
         grenade,
+        charge,
         scatter
     };
 
@@ -77,7 +78,7 @@ class skills
         if (!_charging)
         {
             // Check if we have activated beam mode
-            if (is_beam_mode() && _locked)
+            if (is_charge_mode() && _locked)
             {
                 // If minimum charging has been activated
                 if (get_charge_time() > 250.0)
@@ -107,9 +108,9 @@ class skills
 
         return !_shoot_cooldown;
     }
-    inline bool is_beam_charged() const
+    inline bool is_charged() const
     {
-        return is_beam_mode() && _locked && get_charge_time() > _beam_cd;
+        return is_charge_mode() && _locked && get_charge_time() > _beam_cd;
     }
     inline bool is_jetpack_mode() const
     {
@@ -134,6 +135,10 @@ class skills
     inline bool is_scan_mode() const
     {
         return _mode == skill_mode::scan;
+    }
+    inline bool is_charge_mode() const
+    {
+        return _mode == skill_mode::charge;
     }
     inline bool is_scatter_mode() const
     {
@@ -175,6 +180,10 @@ class skills
     {
         _mode = skill_mode::scan;
     }
+    inline void set_charge_mode()
+    {
+        _mode = skill_mode::charge;
+    }
     inline void set_scatter_mode()
     {
         _mode = skill_mode::scatter;
@@ -195,7 +204,6 @@ class skills
     {
         if (_mode == skill_mode::beam)
         {
-            _charging = false;
             _locked = false;
         }
     }
@@ -231,6 +239,14 @@ class skills
     {
         if (_mode == skill_mode::scan)
         {
+            _locked = false;
+        }
+    }
+    inline void unlock_charge()
+    {
+        if (_mode == skill_mode::charge)
+        {
+            _charging = false;
             _locked = false;
         }
     }

@@ -95,16 +95,19 @@ void show_game(bds &game, min::loop_sync &sync, const size_t frames)
 
             // Calculate needed delay to hit target
             frame_time = sync.sync();
+
+            // Calculate the number of 'average' frames per second
+            const double fps = sync.get_fps();
+
+            // Calculate the percentage of frame spent idle
+            const double idle = sync.idle();
+
+            // Update the debug text
+            game.update_fps(fps, idle);
         }
 
-        // Calculate the number of 'average' frames per second
-        const double fps = sync.get_fps();
-
-        // Calculate the percentage of frame spent idle
-        const double idle = sync.idle();
-
-        // Update the debug text
-        game.update_fps(fps, idle);
+        // Perform second update
+        game.update_second();
 
         // Check for errors
         if (game.check_gl_error())

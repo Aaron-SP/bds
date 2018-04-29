@@ -34,9 +34,11 @@ class ui_overlay
     bool _dirty;
     const std::string _action_fail;
     const std::string _ast;
+    const std::string _intro;
     const std::string _peace;
     const std::string _res;
     const std::string _swarm;
+    const std::string _swarm_kill;
     float _time;
 
     inline void set_ui_alert(const std::string &str, const float time)
@@ -61,27 +63,36 @@ class ui_overlay
           _dirty(false),
           _action_fail("Can't use or craft that item!"),
           _ast("Incoming asteroids, take cover!"),
+          _intro("You awaken in an unfamiliar, mysterious place."),
           _peace("Everything seems peaceful!"),
           _res("Low Power!"),
           _swarm("Space pirates have invaded your planet!"),
+          _swarm_kill("Space pirates pillaged all your belongings!"),
           _time(-1.0) {}
 
-    inline bool action()
+    inline bool action_hover()
     {
-        if (_bg.is_extended())
+        // Check if we failed action
+        const bool action = _bg.action_hover();
+        if (!action)
         {
-            // Check if we failed action
-            const bool action = _bg.action();
-            if (!action)
-            {
-                set_alert_action_fail();
-            }
-
-            // Return action status
-            return action;
+            set_alert_action_fail();
         }
 
-        return false;
+        // Return action status
+        return action;
+    }
+    inline bool action_select()
+    {
+        // Check if we failed action
+        const bool action = _bg.action_select();
+        if (!action)
+        {
+            set_alert_action_fail();
+        }
+
+        // Return action status
+        return action;
     }
     inline bool click()
     {
@@ -272,6 +283,10 @@ class ui_overlay
     {
         set_ui_alert(_ast, 86400.0);
     }
+    inline void set_alert_intro()
+    {
+        set_ui_alert(_intro, 10.0);
+    }
     inline void set_alert_peace()
     {
         set_ui_alert(_peace, 5.0);
@@ -283,6 +298,10 @@ class ui_overlay
     inline void set_alert_swarm()
     {
         set_ui_alert(_swarm, 86400.0);
+    }
+    inline void set_alert_swarm_kill()
+    {
+        set_ui_alert(_swarm_kill, 5.0);
     }
     inline ui_text &text()
     {

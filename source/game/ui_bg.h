@@ -79,6 +79,36 @@ class ui_bg
     min::grid<float, uint16_t, uint16_t, min::vec2, min::aabbox, min::aabbox> _grid;
     std::ostringstream _stream;
 
+    inline bool action(const size_t index)
+    {
+        // Choose between crafting and decaying
+        const std::pair<bool, uint8_t> p = (index >= _inv->begin_cube() && index < _inv->end_cube())
+                                               ? _inv->craft(index)
+                                               : _inv->decay(index);
+
+        // If decaying consumables add stat points
+        const item_id it_id = static_cast<item_id>(p.second);
+        if (p.first)
+        {
+            switch (it_id)
+            {
+            case item_id::CONS_EGGP:
+            case item_id::CONS_GR_PEP:
+            case item_id::CONS_RED_PEP:
+            case item_id::CONS_TOM:
+                _stat->add_health(25.0);
+                break;
+            case item_id::CONS_BATTERY:
+                _stat->add_energy(100.0);
+                break;
+            default:
+                break;
+            }
+        }
+
+        // Return decay status
+        return p.first;
+    }
     inline void clear_stream()
     {
         _stream.clear();
@@ -631,6 +661,8 @@ class ui_bg
                 return _assets.load_scan_icon(inv, p);
             case id_value(skill_id::GRENADE):
                 return _assets.load_grenade_icon(inv, p);
+            case id_value(skill_id::CHARGE):
+                return _assets.load_charge_icon(inv, p);
             case id_value(skill_id::SCATTER):
                 return _assets.load_scatter_icon(inv, p);
             default:
@@ -890,43 +922,21 @@ class ui_bg
         // Reposition all ui on the screen
         position_ui(min::vec2<float>());
     }
-    inline bool action()
+    inline bool action_hover()
     {
         if (_hovering && !_minimized)
         {
-            // Check if index is in cube craft panel
-            const size_t hover_index = _hover.index();
-
-            // Choose between crafting and decaying
-            const std::pair<bool, uint8_t> p = (hover_index >= _inv->begin_cube() && hover_index < _inv->end_cube())
-                                                   ? _inv->craft(hover_index)
-                                                   : _inv->decay(hover_index);
-
-            // If decaying food add stat points
-            const item_id it_id = static_cast<item_id>(p.second);
-            if (p.first)
-            {
-                switch (it_id)
-                {
-                case item_id::FOOD_EGGP:
-                case item_id::FOOD_GR_PEP:
-                    _stat->add_energy(25.0);
-                    break;
-                case item_id::FOOD_RED_PEP:
-                case item_id::FOOD_TOM:
-                    _stat->add_health(25.0);
-                    break;
-                default:
-                    break;
-                }
-            }
-
-            // Return decay status
-            return p.first;
+            // Do action on hovering index
+            return action(_hover.index());
         }
 
-        // No action
+        // No action if not hovering
         return false;
+    }
+    inline bool action_select()
+    {
+        // Do action on selected index
+        return action(_select.index());
     }
     inline size_t bg_text_size() const
     {

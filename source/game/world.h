@@ -99,11 +99,19 @@ class world
     missiles _missiles;
 
     // Random stuff
-    std::uniform_int_distribution<size_t> _drop_dist;
+    std::uniform_int_distribution<uint8_t> _drop_dist;
+    std::uniform_real_distribution<float> _drop_off_dist;
     std::uniform_real_distribution<float> _grid_dist;
     std::uniform_real_distribution<float> _scat_dist;
     std::mt19937 _gen;
 
+    inline unsigned block_remove(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
+    {
+        const min::vec3<int> offset(1, 1, 1);
+
+        // Offset remove radius for geometry removal
+        return _grid.set_geometry(_grid.snap(center_radius(p, scale)), scale, offset, -1);
+    }
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {
         const min::vec3<float> offset(scale.x() / 2, scale.y() / 2, scale.z() / 2);
@@ -126,8 +134,8 @@ class world
         // Update recent chunk
         _grid.update_current_chunk(spawn);
 
-        // Remove geometry around player, requires position snapped to grid and calculated direction vector
-        _grid.set_geometry(spawn, min::vec3<unsigned>(3, 3, 3), min::vec3<int>(1, 1, 1), -1);
+        // Remove 3x3 blocks
+        block_remove(spawn, _ex_radius);
 
         // Return the character body id
         return _char_id;
@@ -146,12 +154,22 @@ class world
 
             // Do explode animation for sodium
             explode_anim(p, flip, _ex_radius, id_value(block_id::SODIUM), size);
+
+            // Remove 5x5 blocks
+            block_remove(p, min::vec3<unsigned>(3, 5, 3));
         }
         else
         {
             // Do explode animation
             explode_anim(p, flip, scale, id_value(block_id::IRON), size);
         }
+    }
+    inline auto drone_respawn_call()
+    {
+        // On collision explode callback
+        return [this](void) {
+            return this->event_spawn();
+        };
     }
     inline min::vec3<float> event_spawn()
     {
@@ -211,13 +229,14 @@ class world
     inline void explode_anim(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size)
     {
         // Add a drop
-        _drops.add(point, dir, value);
+        _drops.add(random_drop_offset(point), dir, value);
 
         // Randomly drop a powerup
-        const size_t ran_drop = random_drop();
+        const uint8_t ran_drop = random_drop();
         if (ran_drop < 4)
         {
-            _drops.add(point, dir, id_value(block_id::CRYSTAL_R) + ran_drop);
+            const int8_t drop_id = id_value(block_id::CRYSTAL_R) + ran_drop;
+            _drops.add(random_drop_offset(point), dir, drop_id);
         }
 
         // Calculate explosion speed
@@ -262,7 +281,8 @@ class world
         const min::vec3<float> center = center_radius(point, scale);
 
         // If we removed geometry do explode animation
-        const unsigned removed = _grid.set_geometry(center, scale, _preview_offset, -1);
+        const min::vec3<int> offset(1, 1, 1);
+        const unsigned removed = _grid.set_geometry(center, scale, offset, -1);
         if (removed > 0)
         {
             // Calculate direction
@@ -398,11 +418,25 @@ class world
         case id_value(block_id::LEAF4):
             inv.add(id_value(item_id::POWD_GUANO), count);
             break;
+        case id_value(block_id::STONE1):
+        case id_value(block_id::STONE2):
+            inv.add(id_value(item_id::POWD_SALT), count);
+            break;
         }
     }
-    inline size_t random_drop()
+    inline uint8_t random_drop()
     {
         return _drop_dist(_gen);
+    }
+    inline min::vec3<float> random_drop_offset(const min::vec3<float> &p)
+    {
+        // Calculate offset
+        const float x = _drop_off_dist(_gen);
+        const float y = _drop_off_dist(_gen);
+        const float z = _drop_off_dist(_gen);
+
+        // Add offset to point
+        return p + min::vec3<float>(x, y, z);
     }
     inline min::vec3<float> ray_spawn(const min::vec3<float> &p)
     {
@@ -435,8 +469,15 @@ class world
             const size_t id = b2.get_id();
             if (id == 1)
             {
-                // Player collided with a drone
-                this->_player.drone_collide(b2.get_position());
+                // If player is not dead attack
+                if (!this->_player.is_dead())
+                {
+                    // Player collided with a drone
+                    this->_player.drone_collide(b2.get_position());
+
+                    // Play the zap sound
+                    this->_sound->play_zap();
+                }
             }
             else if (id == 2)
             {
@@ -567,7 +608,7 @@ class world
             _player.update_frame(_grid, friction, ex_player_call());
 
             // Update drones on this frame
-            _drones.update_frame(_grid);
+            _drones.update_frame(_grid, drone_respawn_call());
 
             // Update drops on this frame
             _drops.update_frame(_grid, drop_friction);
@@ -583,13 +624,13 @@ class world
         }
 
         // Update the drones positions
-        _drones.update(_grid);
+        _drones.update(_grid, p);
 
         // Update the drop positions
-        _drops.update(_grid);
+        _drops.update(_grid, dt);
 
         // Update the explosive positions
-        _explosives.update(_grid);
+        _explosives.update(_grid, dt);
 
         // Update any missiles
         _missiles.update(_grid);
@@ -613,11 +654,12 @@ class world
           _ex_radius(3, 3, 3),
           _sky(uniforms),
           _instance(uniforms),
-          _drones(&_simulation, &_instance),
+          _drones(&_simulation, &_instance, s),
           _drops(&_simulation, &_instance),
           _explosives(&_simulation, &_instance),
           _missiles(&_simulation, particles, &_instance, s),
           _drop_dist(0, 20),
+          _drop_off_dist(-0.5, 0.5),
           _grid_dist((grid_size * -1.0) + 1.0, grid_size - 1.0),
           _scat_dist(-0.1, 0.1),
           _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
@@ -791,8 +833,8 @@ class world
         // Warp player
         _player.warp(spawn);
 
-        // Remove geometry around player, requires position snapped to grid and calculated direction vector
-        _grid.set_geometry(spawn, min::vec3<unsigned>(3, 3, 3), min::vec3<int>(1, 1, 1), -1);
+        // Remove geometry around player
+        block_remove(spawn, _ex_radius);
 
         // Update chunks
         update_all_chunks();
@@ -903,11 +945,15 @@ class world
         const min::vec3<float> down(0.0, -1.0, 0.0);
         _explosives.launch(event_spawn(), down, id_value(block_id::SODIUM));
     }
-    inline void spawn_drones()
+    inline void kill_drones()
     {
-        while (_drones.spawn(event_spawn()))
-        {
-        }
+        // Kill all the drones
+        _drones.clear();
+    }
+    inline void spawn_drone()
+    {
+        // Spawn one drone
+        _drones.spawn(event_spawn());
     }
     void update(min::camera<float> &cam, const float dt)
     {

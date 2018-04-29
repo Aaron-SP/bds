@@ -251,13 +251,13 @@ class player
     inline void drone_collide(const min::vec3<float> &p)
     {
         // Consume some of players health
-        _stats.consume_health(5);
+        _stats.consume_health(20);
 
         // Calculate collision direction towards player
-        //const min::vec3<float> dir = (position() - p).normalize();
+        const min::vec3<float> dir = (position() - p).normalize();
 
         // Add a kick force
-        //force(dir * 1000.0);
+        force(dir * 1000.0);
     }
     inline void explode(const min::vec3<float> &dir, const float sq_dist, const float size, const float power, const int8_t value)
     {

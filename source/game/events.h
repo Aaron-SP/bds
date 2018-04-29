@@ -31,11 +31,13 @@ class events
   private:
     constexpr static float _ast_duration = 30.0;
     constexpr static float _ast_tick_duration = 1.0;
+    constexpr static size_t _spawn_count = 10;
     float _ast;
     float _ast_timer;
     float _ast_tick;
     float _swarm;
     bool _is_swarm;
+    size_t _spawned;
     std::uniform_real_distribution<float> _dist;
     std::mt19937 _gen;
 
@@ -109,14 +111,14 @@ class events
             // Enable swarm alert
             ui.set_alert_swarm();
 
-            // Spawn drones
-            w.spawn_drones();
-
             // Reset the timer
             reset_swarm();
 
             // Set that swarm is occuring
             _is_swarm = true;
+
+            // Reset the swarm spawn counter
+            _spawned = 0;
         }
         else if (drones_dead)
         {
@@ -136,7 +138,8 @@ class events
     }
 
   public:
-    events() : _ast(-1.0), _ast_timer(-1.0), _ast_tick(0.0), _swarm(-1.0), _is_swarm(false), _dist(180.0, 360.0),
+    events() : _ast(-1.0), _ast_timer(-1.0), _ast_tick(0.0),
+               _swarm(-1.0), _is_swarm(false), _spawned(_spawn_count), _dist(180.0, 360.0),
                _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
     {
         // Reset the ast time
@@ -145,6 +148,20 @@ class events
         // Reset the swarm time
         reset_swarm();
     }
+    inline void reset(world &w, ui_overlay &ui)
+    {
+        if (_is_swarm)
+        {
+            // Kill the drones
+            w.kill_drones();
+
+            // Disable alert
+            ui.set_alert_swarm_kill();
+
+            // Disable swarm
+            _is_swarm = false;
+        }
+    }
     inline void update(world &w, ui_overlay &ui, const float dt)
     {
         // Update ast event
@@ -152,6 +169,17 @@ class events
 
         // Update swarm event
         update_swarm(w, ui, dt);
+    }
+    inline void update_second(world &w)
+    {
+        if (_is_swarm && _spawned < _spawn_count)
+        {
+            // Spawn a drone
+            w.spawn_drone();
+
+            // Increment counter
+            _spawned++;
+        }
     }
 };
 }

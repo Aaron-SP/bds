@@ -35,7 +35,7 @@ class load_state
     min::vec3<float> _spawn;
     min::vec3<float> _top;
     std::vector<item> _inv;
-    bool _loaded;
+    bool _new_game;
 
     inline void check_inside(const float grid_size)
     {
@@ -104,6 +104,9 @@ class load_state
                 const uint8_t count = min::read_le<uint8_t>(stream, next);
                 _inv[i] = item(id, count);
             }
+
+            // Flag that this is not a new game
+            _new_game = false;
         }
     }
     inline void state_save_file(const inventory &inv, const min::camera<float> &camera, const min::vec3<float> &p)
@@ -144,7 +147,7 @@ class load_state
           _default_spawn(0.0, grid_size * 0.75, 0.0),
           _look(_default_look), _spawn(_default_spawn),
           _top(0.0, grid_size - 1.0, 0.0),
-          _inv(inventory::size()), _loaded(false)
+          _inv(inventory::size()), _new_game(true)
     {
         // Check that we loaded a valid point
         check_inside(grid_size);
@@ -176,9 +179,9 @@ class load_state
     {
         return _top;
     }
-    inline bool is_loaded() const
+    inline bool is_new_game() const
     {
-        return _loaded;
+        return _new_game;
     }
     inline void save_state(const inventory &inv, const min::camera<float> &camera, const min::vec3<float> &p)
     {

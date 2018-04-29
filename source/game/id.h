@@ -132,10 +132,12 @@ enum class item_id : uint8_t
     POWD_RED_PHOS = 114,
     POWD_UREA = 115,
     POWD_GUANO = 116,
-    FOOD_TOM = 117,
-    FOOD_EGGP = 118,
-    FOOD_RED_PEP = 119,
-    FOOD_GR_PEP = 120
+    CONS_EGGP = 117,
+    CONS_GR_PEP = 118,
+    CONS_RED_PEP = 119,
+    CONS_TOM = 120,
+    CONS_BATTERY = 121,
+    ETHER = 122
 };
 
 enum class skill_id : uint8_t
@@ -146,7 +148,8 @@ enum class skill_id : uint8_t
     JET = 4,
     SCAN = 5,
     GRENADE = 6,
-    SCATTER = 7
+    CHARGE = 7,
+    SCATTER = 8
 };
 
 inline constexpr int8_t id_value(const block_id id)

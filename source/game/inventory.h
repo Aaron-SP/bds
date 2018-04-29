@@ -242,7 +242,7 @@ class inventory
     };
 
     static constexpr size_t _max_slots = 49;
-    static constexpr size_t _max_strings = 121;
+    static constexpr size_t _max_strings = 123;
     static constexpr size_t _cube_size = 9;
     std::array<item, _max_slots> _inv;
     std::vector<std::string> _inv_name;
@@ -353,8 +353,8 @@ class inventory
     inline void load_strings()
     {
         _inv_name[0] = "Empty";
-        _inv_name[1] = "Charge Beam";
-        _inv_desc[1] = "A general purpose_energy weapon";
+        _inv_name[1] = "Beam";
+        _inv_desc[1] = "A general purpose_energy weapon firing_a singular beam";
         _inv_name[2] = "Missile Launcher";
         _inv_desc[2] = "An expensive_offensive projectile_weapon";
         _inv_name[3] = "Grappling Hook";
@@ -365,9 +365,10 @@ class inventory
         _inv_desc[5] = "Scan a block to_retrieve the block_type";
         _inv_name[6] = "Grenade Launcher";
         _inv_desc[6] = "An cheap offensive_projectile weapon";
-        _inv_name[7] = "Scatter Beam";
-        _inv_desc[7] = "An energy weapon_optimized for killing_drones";
-        _inv_name[8] = "Reserved";
+        _inv_name[7] = "Charge Beam";
+        _inv_desc[7] = "A general purpose_energy weapon firing_a charged beam";
+        _inv_name[8] = "Scatter Beam";
+        _inv_desc[8] = "An energy weapon_optimized for killing_drones";
         _inv_name[9] = "Reserved";
         _inv_name[10] = "Reserved";
         _inv_name[11] = "Reserved";
@@ -377,29 +378,51 @@ class inventory
         _inv_name[15] = "Reserved";
         _inv_name[16] = "Reserved";
         _inv_name[17] = "Dense Grass";
+        _inv_desc[17] = "Right click to_transform into Ether";
         _inv_name[18] = "Grass";
+        _inv_desc[18] = "Right click to_transform into Ether";
         _inv_name[19] = "Fertile Soil";
+        _inv_desc[19] = "Right click to_transform into Ether";
         _inv_name[20] = "Soil";
+        _inv_desc[20] = "Right click to_transform into Ether";
         _inv_name[21] = "Yellow Sand";
+        _inv_desc[21] = "Right click to_transform into Ether";
         _inv_name[22] = "White Sand";
+        _inv_desc[22] = "Right click to_transform into Ether";
         _inv_name[23] = "Iron";
+        _inv_desc[23] = "Right click to ionize";
         _inv_name[24] = "Silver";
         _inv_name[25] = "Oak";
+        _inv_desc[25] = "Right click to_transform into Ether";
         _inv_name[26] = "Pine";
+        _inv_desc[26] = "Right click to_transform into Ether";
         _inv_name[27] = "Dark Foliage";
+        _inv_desc[27] = "Right click to_transform into Ether";
         _inv_name[28] = "Light Vegetation";
+        _inv_desc[28] = "Right click to_transform into Ether";
         _inv_name[29] = "Blooming Growth";
+        _inv_desc[29] = "Right click to_transform into Ether";
         _inv_name[30] = "Flowery Growth";
+        _inv_desc[30] = "Right click to_transform into Ether";
         _inv_name[31] = "Magnesium";
+        _inv_desc[31] = "Right click to ionize";
         _inv_name[32] = "Gold";
         _inv_name[33] = "Light Stone";
+        _inv_desc[33] = "Right click to_transform into Ether";
         _inv_name[34] = "Dark Stone";
+        _inv_desc[34] = "Right click to_transform into Ether";
         _inv_name[35] = "Light Clay";
+        _inv_desc[35] = "Right click to_transform into Ether";
         _inv_name[36] = "Dark Clay";
+        _inv_desc[36] = "Right click to_transform into Ether";
         _inv_name[37] = "Mossy Stone";
+        _inv_desc[37] = "Right click to_transform into Ether";
         _inv_name[38] = "Copper";
+        _inv_desc[38] = "Right click to ionize";
         _inv_name[39] = "Unstable Sodium";
+        _inv_desc[39] = "Right click to ionize";
         _inv_name[40] = "Calcium";
+        _inv_desc[40] = "Right click to ionize";
         _inv_name[41] = "Red Crystals";
         _inv_desc[41] = "Right click to harvest";
         _inv_name[42] = "Purple Crystals";
@@ -411,6 +434,7 @@ class inventory
         _inv_name[45] = "???";
         _inv_name[46] = "???";
         _inv_name[47] = "Potassium";
+        _inv_desc[47] = "Right click to ionize";
         _inv_name[48] = "???";
         _inv_name[49] = "Tomatoes";
         _inv_desc[49] = "Right click to harvest";
@@ -448,10 +472,10 @@ class inventory
         _inv_name[102] = "Sodium Bar";
         _inv_name[103] = "Gold Bar";
         _inv_name[104] = "Silver Bar";
-        _inv_name[105] = "Hydrochloric Acid [HCl]";
-        _inv_name[106] = "Nitric Acid [HNO3]";
-        _inv_name[107] = "Phosphoric Acid [H3PO4]";
-        _inv_name[108] = "Sulfuric Acid [H2SO4]";
+        _inv_name[105] = "Hydrochloric Acid";
+        _inv_name[106] = "Nitric Acid";
+        _inv_name[107] = "Phosphoric Acid";
+        _inv_name[108] = "Sulfuric Acid";
         _inv_name[109] = "Potassium Nitrate";
         _inv_name[110] = "Rust";
         _inv_name[111] = "Sulphur";
@@ -461,14 +485,18 @@ class inventory
         _inv_name[115] = "Urea";
         _inv_name[116] = "Bat Guano";
         _inv_desc[116] = "Right click to harvest";
-        _inv_name[117] = "Tomato";
+        _inv_name[117] = "Eggplant";
         _inv_desc[117] = "Right click to eat._It's tender and juicy!";
-        _inv_name[118] = "Eggplant";
+        _inv_name[118] = "Green Pepper";
         _inv_desc[118] = "Right click to eat._It's tender and juicy!";
         _inv_name[119] = "Red Pepper";
         _inv_desc[119] = "Right click to eat._It's tender and juicy!";
-        _inv_name[120] = "Green Pepper";
+        _inv_name[120] = "Tomato";
         _inv_desc[120] = "Right click to eat._It's tender and juicy!";
+        _inv_name[121] = "Battery";
+        _inv_desc[121] = "Right click to use._The power is_overwhelming!";
+        _inv_name[122] = "Ether";
+        _inv_desc[122] = "The building block of_all matter";
     }
     void set_store()
     {
@@ -665,6 +693,26 @@ class inventory
         {
             uint8_t add_count = 4;
             return add(id_value(item_id::POWD_SALT), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_CL), high_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::ACID_HCL), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_NO3), high_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::ACID_HNO3), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_PHOS), high_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::ACID_H3PO4), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_SULPH), high_count))
+        {
+            uint8_t add_count = 4;
+            return add(id_value(item_id::ACID_H2SO4), add_count);
         }
 
         // Blue shard recipes
@@ -901,13 +949,13 @@ class inventory
             return add(id_value(item_id::POWD_UREA), add_count);
         }
 
-        // Jet pack
-        else if (consume3(lower, id_value(item_id::BAR_FE), low_count,
-                          middle, id_value(item_id::POWD_KNO3), mid_count,
-                          higher, id_value(item_id::POWD_UREA), high_count))
+        // Charge beam
+        else if (consume3(lower, id_value(skill_id::BEAM), up_count,
+                          middle, id_value(item_id::BAR_AU), mid_count,
+                          higher, id_value(item_id::BAR_SI), high_count))
         {
             uint8_t add_count = 1;
-            return add(id_value(skill_id::JET), add_count);
+            return add(id_value(skill_id::CHARGE), add_count);
         }
 
         // Scatter beam
@@ -919,6 +967,15 @@ class inventory
             return add(id_value(skill_id::SCATTER), add_count);
         }
 
+        // Jet pack
+        else if (consume3(lower, id_value(item_id::BAR_FE), low_count,
+                          middle, id_value(item_id::POWD_KNO3), mid_count,
+                          higher, id_value(item_id::POWD_UREA), high_count))
+        {
+            uint8_t add_count = 1;
+            return add(id_value(skill_id::JET), add_count);
+        }
+
         // Grappling Hook
         else if (consume3(lower, id_value(item_id::BAR_FE), low_count,
                           middle, id_value(item_id::BAR_AU), mid_count,
@@ -928,10 +985,19 @@ class inventory
             return add(id_value(skill_id::GRAPPLE), add_count);
         }
 
+        // Battery
+        else if (consume3(lower, id_value(item_id::BAR_NA), low_count,
+                          middle, id_value(item_id::ACID_H2SO4), mid_count,
+                          higher, id_value(item_id::POWD_SALT), high_count))
+        {
+            uint8_t add_count = 8;
+            return add(id_value(item_id::CONS_BATTERY), add_count);
+        }
+
         // Failed to craft item
         return false;
     }
-    inline std::pair<bool, uint8_t> craft(const size_t hover_index)
+    inline std::pair<bool, uint8_t> craft(const size_t index)
     {
         size_t craft_size = 0;
         const size_t begin = begin_cube();
@@ -958,7 +1024,7 @@ class inventory
         switch (craft_size)
         {
         case 1:
-            return decay(hover_index);
+            return decay(index);
         case 2:
             return std::make_pair(recipe_2(), 0);
         case 3:
@@ -970,55 +1036,75 @@ class inventory
         // Return that we failed to craft
         return std::make_pair(false, 0);
     }
-    inline std::pair<bool, uint8_t> decay(const size_t hover_index)
+    inline std::pair<bool, uint8_t> decay(const size_t index)
     {
         // Get the item
-        const item &it = _inv[hover_index];
+        const item &it = _inv[index];
 
         uint8_t count = 1;
         const item_id it_id = it.id_enum();
         switch (it_id)
         {
+        case item_id::BLK_GRASS1:
+        case item_id::BLK_GRASS2:
+        case item_id::BLK_DIRT1:
+        case item_id::BLK_DIRT2:
+        case item_id::BLK_SAND1:
+        case item_id::BLK_SAND2:
+        case item_id::BLK_WOOD1:
+        case item_id::BLK_WOOD2:
+        case item_id::BLK_LEAF1:
+        case item_id::BLK_LEAF2:
+        case item_id::BLK_LEAF3:
+        case item_id::BLK_LEAF4:
+        case item_id::BLK_STONE1:
+        case item_id::BLK_STONE2:
+        case item_id::BLK_CLAY1:
+        case item_id::BLK_CLAY2:
+        case item_id::BLK_STONE3:
+            return decay(index, id_value(it_id), id_value(item_id::ETHER), count, 1);
         case item_id::BLK_FE:
-            return decay(hover_index, id_value(item_id::BLK_FE), id_value(item_id::CAT_FE), count, 1);
+            return decay(index, id_value(item_id::BLK_FE), id_value(item_id::CAT_FE), count, 1);
         case item_id::BLK_MG:
-            return decay(hover_index, id_value(item_id::BLK_MG), id_value(item_id::CAT_MG), count, 1);
+            return decay(index, id_value(item_id::BLK_MG), id_value(item_id::CAT_MG), count, 1);
         case item_id::BLK_CU:
-            return decay(hover_index, id_value(item_id::BLK_CU), id_value(item_id::CAT_CU), count, 1);
+            return decay(index, id_value(item_id::BLK_CU), id_value(item_id::CAT_CU), count, 1);
         case item_id::BLK_NA:
-            return decay(hover_index, id_value(item_id::BLK_NA), id_value(item_id::CAT_NA), count, 1);
+            return decay(index, id_value(item_id::BLK_NA), id_value(item_id::CAT_NA), count, 1);
         case item_id::BLK_CA:
-            return decay(hover_index, id_value(item_id::BLK_CA), id_value(item_id::CAT_CA), count, 1);
+            return decay(index, id_value(item_id::BLK_CA), id_value(item_id::CAT_CA), count, 1);
         case item_id::BLK_CRYS_R:
-            return decay(hover_index, id_value(item_id::BLK_CRYS_R), id_value(item_id::SHARD_R), count, 4);
+            return decay(index, id_value(item_id::BLK_CRYS_R), id_value(item_id::SHARD_R), count, 4);
         case item_id::BLK_CRYS_P:
-            return decay(hover_index, id_value(item_id::BLK_CRYS_P), id_value(item_id::SHARD_P), count, 4);
+            return decay(index, id_value(item_id::BLK_CRYS_P), id_value(item_id::SHARD_P), count, 4);
         case item_id::BLK_CRYS_B:
-            return decay(hover_index, id_value(item_id::BLK_CRYS_B), id_value(item_id::SHARD_B), count, 4);
+            return decay(index, id_value(item_id::BLK_CRYS_B), id_value(item_id::SHARD_B), count, 4);
         case item_id::BLK_CRYS_G:
-            return decay(hover_index, id_value(item_id::BLK_CRYS_G), id_value(item_id::SHARD_G), count, 4);
+            return decay(index, id_value(item_id::BLK_CRYS_G), id_value(item_id::SHARD_G), count, 4);
         case item_id::BLK_K:
-            return decay(hover_index, id_value(item_id::BLK_K), id_value(item_id::CAT_K), count, 1);
+            return decay(index, id_value(item_id::BLK_K), id_value(item_id::CAT_K), count, 1);
         case item_id::POWD_GUANO:
-            return decay(hover_index, id_value(item_id::POWD_GUANO), id_value(item_id::POWD_KNO3), count, 4);
+            return decay(index, id_value(item_id::POWD_GUANO), id_value(item_id::POWD_KNO3), count, 4);
         case item_id::BLK_TOM:
-            return decay(hover_index, id_value(item_id::BLK_TOM), id_value(item_id::FOOD_TOM), count, 4);
+            return decay(index, id_value(item_id::BLK_TOM), id_value(item_id::CONS_TOM), count, 4);
         case item_id::BLK_EGGP:
-            return decay(hover_index, id_value(item_id::BLK_EGGP), id_value(item_id::FOOD_EGGP), count, 4);
+            return decay(index, id_value(item_id::BLK_EGGP), id_value(item_id::CONS_EGGP), count, 4);
         case item_id::BLK_RED_PEP:
-            return decay(hover_index, id_value(item_id::BLK_RED_PEP), id_value(item_id::FOOD_RED_PEP), count, 4);
+            return decay(index, id_value(item_id::BLK_RED_PEP), id_value(item_id::CONS_RED_PEP), count, 4);
         case item_id::BLK_GR_PEP:
-            return decay(hover_index, id_value(item_id::BLK_GR_PEP), id_value(item_id::FOOD_GR_PEP), count, 4);
+            return decay(index, id_value(item_id::BLK_GR_PEP), id_value(item_id::CONS_GR_PEP), count, 4);
         case item_id::CAT_NH4:
-            return decay(hover_index, id_value(item_id::CAT_NH4), id_value(item_id::AN_NO3), count, 1);
-        case item_id::FOOD_EGGP:
-            return decay(hover_index, id_value(item_id::FOOD_EGGP), count);
-        case item_id::FOOD_GR_PEP:
-            return decay(hover_index, id_value(item_id::FOOD_GR_PEP), count);
-        case item_id::FOOD_RED_PEP:
-            return decay(hover_index, id_value(item_id::FOOD_RED_PEP), count);
-        case item_id::FOOD_TOM:
-            return decay(hover_index, id_value(item_id::FOOD_TOM), count);
+            return decay(index, id_value(item_id::CAT_NH4), id_value(item_id::AN_NO3), count, 1);
+        case item_id::CONS_EGGP:
+            return decay(index, id_value(item_id::CONS_EGGP), id_value(item_id::AN_CL), count, 1);
+        case item_id::CONS_GR_PEP:
+            return decay(index, id_value(item_id::CONS_GR_PEP), id_value(item_id::AN_CL), count, 1);
+        case item_id::CONS_RED_PEP:
+            return decay(index, id_value(item_id::CONS_RED_PEP), id_value(item_id::CAT_H), count, 1);
+        case item_id::CONS_TOM:
+            return decay(index, id_value(item_id::CONS_TOM), id_value(item_id::CAT_H), count, 1);
+        case item_id::CONS_BATTERY:
+            return decay(index, id_value(item_id::CONS_BATTERY), count);
         default:
             break;
         }

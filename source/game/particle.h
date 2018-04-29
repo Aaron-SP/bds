@@ -161,6 +161,9 @@ class particle
         // Draw charge
         if (_charge_time > 0.0)
         {
+            // Use the shader program to draw models
+            _prog.use();
+
             // Set the charge reference point
             set_reference(_charge_ref);
 
@@ -172,6 +175,9 @@ class particle
     {
         // Bind this texture for drawing missiles
         _tbuffer.bind(_dds_id, 0);
+
+        // Use the shader program to draw models
+        _prog.use();
 
         // Draw all miss launch
         for (size_t i = 0; i < _miss_limit; i++)
@@ -193,6 +199,9 @@ class particle
     {
         // Bind this texture for drawing static
         _tbuffer.bind(_dds_id, 0);
+
+        // Use the shader program to draw models
+        _prog.use();
 
         // Draw all miss launch
         for (size_t i = 0; i < _static_limit; i++)
@@ -253,7 +262,7 @@ class particle
         _index_location = glGetUniformLocation(_prog.id(), "camera_position");
         if (_index_location == -1)
         {
-            throw std::runtime_error("static_instance: could not find uniform 'start_index'");
+            throw std::runtime_error("particle: could not find uniform 'camera_position'");
         }
 
         // Load the uniform buffer with program we will use
@@ -262,9 +271,6 @@ class particle
     }
     inline void set_reference(const min::vec4<float> &ref) const
     {
-        // Use the shader program to draw models
-        _prog.use();
-
         // Set the sampler reference point
         glUniform4f(_index_location, ref.x(), ref.y(), ref.z(), ref.w());
     }

@@ -59,7 +59,7 @@ class drop
 class drops
 {
   private:
-    static constexpr float _rotation_rate = 2.0;
+    static constexpr float _rotation_rate = 120.0;
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *_sim;
     static_instance *_inst;
@@ -217,10 +217,10 @@ class drops
             force(i, xz * friction);
         }
     }
-    inline void update(const cgrid &grid)
+    inline void update(const cgrid &grid, const float dt)
     {
         // Update the drop rotation angle
-        _angle += _rotation_rate;
+        _angle += _rotation_rate * dt;
         if (_angle > 360.0)
         {
             _angle -= 360.0;

@@ -70,7 +70,9 @@ class ui_bg_assets
     static constexpr float _y_scan_uv = 40.0 / _image_size;
     static constexpr float _x_grenade_uv = 256.0 / _image_size;
     static constexpr float _y_grenade_uv = 40.0 / _image_size;
-    static constexpr float _x_scatter_uv = 292.0 / _image_size;
+    static constexpr float _x_charge_uv = 292.0 / _image_size;
+    static constexpr float _y_charge_uv = 40.0 / _image_size;
+    static constexpr float _x_scatter_uv = 328.0 / _image_size;
     static constexpr float _y_scatter_uv = 40.0 / _image_size;
 
     // Cubes
@@ -539,6 +541,14 @@ class ui_bg_assets
 
         // Load rect at position
         set_rect(id.id(), p, scale, gren_coord);
+    }
+    inline void load_charge_icon(const inv_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> charge_coord(_x_charge_uv, _y_charge_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, charge_coord);
     }
     inline void load_scatter_icon(const inv_id id, const min::vec2<float> &p)
     {

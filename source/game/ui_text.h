@@ -52,6 +52,7 @@ class ui_text
     min::shader _vertex;
     min::shader _fragment;
     min::program _prog;
+    GLint _index_location;
 
     // Buffer for holding text
     min::text_buffer _text;
@@ -84,6 +85,21 @@ class ui_text
         _stream.clear();
         _stream.str(std::string());
     }
+    inline void load_program_index()
+    {
+        // Bind the text program
+        _prog.use();
+
+        // Get the start_index uniform location
+        _index_location = glGetUniformLocation(_prog.id(), "ref_color");
+        if (_index_location == -1)
+        {
+            throw std::runtime_error("ui_text: could not find uniform 'ref_color'");
+        }
+
+        // Set reference to white
+        set_reference(1.0, 1.0, 1.0);
+    }
     inline void reposition_text(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
     {
         // Position the console element
@@ -114,6 +130,11 @@ class ui_text
     {
         _text.reserve(_end);
     }
+    inline void set_reference(const float x, const float y, const float z) const
+    {
+        // Set the sampler reference point
+        glUniform3f(_index_location, x, y, z);
+    }
     inline void update_text(const size_t index, const std::string &s)
     {
         _text.set_text(s, index);
@@ -135,6 +156,9 @@ class ui_text
 
         // Reserve text buffer memory
         reserve_memory();
+
+        // Load the reference color program index
+        load_program_index();
 
         // Add 1 console entries
         for (size_t i = _console; i < _ui; i++)
@@ -238,7 +262,18 @@ class ui_text
         if (_draw_hover)
         {
             bind();
-            _text.draw(_hover, _end - 1);
+
+            // Draw titles
+            _text.draw(_hover, _hover + 1);
+
+            // Set reference to orange
+            set_reference(0.985, 0.765, 0.482);
+
+            // Draw description
+            _text.draw(_hover + 1, _end - 1);
+
+            // Set reference to white
+            set_reference(1.0, 1.0, 1.0);
         }
     }
     inline min::text_buffer &get_bg_text()

@@ -110,7 +110,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.218");
+        _ui.text().set_debug_version("VERSION: 0.1.219");
     }
     void update_die_respawn(const float dt)
     {
@@ -137,6 +137,9 @@ class bds
 
             // Reset the voice queue
             _sound.reset_voice_queue();
+
+            // Reset the events
+            _events.reset(_world, _ui);
         }
         else if (player.is_dead())
         {
@@ -275,6 +278,13 @@ class bds
 
         // Update the mouse cursor to center
         set_cursor_center();
+
+        // If this is a new game
+        if (_state.get_load_state().is_new_game())
+        {
+            // Play intro message
+            _ui.set_alert_intro();
+        }
     }
     void draw() const
     {
@@ -393,12 +403,12 @@ class bds
             // Update control class
             _controls.update();
 
-            // Update the UI class
-            update_ui(dt);
-
             // Check if we died
             update_die_respawn(dt);
         }
+
+        // Update the UI class
+        update_ui(dt);
 
         // Update the sound listener properties
         const min::vec3<float> &v = player.velocity();
@@ -417,6 +427,11 @@ class bds
     {
         _fps = fps;
         _idle = idle;
+    }
+    void update_second()
+    {
+        // Update the events
+        _events.update_second(_world);
     }
     void update_window()
     {

@@ -114,7 +114,7 @@ class explosives
   public:
     explosives(physics *sim, static_instance *inst)
         : _sim(sim), _inst(inst),
-          _scale(3, 3, 3), _angle(0.0), _oldest(0), _f(nullptr)
+          _scale(3, 5, 3), _angle(0.0), _oldest(0), _f(nullptr)
     {
         // Reserve memory for collision cells
         reserve_memory();
@@ -198,10 +198,10 @@ class explosives
             }
         }
     }
-    inline void update(const cgrid &grid)
+    inline void update(const cgrid &grid, const float dt)
     {
         // Update the explosive rotation angle
-        _angle += _rotation_rate;
+        _angle += _rotation_rate * dt;
         if (_angle > 360.0)
         {
             _angle -= 360.0;

@@ -37,7 +37,7 @@ class controls
 {
   private:
     static constexpr float _beam_cost = 5.0;
-    static constexpr float _beam_charge_cost = 10.0;
+    static constexpr float _charge_cost = 10.0;
     static constexpr float _scatter_cost = 20.0;
     static constexpr float _grapple_cost = 10.0;
     static constexpr float _grenade_cost = 20.0;
@@ -255,11 +255,21 @@ class controls
     }
     static void toggle_pause(void *ptr, double step)
     {
-        // Get the state, text, window and ui pointers
+        // Get the state, window and ui pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
         state *const state = control->get_state();
         min::window *const win = control->get_window();
         ui_overlay *const ui = control->get_ui();
+
+        // If the UI is extended and we are pausing
+        if (!state->get_pause() && ui->is_extended())
+        {
+            // Close the extended UI
+            ui->toggle_extend();
+
+            // Toggle user input
+            state->toggle_user_input();
+        }
 
         // Toggle the game pause
         const bool mode = state->toggle_pause();
@@ -348,8 +358,9 @@ class controls
 
         // What type of item is it?
         const bool is_empty = (type == item_type::empty);
-        const bool is_skill = (type == item_type::skill);
         const bool is_block = (type == item_type::block);
+        const bool is_item = (type == item_type::item);
+        const bool is_skill = (type == item_type::skill);
 
         // If not locked
         if (!locked)
@@ -368,7 +379,7 @@ class controls
             }
 
             // Play selection sound
-            if (!is_empty)
+            if (!is_empty && !is_item)
             {
                 // Play selection sound
                 _sound->play_click();
@@ -422,6 +433,10 @@ class controls
                     play.set_mode(play_mode::gun);
                     skill.set_grenade_mode();
                     break;
+                case id_value(skill_id::CHARGE):
+                    play.set_mode(play_mode::gun);
+                    skill.set_charge_mode();
+                    break;
                 case id_value(skill_id::SCATTER):
                     play.set_mode(play_mode::gun);
                     skill.set_scatter_mode();
@@ -430,6 +445,11 @@ class controls
                     play.set_mode(play_mode::none);
                     break;
                 }
+            }
+            else if (is_item && _ui->action_select())
+            {
+                // Play selection sound on item action
+                _sound->play_click();
             }
         }
         else
@@ -610,26 +630,30 @@ class controls
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         state *const state = control->get_state();
-        min::window *const win = control->get_window();
 
-        // Get the ui pointer
-        ui_overlay *const ui = control->get_ui();
+        // Do not toggle UI if paused
+        if (!state->get_pause())
+        {
+            // Get the ui and window pointer
+            ui_overlay *const ui = control->get_ui();
+            min::window *const win = control->get_window();
 
-        // Toggle draw inventory
-        ui->toggle_extend();
+            // Toggle draw inventory
+            ui->toggle_extend();
 
-        // Toggle user input
-        const bool input = state->toggle_user_input();
+            // Toggle user input
+            const bool input = state->toggle_user_input();
 
-        // Center cursor when changing user state
-        const uint16_t w = win->get_width();
-        const uint16_t h = win->get_height();
+            // Center cursor when changing user state
+            const uint16_t w = win->get_width();
+            const uint16_t h = win->get_height();
 
-        // Center cursor in middle of window
-        win->set_cursor(w / 2, h / 2);
+            // Center cursor in middle of window
+            win->set_cursor(w / 2, h / 2);
 
-        // Hide or show the cursor
-        win->display_cursor(input);
+            // Hide or show the cursor
+            win->display_cursor(input);
+        }
     }
     static void drop_item(void *ptr, double step)
     {
@@ -702,7 +726,20 @@ class controls
             }
             else if (skill.is_beam_mode() && skill.is_off_cooldown())
             {
-                if (stat.can_consume_energy(_beam_charge_cost))
+                if (stat.can_consume_energy(_beam_cost))
+                {
+                    // Lock the gun in beam mode
+                    skill.lock();
+                }
+                else
+                {
+                    sound->play_voice_resource();
+                    ui->set_alert_resource();
+                }
+            }
+            else if (skill.is_charge_mode() && skill.is_off_cooldown())
+            {
+                if (stat.can_consume_energy(_charge_cost))
                 {
                     // Play the charge sound
                     sound->play_charge();
@@ -737,7 +774,7 @@ class controls
                         // Play the grapple sound
                         sound->play_grapple();
 
-                        // Lock the gun in beam mode
+                        // Lock the gun in grapple mode
                         skill.lock();
                     }
                 }
@@ -784,7 +821,7 @@ class controls
             {
                 if (stat.can_consume_energy(_scatter_cost))
                 {
-                    // Lock the gun in beam mode
+                    // Lock the gun in scatter mode
                     skill.lock();
                 }
                 else
@@ -888,7 +925,7 @@ class controls
                     // Unlock the gun if jetpack mode
                     skill.unlock_jetpack();
                 }
-                else if (skill.is_beam_charged())
+                else if (skill.is_charged())
                 {
                     // Fire a charged explosion ray
                     const min::vec3<unsigned> radius(3, 3, 3);
@@ -901,15 +938,15 @@ class controls
                     skill.start_cooldown();
 
                     // Consume energy
-                    stat.consume_energy(_beam_charge_cost);
+                    stat.consume_energy(_charge_cost);
 
                     // Stop the charge sound
                     sound->stop_charge();
 
-                    // Unlock the gun if beam mode
-                    skill.unlock_beam();
+                    // Unlock the gun if charge mode
+                    skill.unlock_charge();
                 }
-                else if (skill.is_beam_mode())
+                else if (skill.is_beam_mode() || skill.is_charge_mode())
                 {
                     // Remove block from world, get the removed block id
                     if (stat.can_consume_energy(_beam_cost))
@@ -938,6 +975,9 @@ class controls
 
                     // Unlock the gun if beam mode
                     skill.unlock_beam();
+
+                    // Unlock the gun if charge mode
+                    skill.unlock_charge();
                 }
                 else if (skill.is_grapple_mode())
                 {
@@ -950,7 +990,7 @@ class controls
                     // Stop the grapple sound
                     sound->stop_grapple();
 
-                    // Unlock the gun if beam mode
+                    // Unlock the gun if grapple mode
                     skill.unlock_grapple();
                 }
                 else if (skill.is_missile_mode())
@@ -1063,7 +1103,7 @@ class controls
                         ui->set_alert_resource();
                     }
 
-                    // Unlock the gun if beam mode
+                    // Unlock the gun if scatter mode
                     skill.unlock_scatter();
                 }
             }
@@ -1098,7 +1138,7 @@ class controls
         if (input)
         {
             // Do mouse action on UI
-            if (ui->action())
+            if (ui->action_hover())
             {
                 // Play click sound
                 sound->play_click();

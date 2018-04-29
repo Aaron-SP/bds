@@ -123,10 +123,10 @@ class missiles
     }
 
   public:
-    missiles(physics *sim, particle *const particles, static_instance *const inst, sound *const s)
+    missiles(physics *const sim, particle *const particles, static_instance *const inst, sound *const s)
         : _sim(sim), _inst(inst),
           _part(particles), _sound(s),
-          _scale(3, 3, 3), _f(nullptr)
+          _scale(3, 7, 3), _f(nullptr)
     {
         reserve_memory();
     }

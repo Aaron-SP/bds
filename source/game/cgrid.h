@@ -477,9 +477,6 @@ class cgrid
             return;
         }
 
-        // Reset the visited flag
-        std::fill(_visit.begin(), _visit.end(), -1);
-
         // Clear the old neighbors
         _neighbors.clear();
 
@@ -488,6 +485,15 @@ class cgrid
 
         // Clear the old stack
         _stack.clear();
+
+        // If the start key is inside terrain
+        if (_grid[start_key] != -1)
+        {
+            return;
+        }
+
+        // Reset the visited flag
+        std::fill(_visit.begin(), _visit.end(), -1);
 
         // If we need to search
         if (start_key != stop_key)
@@ -750,7 +756,7 @@ class cgrid
     static inline min::aabbox<float, min::vec3> drone_box(const min::vec3<float> &p)
     {
         // Create box at center
-        const min::vec3<float> half_extent(0.5, 0.5, 0.5);
+        const min::vec3<float> half_extent(0.45, 0.45, 0.45);
 
         // Return the box
         return min::aabbox<float, min::vec3>(p - half_extent, p + half_extent);
@@ -837,9 +843,6 @@ class cgrid
         {
             // Create box at this point
             const min::aabbox<float, min::vec3> box = drone_box(center);
-
-            // Get all overlapping cells
-            min::vec3<float>::grid_overlap(_overlap, _world.get_min(), _cell_extent, _grid_scale, box.get_min(), box.get_max());
 
             // Calculate collision cells around this box
             collision_cells(out, box, center);
