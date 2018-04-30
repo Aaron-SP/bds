@@ -79,12 +79,12 @@ class ui_bg
     min::grid<float, uint16_t, uint16_t, min::vec2, min::aabbox, min::aabbox> _grid;
     std::ostringstream _stream;
 
-    inline bool action(const size_t index)
+    inline bool action(const size_t index, const uint8_t mult)
     {
         // Choose between crafting and decaying
         const std::pair<bool, uint8_t> p = (index >= _inv->begin_cube() && index < _inv->end_cube())
-                                               ? _inv->craft(index)
-                                               : _inv->decay(index);
+                                               ? _inv->craft(index, mult)
+                                               : _inv->decay(index, mult);
 
         // If decaying consumables add stat points
         const item_id it_id = static_cast<item_id>(p.second);
@@ -922,21 +922,21 @@ class ui_bg
         // Reposition all ui on the screen
         position_ui(min::vec2<float>());
     }
-    inline bool action_hover()
+    inline bool action_hover(const uint8_t mult)
     {
         if (_hovering && !_minimized)
         {
             // Do action on hovering index
-            return action(_hover.index());
+            return action(_hover.index(), mult);
         }
 
         // No action if not hovering
         return false;
     }
-    inline bool action_select()
+    inline bool action_select(const uint8_t mult)
     {
         // Do action on selected index
-        return action(_select.index());
+        return action(_select.index(), mult);
     }
     inline size_t bg_text_size() const
     {

@@ -114,11 +114,14 @@ class events
             // Reset the timer
             reset_swarm();
 
-            // Set that swarm is occuring
-            _is_swarm = true;
+            // Spawn a drone
+            w.spawn_drone();
 
             // Reset the swarm spawn counter
-            _spawned = 0;
+            _spawned = 1;
+
+            // Set that swarm is occuring
+            _is_swarm = true;
         }
         else if (drones_dead)
         {

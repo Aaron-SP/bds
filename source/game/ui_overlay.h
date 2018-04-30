@@ -36,10 +36,12 @@ class ui_overlay
     const std::string _ast;
     const std::string _intro;
     const std::string _peace;
+    const std::string _power;
     const std::string _res;
     const std::string _swarm;
     const std::string _swarm_kill;
     float _time;
+    uint8_t _mult;
 
     inline void set_ui_alert(const std::string &str, const float time)
     {
@@ -65,15 +67,16 @@ class ui_overlay
           _ast("Incoming asteroids, take cover!"),
           _intro("You awaken in an unfamiliar, mysterious place."),
           _peace("Everything seems peaceful!"),
-          _res("Low Power!"),
+          _power("Low Power!"),
+          _res("Not enough blocks/ether for that operation!"),
           _swarm("Space pirates have invaded your planet!"),
           _swarm_kill("Space pirates pillaged all your belongings!"),
-          _time(-1.0) {}
+          _time(-1.0), _mult(1) {}
 
     inline bool action_hover()
     {
         // Check if we failed action
-        const bool action = _bg.action_hover();
+        const bool action = _bg.action_hover(_mult);
         if (!action)
         {
             set_alert_action_fail();
@@ -85,7 +88,7 @@ class ui_overlay
     inline bool action_select()
     {
         // Check if we failed action
-        const bool action = _bg.action_select();
+        const bool action = _bg.action_select(_mult);
         if (!action)
         {
             set_alert_action_fail();
@@ -267,6 +270,10 @@ class ui_overlay
     {
         _bg.set_menu_pause();
     }
+    inline void set_multiplier(const uint8_t mult)
+    {
+        _mult = mult;
+    }
     inline void set_screen(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
     {
         // Set bg screen dimensions
@@ -291,7 +298,11 @@ class ui_overlay
     {
         set_ui_alert(_peace, 5.0);
     }
-    inline void set_alert_resource()
+    inline void set_alert_low_power()
+    {
+        set_ui_alert(_power, 2.0);
+    }
+    inline void set_alert_low_resource()
     {
         set_ui_alert(_res, 2.0);
     }

@@ -951,7 +951,7 @@ class sound
         // Remove duplicates
         _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
     }
-    inline void play_voice_resource()
+    inline void play_voice_low_power()
     {
         _v_queue.push_back(v_resource());
 

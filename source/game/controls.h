@@ -135,6 +135,7 @@ class controls
         keyboard.add(min::window::key_code::KEY8);
         keyboard.add(min::window::key_code::SPACE);
         keyboard.add(min::window::key_code::TAB);
+        keyboard.add(min::window::key_code::LSHIFT);
         keyboard.add(min::window::key_code::KEYQ);
 
         // Register callback function F1
@@ -217,7 +218,11 @@ class controls
         // Register callback function TAB
         keyboard.register_keydown(min::window::key_code::TAB, controls::ui_extend, (void *)this);
 
-        // Register callback function TAB
+        // Register callback function LSHIFT
+        keyboard.register_keydown(min::window::key_code::LSHIFT, controls::ui_mult_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::LSHIFT, controls::ui_mult_up, (void *)this);
+
+        // Register callback function KEYQ
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::drop_item, (void *)this);
     }
     static void close_window(void *ptr, double step)
@@ -361,6 +366,10 @@ class controls
         const bool is_block = (type == item_type::block);
         const bool is_item = (type == item_type::item);
         const bool is_skill = (type == item_type::skill);
+        const bool is_ether = (id == id_value(item_id::ETHER));
+
+        // Selecting multiple times?
+        const bool multi_click = _ui->get_selected() == inv_id(index).to_key();
 
         // If not locked
         if (!locked)
@@ -372,10 +381,10 @@ class controls
             _ui->set_console_string(inv.get_name(it));
 
             // Cancel edit mode
-            if (!is_block)
+            if (!is_block && !is_ether)
             {
                 // Disable edit mode
-                _world->set_edit_mode(false);
+                _world->set_edit_mode(false, false, false);
             }
 
             // Play selection sound
@@ -396,7 +405,7 @@ class controls
                 _world->reset_scale();
 
                 // Enable edit mode
-                _world->set_edit_mode(true);
+                _world->set_edit_mode(true, false, false);
 
                 // Set atlas id
                 _world->set_atlas_id(inv.id_to_atlas(id));
@@ -445,6 +454,22 @@ class controls
                     play.set_mode(play_mode::none);
                     break;
                 }
+            }
+            else if (is_ether)
+            {
+                if (multi_click)
+                {
+                    // Swap copy / place mode
+                    _world->toggle_swatch_copy_place();
+                }
+                else
+                {
+                    // Turn on swatches
+                    _world->set_edit_mode(true, true, true);
+                }
+
+                // Load the current swatch data
+                _world->load_swatch();
             }
             else if (is_item && _ui->action_select())
             {
@@ -655,6 +680,30 @@ class controls
             win->display_cursor(input);
         }
     }
+    static void ui_mult_down(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        ui_overlay *const ui = control->get_ui();
+
+        // Set the multiplier to 4
+        if (ui->is_extended())
+        {
+            ui->set_multiplier(4);
+        }
+    }
+    static void ui_mult_up(void *ptr, double step)
+    {
+        // Cast to control pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        ui_overlay *const ui = control->get_ui();
+
+        // Set the multiplier to 4
+        if (ui->is_extended())
+        {
+            ui->set_multiplier(1);
+        }
+    }
     static void drop_item(void *ptr, double step)
     {
         // Cast to control pointer
@@ -733,8 +782,8 @@ class controls
                 }
                 else
                 {
-                    sound->play_voice_resource();
-                    ui->set_alert_resource();
+                    sound->play_voice_low_power();
+                    ui->set_alert_low_power();
                 }
             }
             else if (skill.is_charge_mode() && skill.is_off_cooldown())
@@ -752,8 +801,8 @@ class controls
                 }
                 else
                 {
-                    sound->play_voice_resource();
-                    ui->set_alert_resource();
+                    sound->play_voice_low_power();
+                    ui->set_alert_low_power();
                 }
             }
             else if (skill.is_grapple_mode())
@@ -780,8 +829,8 @@ class controls
                 }
                 else
                 {
-                    sound->play_voice_resource();
-                    ui->set_alert_resource();
+                    sound->play_voice_low_power();
+                    ui->set_alert_low_power();
                 }
             }
             else if (skill.is_missile_mode() && skill.is_off_cooldown())
@@ -794,8 +843,8 @@ class controls
                 }
                 else
                 {
-                    sound->play_voice_resource();
-                    ui->set_alert_resource();
+                    sound->play_voice_low_power();
+                    ui->set_alert_low_power();
                 }
             }
             else if (skill.is_scan_mode())
@@ -813,8 +862,8 @@ class controls
                 }
                 else
                 {
-                    sound->play_voice_resource();
-                    ui->set_alert_resource();
+                    sound->play_voice_low_power();
+                    ui->set_alert_low_power();
                 }
             }
             else if (skill.is_scatter_mode() && skill.is_off_cooldown())
@@ -826,8 +875,8 @@ class controls
                 }
                 else
                 {
-                    sound->play_voice_resource();
-                    ui->set_alert_resource();
+                    sound->play_voice_low_power();
+                    ui->set_alert_low_power();
                 }
             }
         }
@@ -873,13 +922,13 @@ class controls
         const bool mode = world->get_edit_mode();
         if (mode)
         {
-            // Get the active atlas id
-            const uint8_t block_id = inv.id_from_atlas(world->get_atlas_id());
+            // Get the active atlas id or use ether if in swatch mode
+            const uint8_t consume_id = (world->get_swatch_mode()) ? id_value(item_id::ETHER) : inv.id_from_atlas(world->get_atlas_id());
 
             // Try to consume energy to create this resource
-            uint8_t count = 1;
+            uint8_t count = world->get_scale_size();
             const inv_id id = ui->get_selected();
-            const bool consumed = inv.consume(id.index(), block_id, count);
+            const bool consumed = inv.consume(id.index(), consume_id, count);
             if (consumed)
             {
                 // Calculate new point to add
@@ -898,12 +947,12 @@ class controls
                     world->reset_scale();
 
                     // Disable edit mode
-                    world->set_edit_mode(false);
+                    world->set_edit_mode(false, false, false);
                 }
             }
             else
             {
-                world->set_edit_mode(false);
+                ui->set_alert_low_resource();
             }
         }
         else if (play.is_action_mode())
@@ -966,8 +1015,8 @@ class controls
                     }
                     else
                     {
-                        sound->play_voice_resource();
-                        ui->set_alert_resource();
+                        sound->play_voice_low_power();
+                        ui->set_alert_low_power();
                     }
 
                     // Stop the charge sound
@@ -1099,8 +1148,8 @@ class controls
                     }
                     else
                     {
-                        sound->play_voice_resource();
-                        ui->set_alert_resource();
+                        sound->play_voice_low_power();
+                        ui->set_alert_low_power();
                     }
 
                     // Unlock the gun if scatter mode

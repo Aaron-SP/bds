@@ -662,7 +662,7 @@ class inventory
 
         return false;
     }
-    inline bool recipe_2()
+    inline bool recipe_2(const uint8_t mult)
     {
         // Sort the crafting array by ID
         std::sort(_craft.begin(), _craft.begin() + 2, std::less<craft_item>());
@@ -670,263 +670,219 @@ class inventory
         // Get indices in sorted order
         const size_t lower = _craft[0].index();
         const size_t higher = _craft[1].index();
-        uint8_t low_count = 4;
-        uint8_t high_count = 4;
+        uint8_t low_count = mult;
+        uint8_t high_count = mult;
+
+        // How many items to craft
+        uint8_t add_count = mult;
 
         // Try to craft a recipe
         if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::CAT_H), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::POWD_RUST), add_count);
         }
         else if (consume2(lower, id_value(item_id::POWD_KNO3), low_count, higher, id_value(item_id::POWD_CHARCOAL), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(skill_id::GRENADE), add_count);
         }
         else if (consume2(lower, id_value(item_id::CAT_K), low_count, higher, id_value(item_id::AN_NO3), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::POWD_KNO3), add_count);
         }
         else if (consume2(lower, id_value(item_id::CAT_NA), low_count, higher, id_value(item_id::AN_CL), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::POWD_SALT), add_count);
         }
         else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_CL), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::ACID_HCL), add_count);
         }
         else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_NO3), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::ACID_HNO3), add_count);
         }
         else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_PHOS), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::ACID_H3PO4), add_count);
         }
         else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_SULPH), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::ACID_H2SO4), add_count);
         }
 
         // Blue shard recipes
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_CA), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_CA), add_count);
         }
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_CU), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_CU), add_count);
         }
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_FE), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_FE), add_count);
         }
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_MG), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_MG), add_count);
         }
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_K), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_K), add_count);
         }
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_NA), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_NA), add_count);
         }
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::AN_NO3), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::CAT_NH4), add_count);
         }
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::AN_PHOS), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::POWD_RED_PHOS), add_count);
         }
         else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::AN_SULPH), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::POWD_SULPHUR), add_count);
         }
 
         // Green shard recipes
         else if (consume2(lower, id_value(item_id::BLK_CLAY1), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_STONE1), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_CLAY2), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_STONE2), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_STONE1), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_CA), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_STONE2), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_CA), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_CA), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_MG), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_MG), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_K), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_K), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_CU), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_LEAF1), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_TOM), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_LEAF2), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_EGGP), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_LEAF3), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_GR_PEP), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_LEAF4), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_RED_PEP), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_SAND1), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_DIRT1), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_SAND2), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_DIRT2), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_DIRT1), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_GRASS1), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_DIRT2), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_GRASS2), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_GRASS1), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_WOOD1), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_GRASS2), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_WOOD2), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_WOOD1), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_FE), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_WOOD2), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_FE), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BLK_NA), add_count);
         }
 
         // Red shard recipes
         else if (consume2(lower, id_value(item_id::BLK_WOOD1), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::POWD_CHARCOAL), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_WOOD2), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::POWD_CHARCOAL), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_CA), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BAR_CA), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_CU), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BAR_CU), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BAR_FE), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_MG), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BAR_MG), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_K), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BAR_K), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_NA), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BAR_NA), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_AU), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BAR_AU), add_count);
         }
         else if (consume2(lower, id_value(item_id::BLK_SI), low_count, higher, id_value(item_id::SHARD_R), high_count))
         {
-            uint8_t add_count = 4;
             return add(id_value(item_id::BAR_SI), add_count);
         }
 
         // Missiles
         else if (consume2(lower, id_value(item_id::BAR_FE), low_count, higher, id_value(item_id::BAR_NA), high_count))
         {
-            uint8_t add_count = 32;
+            uint8_t add_count = 4 * mult;
             return add(id_value(skill_id::MISSILE), add_count);
         }
 
         // Failed to craft item
         return false;
     }
-    inline bool recipe_3()
+    inline bool recipe_3(const uint8_t mult)
     {
         // Sort the crafting array by ID
         std::sort(_craft.begin(), _craft.begin() + 3, std::less<craft_item>());
@@ -935,17 +891,19 @@ class inventory
         const size_t lower = _craft[0].index();
         const size_t middle = _craft[1].index();
         const size_t higher = _craft[2].index();
-        uint8_t low_count = 4;
-        uint8_t up_count = 1;
-        uint8_t mid_count = 4;
-        uint8_t high_count = 4;
+        uint8_t low_count = 4 * mult;
+        uint8_t mid_count = 4 * mult;
+        uint8_t high_count = 4 * mult;
+        uint8_t up_count = mult;
+
+        // How many items to craft
+        uint8_t add_count = mult;
 
         // Urea
         if (consume3(lower, id_value(item_id::SHARD_B), low_count,
                      middle, id_value(item_id::CAT_NH4), mid_count,
                      higher, id_value(item_id::POWD_CHARCOAL), high_count))
         {
-            uint8_t add_count = 1;
             return add(id_value(item_id::POWD_UREA), add_count);
         }
 
@@ -954,7 +912,6 @@ class inventory
                           middle, id_value(item_id::BAR_AU), mid_count,
                           higher, id_value(item_id::BAR_SI), high_count))
         {
-            uint8_t add_count = 1;
             return add(id_value(skill_id::CHARGE), add_count);
         }
 
@@ -963,7 +920,6 @@ class inventory
                           middle, id_value(item_id::BAR_FE), mid_count,
                           higher, id_value(item_id::POWD_UREA), high_count))
         {
-            uint8_t add_count = 1;
             return add(id_value(skill_id::SCATTER), add_count);
         }
 
@@ -972,7 +928,6 @@ class inventory
                           middle, id_value(item_id::POWD_KNO3), mid_count,
                           higher, id_value(item_id::POWD_UREA), high_count))
         {
-            uint8_t add_count = 1;
             return add(id_value(skill_id::JET), add_count);
         }
 
@@ -981,7 +936,6 @@ class inventory
                           middle, id_value(item_id::BAR_AU), mid_count,
                           higher, id_value(item_id::POWD_RED_PHOS), high_count))
         {
-            uint8_t add_count = 1;
             return add(id_value(skill_id::GRAPPLE), add_count);
         }
 
@@ -990,14 +944,14 @@ class inventory
                           middle, id_value(item_id::ACID_H2SO4), mid_count,
                           higher, id_value(item_id::POWD_SALT), high_count))
         {
-            uint8_t add_count = 8;
+            add_count = mult * 2;
             return add(id_value(item_id::CONS_BATTERY), add_count);
         }
 
         // Failed to craft item
         return false;
     }
-    inline std::pair<bool, uint8_t> craft(const size_t index)
+    inline std::pair<bool, uint8_t> craft(const size_t index, const uint8_t mult)
     {
         size_t craft_size = 0;
         const size_t begin = begin_cube();
@@ -1024,11 +978,11 @@ class inventory
         switch (craft_size)
         {
         case 1:
-            return decay(index);
+            return decay(index, mult);
         case 2:
-            return std::make_pair(recipe_2(), 0);
+            return std::make_pair(recipe_2(mult), 0);
         case 3:
-            return std::make_pair(recipe_3(), 0);
+            return std::make_pair(recipe_3(mult), 0);
         default:
             break;
         }
@@ -1036,12 +990,12 @@ class inventory
         // Return that we failed to craft
         return std::make_pair(false, 0);
     }
-    inline std::pair<bool, uint8_t> decay(const size_t index)
+    inline std::pair<bool, uint8_t> decay(const size_t index, const uint8_t mult)
     {
         // Get the item
         const item &it = _inv[index];
 
-        uint8_t count = 1;
+        uint8_t count = mult;
         const item_id it_id = it.id_enum();
         switch (it_id)
         {
@@ -1062,48 +1016,53 @@ class inventory
         case item_id::BLK_CLAY1:
         case item_id::BLK_CLAY2:
         case item_id::BLK_STONE3:
-            return decay(index, id_value(it_id), id_value(item_id::ETHER), count, 1);
+            return decay(index, id_value(it_id), id_value(item_id::ETHER), count, mult);
         case item_id::BLK_FE:
-            return decay(index, id_value(item_id::BLK_FE), id_value(item_id::CAT_FE), count, 1);
+            return decay(index, id_value(item_id::BLK_FE), id_value(item_id::CAT_FE), count, mult);
         case item_id::BLK_MG:
-            return decay(index, id_value(item_id::BLK_MG), id_value(item_id::CAT_MG), count, 1);
+            return decay(index, id_value(item_id::BLK_MG), id_value(item_id::CAT_MG), count, mult);
         case item_id::BLK_CU:
-            return decay(index, id_value(item_id::BLK_CU), id_value(item_id::CAT_CU), count, 1);
+            return decay(index, id_value(item_id::BLK_CU), id_value(item_id::CAT_CU), count, mult);
         case item_id::BLK_NA:
-            return decay(index, id_value(item_id::BLK_NA), id_value(item_id::CAT_NA), count, 1);
+            return decay(index, id_value(item_id::BLK_NA), id_value(item_id::CAT_NA), count, mult);
         case item_id::BLK_CA:
-            return decay(index, id_value(item_id::BLK_CA), id_value(item_id::CAT_CA), count, 1);
+            return decay(index, id_value(item_id::BLK_CA), id_value(item_id::CAT_CA), count, mult);
         case item_id::BLK_CRYS_R:
-            return decay(index, id_value(item_id::BLK_CRYS_R), id_value(item_id::SHARD_R), count, 4);
+            return decay(index, id_value(item_id::BLK_CRYS_R), id_value(item_id::SHARD_R), count, mult * 4);
         case item_id::BLK_CRYS_P:
-            return decay(index, id_value(item_id::BLK_CRYS_P), id_value(item_id::SHARD_P), count, 4);
+            return decay(index, id_value(item_id::BLK_CRYS_P), id_value(item_id::SHARD_P), count, mult * 4);
         case item_id::BLK_CRYS_B:
-            return decay(index, id_value(item_id::BLK_CRYS_B), id_value(item_id::SHARD_B), count, 4);
+            return decay(index, id_value(item_id::BLK_CRYS_B), id_value(item_id::SHARD_B), count, mult * 4);
         case item_id::BLK_CRYS_G:
-            return decay(index, id_value(item_id::BLK_CRYS_G), id_value(item_id::SHARD_G), count, 4);
+            return decay(index, id_value(item_id::BLK_CRYS_G), id_value(item_id::SHARD_G), count, mult * 4);
         case item_id::BLK_K:
-            return decay(index, id_value(item_id::BLK_K), id_value(item_id::CAT_K), count, 1);
+            return decay(index, id_value(item_id::BLK_K), id_value(item_id::CAT_K), count, mult);
         case item_id::POWD_GUANO:
-            return decay(index, id_value(item_id::POWD_GUANO), id_value(item_id::POWD_KNO3), count, 4);
+            return decay(index, id_value(item_id::POWD_GUANO), id_value(item_id::POWD_KNO3), count, mult * 4);
         case item_id::BLK_TOM:
-            return decay(index, id_value(item_id::BLK_TOM), id_value(item_id::CONS_TOM), count, 4);
+            return decay(index, id_value(item_id::BLK_TOM), id_value(item_id::CONS_TOM), count, mult * 4);
         case item_id::BLK_EGGP:
-            return decay(index, id_value(item_id::BLK_EGGP), id_value(item_id::CONS_EGGP), count, 4);
+            return decay(index, id_value(item_id::BLK_EGGP), id_value(item_id::CONS_EGGP), count, mult * 4);
         case item_id::BLK_RED_PEP:
-            return decay(index, id_value(item_id::BLK_RED_PEP), id_value(item_id::CONS_RED_PEP), count, 4);
+            return decay(index, id_value(item_id::BLK_RED_PEP), id_value(item_id::CONS_RED_PEP), count, mult * 4);
         case item_id::BLK_GR_PEP:
-            return decay(index, id_value(item_id::BLK_GR_PEP), id_value(item_id::CONS_GR_PEP), count, 4);
+            return decay(index, id_value(item_id::BLK_GR_PEP), id_value(item_id::CONS_GR_PEP), count, mult * 4);
         case item_id::CAT_NH4:
-            return decay(index, id_value(item_id::CAT_NH4), id_value(item_id::AN_NO3), count, 1);
+            return decay(index, id_value(item_id::CAT_NH4), id_value(item_id::AN_NO3), count, mult);
         case item_id::CONS_EGGP:
+            count = 1;
             return decay(index, id_value(item_id::CONS_EGGP), id_value(item_id::AN_CL), count, 1);
         case item_id::CONS_GR_PEP:
+            count = 1;
             return decay(index, id_value(item_id::CONS_GR_PEP), id_value(item_id::AN_CL), count, 1);
         case item_id::CONS_RED_PEP:
+            count = 1;
             return decay(index, id_value(item_id::CONS_RED_PEP), id_value(item_id::CAT_H), count, 1);
         case item_id::CONS_TOM:
+            count = 1;
             return decay(index, id_value(item_id::CONS_TOM), id_value(item_id::CAT_H), count, 1);
         case item_id::CONS_BATTERY:
+            count = 1;
             return decay(index, id_value(item_id::CONS_BATTERY), count);
         default:
             break;

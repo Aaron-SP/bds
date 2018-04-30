@@ -33,6 +33,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/sky.h>
 #include <game/sound.h>
 #include <game/static_instance.h>
+#include <game/swatch.h>
 #include <game/terrain.h>
 #include <game/uniforms.h>
 #include <min/camera.h>
@@ -83,6 +84,10 @@ class world
     min::vec3<float> _preview;
     min::vec3<unsigned> _scale;
     bool _edit_mode;
+    int8_t _atlas_id;
+    swatch _swatch;
+    bool _swatch_mode;
+    bool _swatch_copy_place;
 
     // Player
     player _player;
@@ -364,7 +369,22 @@ class world
         _preview_offset = _cached_offset;
 
         // Load data into mesh
-        _grid.atlas_preview(_terr_mesh, _preview_offset, _scale);
+        if (_swatch_mode)
+        {
+            // Update the swatch scale
+            _swatch.set_length(_scale);
+
+            // Update the swatch offset
+            _swatch.set_offset(_preview_offset);
+
+            // If generating a swatch preview
+            _grid.preview_swatch(_terr_mesh, _swatch);
+        }
+        else
+        {
+            // If generating a block preview
+            _grid.preview_atlas(_terr_mesh, _preview_offset, _scale, _atlas_id);
+        }
 
         // Upload preview geometry
         _terrain.upload_preview(_terr_mesh);
@@ -649,7 +669,7 @@ class world
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
           _scale(1, 1, 1),
-          _edit_mode(false),
+          _edit_mode(false), _swatch_mode(false),
           _player(&_simulation, state, character_load(state)),
           _ex_radius(3, 3, 3),
           _sky(uniforms),
@@ -678,11 +698,15 @@ class world
     }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {
-        // Trace a ray to the destination point to find placement position, return point is snapped
-        const min::vec3<float> traced = _grid.ray_trace_prev(r, 6);
-
         // Add to grid
-        _grid.set_geometry(traced, _scale, _preview_offset, _grid.get_atlas());
+        if (_swatch_mode)
+        {
+            _grid.set_geometry(_swatch, _preview);
+        }
+        else
+        {
+            _grid.set_geometry(_preview, _scale, _preview_offset, _atlas_id);
+        }
     }
     void draw(const uniforms &uniforms) const
     {
@@ -755,13 +779,17 @@ class world
     }
     inline int8_t get_atlas_id() const
     {
-        return _grid.get_atlas();
+        return _atlas_id;
+    }
+    inline bool get_swatch_mode() const
+    {
+        return _swatch_mode;
     }
     inline size_t get_chunks_in_view() const
     {
         return _view_chunks.size();
     }
-    inline bool get_edit_mode()
+    inline bool get_edit_mode() const
     {
         return _edit_mode;
     }
@@ -819,6 +847,14 @@ class world
         // Launch a missile in front of player
         return _missiles.launch_missile(p, dir);
     }
+    inline void load_swatch()
+    {
+        // Load data into swatch
+        _grid.load_swatch(_swatch, _preview, _preview_offset, _scale);
+
+        // Generate new preview
+        generate_preview();
+    }
     inline void portal(const load_state &state)
     {
         // Get default spawn point
@@ -867,21 +903,31 @@ class world
             _preview_offset = _cached_offset;
         }
     }
+    inline uint8_t get_scale_size() const
+    {
+        return _scale.x() * _scale.y() * _scale.z();
+    }
     inline void set_atlas_id(const int8_t id)
     {
         // Only applicable in edit mode
         if (_edit_mode)
         {
-            _grid.set_atlas(id);
+            _atlas_id = id;
 
             // Regenerate the preview mesh
             generate_preview();
         }
     }
-    inline void set_edit_mode(const bool flag)
+    inline void set_edit_mode(const bool edit, const bool swatch, const bool copy)
     {
-        // Toggle flag and return result
-        _edit_mode = flag;
+        // Set flag and return result
+        _edit_mode = edit;
+
+        // Set block mode
+        _swatch_mode = swatch;
+
+        // Set swatch copy place
+        _swatch_copy_place = copy;
     }
     inline void set_scale_x(unsigned dx)
     {
@@ -955,6 +1001,10 @@ class world
         // Spawn one drone
         _drones.spawn(event_spawn());
     }
+    inline void toggle_swatch_copy_place()
+    {
+        _swatch_copy_place = !_swatch_copy_place;
+    }
     void update(min::camera<float> &cam, const float dt)
     {
         // Update the physics and AI in world
@@ -998,7 +1048,16 @@ class world
         const min::ray<float, min::vec3> &r = _player.ray();
 
         // Trace a ray to the destination point to find placement position, return point is snapped
-        _preview = _grid.ray_trace_prev(r, 6);
+        // swatch_copy_place == true is copy, == false is default place mode
+        if (_swatch_copy_place)
+        {
+            int8_t value;
+            _preview = _grid.ray_trace_last(r, 6, value);
+        }
+        else
+        {
+            _preview = _grid.ray_trace_prev(r, 6);
+        }
 
         // Update offset x-vector
         if (cam.get_forward().x() >= 0.0)
