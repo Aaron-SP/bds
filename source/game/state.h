@@ -20,8 +20,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/character.h>
 #include <game/file.h>
-#include <game/inventory.h>
 #include <game/load_state.h>
+#include <game/player.h>
 
 namespace game
 {
@@ -146,9 +146,9 @@ class state
         // Reload camera settings
         set_camera(_state.get_default_spawn(), _state.get_default_look());
     }
-    inline void save_state(const inventory &inv, const min::vec3<float> &p)
+    inline void save_state(const player &p)
     {
-        _state.save_state(inv, _camera, p);
+        _state.save_state(p.get_inventory(), p.get_stats(), _camera, p.position());
     }
     inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
     {

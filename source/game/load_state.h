@@ -19,6 +19,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __LOAD_STATE__
 
 #include <game/file.h>
+#include <game/inventory.h>
+#include <game/stats.h>
 #include <iostream>
 #include <min/vec3.h>
 #include <stdexcept>
@@ -35,6 +37,8 @@ class load_state
     min::vec3<float> _spawn;
     min::vec3<float> _top;
     std::vector<item> _inv;
+    std::array<uint16_t, stats::stat_str_size()> _stat;
+    float _exp;
     bool _new_game;
 
     inline void check_inside(const float grid_size)
@@ -105,11 +109,21 @@ class load_state
                 _inv[i] = item(id, count);
             }
 
+            // Load stats from stream
+            const size_t stat_size = stats::stat_str_size();
+            for (size_t i = 0; i < stat_size; i++)
+            {
+                _stat[i] = min::read_le<uint16_t>(stream, next);
+            }
+
+            // Load exp from stream
+            _exp = min::read_le<float>(stream, next);
+
             // Flag that this is not a new game
             _new_game = false;
         }
     }
-    inline void state_save_file(const inventory &inv, const min::camera<float> &camera, const min::vec3<float> &p)
+    inline void state_save_file(const inventory &inv, const stats &stat, const min::camera<float> &camera, const min::vec3<float> &p)
     {
         // Create output stream for saving world
         std::vector<uint8_t> stream;
@@ -119,10 +133,8 @@ class load_state
         min::write_le<float>(stream, p.y());
         min::write_le<float>(stream, p.z());
 
-        // Get the camera look position
+        // Get the camera look position and write into stream
         const min::vec3<float> look = camera.project_point(1.0);
-
-        // Write look into stream
         min::write_le<float>(stream, look.x());
         min::write_le<float>(stream, look.y());
         min::write_le<float>(stream, look.z());
@@ -137,6 +149,16 @@ class load_state
             min::write_le<uint8_t>(stream, it.count());
         }
 
+        // Write stats into stream
+        const size_t stat_size = stat.stat_str_size();
+        for (size_t i = 0; i < stat_size; i++)
+        {
+            min::write_le<uint16_t>(stream, stat.stat_value(i));
+        }
+
+        // Save the player experience
+        min::write_le<float>(stream, stat.get_exp());
+
         // Write data to file
         save_file("bin/state", stream);
     }
@@ -147,7 +169,7 @@ class load_state
           _default_spawn(0.0, grid_size * 0.75, 0.0),
           _look(_default_look), _spawn(_default_spawn),
           _top(0.0, grid_size - 1.0, 0.0),
-          _inv(inventory::size()), _new_game(true)
+          _inv(inventory::size()), _stat{}, _exp(0.0), _new_game(true)
     {
         // Check that we loaded a valid point
         check_inside(grid_size);
@@ -163,6 +185,10 @@ class load_state
     {
         return _default_spawn;
     }
+    inline float get_exp() const
+    {
+        return _exp;
+    }
     inline const std::vector<item> &get_inventory() const
     {
         return _inv;
@@ -175,6 +201,10 @@ class load_state
     {
         return _spawn;
     }
+    inline const std::array<uint16_t, stats::stat_str_size()> &get_stats() const
+    {
+        return _stat;
+    }
     inline const min::vec3<float> &get_top() const
     {
         return _top;
@@ -183,9 +213,9 @@ class load_state
     {
         return _new_game;
     }
-    inline void save_state(const inventory &inv, const min::camera<float> &camera, const min::vec3<float> &p)
+    inline void save_state(const inventory &inv, const stats &stat, const min::camera<float> &cam, const min::vec3<float> &p)
     {
-        state_save_file(inv, camera, p);
+        state_save_file(inv, stat, cam, p);
     }
 };
 }

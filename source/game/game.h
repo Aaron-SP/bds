@@ -110,7 +110,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.220");
+        _ui.text().set_debug_version("VERSION: 0.1.221");
     }
     void update_die_respawn(const float dt)
     {
@@ -239,11 +239,8 @@ class bds
     }
     ~bds()
     {
-        // Get player object
-        game::player &play = _world.get_player();
-
         // Save game data to file
-        _state.save_state(play.get_inventory(), play.position());
+        _state.save_state(_world.get_player());
     }
     void blink_console_message()
     {

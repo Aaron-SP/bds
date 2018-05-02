@@ -35,6 +35,7 @@ class ui_overlay
     const std::string _action_fail;
     const std::string _ast;
     const std::string _intro;
+    const std::string _level;
     const std::string _peace;
     const std::string _power;
     const std::string _res;
@@ -66,6 +67,7 @@ class ui_overlay
           _action_fail("Can't use or craft that item!"),
           _ast("Incoming asteroids, take cover!"),
           _intro("You awaken in an unfamiliar, mysterious place."),
+          _level("Level up!"),
           _peace("Everything seems peaceful!"),
           _power("Low Power!"),
           _res("Not enough blocks/ether for that operation!"),
@@ -294,6 +296,10 @@ class ui_overlay
     {
         set_ui_alert(_intro, 10.0);
     }
+    inline void set_alert_level()
+    {
+        set_ui_alert(_level, 10.0);
+    }
     inline void set_alert_peace()
     {
         set_ui_alert(_peace, 5.0);
@@ -341,6 +347,13 @@ class ui_overlay
     }
     inline void update(const float dt)
     {
+        // If we got a level up alert
+        if (_bg.is_level_up())
+        {
+            set_alert_level();
+        }
+
+        // Update bg
         _bg.update();
 
         // If we need to upload text

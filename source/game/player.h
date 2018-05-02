@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __PLAYER__
 #define __PLAYER__
 
+#include <game/cgrid.h>
 #include <game/inventory.h>
 #include <game/load_state.h>
 #include <game/skills.h>
@@ -158,11 +159,11 @@ class player
                 if (speed > 20.0)
                 {
                     // Lethal damage
-                    _stats.consume_health(100.0);
+                    _stats.consume_health(speed * 5.0);
                 }
                 else if (speed > 10.0)
                 {
-                    _stats.consume_health(50.0);
+                    _stats.consume_health(speed * 2.5);
                 }
             }
         }
@@ -237,8 +238,18 @@ class player
         // Reserve space for collision cells
         reserve_memory();
 
-        // Copy loaded inventory
-        _inv.fill(state.get_inventory());
+        // If resuming game
+        if (!state.is_new_game())
+        {
+            // Copy loaded inventory
+            _inv.fill(state.get_inventory());
+
+            // Copy loaded stats
+            _stats.fill(state.get_stats());
+
+            // Add experience
+            _stats.add_exp(state.get_exp());
+        }
     }
     inline const min::body<float, min::vec3> &body() const
     {
@@ -250,8 +261,8 @@ class player
     }
     inline void drone_collide(const min::vec3<float> &p)
     {
-        // Consume some of players health
-        _stats.consume_health(20);
+        // Apply damage to player
+        _stats.damage(_stats.level() * 2.5);
 
         // Calculate collision direction towards player
         const min::vec3<float> dir = (position() - p).normalize();
@@ -259,7 +270,7 @@ class player
         // Add a kick force
         force(dir * 1000.0);
     }
-    inline void explode(const min::vec3<float> &dir, const float sq_dist, const float size, const float power, const int8_t value)
+    inline void explode(const min::vec3<float> &dir, const float power, const float size, const float sq_dist, const int8_t value)
     {
         // If we haven't been exploded take damage
         if (!_exploded)
@@ -268,16 +279,14 @@ class player
             _explode_id = value;
 
             // Calculate damage
-            const float inv_sq = 1.0 / sq_dist;
-            const float mult = power * size * inv_sq * 0.001;
-            const float damage = (mult * 2.0) - (mult * inv_sq);
-            _stats.consume_health(damage);
+            const float factor = power * size / sq_dist;
+            _stats.damage(factor * 0.005);
 
             // Signal explode signal
             _exploded = true;
 
             // Apply force to the player body
-            force(dir * power);
+            force(dir * factor);
         }
     }
     inline void force(const min::vec3<float> &f)
@@ -369,6 +378,18 @@ class player
     {
         return _target_valid;
     }
+    inline void dash()
+    {
+        // If not hooked
+        if (!_hooked && _stats.can_thrust())
+        {
+            // Consume energy
+            _stats.consume_thrust();
+
+            // Add force to the player body
+            force(_forward * 1500.0);
+        }
+    }
     inline void jump()
     {
         // If not hooked
@@ -383,10 +404,13 @@ class player
                 // Add force to the player body
                 force(min::vec3<float>(0.0, 900.0, 0.0));
             }
-            else if (_jump_count == 1)
+            else if (_jump_count == 1 && _stats.can_thrust())
             {
                 // Increment jump count
                 _jump_count++;
+
+                // Consume energy
+                _stats.consume_thrust();
 
                 // Add force to the player body
                 force(min::vec3<float>(0.0, 900.0, 0.0));

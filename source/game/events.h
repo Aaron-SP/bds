@@ -175,7 +175,11 @@ class events
     }
     inline void update_second(world &w)
     {
-        if (_is_swarm && _spawned < _spawn_count)
+        // Get the player stats
+        stats &stat = w.get_player().get_stats();
+
+        // Spawn drones for each player level
+        if (_is_swarm && _spawned < stat.level())
         {
             // Spawn a drone
             w.spawn_drone();

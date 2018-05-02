@@ -1070,7 +1070,7 @@ class inventory
 
         return std::make_pair(false, it.id());
     }
-    inline bool dirty() const
+    inline bool is_dirty() const
     {
         return _update.size() > 0;
     }

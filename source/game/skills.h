@@ -28,8 +28,12 @@ namespace game
 class skills
 {
   private:
-    static constexpr float _miss_cd = 500.0;
-    static constexpr float _beam_cd = 500.0;
+    static constexpr float _beam_cd = 1000.0;
+    static constexpr float _charge_cd = 500.0;
+    static constexpr float _charge_start = 250.0;
+    static constexpr float _charge_time = 500.0;
+    static constexpr float _gren_cd = 1000.0;
+    static constexpr float _miss_cd = 250.0;
     enum skill_mode
     {
         jetpack,
@@ -45,6 +49,7 @@ class skills
     skill_mode _mode;
     std::chrono::high_resolution_clock::time_point _charge;
     std::chrono::high_resolution_clock::time_point _cool;
+    double _cd;
     bool _charging;
     bool _locked;
     bool _shoot_cooldown;
@@ -69,8 +74,8 @@ class skills
   public:
     skills()
         : _mode(skill_mode::beam),
-          _charging(false), _locked(false),
-          _shoot_cooldown(false) {}
+          _cd(0.0), _charging(false),
+          _locked(false), _shoot_cooldown(false) {}
 
     inline bool activate_charge()
     {
@@ -81,7 +86,7 @@ class skills
             if (is_charge_mode() && _locked)
             {
                 // If minimum charging has been activated
-                if (get_charge_time() > 250.0)
+                if (get_charge_time() > _charge_start)
                 {
                     // Set charging debounce
                     _charging = true;
@@ -99,8 +104,11 @@ class skills
     {
         if (_shoot_cooldown)
         {
+            // Get the time from start of cooldown
             const double dt = get_cool_time();
-            if (dt > _miss_cd)
+
+            // Check if we are off cooldown
+            if (dt > _cd)
             {
                 _shoot_cooldown = !_shoot_cooldown;
             }
@@ -110,7 +118,7 @@ class skills
     }
     inline bool is_charged() const
     {
-        return is_charge_mode() && _locked && get_charge_time() > _beam_cd;
+        return is_charge_mode() && _locked && get_charge_time() > _charge_time;
     }
     inline bool is_jetpack_mode() const
     {
@@ -192,10 +200,32 @@ class skills
     {
         _charge = std::chrono::high_resolution_clock::now();
     }
-    inline void start_cooldown()
+    inline void start_cooldown(const float mult)
     {
         // Start the cooldown timer
         _shoot_cooldown = true;
+
+        // Set the cooldown time
+        switch (_mode)
+        {
+        case skill_mode::beam:
+            _cd = _beam_cd;
+            break;
+        case skill_mode::charge:
+            _cd = _charge_cd;
+            break;
+        case skill_mode::grenade:
+            _cd = _gren_cd;
+            break;
+        case skill_mode::missile:
+            _cd = _miss_cd;
+            break;
+        default:
+            break;
+        }
+
+        // Apply cooldown reduction
+        _cd *= mult;
 
         // Update start time
         _cool = std::chrono::high_resolution_clock::now();

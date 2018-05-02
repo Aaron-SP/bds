@@ -66,12 +66,14 @@ static constexpr float _y_alert_wrap = _font_size;
 static constexpr float _alert_dy = -180.0;
 
 // Extended UI
+static constexpr float _attr_text_dx = -304.0;
+static constexpr float _attr_text_dy = 597.0;
 static constexpr float _cube_dx = -42.0;
 static constexpr float _cube_dy = 518;
 static constexpr float _cube_space = 42.0;
 static constexpr float _stat_dx = 0.0;
 static constexpr float _stat_dy = 458.0;
-static constexpr float _stat_text_dx = 114.0;
+static constexpr float _stat_text_dx = 110.0;
 static constexpr float _stat_text_dy = 597.0;
 }
 

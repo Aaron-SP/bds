@@ -43,9 +43,9 @@ class drone
   public:
     drone(const size_t body_id, const size_t inst_id,
           const size_t path_id, const size_t sound_id, std::vector<path> *const vp,
-          const min::vec3<float> &p, const min::vec3<float> &dest)
+          const min::vec3<float> &p, const min::vec3<float> &dest, const float health)
         : _body_id(body_id), _inst_id(inst_id), _path_id(path_id),
-          _sound_id(sound_id), _paths(vp), _idle(0), _health(100.0)
+          _sound_id(sound_id), _paths(vp), _idle(0), _health(health)
     {
         // Reset path and update with new info
         get_path().set_dead(false);
@@ -267,7 +267,7 @@ class drones
     {
         return _drones.size();
     }
-    inline bool spawn(const min::vec3<float> &p)
+    inline bool spawn(const min::vec3<float> &p, const float health)
     {
         // If full fail spawn
         if (_inst->drone_full())
@@ -298,7 +298,7 @@ class drones
         _sound->play_drone(sound_id, p);
 
         // Add path and path data for drone
-        _drones.emplace_back(body_id, inst_id, path_id, sound_id, &_paths, p, _dest);
+        _drones.emplace_back(body_id, inst_id, path_id, sound_id, &_paths, p, _dest, health);
 
         // Spawned a drone
         return true;

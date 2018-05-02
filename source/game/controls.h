@@ -219,8 +219,8 @@ class controls
         keyboard.register_keydown(min::window::key_code::TAB, controls::ui_extend, (void *)this);
 
         // Register callback function LSHIFT
-        keyboard.register_keydown(min::window::key_code::LSHIFT, controls::ui_mult_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::LSHIFT, controls::ui_mult_up, (void *)this);
+        keyboard.register_keydown(min::window::key_code::LSHIFT, controls::shift_down, (void *)this);
+        keyboard.register_keyup(min::window::key_code::LSHIFT, controls::shift_up, (void *)this);
 
         // Register callback function KEYQ
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::drop_item, (void *)this);
@@ -680,7 +680,7 @@ class controls
             win->display_cursor(input);
         }
     }
-    static void ui_mult_down(void *ptr, double step)
+    static void shift_down(void *ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -691,10 +691,16 @@ class controls
         {
             ui->set_multiplier(4);
         }
+        else
+        {
+            // Get the world pointer
+            world *const world = control->get_world();
+            world->get_player().dash();
+        }
     }
-    static void ui_mult_up(void *ptr, double step)
+    static void shift_up(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Cast to control pointer and get ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         ui_overlay *const ui = control->get_ui();
 
@@ -898,6 +904,9 @@ class controls
         sound *const sound = control->get_sound();
         ui_overlay *const ui = control->get_ui();
 
+        // Get the cooldown multiplier
+        const float cd_mult = play.get_stats().get_cooldown_mult();
+
         // Do we need to release skill lock
         if (!skill.is_locked())
         {
@@ -978,13 +987,13 @@ class controls
                 {
                     // Fire a charged explosion ray
                     const min::vec3<unsigned> radius(3, 3, 3);
-                    world->explode_ray(radius, play_ex, 100.0);
+                    world->explode_ray(radius, play_ex, 100.0, true);
 
                     // Activate shoot animation
                     character->set_animation_shoot();
 
                     // Start gun cooldown timer
-                    skill.start_cooldown();
+                    skill.start_cooldown(cd_mult);
 
                     // Consume energy
                     stat.consume_energy(_charge_cost);
@@ -1002,13 +1011,16 @@ class controls
                     {
                         // Fire an explosion ray
                         const min::vec3<unsigned> radius(1, 1, 1);
-                        world->explode_ray(radius, nullptr, 20.0);
+                        world->explode_ray(radius, nullptr, 20.0, false);
 
                         // Activate shoot animation
                         character->set_animation_shoot();
 
                         // Play the shot sound
                         sound->play_shot();
+
+                        // Start beam cooldown timer
+                        skill.start_cooldown(cd_mult);
 
                         // Consume energy
                         stat.consume_energy(_beam_cost);
@@ -1063,7 +1075,7 @@ class controls
                             character->set_animation_shoot();
 
                             // Start gun cooldown timer
-                            skill.start_cooldown();
+                            skill.start_cooldown(cd_mult);
 
                             // Consume energy
                             stat.consume_energy(_missile_cost);
@@ -1114,7 +1126,7 @@ class controls
                             sound->play_shot();
 
                             // Start gun cooldown timer
-                            skill.start_cooldown();
+                            skill.start_cooldown(cd_mult);
 
                             // Consume energy
                             stat.consume_energy(_grenade_cost);
@@ -1351,7 +1363,6 @@ class controls
         }
         else
         {
-
             _ui->set_cursor_aim();
         }
     }

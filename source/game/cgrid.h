@@ -659,7 +659,7 @@ class cgrid
             chunk_update(k);
         }
     }
-    void set_geometry_cell(const size_t key, const int8_t value)
+    inline min::vec3<float> set_geometry_cell(const size_t key, const int8_t value)
     {
         // Get the chunk key for updating
         const min::vec3<float> p = grid_cell_center(key);
@@ -668,6 +668,9 @@ class cgrid
 
         // Set the cell with value
         _grid[key] = value;
+
+        // Return position
+        return p;
     }
     inline void world_load()
     {
@@ -1246,7 +1249,8 @@ class cgrid
         // Return the number of modified blocks
         return out;
     }
-    unsigned set_geometry(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset, const int8_t atlas_id)
+    unsigned set_geometry(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
+                          const int8_t atlas_id, const std::function<void(const min::vec3<float> &, const int8_t)> &callback)
     {
         // Modified geometry
         unsigned out = 0;
@@ -1260,7 +1264,10 @@ class cgrid
         if (atlas_id == -1 && in)
         {
             // Create cubic function, for each cell in cubic space
-            const auto f = [this, &out, atlas_id](const size_t i, const size_t j, const size_t k, const size_t key) {
+            const auto f = [this, &out, atlas_id, callback](const size_t i, const size_t j, const size_t k, const size_t key) {
+
+                // Get the old value
+                const int8_t old_value = _grid[key];
 
                 // Count changed blocks
                 if (_grid[key] != atlas_id)
@@ -1269,10 +1276,16 @@ class cgrid
                     out++;
 
                     // Set the geometry cell with value
-                    set_geometry_cell(key, atlas_id);
+                    const min::vec3<float> p = set_geometry_cell(key, atlas_id);
 
                     // If we are removing blocks, add boundary cells for update
                     set_boundary_chunk(key);
+
+                    // Callback on cell
+                    if (callback)
+                    {
+                        callback(p, old_value);
+                    }
                 }
             };
 

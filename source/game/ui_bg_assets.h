@@ -391,10 +391,14 @@ class ui_bg_assets
         const float x_offset = _center_w + (x_width - _s_exp_y) * 0.5 + _exp_dx;
         const min::vec2<float> p(x_offset, _exp_dy);
         const min::vec2<float> scale(x_width, _s_exp_y);
-        const min::vec4<float> blue_coord(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv);
+
+        // Offset texture to prevent blurring edges
+        const float uv_off = 2.0 / _image_size;
+        const float suv_off = 4.0 / _image_size;
+        const min::vec4<float> exp_coord(_x_yellow_uv + uv_off, _y_yellow_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
 
         // Load rect at position
-        set_rect(5, p, scale, blue_coord);
+        set_rect(5, p, scale, exp_coord);
     }
     inline void load_bg_stat()
     {
@@ -630,6 +634,15 @@ class ui_bg_assets
     inline void toggle_draw_ex()
     {
         _draw_ex = !_draw_ex;
+    }
+    inline min::vec2<float> attr_position(const size_t row, const size_t size) const
+    {
+        // Calculate offset from center for this stat text element
+        const float x = _center_w + _attr_text_dx;
+        const float y = _attr_text_dy - (row * size);
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
     }
     inline min::vec2<float> cube_position(const size_t row, const size_t col) const
     {

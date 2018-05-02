@@ -96,12 +96,15 @@ class ui_bg
             case item_id::CONS_GR_PEP:
             case item_id::CONS_RED_PEP:
             case item_id::CONS_TOM:
+                _stat->add_exp(10.0);
                 _stat->add_health(25.0);
                 break;
             case item_id::CONS_BATTERY:
-                _stat->add_energy(100.0);
+                _stat->add_exp(10.0);
+                _stat->add_energy(50.0);
                 break;
             default:
+                _stat->add_exp(mult * 25.0);
                 break;
             }
         }
@@ -323,18 +326,33 @@ class ui_bg
             _text->add_text(_stream.str(), p.x() + _inv_ui_dx, p.y() + _inv_ui_dy);
         }
 
+        // Add attr text
+        const size_t attr_size = _stat->attr_str_size();
+        for (size_t i = 0; i < attr_size; i++)
+        {
+            // Get attr text position
+            const min::vec2<float> p = _assets.attr_position(i, _text_size);
+
+            // Add attr string to stream
+            clear_stream();
+            _stream << _stat->attr_str(i) << ": " << _stat->attr_value(i);
+
+            // Set attr text at offset
+            _text->add_text(_stream.str(), p.x(), p.y());
+        }
+
         // Add stat text
-        const size_t size = _stat->str_size();
-        for (size_t i = 0; i < size; i++)
+        const size_t stat_size = _stat->stat_str_size();
+        for (size_t i = 0; i < stat_size; i++)
         {
             // Get stat text position
             const min::vec2<float> p = _assets.stat_position(i, _text_size);
 
             // Add stat descriptor and value text
-            _text->add_text(_stat->str(i), p.x(), p.y());
+            _text->add_text(_stat->stat_str(i), p.x(), p.y());
 
             // Get stat value
-            const uint16_t value = _stat->value(i);
+            const uint16_t value = _stat->stat_value(i);
 
             // Create string from value
             clear_stream();
@@ -907,6 +925,9 @@ class ui_bg
           _clicking(false), _click(0), _hovering(false), _minimized(false), _hover(0), _select(inv->begin_key()),
           _assets(width, height), _inv(inv), _stat(stat), _text(&text), _grid(screen_box(width, height))
     {
+        // Format string stream
+        _stream.precision(3);
+
         // Create the instance rectangle
         load_base_rect();
 
@@ -1056,6 +1077,10 @@ class ui_bg
     inline bool is_extended() const
     {
         return _assets.get_draw_ex();
+    }
+    inline bool is_level_up() const
+    {
+        return _stat->is_dirty();
     }
     inline bool overlap(const min::vec2<float> &p)
     {
@@ -1284,7 +1309,7 @@ class ui_bg
     inline void update()
     {
         // Update the inventory matrices if dirty
-        if (_inv->dirty())
+        if (_inv->is_dirty())
         {
             // Get all updated slots
             const std::vector<inv_id> &updates = _inv->get_updates();
@@ -1307,28 +1332,47 @@ class ui_bg
         }
 
         // Update the stats
-        if (_stat->dirty())
+        if (_stat->is_dirty())
         {
             // Calculate text offset
             const size_t bs = _inv->begin_store();
             const size_t ec = _inv->end_cube();
-            const size_t t_off = ec - bs;
 
-            // Add stat text
-            const size_t size = _stat->str_size();
-            for (size_t i = 0; i < size; i++)
+            // Update attr text
+            const size_t attr_off = ec - bs;
+            const size_t attr_size = _stat->attr_str_size();
+            for (size_t i = 0; i < attr_size; i++)
+            {
+                // Get attr text position
+                const min::vec2<float> p = _assets.attr_position(i, _text_size);
+
+                // Get text buffer offset
+                const size_t index = attr_off + i;
+
+                // Add attr string to stream
+                clear_stream();
+                _stream << _stat->attr_str(i) << ": " << _stat->attr_value(i);
+
+                // Add attr descriptor and value text
+                _text->set_text(_stream.str(), index, p.x(), p.y());
+            }
+
+            // Update stat text
+            const size_t stat_off = (ec - bs) + attr_size;
+            const size_t stat_size = _stat->stat_str_size();
+            for (size_t i = 0; i < stat_size; i++)
             {
                 // Get stat text position
                 const min::vec2<float> p = _assets.stat_position(i, _text_size);
 
                 // Get text buffer offset
-                const size_t index = t_off + i * 2;
+                const size_t index = stat_off + (i * 2);
 
                 // Add stat descriptor and value text
-                _text->set_text(_stat->str(i), index, p.x(), p.y());
+                _text->set_text(_stat->stat_str(i), index, p.x(), p.y());
 
                 // Get stat value
-                const uint16_t value = _stat->value(i);
+                const uint16_t value = _stat->stat_value(i);
 
                 // Create string from value
                 clear_stream();
@@ -1341,7 +1385,7 @@ class ui_bg
         }
 
         // Upload text if updated
-        if (_inv->dirty() || _stat->dirty())
+        if (_inv->is_dirty() || _stat->is_dirty())
         {
             // Flag inventory clean state
             _inv->clean();
