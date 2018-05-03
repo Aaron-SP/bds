@@ -661,12 +661,12 @@ class world
     }
 
   public:
-    world(const load_state &state, particle *const particles, sound *const s, const uniforms &uniforms,
+    world(const load_state &state, particle &particles, sound &s, const uniforms &uniforms,
           const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
         : _grid(chunk_size, grid_size, view_chunk_size),
           _terrain(uniforms, _grid.get_chunks(), chunk_size),
-          _particles(particles),
-          _sound(s),
+          _particles(&particles),
+          _sound(&s),
           _gravity(0.0, -_grav_mag, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _terr_mesh("atlas"),
@@ -678,10 +678,10 @@ class world
           _ex_radius(3, 3, 3),
           _sky(uniforms),
           _instance(uniforms),
-          _drones(&_simulation, &_instance, s),
-          _drops(&_simulation, &_instance),
-          _explosives(&_simulation, &_instance),
-          _missiles(&_simulation, particles, &_instance, s),
+          _drones(_simulation, _instance, s),
+          _drops(_simulation, _instance),
+          _explosives(_simulation, _instance),
+          _missiles(_simulation, particles, _instance, s),
           _drop_dist(0, 20),
           _drop_off_dist(-0.5, 0.5),
           _grid_dist((grid_size * -1.0) + 1.0, grid_size - 1.0),

@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define _UI_OVERLAY__
 
 #include <game/inventory.h>
+#include <game/stats.h>
 #include <game/ui_bg.h>
 #include <game/ui_text.h>
 #include <string>
@@ -32,6 +33,7 @@ class ui_overlay
     ui_text _text;
     ui_bg _bg;
     bool _dirty;
+    int _order;
     const std::string _action_fail;
     const std::string _ast;
     const std::string _intro;
@@ -41,29 +43,37 @@ class ui_overlay
     const std::string _res;
     const std::string _swarm;
     const std::string _swarm_kill;
+    const std::string _thrust;
     float _time;
     uint8_t _mult;
 
-    inline void set_ui_alert(const std::string &str, const float time)
+    inline void set_ui_alert(const std::string &str, const float time, const int order)
     {
-        // Flag dirty
-        _dirty = true;
+        // If alert is higher precedence
+        if (order > _order)
+        {
+            // Flag dirty
+            _dirty = true;
 
-        // Enable drawing alert text
-        _text.set_draw_alert(true);
+            // Enable drawing alert text
+            _text.set_draw_alert(true);
 
-        // Show resource message
-        _text.update_ui_alert(str);
+            // Show resource message
+            _text.update_ui_alert(str);
 
-        // Add some time on the clock
-        _time = time;
+            // Add some time on the clock
+            _time = time;
+
+            // Set the current UI alert order
+            _order = order;
+        }
     }
 
   public:
-    ui_overlay(const uniforms &uniforms, inventory *const inv, stats *const stat, const uint16_t width, const uint16_t height)
+    ui_overlay(const uniforms &uniforms, inventory &inv, stats &stat, const uint16_t width, const uint16_t height)
         : _text(width, height),
           _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
-          _dirty(false),
+          _dirty(false), _order(-1),
           _action_fail("Can't use or craft that item!"),
           _ast("Incoming asteroids, take cover!"),
           _intro("You awaken in an unfamiliar, mysterious place."),
@@ -73,6 +83,7 @@ class ui_overlay
           _res("Not enough blocks/ether for that operation!"),
           _swarm("Space pirates have invaded your planet!"),
           _swarm_kill("Space pirates pillaged all your belongings!"),
+          _thrust("Level up! Thrusters are now online!"),
           _time(-1.0), _mult(1) {}
 
     inline bool action_hover()
@@ -286,39 +297,43 @@ class ui_overlay
     }
     inline void set_alert_action_fail()
     {
-        set_ui_alert(_action_fail, 2.0);
+        set_ui_alert(_action_fail, 2.0, 1);
     }
     inline void set_alert_asteroid()
     {
-        set_ui_alert(_ast, 86400.0);
+        set_ui_alert(_ast, 5.0, 4);
     }
     inline void set_alert_intro()
     {
-        set_ui_alert(_intro, 10.0);
+        set_ui_alert(_intro, 10.0, 5);
     }
     inline void set_alert_level()
     {
-        set_ui_alert(_level, 10.0);
+        set_ui_alert(_level, 10.0, 5);
     }
     inline void set_alert_peace()
     {
-        set_ui_alert(_peace, 5.0);
+        set_ui_alert(_peace, 5.0, 4);
     }
     inline void set_alert_low_power()
     {
-        set_ui_alert(_power, 2.0);
+        set_ui_alert(_power, 2.0, 1);
     }
     inline void set_alert_low_resource()
     {
-        set_ui_alert(_res, 2.0);
+        set_ui_alert(_res, 2.0, 1);
     }
     inline void set_alert_swarm()
     {
-        set_ui_alert(_swarm, 86400.0);
+        set_ui_alert(_swarm, 5.0, 4);
     }
     inline void set_alert_swarm_kill()
     {
-        set_ui_alert(_swarm_kill, 5.0);
+        set_ui_alert(_swarm_kill, 5.0, 4);
+    }
+    inline void set_alert_thruster()
+    {
+        set_ui_alert(_thrust, 10.0, 6);
     }
     inline ui_text &text()
     {
@@ -347,12 +362,6 @@ class ui_overlay
     }
     inline void update(const float dt)
     {
-        // If we got a level up alert
-        if (_bg.is_level_up())
-        {
-            set_alert_level();
-        }
-
         // Update bg
         _bg.update();
 
@@ -374,6 +383,9 @@ class ui_overlay
             {
                 // Disable alert text
                 _text.set_draw_alert(false);
+
+                // Unlock ui if locked
+                _order = -1;
             }
         }
     }

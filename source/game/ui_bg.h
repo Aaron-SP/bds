@@ -918,12 +918,12 @@ class ui_bg
     }
 
   public:
-    ui_bg(const uniforms &uniforms, inventory *const inv, stats *const stat, min::text_buffer &text, const uint16_t width, const uint16_t height)
+    ui_bg(const uniforms &uniforms, inventory &inv, stats &stat, min::text_buffer &text, const uint16_t width, const uint16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)), _mesh_id(0),
-          _clicking(false), _click(0), _hovering(false), _minimized(false), _hover(0), _select(inv->begin_key()),
-          _assets(width, height), _inv(inv), _stat(stat), _text(&text), _grid(screen_box(width, height))
+          _clicking(false), _click(0), _hovering(false), _minimized(false), _hover(0), _select(inv.begin_key()),
+          _assets(width, height), _inv(&inv), _stat(&stat), _text(&text), _grid(screen_box(width, height))
     {
         // Format string stream
         _stream.precision(3);
@@ -1070,6 +1070,10 @@ class ui_bg
     {
         return _select;
     }
+    inline const stats &get_stats() const
+    {
+        return *_stat;
+    }
     inline const std::vector<min::mat3<float>> &get_uv() const
     {
         return _assets.get_uv();
@@ -1077,10 +1081,6 @@ class ui_bg
     inline bool is_extended() const
     {
         return _assets.get_draw_ex();
-    }
-    inline bool is_level_up() const
-    {
-        return _stat->is_dirty();
     }
     inline bool overlap(const min::vec2<float> &p)
     {

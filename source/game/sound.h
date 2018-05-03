@@ -121,7 +121,7 @@ class sound
     static constexpr size_t _drone_limit = 10;
     static constexpr size_t _miss_limit = 10;
     static constexpr size_t _sounds = 21;
-    static constexpr size_t _voice_sounds = 6;
+    static constexpr size_t _voice_sounds = 9;
     static constexpr float _land_threshold = 3.0;
     static constexpr float _max_delay = 120.0;
     static constexpr float _max_speed = 10.0;
@@ -265,21 +265,33 @@ class sound
     {
         return 1;
     }
-    inline static size_t v_power()
+    inline static size_t v_level()
     {
         return 2;
     }
-    inline static size_t v_repair()
+    inline static size_t v_portal_alert()
     {
         return 3;
     }
-    inline static size_t v_resource()
+    inline static size_t v_power()
     {
         return 4;
     }
-    inline static size_t v_shutdown()
+    inline static size_t v_repair()
     {
         return 5;
+    }
+    inline static size_t v_resource()
+    {
+        return 6;
+    }
+    inline static size_t v_shutdown()
+    {
+        return 7;
+    }
+    inline static size_t v_thrust_alert()
+    {
+        return 8;
     }
     inline void load_drone_settings(const size_t s)
     {
@@ -554,14 +566,20 @@ class sound
         const min::ogg sound1(ogg1);
         const min::mem_file &ogg2 = memory_map::memory.get_file("data/sound/voice_critical_s.ogg");
         const min::ogg sound2(ogg2);
-        const min::mem_file &ogg3 = memory_map::memory.get_file("data/sound/voice_power_s.ogg");
+        const min::mem_file &ogg3 = memory_map::memory.get_file("data/sound/voice_level_s.ogg");
         const min::ogg sound3(ogg3);
-        const min::mem_file &ogg4 = memory_map::memory.get_file("data/sound/voice_repair_s.ogg");
+        const min::mem_file &ogg4 = memory_map::memory.get_file("data/sound/voice_portal_alert_s.ogg");
         const min::ogg sound4(ogg4);
-        const min::mem_file &ogg5 = memory_map::memory.get_file("data/sound/voice_resource_s.ogg");
+        const min::mem_file &ogg5 = memory_map::memory.get_file("data/sound/voice_power_s.ogg");
         const min::ogg sound5(ogg5);
-        const min::mem_file &ogg6 = memory_map::memory.get_file("data/sound/voice_shutdown_s.ogg");
+        const min::mem_file &ogg6 = memory_map::memory.get_file("data/sound/voice_repair_s.ogg");
         const min::ogg sound6(ogg6);
+        const min::mem_file &ogg7 = memory_map::memory.get_file("data/sound/voice_resource_s.ogg");
+        const min::ogg sound7(ogg7);
+        const min::mem_file &ogg8 = memory_map::memory.get_file("data/sound/voice_shutdown_s.ogg");
+        const min::ogg sound8(ogg8);
+        const min::mem_file &ogg9 = memory_map::memory.get_file("data/sound/voice_thrust_alert_s.ogg");
+        const min::ogg sound9(ogg9);
 
         // Create music buffers
         _voice[0] = _buffer.add_ogg_pcm(sound1);
@@ -570,6 +588,9 @@ class sound
         _voice[3] = _buffer.add_ogg_pcm(sound4);
         _voice[4] = _buffer.add_ogg_pcm(sound5);
         _voice[5] = _buffer.add_ogg_pcm(sound6);
+        _voice[6] = _buffer.add_ogg_pcm(sound7);
+        _voice[7] = _buffer.add_ogg_pcm(sound8);
+        _voice[8] = _buffer.add_ogg_pcm(sound9);
 
         // Load the first sound into the sound buffer
         load_sound(_voice[0], _voice_gain, _fade_speed);
@@ -937,6 +958,20 @@ class sound
         // Remove duplicates
         _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
     }
+    inline void play_voice_level()
+    {
+        _v_queue.push_back(v_level());
+
+        // Remove duplicates
+        _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
+    }
+    inline void play_voice_portal_alert()
+    {
+        _v_queue.push_back(v_portal_alert());
+
+        // Remove duplicates
+        _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
+    }
     inline void play_voice_power()
     {
         _v_queue.push_back(v_power());
@@ -961,6 +996,13 @@ class sound
     inline void play_voice_shutdown()
     {
         _v_queue.push_back(v_shutdown());
+
+        // Remove duplicates
+        _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());
+    }
+    inline void play_voice_thrust_alert()
+    {
+        _v_queue.push_back(v_thrust_alert());
 
         // Remove duplicates
         _v_queue.erase(std::unique(_v_queue.begin() + _v_head, _v_queue.end()), _v_queue.end());

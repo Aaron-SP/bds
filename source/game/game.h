@@ -51,6 +51,7 @@ class bds
     min::window _win;
     game::uniforms _uniforms;
     game::particle _particles;
+    game::sound _sound;
     game::character _character;
     game::state _state;
     game::world _world;
@@ -58,7 +59,6 @@ class bds
     game::ui_overlay _ui;
     game::controls _controls;
     game::title _title;
-    game::sound _sound;
     std::pair<uint16_t, uint16_t> _cursor;
     double _fps;
     double _idle;
@@ -111,6 +111,31 @@ class bds
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
         _ui.text().set_debug_version("VERSION: 0.1.221");
+    }
+    void update_alerts()
+    {
+        // Get the stats from bg;
+        game::stats &stat = _world.get_player().get_stats();
+        const game::stat_alert alert = stat.get_alert();
+
+        // Do action on an alert
+        switch (alert)
+        {
+        case game::stat_alert::level:
+            _sound.play_voice_level();
+            _ui.set_alert_level();
+            break;
+        case game::stat_alert::thruster:
+            _sound.play_voice_level();
+            _sound.play_voice_thrust_alert();
+            _ui.set_alert_thruster();
+            break;
+        default:
+            break;
+        }
+
+        // Clear any alerts
+        stat.clear_alert();
     }
     void update_die_respawn(const float dt)
     {
@@ -220,8 +245,8 @@ class bds
           _particles(_uniforms),
           _character(&_particles, _uniforms),
           _state(grid),
-          _world(_state.get_load_state(), &_particles, &_sound, _uniforms, chunk, grid, view),
-          _ui(_uniforms, &_world.get_player().get_inventory(), &_world.get_player().get_stats(), _win.get_width(), _win.get_height()),
+          _world(_state.get_load_state(), _particles, _sound, _uniforms, chunk, grid, view),
+          _ui(_uniforms, _world.get_player().get_inventory(), _world.get_player().get_stats(), _win.get_width(), _win.get_height()),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
           _title(_state.get_camera(), _ui, _win), _fps(0.0), _idle(0.0)
     {
@@ -345,6 +370,10 @@ class bds
         // If game is not paused update game state
         if (!_state.get_pause())
         {
+            // Update stat alerts
+            update_alerts();
+
+            // Get user input
             if (!_state.get_user_input())
             {
                 // Get the cursor coordinates

@@ -112,8 +112,8 @@ class explosives
     }
 
   public:
-    explosives(physics *sim, static_instance *inst)
-        : _sim(sim), _inst(inst),
+    explosives(physics &sim, static_instance &inst)
+        : _sim(&sim), _inst(&inst),
           _scale(3, 5, 3), _angle(0.0), _oldest(0), _f(nullptr)
     {
         // Reserve memory for collision cells

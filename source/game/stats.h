@@ -24,6 +24,13 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
+enum class stat_alert
+{
+    none,
+    level,
+    thruster
+};
+
 class stats
 {
   private:
@@ -44,6 +51,7 @@ class stats
     bool _low_health;
     bool _dead;
     bool _dirty;
+    stat_alert _alert;
     std::array<float, _max_attr> _attr;
     std::array<uint16_t, _max_stats> _stat;
     float _sqrt_level;
@@ -141,7 +149,7 @@ class stats
     stats()
         : _max_energy(100.0), _energy(_max_energy), _low_energy(false), _exp(0.0),
           _max_health(100.0), _health(_max_health), _low_health(false),
-          _dead(false), _dirty(false),
+          _dead(false), _dirty(false), _alert(stat_alert::none),
           _attr{}, _stat{}, _sqrt_level(1.0)
     {
         // Level up
@@ -149,6 +157,9 @@ class stats
 
         // Clean first time
         clean();
+
+        // Clear any alerts
+        clear_alert();
     }
 
     inline void add_energy(const float energy)
@@ -192,6 +203,10 @@ class stats
     {
         _dirty = false;
     }
+    inline void clear_alert()
+    {
+        _alert = stat_alert::none;
+    }
     inline void consume_thrust()
     {
         consume_energy(get_thrust_consume());
@@ -224,6 +239,10 @@ class stats
         {
             _low_health = true;
         }
+    }
+    inline stat_alert get_alert() const
+    {
+        return _alert;
     }
     inline float get_cooldown_mult() const
     {
@@ -293,6 +312,10 @@ class stats
         return _dead;
     }
     inline bool is_dirty() const
+    {
+        return _dirty;
+    }
+    inline bool is_level_up() const
     {
         return _dirty;
     }
@@ -465,6 +488,16 @@ class stats
 
         // Update the stat cache
         update_cache();
+
+        // Set alert on update
+        if (_stat[6] == 3)
+        {
+            _alert = stat_alert::thruster;
+        }
+        else
+        {
+            _alert = stat_alert::level;
+        }
 
         // Set dirty flag
         _dirty = true;

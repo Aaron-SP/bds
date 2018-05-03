@@ -106,8 +106,8 @@ class drops
     }
 
   public:
-    drops(physics *sim, static_instance *inst)
-        : _sim(sim), _inst(inst), _angle(0.0), _oldest(0)
+    drops(physics &sim, static_instance &inst)
+        : _sim(&sim), _inst(&inst), _angle(0.0), _oldest(0)
     {
         reserve_memory();
     }

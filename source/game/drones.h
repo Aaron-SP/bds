@@ -199,8 +199,8 @@ class drones
     }
 
   public:
-    drones(physics *const sim, static_instance *const inst, sound *const s)
-        : _sim(sim), _inst(inst), _sound(s),
+    drones(physics &sim, static_instance &inst, sound &s)
+        : _sim(&sim), _inst(&inst), _sound(&s),
           _paths(static_instance::max_drones()), _path_old(0),
           _f(nullptr), _disable(false)
     {
