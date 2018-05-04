@@ -70,7 +70,6 @@ class explosives
     std::vector<explosive> _ex;
     const min::vec3<unsigned> _scale;
     float _angle;
-    size_t _oldest;
     coll_call _f;
 
     inline min::body<float, min::vec3> &body(const size_t index)
@@ -114,7 +113,7 @@ class explosives
   public:
     explosives(physics &sim, static_instance &inst)
         : _sim(&sim), _inst(&inst),
-          _scale(3, 5, 3), _angle(0.0), _oldest(0), _f(nullptr)
+          _scale(3, 5, 3), _angle(0.0), _f(nullptr)
     {
         // Reserve memory for collision cells
         reserve_memory();

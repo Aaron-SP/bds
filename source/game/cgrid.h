@@ -1356,7 +1356,7 @@ class cgrid
         cubic(start, offset, length, f);
 
         // Sort the view indices based on distance from camera to reduce overdraw
-        std::sort(_view_chunks.begin(), _view_chunks.end(), [this](const view_chunk &a, const view_chunk &b) {
+        std::sort(_view_chunks.begin(), _view_chunks.end(), [](const view_chunk &a, const view_chunk &b) {
             return a.get_dist() < b.get_dist();
         });
 

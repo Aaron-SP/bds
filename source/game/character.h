@@ -118,7 +118,7 @@ class character
         : _vertex(memory_map::memory.get_file("data/shader/character.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/character.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _md5_model(std::move(min::md5_mesh<float, uint32_t>(memory_map::memory.get_file("data/models/gun.md5mesh")))),
+          _md5_model(min::md5_mesh<float, uint32_t>(memory_map::memory.get_file("data/models/gun.md5mesh"))),
           _particles(particles),
           _need_bone_reset(false)
     {

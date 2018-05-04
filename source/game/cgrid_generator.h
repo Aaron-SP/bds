@@ -40,7 +40,7 @@ class cgrid_generator
     inline void clear_grid(std::vector<int8_t> &grid)
     {
         // Parallelize on copying buffers
-        const auto work = [this, &grid](std::mt19937 &gen, const size_t i) {
+        const auto work = [&grid](std::mt19937 &gen, const size_t i) {
             grid[i] = -1;
         };
 
