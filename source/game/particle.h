@@ -35,11 +35,12 @@ class emitter
   protected:
     min::emitter_buffer<float, GL_FLOAT> _emit;
     float _time;
+    bool _in_view;
     min::vec4<float> _ref;
 
   public:
     emitter(const min::vec3<float> &p, const size_t emit_count, const size_t emit_periods, const float emit_freq, const float spawn_freq, const float random)
-        : _emit(p, emit_count, emit_periods, emit_freq, spawn_freq, random), _time(-1) {}
+        : _emit(p, emit_count, emit_periods, emit_freq, spawn_freq, random), _time(-1), _in_view(false) {}
     void abort()
     {
         _time = -1;
@@ -51,6 +52,10 @@ class emitter
     const min::emitter_buffer<float, GL_FLOAT> &emit() const
     {
         return _emit;
+    }
+    inline bool is_in_view() const
+    {
+        return _in_view;
     }
     void time_dec(const float dt)
     {
@@ -73,6 +78,10 @@ class emitter
         _ref.x(ref.x());
         _ref.y(ref.y());
         _ref.z(ref.z());
+    }
+    inline void set_view(const bool flag)
+    {
+        _in_view = flag;
     }
     void w(const float w)
     {
@@ -145,30 +154,28 @@ class particle
     {
         return cam.get_position() + (cam.get_right() - cam.get_up()) * 0.1;
     }
-    inline void draw_emit() const
-    {
-        // Bind this texture for drawing
-        _tbuffer.bind(_dds_id, 0);
-
-        // Bind VAO
-        _emit.bind();
-
-        // Draw the particles
-        _emit.draw();
-    }
     inline void draw_emit_charge() const
     {
         // Draw charge
         if (_charge_time > 0.0)
         {
+            // Bind this texture for drawing
+            _tbuffer.bind(_dds_id, 0);
+
             // Use the shader program to draw models
             _prog.use();
+
+            // Upload data to GPU
+            _emit.upload();
 
             // Set the charge reference point
             set_reference(_charge_ref);
 
-            // Draw on emit buffer
-            draw_emit();
+            // Bind VAO
+            _emit.bind();
+
+            // Draw the particles
+            _emit.draw();
         }
     }
     inline void draw_miss_launch() const
@@ -182,8 +189,11 @@ class particle
         // Draw all miss launch
         for (size_t i = 0; i < _miss_limit; i++)
         {
-            if (_miss[i].time() > 0.0)
+            if (_miss[i].time() > 0.0 && _miss[i].is_in_view())
             {
+                // Upload data to GPU
+                _miss[i].emit().upload();
+
                 // Set the launch reference point
                 set_reference(_miss[i].ref());
 
@@ -207,8 +217,11 @@ class particle
         for (size_t i = 0; i < _static_limit; i++)
         {
             // Draw static
-            if (_static[i].time() > 0.0)
+            if (_static[i].time() > 0.0 && _static[i].is_in_view())
             {
+                // Upload data to GPU
+                _static[i].emit().upload();
+
                 // Set the static reference point
                 set_reference(_static[i].ref());
 
@@ -444,7 +457,7 @@ class particle
         // Set the reference position
         _miss[index].set_ref(p);
     }
-    void update(min::camera<float> &cam, const double dt)
+    void update(const min::camera<float> &cam, const double dt)
     {
         // Unbind the last VAO to prevent scrambling buffers
         _static[0].emit().unbind();
@@ -473,24 +486,26 @@ class particle
 
             // Update the particle positions
             _emit.step(dt);
-
-            // Upload data to GPU
-            _emit.upload();
         }
+
+        // Get the camera frustum
+        const min::frustum<float> &frust = cam.get_frustum();
 
         // Update missile emitters
         for (size_t i = 0; i < _miss_limit; i++)
         {
+            // Update missile
             if (_miss[i].time() > 0.0)
             {
+                // Set the view flag
+                const min::vec3<float> &p = _miss[i].emit().get_position();
+                _miss[i].set_view(frust.point_inside(p));
+
                 // Remove some of the time
                 _miss[i].time_dec(dt);
 
                 // Update the particle positions
                 _miss[i].emit().step(dt);
-
-                // Upload data to GPU
-                _miss[i].emit().upload();
             }
         }
 
@@ -500,17 +515,21 @@ class particle
             // Update explode
             if (_static[i].is_explode() && _static[i].time() > 0.0)
             {
+                // Set the view flag
+                const min::vec3<float> &p = _static[i].emit().get_position();
+                _static[i].set_view(frust.point_inside(p));
+
                 // Remove some of the time
                 _static[i].time_dec(dt);
 
                 // Update the particle positions
                 _static[i].emit().step(dt);
-
-                // Upload data to GPU
-                _static[i].emit().upload();
             }
             else if (!_static[i].is_explode() && _static[i].time() > 0.0)
             {
+                // Set the view flag
+                _static[i].set_view(true);
+
                 // Remove some of the time
                 _static[i].time_dec(dt);
 
@@ -540,9 +559,6 @@ class particle
 
                 // Update the particle positions
                 _static[i].emit().set(f);
-
-                // Upload data to GPU
-                _static[i].emit().upload();
             }
         }
     }

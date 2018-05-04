@@ -109,6 +109,115 @@ class static_instance
             mat_out.clear();
         }
     }
+    inline void cull_frustum(const min::camera<float> &cam)
+    {
+        // Cull drones
+        const size_t drone_size = _drone_mat.size();
+        for (size_t i = 0; i < drone_size; i++)
+        {
+            // Create drone bounding box from matrix position
+            const min::aabbox<float, min::vec3> box = box_drone(i);
+
+            // If the box is within the frustum
+            if (min::intersect<float>(cam.get_frustum(), box))
+            {
+                _drone_index.push_back(i);
+            }
+        }
+
+        // Cull drops
+        const size_t drop_size = _drop_mat.size();
+        for (size_t i = 0; i < drop_size; i++)
+        {
+            // Create drop bounding box from matrix position
+            const min::aabbox<float, min::vec3> box = box_drop(i);
+
+            // If the box is within the frustum
+            if (min::intersect<float>(cam.get_frustum(), box))
+            {
+                _drop_index.push_back(i);
+            }
+        }
+
+        // Cull explosives
+        const size_t explode_size = _explode_mat.size();
+        for (size_t i = 0; i < explode_size; i++)
+        {
+            // Create explosive bounding box from matrix position
+            const min::aabbox<float, min::vec3> box = box_explosive(i);
+
+            // If the box is within the frustum
+            if (min::intersect<float>(cam.get_frustum(), box))
+            {
+                _explode_index.push_back(i);
+            }
+        }
+
+        // Cull missiles
+        const size_t miss_size = _miss_mat.size();
+        for (size_t i = 0; i < miss_size; i++)
+        {
+            // Create missile bounding box from matrix position
+            const min::aabbox<float, min::vec3> box = box_missile(i);
+
+            // If the box is within the frustum
+            if (min::intersect<float>(cam.get_frustum(), box))
+            {
+                _miss_index.push_back(i);
+            }
+        }
+    }
+    inline void cull_physics(const physics &sim, const cgrid &grid)
+    {
+        // Get the view chunks from grid
+        const std::vector<view_chunk> &view_chunks = grid.get_view_chunks();
+
+        // Get the index map
+        const std::vector<uint16_t> &map = sim.get_index_map();
+
+        // For each view chunk
+        for (const view_chunk &vc : view_chunks)
+        {
+            // Perform overlapping of physics bodies
+            const std::vector<std::pair<uint16_t, uint16_t>> &over = sim.get_overlap(vc.get_box());
+
+            // For each body in view chunk
+            const size_t size = over.size();
+            for (size_t i = 0; i < size; i++)
+            {
+                // Get the body from the simulation
+                const uint16_t body_index = map[over[i].first];
+                const min::body<float, min::vec3> &b = sim.get_body(body_index);
+
+                // If the body is not dead
+                if (!b.is_dead())
+                {
+                    // Get the index of the type
+                    const size_t index = b.get_data().index;
+
+                    // Get the type of body
+                    const size_t id = b.get_id();
+                    switch (id)
+                    {
+                    case 1:
+                        _drone_index.push_back(index);
+                        break;
+                    case 2:
+                        _drop_index.push_back(index);
+                        break;
+                    case 3:
+                        _explode_index.push_back(index);
+                        break;
+                    case 4:
+                        _miss_index.push_back(index);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        }
+    }
     inline void load_drone_model()
     {
         // Load drone data from binary mesh file
@@ -574,61 +683,21 @@ class static_instance
     {
         return _drone_mat_out.size() + _drop_mat_out.size() + _explode_mat_out.size() + _miss_mat_out.size();
     }
-    void update(const physics &sim, const cgrid &grid)
+    void update(const physics &sim, const cgrid &grid, const min::camera<float> &cam)
     {
-        // Get the view chunks from grid
-        const std::vector<view_chunk> &view_chunks = grid.get_view_chunks();
-
-        // Get the index map
-        const std::vector<uint16_t> &map = sim.get_index_map();
-
         // Clear out the output buffers
         _drone_index.clear();
         _drop_index.clear();
         _explode_index.clear();
         _miss_index.clear();
 
-        // For each view chunk
-        for (const view_chunk &vc : view_chunks)
+        if (sim.get_scale() >= 8)
         {
-            // Perform overlapping of physics bodies
-            const std::vector<std::pair<uint16_t, uint16_t>> &over = sim.get_overlap(vc.get_box());
-
-            // For each body in view chunk
-            const size_t size = over.size();
-            for (size_t i = 0; i < size; i++)
-            {
-                // Get the body from the simulation
-                const uint16_t body_index = map[over[i].first];
-                const min::body<float, min::vec3> &b = sim.get_body(body_index);
-
-                // If the body is not dead
-                if (!b.is_dead())
-                {
-                    // Get the index of the type
-                    const size_t index = b.get_data().index;
-
-                    // Get the type of body
-                    const size_t id = b.get_id();
-                    switch (id)
-                    {
-                    case 1:
-                        _drone_index.push_back(index);
-                        break;
-                    case 2:
-                        _drop_index.push_back(index);
-                        break;
-                    case 3:
-                        _explode_index.push_back(index);
-                        break;
-                    case 4:
-                        _miss_index.push_back(index);
-                        break;
-                    default:
-                        break;
-                    }
-                }
-            }
+            cull_physics(sim, grid);
+        }
+        else
+        {
+            cull_frustum(cam);
         }
 
         // Sort drones and remove duplicates
@@ -654,11 +723,6 @@ class static_instance
 
         // Copy missiles to output buffer
         copy_mat_index(_miss_mat, _miss_mat_out, _miss_index);
-
-        if (_drop_mat_out.size() > _DROP_LIMIT)
-        {
-            throw std::runtime_error("Too many drops!");
-        }
     }
     inline void update_drone_position(const size_t index, const min::vec3<float> &p)
     {

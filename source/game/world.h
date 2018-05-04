@@ -1057,7 +1057,7 @@ class world
         }
 
         // Update the static instance frustum culling
-        _instance.update(_simulation, _grid);
+        _instance.update(_simulation, _grid, cam);
 
         // Get ray from camera to destination
         const min::ray<float, min::vec3> &r = _player.ray();
