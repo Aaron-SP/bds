@@ -70,7 +70,7 @@ class world
     terrain _terrain;
     particle *_particles;
     sound *_sound;
-    std::vector<size_t> _view_chunks;
+    std::vector<size_t> _view_chunk_index;
 
     // Physics stuff
     min::vec3<float> _gravity;
@@ -471,7 +471,7 @@ class world
         _terr_mesh.index.reserve(_pre_max_vol);
 
         // Reserve space for view chunks
-        _view_chunks.reserve(view_chunk_size * view_chunk_size * view_chunk_size);
+        _view_chunk_index.reserve(view_chunk_size * view_chunk_size * view_chunk_size);
     }
     inline void set_collision_callbacks()
     {
@@ -722,7 +722,7 @@ class world
         _terrain.bind();
 
         // Draw the world geometry
-        _terrain.draw_terrain(uniforms, _view_chunks);
+        _terrain.draw_terrain(uniforms, _view_chunk_index);
 
         // Only draw if toggled
         if (_edit_mode)
@@ -792,7 +792,7 @@ class world
     }
     inline size_t get_chunks_in_view() const
     {
-        return _view_chunks.size();
+        return _view_chunk_index.size();
     }
     inline bool get_edit_mode() const
     {
@@ -805,6 +805,10 @@ class world
     inline const static_instance &get_instances() const
     {
         return _instance;
+    }
+    inline size_t get_inst_in_view() const
+    {
+        return _instance.get_inst_in_view();
     }
     inline player &get_player()
     {
@@ -1031,7 +1035,7 @@ class world
         _grid.update_current_chunk(p);
 
         // Get surrounding chunks for drawing
-        _grid.get_view_chunks(cam, _view_chunks);
+        _grid.update_view_chunk_index(cam, _view_chunk_index);
 
 // Only used for instance rendering
 #ifdef USE_INST_RENDER
@@ -1039,7 +1043,7 @@ class world
 #endif
 
         // For all chunk meshes
-        for (const auto &i : _view_chunks)
+        for (const auto &i : _view_chunk_index)
         {
             // If the chunk needs updating
             if (_grid.is_update_chunk(i))
@@ -1051,6 +1055,9 @@ class world
                 _grid.update_chunk(i);
             }
         }
+
+        // Update the static instance frustum culling
+        _instance.update(_simulation, _grid);
 
         // Get ray from camera to destination
         const min::ray<float, min::vec3> &r = _player.ray();

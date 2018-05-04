@@ -37,7 +37,7 @@ class ui_text
     static constexpr size_t _ui = _console + 1;
     static constexpr size_t _alert = _ui + 2;
     static constexpr size_t _debug = _alert + 1;
-    static constexpr size_t _hover = _debug + 11;
+    static constexpr size_t _hover = _debug + 12;
     static constexpr size_t _end = _hover + 2;
 
     // Hover
@@ -405,9 +405,18 @@ class ui_text
         _stream << "CHUNKS: " << chunks;
         update_text(_debug + 9, _stream.str());
     }
+    inline void set_debug_insts(const size_t insts)
+    {
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update FPS and IDLE
+        _stream << "INSTANCES: " << insts;
+        update_text(_debug + 10, _stream.str());
+    }
     inline void set_debug_version(const std::string &str)
     {
-        update_text(_debug + 10, str);
+        update_text(_debug + 11, str);
     }
     inline void toggle_draw_console()
     {

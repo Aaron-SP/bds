@@ -110,7 +110,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.221");
+        _ui.text().set_debug_version("VERSION: 0.1.223");
     }
     void update_alerts()
     {
@@ -196,9 +196,10 @@ class bds
         const float health = stat.get_health();
         const float energy = stat.get_energy();
         const size_t chunks = _world.get_chunks_in_view();
+        const size_t insts = _world.get_inst_in_view();
 
         // Update the ui overlay
-        _ui.update_text(p, f, health, energy, _fps, _idle, chunks);
+        _ui.update_text(p, f, health, energy, _fps, _idle, chunks, insts);
 
         // Process timer and upload changes
         _ui.update(dt);

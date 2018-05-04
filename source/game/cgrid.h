@@ -34,6 +34,36 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
+class view_chunk
+{
+  private:
+    size_t _index;
+    size_t _key;
+    min::aabbox<float, min::vec3> _box;
+    float _dist;
+
+  public:
+    view_chunk(const size_t index, const size_t key, const min::aabbox<float, min::vec3> &box, const float dist)
+        : _index(index), _key(key), _box(box), _dist(dist) {}
+
+    const min::aabbox<float, min::vec3> &get_box() const
+    {
+        return _box;
+    }
+    float get_dist() const
+    {
+        return _dist;
+    }
+    size_t get_key() const
+    {
+        return _key;
+    }
+    size_t get_index() const
+    {
+        return _index;
+    }
+};
+
 class cgrid
 {
   private:
@@ -51,8 +81,7 @@ class cgrid
     std::vector<bool> _chunk_update;
     std::vector<size_t> _chunk_update_keys;
     std::vector<size_t> _sort_chunk;
-    std::vector<float> _sort_view;
-    std::vector<size_t> _sort_view_index;
+    std::vector<view_chunk> _view_chunks;
     mutable std::vector<size_t> _overlap;
     size_t _recent_chunk;
     size_t _view_chunk_size;
@@ -465,8 +494,7 @@ class cgrid
         _neighbors.reserve(6);
         _stack.reserve(100);
         _sort_chunk.reserve(27);
-        _sort_view.reserve(27);
-        _sort_view_index.reserve(27);
+        _view_chunks.reserve(27);
     }
     inline void search(const min::vec3<float> &start, const min::vec3<float> &stop)
     {
@@ -932,65 +960,9 @@ class cgrid
     {
         return _chunks.size();
     }
-    inline void get_view_chunks(const min::camera<float> &cam, std::vector<size_t> &out)
+    inline const std::vector<view_chunk> &get_view_chunks() const
     {
-        out.clear();
-        _sort_chunk.clear();
-
-        // Center of view chunks
-        const min::vec3<float> center = chunk_start(_recent_chunk);
-
-        // Calculate view half width chunk size
-        const float half_width = _chunk_size * _view_half_width;
-
-        // Get cubic chunk start point
-        const min::vec3<float> start = center - min::vec3<float>(half_width, half_width, half_width);
-        const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
-        const min::vec3<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
-
-        // Create cubic function, for each chunk in cubic space
-        const auto f = [this, &cam](const min::vec3<float> &p) {
-
-            // Create chunk bounding box
-            const min::aabbox<float, min::vec3> box = create_chunk_box(p);
-
-            // If the view is within the frustum
-            if (min::intersect<float>(cam.get_frustum(), box))
-            {
-                const size_t ckey = chunk_key_unsafe(p);
-                _sort_chunk.push_back(ckey);
-            }
-        };
-
-        // Run the function
-        cubic(start, offset, length, f);
-
-        // Resize sort buffer
-        const size_t size = _sort_chunk.size();
-        _sort_view.resize(size);
-        _sort_view_index.resize(size);
-        std::iota(_sort_view_index.begin(), _sort_view_index.end(), 0);
-
-        // Calculate a weighted center to favor chunks in front of viewer
-        const min::vec3<float> weight_center = cam.project_point(_chunk_size / 2);
-
-        // Calculate square distances from center of view frustum
-        for (size_t i = 0; i < size; i++)
-        {
-            const min::vec3<float> d = weight_center - chunk_center(_sort_chunk[i]);
-            _sort_view[i] = d.dot(d);
-        }
-
-        // Sort the view indices based on distance from camera to reduce overdraw
-        std::sort(_sort_view_index.begin(), _sort_view_index.end(), [this](const size_t a, const size_t b) {
-            return this->_sort_view[a] < this->_sort_view[b];
-        });
-
-        // Sorted indices based off distance from center of view frustum, ascending order
-        for (const auto index : _sort_view_index)
-        {
-            out.push_back(_sort_chunk[index]);
-        }
+        return _view_chunks;
     }
     inline const min::aabbox<float, min::vec3> &get_world()
     {
@@ -1335,6 +1307,63 @@ class cgrid
         if (is_valid)
         {
             _recent_chunk = key;
+        }
+    }
+    inline void update_view_chunk_index(const min::camera<float> &cam, std::vector<size_t> &out)
+    {
+        out.clear();
+        _view_chunks.clear();
+
+        // Center of view chunks
+        const min::vec3<float> center = chunk_start(_recent_chunk);
+
+        // Calculate view half width chunk size
+        const float half_width = _chunk_size * _view_half_width;
+
+        // Get cubic chunk start point
+        const min::vec3<float> start = center - min::vec3<float>(half_width, half_width, half_width);
+        const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
+        const min::vec3<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
+
+        // Calculate a weighted center to favor chunks in front of viewer
+        const min::vec3<float> weight_center = cam.project_point(_chunk_size / 2);
+
+        // Count for assigning indices
+        size_t count = 0;
+
+        // Create cubic function, for each chunk in cubic space
+        const auto f = [this, &cam, &count, &weight_center](const min::vec3<float> &p) {
+
+            // Create chunk bounding box
+            const min::aabbox<float, min::vec3> box = this->create_chunk_box(p);
+
+            // If the view is within the frustum
+            if (min::intersect<float>(cam.get_frustum(), box))
+            {
+                // Get the key for this chunk
+                const size_t key = this->chunk_key_unsafe(p);
+
+                // Calculate square distances from center of view frustum
+                const min::vec3<float> diff = weight_center - box.get_center();
+                const float dist = diff.dot(diff);
+
+                // Store the index, key, box and dist for this view chunk
+                this->_view_chunks.emplace_back(count++, key, box, dist);
+            }
+        };
+
+        // Run the function
+        cubic(start, offset, length, f);
+
+        // Sort the view indices based on distance from camera to reduce overdraw
+        std::sort(_view_chunks.begin(), _view_chunks.end(), [this](const view_chunk &a, const view_chunk &b) {
+            return a.get_dist() < b.get_dist();
+        });
+
+        // Sorted indices based off distance from center of view frustum, ascending order
+        for (const view_chunk &vc : _view_chunks)
+        {
+            out.push_back(vc.get_key());
         }
     }
 };

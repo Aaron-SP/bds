@@ -391,7 +391,7 @@ class ui_overlay
     }
     void update_text(const min::vec3<float> &p, const min::vec3<float> &dir,
                      const float health, const float energy, const double fps,
-                     const double idle, const size_t chunks)
+                     const double idle, const size_t chunks, const size_t insts)
     {
         // Flag dirty
         _dirty = true;
@@ -406,6 +406,7 @@ class ui_overlay
             _text.set_debug_fps(fps);
             _text.set_debug_idle(idle);
             _text.set_debug_chunks(chunks);
+            _text.set_debug_insts(insts);
         }
 
         _text.update_ui(health, energy);

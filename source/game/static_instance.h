@@ -18,16 +18,19 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __STATIC_INSTANCE__
 #define __STATIC_INSTANCE__
 
+#include <game/cgrid.h>
 #include <game/geometry.h>
 #include <game/memory_map.h>
 #include <game/uniforms.h>
 #include <min/aabbox.h>
 #include <min/camera.h>
 #include <min/mat4.h>
+#include <min/physics_nt.h>
 #include <min/program.h>
 #include <min/shader.h>
 #include <min/static_vertex.h>
 #include <min/texture_buffer.h>
+#include <min/utility.h>
 #include <min/vec3.h>
 #include <min/vertex_buffer.h>
 #include <min/wavefront.h>
@@ -40,6 +43,7 @@ namespace game
 class static_instance
 {
   private:
+    typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     static constexpr size_t _DRONE_LIMIT = 10;
     static constexpr size_t _DROP_LIMIT = 10;
     static constexpr size_t _EXPLODE_LIMIT = 10;
@@ -65,17 +69,46 @@ class static_instance
     min::aabbox<float, min::vec3> _miss_box;
 
     // Positions of each instance
+    std::vector<size_t> _sort_index;
+    std::vector<size_t> _drone_index;
     std::vector<min::mat4<float>> _drone_mat;
+    std::vector<min::mat4<float>> _drone_mat_out;
+    std::vector<size_t> _drop_index;
     std::vector<min::mat4<float>> _drop_mat;
+    std::vector<min::mat4<float>> _drop_mat_out;
+    std::vector<size_t> _explode_index;
     std::vector<min::mat4<float>> _explode_mat;
+    std::vector<min::mat4<float>> _explode_mat_out;
+    std::vector<size_t> _miss_index;
     std::vector<min::mat4<float>> _miss_mat;
+    std::vector<min::mat4<float>> _miss_mat_out;
 
     // Indices for each mesh
-    size_t _drone_index;
-    size_t _drop_index;
-    size_t _explode_index;
-    size_t _miss_index;
+    size_t _drone_inst;
+    size_t _drop_inst;
+    size_t _explode_inst;
+    size_t _miss_inst;
 
+    inline void copy_mat_index(std::vector<min::mat4<float>> &mat, std::vector<min::mat4<float>> &mat_out, std::vector<size_t> &index)
+    {
+        // Cull empty index buffer
+        const size_t size = index.size();
+        if (size > 0)
+        {
+            // Resize output buffer
+            mat_out.resize(size);
+
+            // Copy elements from index buffer
+            for (size_t i = 0; i < size; i++)
+            {
+                mat_out[i] = mat[index[i]];
+            }
+        }
+        else
+        {
+            mat_out.clear();
+        }
+    }
     inline void load_drone_model()
     {
         // Load drone data from binary mesh file
@@ -90,7 +123,7 @@ class static_instance
         _drone_box = min::aabbox<float, min::vec3>(drone_box.get_min(), drone_box.get_max());
 
         // Add mesh and update buffers
-        _drone_index = _buffer.add_mesh(drone_mesh);
+        _drone_inst = _buffer.add_mesh(drone_mesh);
     }
     inline void load_drop_model()
     {
@@ -129,13 +162,13 @@ class static_instance
         _drop_box = min::aabbox<float, min::vec3>(min, max);
 
         // Add mesh and update buffers
-        _drop_index = _buffer.add_mesh(drop_mesh);
+        _drop_inst = _buffer.add_mesh(drop_mesh);
     }
     inline void load_explode_model()
     {
         // Use the drop box and model for explode
         _explode_box = _drop_box;
-        _explode_index = _drop_index;
+        _explode_inst = _drop_inst;
     }
     inline void load_missile_model()
     {
@@ -151,7 +184,7 @@ class static_instance
         _miss_box = min::aabbox<float, min::vec3>(miss_box.get_min(), miss_box.get_max());
 
         // Add mesh and update buffers
-        _miss_index = _buffer.add_mesh(miss_mesh);
+        _miss_inst = _buffer.add_mesh(miss_mesh);
     }
     inline void load_models()
     {
@@ -211,15 +244,50 @@ class static_instance
     }
     inline void reserve_memory()
     {
+        // Sorting
+        _sort_index.reserve(_DROP_LIMIT);
+
+        // Drones
+        _drone_index.reserve(_DRONE_LIMIT);
         _drone_mat.reserve(_DRONE_LIMIT);
+        _drone_mat_out.reserve(_DRONE_LIMIT);
+
+        // Drops
+        _drop_index.reserve(_DROP_LIMIT);
         _drop_mat.reserve(_DROP_LIMIT);
+        _drop_mat_out.reserve(_DROP_LIMIT);
+
+        // Explosives
+        _explode_index.reserve(_EXPLODE_LIMIT);
         _explode_mat.reserve(_EXPLODE_LIMIT);
+        _explode_mat_out.reserve(_EXPLODE_LIMIT);
+
+        // Missiles
+        _miss_index.reserve(_MISS_LIMIT);
         _miss_mat.reserve(_MISS_LIMIT);
+        _miss_mat_out.reserve(_MISS_LIMIT);
     }
     inline void set_start_index(const GLint start_index) const
     {
         // Set the sampler active texture
         glUniform1i(_index_location, start_index);
+    }
+    inline void sort_prune_index(std::vector<size_t> &index)
+    {
+        // Cull empty index buffer
+        if (index.size() > 0)
+        {
+            // Sort index keys using a radix sort
+            min::uint_sort<size_t>(index, _sort_index, [](const size_t i) {
+                return i;
+            });
+
+            // Make keys unique
+            const auto last = std::unique(index.begin(), index.end());
+
+            // Erase empty spaces in vector
+            index.erase(last, index.end());
+        }
     }
 
   public:
@@ -258,15 +326,6 @@ class static_instance
         // return mob id
         return _drone_mat.size() - 1;
     }
-    inline void clear_drone(const size_t index)
-    {
-        // Erase matrix at iterator
-        _drone_mat.erase(_drone_mat.begin() + index);
-    }
-    inline void clear_drones()
-    {
-        _drone_mat.clear();
-    }
     inline size_t add_drop(const min::vec3<float> &p, const int8_t atlas)
     {
         // Check for buffer overflow
@@ -283,15 +342,6 @@ class static_instance
 
         // return mob id
         return _drop_mat.size() - 1;
-    }
-    inline void clear_drop(const size_t index)
-    {
-        // Erase matrix at iterator
-        _drop_mat.erase(_drop_mat.begin() + index);
-    }
-    inline void clear_drops()
-    {
-        _drop_mat.clear();
     }
     inline size_t add_explosive(const min::vec3<float> &p, const int8_t atlas)
     {
@@ -310,15 +360,6 @@ class static_instance
         // return mob id
         return _explode_mat.size() - 1;
     }
-    inline void clear_explosive(const size_t index)
-    {
-        // Erase matrix at iterator
-        _explode_mat.erase(_explode_mat.begin() + index);
-    }
-    inline void clear_explosives()
-    {
-        _explode_mat.clear();
-    }
     inline size_t add_missile(const min::vec3<float> &p)
     {
         // Check for buffer overflow
@@ -332,15 +373,6 @@ class static_instance
 
         // return mob id
         return _miss_mat.size() - 1;
-    }
-    inline void clear_missile(const size_t index)
-    {
-        // Erase matrix at iterator
-        _miss_mat.erase(_miss_mat.begin() + index);
-    }
-    inline void clear_missiles()
-    {
-        _miss_mat.clear();
     }
     inline min::aabbox<float, min::vec3> box_drone(const size_t index) const
     {
@@ -386,6 +418,42 @@ class static_instance
         // Return this box for collisions
         return box;
     }
+    inline void clear_drone(const size_t index)
+    {
+        // Erase matrix at iterator
+        _drone_mat.erase(_drone_mat.begin() + index);
+    }
+    inline void clear_drones()
+    {
+        _drone_mat.clear();
+    }
+    inline void clear_drop(const size_t index)
+    {
+        // Erase matrix at iterator
+        _drop_mat.erase(_drop_mat.begin() + index);
+    }
+    inline void clear_drops()
+    {
+        _drop_mat.clear();
+    }
+    inline void clear_explosive(const size_t index)
+    {
+        // Erase matrix at iterator
+        _explode_mat.erase(_explode_mat.begin() + index);
+    }
+    inline void clear_explosives()
+    {
+        _explode_mat.clear();
+    }
+    inline void clear_missile(const size_t index)
+    {
+        // Erase matrix at iterator
+        _miss_mat.erase(_miss_mat.begin() + index);
+    }
+    inline void clear_missiles()
+    {
+        _miss_mat.clear();
+    }
     void draw(const game::uniforms &uniforms) const
     {
         // Bind VAO
@@ -395,7 +463,8 @@ class static_instance
         _prog.use();
 
         // Draw drones
-        if (_drone_mat.size() > 0)
+        const size_t drone_size = _drone_mat_out.size();
+        if (drone_size > 0)
         {
             // Bind this texture for drawing on channel '0'
             _texture_buffer.bind(_drone_tid, 0);
@@ -404,12 +473,12 @@ class static_instance
             set_start_index(225);
 
             // Draw mob instances
-            const size_t size = _drone_mat.size();
-            _buffer.draw_many(GL_TRIANGLES, _drone_index, size);
+            _buffer.draw_many(GL_TRIANGLES, _drone_inst, drone_size);
         }
 
         // Draw drops
-        if (_drop_mat.size() > 0)
+        const size_t drop_size = _drop_mat_out.size();
+        if (drop_size > 0)
         {
             // Bind this texture for drawing on channel '0'
             _texture_buffer.bind(_drop_tid, 0);
@@ -418,12 +487,12 @@ class static_instance
             set_start_index(235);
 
             // Draw mob instances
-            const size_t size = _drop_mat.size();
-            _buffer.draw_many(GL_TRIANGLES, _drop_index, size);
+            _buffer.draw_many(GL_TRIANGLES, _drop_inst, drop_size);
         }
 
         // Draw explosives
-        if (_explode_mat.size() > 0)
+        const size_t explode_size = _explode_mat_out.size();
+        if (explode_size > 0)
         {
             // Bind this texture for drawing on channel '0'
             _texture_buffer.bind(_explode_tid, 0);
@@ -432,12 +501,12 @@ class static_instance
             set_start_index(245);
 
             // Draw mob instances
-            const size_t size = _explode_mat.size();
-            _buffer.draw_many(GL_TRIANGLES, _explode_index, size);
+            _buffer.draw_many(GL_TRIANGLES, _explode_inst, explode_size);
         }
 
         // Draw missiles
-        if (_miss_mat.size() > 0)
+        const size_t miss_size = _miss_mat_out.size();
+        if (miss_size)
         {
             // Bind this texture for drawing on channel '0'
             _texture_buffer.bind(_miss_tid, 0);
@@ -446,33 +515,12 @@ class static_instance
             set_start_index(255);
 
             // Draw missile instances
-            const size_t size = _miss_mat.size();
-            _buffer.draw_many(GL_TRIANGLES, _miss_index, size);
+            _buffer.draw_many(GL_TRIANGLES, _miss_inst, miss_size);
         }
-    }
-    inline const std::vector<min::mat4<float>> &get_drone_matrix() const
-    {
-        return _drone_mat;
-    }
-    inline const std::vector<min::mat4<float>> &get_drop_matrix() const
-    {
-        return _drop_mat;
-    }
-    inline const std::vector<min::mat4<float>> &get_explosive_matrix() const
-    {
-        return _explode_mat;
-    }
-    inline const std::vector<min::mat4<float>> &get_missile_matrix() const
-    {
-        return _miss_mat;
     }
     inline bool drone_full() const
     {
         return _drone_mat.size() == _DRONE_LIMIT;
-    }
-    inline size_t drone_size() const
-    {
-        return _drone_mat.size();
     }
     inline static constexpr size_t max_alloc()
     {
@@ -498,25 +546,119 @@ class static_instance
     {
         return _drop_mat.size() == _DROP_LIMIT;
     }
-    inline size_t drop_size() const
-    {
-        return _drop_mat.size();
-    }
     inline bool explosive_full() const
     {
         return _explode_mat.size() == _EXPLODE_LIMIT;
-    }
-    inline size_t explosive_size() const
-    {
-        return _explode_mat.size();
     }
     inline bool missile_full() const
     {
         return _miss_mat.size() == _MISS_LIMIT;
     }
-    inline size_t missile_size() const
+    inline const std::vector<min::mat4<float>> &get_drone_matrix() const
     {
-        return _miss_mat.size();
+        return _drone_mat_out;
+    }
+    inline const std::vector<min::mat4<float>> &get_drop_matrix() const
+    {
+        return _drop_mat_out;
+    }
+    inline const std::vector<min::mat4<float>> &get_explosive_matrix() const
+    {
+        return _explode_mat_out;
+    }
+    inline const std::vector<min::mat4<float>> &get_missile_matrix() const
+    {
+        return _miss_mat_out;
+    }
+    inline size_t get_inst_in_view() const
+    {
+        return _drone_mat_out.size() + _drop_mat_out.size() + _explode_mat_out.size() + _miss_mat_out.size();
+    }
+    void update(const physics &sim, const cgrid &grid)
+    {
+        // Get the view chunks from grid
+        const std::vector<view_chunk> &view_chunks = grid.get_view_chunks();
+
+        // Get the index map
+        const std::vector<uint16_t> &map = sim.get_index_map();
+
+        // Clear out the output buffers
+        _drone_index.clear();
+        _drop_index.clear();
+        _explode_index.clear();
+        _miss_index.clear();
+
+        // For each view chunk
+        for (const view_chunk &vc : view_chunks)
+        {
+            // Perform overlapping of physics bodies
+            const std::vector<std::pair<uint16_t, uint16_t>> &over = sim.get_overlap(vc.get_box());
+
+            // For each body in view chunk
+            const size_t size = over.size();
+            for (size_t i = 0; i < size; i++)
+            {
+                // Get the body from the simulation
+                const uint16_t body_index = map[over[i].first];
+                const min::body<float, min::vec3> &b = sim.get_body(body_index);
+
+                // If the body is not dead
+                if (!b.is_dead())
+                {
+                    // Get the index of the type
+                    const size_t index = b.get_data().index;
+
+                    // Get the type of body
+                    const size_t id = b.get_id();
+                    switch (id)
+                    {
+                    case 1:
+                        _drone_index.push_back(index);
+                        break;
+                    case 2:
+                        _drop_index.push_back(index);
+                        break;
+                    case 3:
+                        _explode_index.push_back(index);
+                        break;
+                    case 4:
+                        _miss_index.push_back(index);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Sort drones and remove duplicates
+        sort_prune_index(_drone_index);
+
+        // Sort drops and remove duplicates
+        sort_prune_index(_drop_index);
+
+        // Sort explosives and remove duplicates
+        sort_prune_index(_explode_index);
+
+        // Sort missiles and remove duplicates
+        sort_prune_index(_miss_index);
+
+        // Copy drones to output buffer
+        copy_mat_index(_drone_mat, _drone_mat_out, _drone_index);
+
+        // Copy drops to output buffer
+        copy_mat_index(_drop_mat, _drop_mat_out, _drop_index);
+
+        // Copy explosives to output buffer
+        copy_mat_index(_explode_mat, _explode_mat_out, _explode_index);
+
+        // Copy missiles to output buffer
+        copy_mat_index(_miss_mat, _miss_mat_out, _miss_index);
+
+        if (_drop_mat_out.size() > _DROP_LIMIT)
+        {
+            throw std::runtime_error("Too many drops!");
+        }
     }
     inline void update_drone_position(const size_t index, const min::vec3<float> &p)
     {
