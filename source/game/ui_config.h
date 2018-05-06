@@ -60,21 +60,32 @@ static constexpr float _s_exp_y = 8.0;
 static constexpr float _exp_dx = (_s_exp_y - _s_exp_x) * 0.5;
 static constexpr float _exp_dy = _console_dy + 24.0;
 
+// Oxygen Bar
+static constexpr float _s_oxy_x = _s_console_x;
+static constexpr float _s_oxy_y = 8.0;
+static constexpr float _oxy_dx = (_s_oxy_y - _s_oxy_x) * 0.5;
+static constexpr float _oxy_dy = _console_dy + 34.0;
+
 // Alert Text
 static constexpr float _x_alert_wrap = 600.0;
 static constexpr float _y_alert_wrap = _font_size;
 static constexpr float _alert_dy = -180.0;
 
+// Stream Text
+static constexpr float _stream_dy = _console_dy;
+static constexpr float _x_stream_wrap = _x_console_wrap;
+static constexpr float _y_stream_wrap = _y_console_wrap;
+
 // Extended UI
 static constexpr float _attr_text_dx = -304.0;
-static constexpr float _attr_text_dy = 597.0;
+static constexpr float _attr_text_dy = 540.0;
 static constexpr float _cube_dx = -42.0;
-static constexpr float _cube_dy = 518;
+static constexpr float _cube_dy = 461;
 static constexpr float _cube_space = 42.0;
 static constexpr float _stat_dx = 0.0;
 static constexpr float _stat_dy = 458.0;
 static constexpr float _stat_text_dx = 110.0;
-static constexpr float _stat_text_dy = 597.0;
+static constexpr float _stat_text_dy = 540.0;
 }
 
 #endif

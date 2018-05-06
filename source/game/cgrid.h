@@ -960,6 +960,10 @@ class cgrid
     {
         return _chunks.size();
     }
+    inline size_t get_chunk_scale() const
+    {
+        return _chunk_scale;
+    }
     inline const std::vector<view_chunk> &get_view_chunks() const
     {
         return _view_chunks;

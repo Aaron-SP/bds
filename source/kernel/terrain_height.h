@@ -93,7 +93,7 @@ class terrain_height
         // Run height map in parallel
         pool.run(work, 0, _scale);
     }
-    inline void plants(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map) const
+    inline void plants(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map, const size_t size) const
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
@@ -121,9 +121,9 @@ class terrain_height
         };
 
         // Run height map in parallel
-        pool.run(work, 0, 100);
+        pool.run(work, 0, size);
     }
-    inline void trees(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map) const
+    inline void trees(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map, const size_t size) const
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
@@ -185,14 +185,14 @@ class terrain_height
         };
 
         // Run height map in parallel
-        pool.run(work, 0, 500);
+        pool.run(work, 0, size);
     }
 
   public:
     terrain_height(const size_t scale, const size_t start, const size_t stop)
         : _scale(scale), _start(start), _stop(stop) {}
 
-    inline void generate(game::thread_pool &pool, std::vector<int8_t> &write) const
+    inline void generate(game::thread_pool &pool, std::mt19937 &gen, std::vector<int8_t> &write) const
     {
         // Generate height map
         const size_t level = std::ceil(std::log2(_scale));
@@ -202,10 +202,12 @@ class terrain_height
         terrain(pool, write, map);
 
         // Generate trees
-        trees(pool, write, map);
+        std::uniform_int_distribution<size_t> tree_dist(250, 1000);
+        trees(pool, write, map, tree_dist(gen));
 
         // Generate plants
-        plants(pool, write, map);
+        std::uniform_int_distribution<size_t> plant_dist(50, 150);
+        plants(pool, write, map, plant_dist(gen));
     }
 };
 }

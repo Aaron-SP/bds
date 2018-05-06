@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __UI_TEXT__
 #define __UI_TEXT__
 
+#include <array>
 #include <game/memory_map.h>
 #include <game/ui_config.h>
 #include <iomanip>
@@ -30,15 +31,38 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
+class stream_text
+{
+  private:
+    float _time;
+
+  public:
+    stream_text() : _time(-1.0) {}
+    inline void dec_time(const float time)
+    {
+        _time -= time;
+    }
+    inline float get_time() const
+    {
+        return _time;
+    }
+    inline void set_time(const float time)
+    {
+        _time = time;
+    }
+};
+
 class ui_text
 {
   private:
+    static constexpr size_t _max_stream = 10;
     static constexpr size_t _console = 0;
     static constexpr size_t _ui = _console + 1;
     static constexpr size_t _alert = _ui + 2;
     static constexpr size_t _debug = _alert + 1;
     static constexpr size_t _hover = _debug + 12;
-    static constexpr size_t _end = _hover + 2;
+    static constexpr size_t _stream = _hover + 2;
+    static constexpr size_t _end = _stream + _max_stream;
 
     // Hover
     static constexpr float _hover_info_dx = (_s_hover_bg_x - _s_hover_text_x) * 0.5;
@@ -47,6 +71,10 @@ class ui_text
     static constexpr float _hover_name_dy = _s_hover_text_y - 30.0;
     static constexpr float _ui_health_dx = _health_dx - _font_size * 3.0;
     static constexpr float _ui_energy_dx = _energy_dx + _font_size;
+    static constexpr float _max_stream_time = 1.0;
+    static constexpr float _stream_freq = 10.0;
+    static constexpr float _stream_scroll = 400.0;
+    static constexpr float _stream_stride = 25.0;
 
     // Text OpenGL stuff
     min::shader _vertex;
@@ -57,8 +85,9 @@ class ui_text
     // Buffer for holding text
     min::text_buffer _text;
     min::text_buffer _text_bg;
-    std::vector<size_t> _indices;
-    std::ostringstream _stream;
+    std::array<stream_text, _max_stream> _st;
+    size_t _stream_old;
+    std::ostringstream _ss;
     bool _draw_console;
     bool _draw_debug;
     bool _draw_alert;
@@ -67,10 +96,7 @@ class ui_text
 
     inline void add_text(const std::string &s, const float x, const float y)
     {
-        const size_t index = _text.add_text(s, x, y);
-
-        // Add text index to index buffer
-        _indices.push_back(index);
+        _text.add_text(s, x, y);
     }
     inline void bind() const
     {
@@ -82,8 +108,8 @@ class ui_text
     }
     inline void clear_stream()
     {
-        _stream.clear();
-        _stream.str(std::string());
+        _ss.clear();
+        _ss.str(std::string());
     }
     inline void load_program_index()
     {
@@ -115,7 +141,7 @@ class ui_text
 
         // Rescale all debug text
         uint16_t y = height - 20;
-        for (size_t i = _debug; i < _end; i++)
+        for (size_t i = _debug; i < _stream; i++)
         {
             // Update the text location
             _text.set_text_location(i, 10, y);
@@ -125,6 +151,19 @@ class ui_text
         // Position the hover elements
         _text.set_text_location(_hover, p.x() + _hover_name_dx, p.y() + _hover_name_dy);
         _text.set_text_location(_hover + 1, p.x() + _hover_info_dx, p.y() + _hover_info_dy);
+
+        // Update stream text
+        for (size_t i = _stream; i < _end; i++)
+        {
+            // If this stream text is being used
+            const float time = _st[i - _stream].get_time();
+            if (time > 0.0)
+            {
+                // Update stream text location
+                const float y = _stream_dy + (_max_stream_time - time);
+                _text.set_text_center(i, w2, y);
+            }
+        }
     }
     inline void reserve_memory()
     {
@@ -147,7 +186,7 @@ class ui_text
           _prog(_vertex, _fragment),
           _text("data/fonts/open_sans.ttf", _font_size),
           _text_bg("data/fonts/open_sans.ttf", _ui_font_size),
-          _draw_console(false), _draw_debug(false), _draw_alert(false),
+          _st{}, _stream_old(0), _draw_console(false), _draw_debug(false), _draw_alert(false),
           _draw_ui(false), _draw_hover(false)
     {
         // Update the text buffer screen dimensions
@@ -187,7 +226,7 @@ class ui_text
         }
 
         // Add 2 hover entries
-        for (size_t i = _hover; i < _end; i++)
+        for (size_t i = _hover; i < _stream; i++)
         {
             add_text("", 0, 0);
         }
@@ -196,42 +235,79 @@ class ui_text
         _text.set_line_wrap(_hover, _s_hover_bg_x, _y_hover_wrap);
         _text.set_line_wrap(_hover + 1, _s_hover_text_x, _y_hover_wrap);
 
+        // Add 10 stream entries
+        for (size_t i = _stream; i < _end; i++)
+        {
+            add_text("", 0, 0);
+            _text.set_line_wrap(i, _x_stream_wrap, _y_stream_wrap);
+        }
+
         // Reposition all of the text
         reposition_text(min::vec2<float>(), width, height);
     }
+    void add_stream_float(const std::string &str, const float value)
+    {
+        // Clear and reset the stream
+        clear_stream();
+
+        // Add float to stream
+        _ss << str << value;
+        add_stream_text(_ss.str());
+    }
+    void add_stream_text(const std::string &str)
+    {
+        // Increment next stream text
+        const size_t index = (_stream_old %= _max_stream)++;
+
+        // Set stream time
+        _st[index].set_time(_max_stream_time);
+
+        // Calculate text index
+        const size_t text_index = _stream + index;
+
+        // Update the stream text
+        update_text(text_index, str);
+
+        // Get the screen dimensions
+        const std::pair<float, float> size = _text.get_screen_size();
+
+        // Get the center width
+        const uint16_t w2 = size.first / 2;
+        _text.set_text_center(text_index, w2, _stream_dy);
+    }
     void draw(const size_t bg_size) const
     {
+        // Bind text buffer
+        bind();
+
+        // Set reference to white
+        set_reference(1.0, 1.0, 1.0);
+
         // Minimize draw calls by lumping togetherness
         if (_draw_console && _draw_ui && _draw_alert && _draw_debug)
         {
-            bind();
             _text.draw(_console, _hover - 1);
         }
         else if (_draw_console && _draw_ui && _draw_alert && !_draw_debug)
         {
-            bind();
             _text.draw(_console, _debug - 1);
         }
         else if (_draw_console && _draw_ui && !_draw_alert && !_draw_debug)
         {
-            bind();
             _text.draw(_console, _alert - 1);
         }
         else if (_draw_console && _draw_ui && !_draw_alert && _draw_debug)
         {
-            bind();
             _text.draw(_console, _alert - 1);
             _text.draw(_debug, _hover - 1);
         }
         else if (_draw_console && !_draw_ui && !_draw_alert && !_draw_debug)
         {
-            bind();
             _text.draw(_console);
         }
         else
         {
             // For all other permutations
-            bind();
             if (_draw_console)
             {
                 _text.draw(_console, _ui - 1);
@@ -249,6 +325,46 @@ class ui_text
                 _text.draw(_debug, _hover - 1);
             }
         }
+
+        // Set reference to red
+        set_reference(0.9, 0.3, 0.2);
+
+        // Draw stream text
+        for (size_t i = _stream; i < _end; i++)
+        {
+            // Record start index
+            const size_t start = i;
+
+            // If we have time
+            const float time = _st[i - _stream].get_time();
+            if (time > 0.0)
+            {
+                // Find adjacent runs to draw
+                size_t end = start;
+                for (size_t j = i + 1; j < _end; j++)
+                {
+                    const float inner_time = _st[j - _stream].get_time();
+                    if (inner_time <= 0.0)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        // Assign new end index
+                        end = j;
+
+                        // Increment
+                        i++;
+                    }
+                }
+
+                // Draw adjacent range
+                _text.draw(start, end);
+            }
+        }
+
+        // Set reference to white
+        set_reference(1.0, 1.0, 1.0);
 
         // Draw the background text
         if (bg_size > 0)
@@ -270,10 +386,7 @@ class ui_text
             set_reference(0.985, 0.765, 0.482);
 
             // Draw description
-            _text.draw(_hover + 1, _end - 1);
-
-            // Set reference to white
-            set_reference(1.0, 1.0, 1.0);
+            _text.draw(_hover + 1, _stream - 1);
         }
     }
     inline min::text_buffer &get_bg_text()
@@ -321,8 +434,8 @@ class ui_text
         clear_stream();
 
         // Title text
-        _stream << title;
-        update_text(_debug, _stream.str());
+        _ss << title;
+        update_text(_debug, _ss.str());
     }
     inline void set_debug_vendor(const char *vendor)
     {
@@ -330,8 +443,8 @@ class ui_text
         clear_stream();
 
         // Vendor text
-        _stream << vendor;
-        update_text(_debug + 1, _stream.str());
+        _ss << vendor;
+        update_text(_debug + 1, _ss.str());
     }
     inline void set_debug_renderer(const char *renderer)
     {
@@ -339,80 +452,80 @@ class ui_text
         clear_stream();
 
         // Renderer text
-        _stream << renderer;
-        update_text(_debug + 2, _stream.str());
+        _ss << renderer;
+        update_text(_debug + 2, _ss.str());
     }
     inline void set_debug_position(const min::vec3<float> &p)
     {
-        // Clear and reset the _stream
+        // Clear and reset the stream
         clear_stream();
 
         // Update player position debug text
-        _stream << std::fixed << std::setprecision(4) << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
-        update_text(_debug + 3, _stream.str());
+        _ss << std::fixed << std::setprecision(4) << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
+        update_text(_debug + 3, _ss.str());
     }
     inline void set_debug_direction(const min::vec3<float> &dir)
     {
-        // Clear and reset the _stream
+        // Clear and reset the stream
         clear_stream();
 
         // Update player direction debug text
-        _stream << "DIR- X: " << dir.x() << ", Y: " << dir.y() << ", Z: " << dir.z();
-        update_text(_debug + 4, _stream.str());
+        _ss << "DIR- X: " << dir.x() << ", Y: " << dir.y() << ", Z: " << dir.z();
+        update_text(_debug + 4, _ss.str());
     }
     inline void set_debug_health(const float health)
     {
-        // Clear and reset the _stream
+        // Clear and reset the stream
         clear_stream();
 
         // Update the energy text
-        _stream << "HEALTH: " << health;
-        update_text(_debug + 5, _stream.str());
+        _ss << "HEALTH: " << health;
+        update_text(_debug + 5, _ss.str());
     }
     inline void set_debug_energy(const float energy)
     {
-        // Clear and reset the _stream
+        // Clear and reset the stream
         clear_stream();
 
         // Update the energy text
-        _stream << "ENERGY: " << energy;
-        update_text(_debug + 6, _stream.str());
+        _ss << "ENERGY: " << energy;
+        update_text(_debug + 6, _ss.str());
     }
     inline void set_debug_fps(const float fps)
     {
-        // Clear and reset the _stream
+        // Clear and reset the stream
         clear_stream();
 
         // Update FPS and IDLE
-        _stream << "FPS: " << std::round(fps);
-        update_text(_debug + 7, _stream.str());
+        _ss << "FPS: " << std::round(fps);
+        update_text(_debug + 7, _ss.str());
     }
     inline void set_debug_idle(const double idle)
     {
-        // Clear and reset the _stream
+        // Clear and reset the stream
         clear_stream();
 
         // Update FPS and IDLE
-        _stream << "IDLE: " << idle;
-        update_text(_debug + 8, _stream.str());
+        _ss << "IDLE: " << idle;
+        update_text(_debug + 8, _ss.str());
     }
     inline void set_debug_chunks(const size_t chunks)
     {
-        // Clear and reset the _stream
+        // Clear and reset the stream
         clear_stream();
 
         // Update FPS and IDLE
-        _stream << "CHUNKS: " << chunks;
-        update_text(_debug + 9, _stream.str());
+        _ss << "CHUNKS: " << chunks;
+        update_text(_debug + 9, _ss.str());
     }
     inline void set_debug_insts(const size_t insts)
     {
-        // Clear and reset the _stream
+        // Clear and reset the stream
         clear_stream();
 
         // Update FPS and IDLE
-        _stream << "INSTANCES: " << insts;
-        update_text(_debug + 10, _stream.str());
+        _ss << "INSTANCES: " << insts;
+        update_text(_debug + 10, _ss.str());
     }
     inline void set_debug_version(const std::string &str)
     {
@@ -434,25 +547,25 @@ class ui_text
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();
 
-        // Position the console elements
-        const uint16_t w2 = (size.first / 2);
+        // Get the center width
+        const uint16_t w2 = size.first / 2;
         _text.set_text_center(_console, w2, _console_dy);
     }
     inline void update_ui(const float health, const float energy)
     {
+        // Clear and reset the stream
+        clear_stream();
+
+        // Update the energy text
+        _ss << static_cast<int>(std::round(health));
+        update_text(_ui, _ss.str());
+
         // Clear and reset the _stream
         clear_stream();
 
         // Update the energy text
-        _stream << static_cast<int>(std::round(health));
-        update_text(_ui, _stream.str());
-
-        // Clear and reset the _stream
-        clear_stream();
-
-        // Update the energy text
-        _stream << static_cast<int>(std::round(energy));
-        update_text(_ui + 1, _stream.str());
+        _ss << static_cast<int>(std::round(energy));
+        update_text(_ui + 1, _ss.str());
     }
     inline void update_ui_alert(const std::string &alert)
     {
@@ -462,8 +575,8 @@ class ui_text
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();
 
-        // Position the console elements
-        const uint16_t w2 = (size.first / 2);
+        // Get the center width
+        const uint16_t w2 = size.first / 2;
         _text.set_text_center(_alert, w2, size.second + _alert_dy);
     }
     inline void update_hover(const min::vec2<float> &p, const std::string &name, const std::string &info)
@@ -490,6 +603,35 @@ class ui_text
         const float x_info = p.x() + _hover_info_dx;
         const float y_info = p.y() + hover_info_dy;
         _text.set_text_location(_hover + 1, x_info, y_info);
+    }
+    inline void update_stream(const float dt)
+    {
+        // Get the screen dimensions
+        const std::pair<float, float> size = _text.get_screen_size();
+
+        // Get the center width
+        const uint16_t w2 = size.first / 2;
+
+        // Update all stream elements
+        for (size_t i = _stream; i < _end; i++)
+        {
+            // Get stream text
+            stream_text &st = _st[i - _stream];
+
+            // If this stream text is being used
+            const float time = st.get_time();
+            if (time >= 0.0)
+            {
+                // Decrement time
+                st.dec_time(dt);
+
+                // Update stream text location
+                const float accum = _max_stream_time - time;
+                const float x = w2 + (std::sin(accum * _stream_freq) * _stream_stride);
+                const float y = _stream_dy + (accum * _stream_scroll);
+                _text.set_text_center(i, x, y);
+            }
+        }
     }
     inline void upload() const
     {

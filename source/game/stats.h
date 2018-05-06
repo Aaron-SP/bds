@@ -36,6 +36,7 @@ class stats
   private:
     static constexpr float _health_consume = 0.5;
     static constexpr float _energy_consume = 1.0;
+    static constexpr float _oxygen_consume = 0.001;
     static constexpr float _health_regen = 2.5;
     static constexpr float _energy_regen = 5.0;
     static constexpr size_t _max_attr = 8;
@@ -49,6 +50,10 @@ class stats
     float _max_health;
     float _health;
     bool _low_health;
+    float _max_oxygen;
+    float _oxygen;
+    bool _low_oxygen;
+    float _hit;
     bool _dead;
     bool _dirty;
     stat_alert _alert;
@@ -124,6 +129,56 @@ class stats
     {
         return _attr[7];
     }
+    inline void set_energy(const float energy)
+    {
+        // Check above warning threshold
+        const bool above = _energy >= 25.0;
+
+        // Set energy
+        _energy = energy;
+
+        // Check for low energy
+        if (above && _energy < 25.0)
+        {
+            _low_energy = true;
+        }
+    }
+    inline void set_health(const float health)
+    {
+        // Check above warning threshold
+        const bool above = _health >= 25.0;
+
+        // Set health
+        _health = health;
+
+        // Check for low health
+        if (_health <= 0.0)
+        {
+            _dead = true;
+        }
+        else if (above && _health < 25.0)
+        {
+            _low_health = true;
+        }
+    }
+    inline void set_oxygen(const float oxygen)
+    {
+        // Check above warning threshold
+        const bool above = _oxygen >= 25.0;
+
+        // Set oxygen
+        _oxygen = oxygen;
+
+        // Check for low oxygen
+        if (_oxygen <= 0.0)
+        {
+            _dead = true;
+        }
+        else if (above && _oxygen < 25.0)
+        {
+            _low_oxygen = true;
+        }
+    }
     void update_cache()
     {
         // Cache the sqrt of level
@@ -147,9 +202,11 @@ class stats
     static std::array<std::string, _max_attr> _attr_str;
     static std::array<std::string, _max_stats> _stat_str;
     stats()
-        : _max_energy(100.0), _energy(_max_energy), _low_energy(false), _exp(0.0),
+        : _max_energy(100.0), _energy(_max_energy), _low_energy(false),
+          _max_exp(100.0), _exp(0.0),
           _max_health(100.0), _health(_max_health), _low_health(false),
-          _dead(false), _dirty(false), _alert(stat_alert::none),
+          _max_oxygen(100.0), _oxygen(_max_oxygen), _low_oxygen(false),
+          _hit(-1.0), _dead(false), _dirty(false), _alert(stat_alert::none),
           _attr{}, _stat{}, _sqrt_level(1.0)
     {
         // Level up
@@ -183,7 +240,45 @@ class stats
     {
         _health += health;
     }
+    inline void add_oxygen(const float oxy)
+    {
+        _oxygen += oxy;
 
+        // If oxygen overflow
+        if (_oxygen > _max_oxygen)
+        {
+            _oxygen = _max_oxygen;
+        }
+    }
+    inline static constexpr size_t attr_str_size()
+    {
+        return _max_attr;
+    }
+    inline static const std::string &attr_str(const size_t index)
+    {
+        return _attr_str[index];
+    }
+    inline float attr_value(const size_t index)
+    {
+        // Formatting attr for display
+        switch (index)
+        {
+        case 0:
+            return _attr[index] * 100.0;
+        case 1:
+            return _attr[index] * 180.0;
+        case 2:
+            return _attr[index] * 180.0;
+        case 3:
+            return _attr[index] * 180.0;
+        case 4:
+            return _attr[index] * 180.0;
+        case 6:
+            return _attr[index] * 100.0;
+        default:
+            return _attr[index];
+        }
+    }
     inline bool can_consume_energy(const float energy) const
     {
         // Try to consume energy
@@ -207,46 +302,28 @@ class stats
     {
         _alert = stat_alert::none;
     }
+    inline void clear_hit()
+    {
+        _hit = -1.0;
+    }
     inline void consume_thrust()
     {
         consume_energy(get_thrust_consume());
     }
     inline void consume_energy(const float energy)
     {
-        // Check above warning threshold
-        const bool above = _energy >= 25.0;
-
-        // Consume energy
-        _energy -= energy;
-
-        // Check for low energy
-        if (above && _energy < 25.0)
-        {
-            _low_energy = true;
-        }
+        set_energy(_energy - energy);
     }
-    inline void consume_health(const float health)
+    inline void consume_health(const float hit)
     {
-        // Check above warning threshold
-        const bool above = _health >= 25.0;
+        // Calculate damage
+        _hit += hit;
 
-        _health -= health;
-        if (_health <= 0.0)
-        {
-            _dead = true;
-        }
-        else if (above && _health < 25.0)
-        {
-            _low_health = true;
-        }
+        set_health(_health - hit);
     }
-    inline stat_alert get_alert() const
+    inline void consume_oxygen()
     {
-        return _alert;
-    }
-    inline float get_cooldown_mult() const
-    {
-        return 1.0 - get_cooldown_reduc();
+        set_oxygen(_oxygen - _oxygen_consume);
     }
     inline void damage(const float in)
     {
@@ -259,6 +336,14 @@ class stats
     inline float do_damage(const float in) const
     {
         return get_damage_mult() * in;
+    }
+    inline stat_alert get_alert() const
+    {
+        return _alert;
+    }
+    inline float get_cooldown_mult() const
+    {
+        return 1.0 - get_cooldown_reduc();
     }
     inline float get_drone_health() const
     {
@@ -296,7 +381,19 @@ class stats
     {
         return _health / _max_health;
     }
-    inline void fill(const std::array<uint16_t, _max_stats> &stat)
+    inline float get_hit() const
+    {
+        return _hit;
+    }
+    inline float get_oxygen() const
+    {
+        return _oxygen;
+    }
+    inline float get_oxygen_fraction() const
+    {
+        return _oxygen / _max_oxygen;
+    }
+    inline void fill(const std::array<uint16_t, _max_stats> &stat, const float energy, const float exp, const float health, const float oxygen)
     {
         // Copy stats into stat array
         for (size_t i = 0; i < _max_stats; i++)
@@ -306,6 +403,18 @@ class stats
 
         // Update the stat cache
         update_cache();
+
+        // Set the energy
+        set_energy(energy);
+
+        // Set the exp
+        add_exp(exp);
+
+        // Set the health
+        set_health(health);
+
+        // Set the oxygen
+        set_oxygen(oxygen);
     }
     inline bool is_dead() const
     {
@@ -314,6 +423,10 @@ class stats
     inline bool is_dirty() const
     {
         return _dirty;
+    }
+    inline bool is_hit() const
+    {
+        return (_hit > -1.0);
     }
     inline bool is_level_up() const
     {
@@ -326,6 +439,10 @@ class stats
     inline bool is_low_health() const
     {
         return _low_health;
+    }
+    inline bool is_low_oxygen() const
+    {
+        return _low_oxygen;
     }
     inline void regen_energy()
     {
@@ -393,6 +510,10 @@ class stats
     {
         _low_health = false;
     }
+    inline void reset_low_oxygen()
+    {
+        _low_oxygen = false;
+    }
     inline void respawn()
     {
         // Reset energy
@@ -405,36 +526,12 @@ class stats
         // Reset health
         _health = _max_health;
         _low_health = false;
+
+        // Reset health
+        _oxygen = _max_oxygen;
+        _low_oxygen = false;
+        _hit = -1.0;
         _dead = false;
-    }
-    inline static constexpr size_t attr_str_size()
-    {
-        return _max_attr;
-    }
-    inline static const std::string &attr_str(const size_t index)
-    {
-        return _attr_str[index];
-    }
-    inline float attr_value(const size_t index)
-    {
-        // Formatting attr for display
-        switch (index)
-        {
-        case 0:
-            return _attr[index] * 100.0;
-        case 1:
-            return _attr[index] * 180.0;
-        case 2:
-            return _attr[index] * 180.0;
-        case 3:
-            return _attr[index] * 180.0;
-        case 4:
-            return _attr[index] * 180.0;
-        case 6:
-            return _attr[index] * 100.0;
-        default:
-            return _attr[index];
-        }
     }
     inline static constexpr size_t stat_str_size()
     {

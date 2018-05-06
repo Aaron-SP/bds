@@ -87,7 +87,7 @@ class ui_bg_assets
     static constexpr float _x_pause_uv = 4.0 / _image_size;
     static constexpr float _y_pause_uv = 768.0 / _image_size;
     static constexpr float _x_stat_uv = 4.0 / _image_size;
-    static constexpr float _y_stat_uv = 384.0 / _image_size;
+    static constexpr float _y_stat_uv = 498.0 / _image_size;
     static constexpr float _x_hover_uv = 688.0 / _image_size;
     static constexpr float _y_hover_uv = 574.0 / _image_size;
 
@@ -98,7 +98,7 @@ class ui_bg_assets
     static constexpr float _s_energy_x = 32.0;
     static constexpr float _s_energy_y = 96.0;
     static constexpr float _s_stat_x = 680.0;
-    static constexpr float _s_stat_y = 380.0;
+    static constexpr float _s_stat_y = 266.0;
     static constexpr float _s_stat_uv_x = _s_stat_x / _image_size;
     static constexpr float _s_stat_uv_y = _s_stat_y / _image_size;
     static constexpr float _s_hover_uv_x = _s_hover_bg_x / _image_size;
@@ -110,9 +110,9 @@ class ui_bg_assets
     static constexpr float _s_menu_uv_x = 504.0 / _image_size;
     static constexpr float _s_menu_uv_y = 124.0 / _image_size;
 
-    // Number of ui elements, 3 + 3 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 1
-    static constexpr size_t _base = 38;
-    static constexpr size_t _ext = 105;
+    // Number of ui elements, 3 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 1
+    static constexpr size_t _base = 39;
+    static constexpr size_t _ext = 106;
     static constexpr size_t _ext_hover = _ext + 1;
     static constexpr size_t _max_size = _ext_hover;
 
@@ -128,6 +128,7 @@ class ui_bg_assets
     float _energy;
     float _exp;
     float _health;
+    float _oxy;
     float _cursor_angle;
     bool _draw_console;
     bool _draw_ex;
@@ -208,7 +209,7 @@ class ui_bg_assets
         : _v(_max_size), _uv(_max_size),
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
-          _energy(0.0), _exp(0.0), _health(1.0), _cursor_angle(0.0),
+          _energy(0.0), _exp(0.0), _health(1.0), _oxy(1.0), _cursor_angle(0.0),
           _draw_console(false), _draw_ex(false), _draw_menu(0), _draw_title(true) {}
 
     inline bool get_draw_console() const
@@ -400,13 +401,36 @@ class ui_bg_assets
         // Load rect at position
         set_rect(5, p, scale, exp_coord);
     }
+    inline void load_oxy_meter()
+    {
+        const float x_width = _s_oxy_x * _oxy;
+        const float x_offset = _center_w + (x_width - _s_oxy_y) * 0.5 + _oxy_dx;
+        const min::vec2<float> p(x_offset, _oxy_dy);
+        const min::vec2<float> scale(x_width, _s_oxy_y);
+
+        // Offset texture to prevent blurring edges
+        const float uv_off = 2.0 / _image_size;
+        const float suv_off = 4.0 / _image_size;
+
+        // Load rect at position depending on energy
+        if (_oxy > 0.5)
+        {
+            const min::vec4<float> oxy_coord(_x_light_blue_uv + uv_off, _y_light_blue_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
+            set_rect(6, p, scale, oxy_coord);
+        }
+        else
+        {
+            const min::vec4<float> oxy_coord(_x_red_uv + uv_off, _y_red_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
+            set_rect(6, p, scale, oxy_coord);
+        }
+    }
     inline void load_bg_stat()
     {
         // Load stat rect at position
         const min::vec2<float> p(_center_w + _stat_dx, _stat_dy);
         const min::vec2<float> stat_scale(_s_stat_x, _s_stat_y);
         const min::vec4<float> stat_coord(_x_stat_uv, _y_stat_uv, _s_stat_uv_x, _s_stat_uv_y);
-        set_rect(86, p, stat_scale, stat_coord);
+        set_rect(87, p, stat_scale, stat_coord);
     }
     inline void load_bg_hover(const min::vec2<float> &p)
     {
@@ -420,7 +444,7 @@ class ui_bg_assets
         // Offset position by half width of rect
         const min::vec2<float> off = min::vec2<float>(p.x() + _s_hover_bg_x * 0.5, p.y() + hover_dy);
 
-        set_rect(105, off, scale, coord);
+        set_rect(106, off, scale, coord);
     }
     inline void load_bg_black(const inv_id id, const min::vec2<float> &p)
     {
@@ -617,6 +641,14 @@ class ui_bg_assets
         // Set the size of the health bar
         load_health_meter();
     }
+    inline void set_oxygen(const float oxy)
+    {
+        // Set experience in percent
+        _oxy = oxy;
+
+        // Set the size of the health bar
+        load_oxy_meter();
+    }
     inline void set_screen(const uint16_t width, const uint16_t height)
     {
         // Update the screen dimensions
@@ -710,7 +742,7 @@ class ui_bg_assets
     }
     inline static constexpr size_t ui_size()
     {
-        // 3 + 3 + 16 + 16
+        // 3 + 4 + 16 + 16
         return _base;
     }
 };

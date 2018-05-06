@@ -225,6 +225,9 @@ class player
             // Rate is units / second
             _stats.regen_health();
         }
+
+        // Consume oxygen
+        _stats.consume_oxygen();
     }
 
   public:
@@ -245,10 +248,8 @@ class player
             _inv.fill(state.get_inventory());
 
             // Copy loaded stats
-            _stats.fill(state.get_stats());
-
-            // Add experience
-            _stats.add_exp(state.get_exp());
+            _stats.fill(state.get_stats(), state.get_energy(),
+                        state.get_exp(), state.get_health(), state.get_oxygen());
         }
     }
     inline const min::body<float, min::vec3> &body() const

@@ -32,12 +32,13 @@ class ui_overlay
   private:
     ui_text _text;
     ui_bg _bg;
-    bool _dirty;
     int _order;
     const std::string _action_fail;
     const std::string _ast;
+    const std::string _health;
     const std::string _intro;
     const std::string _level;
+    const std::string _oxygen;
     const std::string _peace;
     const std::string _power;
     const std::string _res;
@@ -52,9 +53,6 @@ class ui_overlay
         // If alert is higher precedence
         if (order > _order)
         {
-            // Flag dirty
-            _dirty = true;
-
             // Enable drawing alert text
             _text.set_draw_alert(true);
 
@@ -73,11 +71,13 @@ class ui_overlay
     ui_overlay(const uniforms &uniforms, inventory &inv, stats &stat, const uint16_t width, const uint16_t height)
         : _text(width, height),
           _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
-          _dirty(false), _order(-1),
+          _order(-1),
           _action_fail("Can't use or craft that item!"),
           _ast("Incoming asteroids, take cover!"),
+          _health("Low Health!"),
           _intro("You awaken in an unfamiliar, mysterious place."),
           _level("Level up!"),
+          _oxygen("Low Oxygen!"),
           _peace("Everything seems peaceful!"),
           _power("Low Power!"),
           _res("Not enough blocks/ether for that operation!"),
@@ -86,6 +86,14 @@ class ui_overlay
           _thrust("Level up! Thrusters are now online!"),
           _time(-1.0), _mult(1) {}
 
+    void add_stream_float(const std::string &str, const float value)
+    {
+        _text.add_stream_float(str, value);
+    }
+    inline void add_stream_text(const std::string &str)
+    {
+        _text.add_stream_text(str);
+    }
     inline bool action_hover()
     {
         // Check if we failed action
@@ -221,9 +229,6 @@ class ui_overlay
     }
     inline void set_console_string(const std::string &str)
     {
-        // Flag dirty
-        _dirty = true;
-
         // Update the console text
         _text.update_console(str);
     }
@@ -258,6 +263,10 @@ class ui_overlay
     inline void set_health(const float health)
     {
         _bg.set_health(health);
+    }
+    inline void set_oxygen(const float oxygen)
+    {
+        _bg.set_oxygen(oxygen);
     }
     inline void set_key_down(const size_t index)
     {
@@ -335,6 +344,14 @@ class ui_overlay
     {
         set_ui_alert(_thrust, 10.0, 6);
     }
+    inline void stream_low_health()
+    {
+        add_stream_text(_health);
+    }
+    inline void stream_low_oxygen()
+    {
+        add_stream_text(_oxygen);
+    }
     inline ui_text &text()
     {
         return _text;
@@ -360,41 +377,12 @@ class ui_overlay
     {
         _text.toggle_draw_debug();
     }
-    inline void update(const float dt)
+    inline void update(const min::vec3<float> &p, const min::vec3<float> &dir,
+                       const float health, const float energy, const double fps,
+                       const double idle, const size_t chunks, const size_t insts, const float dt)
     {
         // Update bg
         _bg.update();
-
-        // If we need to upload text
-        if (_dirty)
-        {
-            // Flag cleaned
-            _dirty = false;
-
-            // Upload the changed text
-            _text.upload();
-        }
-
-        // Decrement time on timer
-        if (_time > 0.0)
-        {
-            _time -= dt;
-            if (_time < 0.0)
-            {
-                // Disable alert text
-                _text.set_draw_alert(false);
-
-                // Unlock ui if locked
-                _order = -1;
-            }
-        }
-    }
-    void update_text(const min::vec3<float> &p, const min::vec3<float> &dir,
-                     const float health, const float energy, const double fps,
-                     const double idle, const size_t chunks, const size_t insts)
-    {
-        // Flag dirty
-        _dirty = true;
 
         // Update all text and upload it
         if (_text.is_draw_debug())
@@ -409,7 +397,28 @@ class ui_overlay
             _text.set_debug_insts(insts);
         }
 
+        // Update ui text
         _text.update_ui(health, energy);
+
+        // Update stream text
+        _text.update_stream(dt);
+
+        // Upload the changed text
+        _text.upload();
+
+        // Decrement time on timer
+        if (_time > 0.0)
+        {
+            _time -= dt;
+            if (_time < 0.0)
+            {
+                // Disable alert text
+                _text.set_draw_alert(false);
+
+                // Unlock ui if locked
+                _order = -1;
+            }
+        }
     }
 };
 }

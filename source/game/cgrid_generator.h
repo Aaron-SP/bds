@@ -21,7 +21,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <cmath>
 #include <fstream>
 #include <game/work_queue.h>
-#include <kernel/brownian_grow.h>
 #include <kernel/mandelbulb_asym.h>
 #include <kernel/mandelbulb_sym.h>
 #include <kernel/terrain_base.h>
@@ -85,13 +84,16 @@ class cgrid_generator
         // Wake up the threads for processing
         work_queue::worker.wake();
 
+        // Create random number generator
+        std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+
         // Calculates perlin noise
         kernel::terrain_base base(scale, chunk_size, 0, scale / 2);
         base.generate(work_queue::worker, _back);
 
         // Calculates a height map
         kernel::terrain_height height(scale, scale / 2, scale - 1);
-        height.generate(work_queue::worker, _back);
+        height.generate(work_queue::worker, gen, _back);
 
         // Copy data from back to front buffer
         copy(grid);

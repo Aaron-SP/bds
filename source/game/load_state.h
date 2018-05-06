@@ -38,7 +38,10 @@ class load_state
     min::vec3<float> _top;
     std::vector<item> _inv;
     std::array<uint16_t, stats::stat_str_size()> _stat;
+    float _energy;
     float _exp;
+    float _health;
+    float _oxygen;
     bool _new_game;
 
     inline void check_inside(const float grid_size)
@@ -116,8 +119,17 @@ class load_state
                 _stat[i] = min::read_le<uint16_t>(stream, next);
             }
 
+            // Load energy from stream
+            _energy = min::read_le<float>(stream, next);
+
             // Load exp from stream
             _exp = min::read_le<float>(stream, next);
+
+            // Load health from stream
+            _health = min::read_le<float>(stream, next);
+
+            // Load oxygen from stream
+            _oxygen = min::read_le<float>(stream, next);
 
             // Flag that this is not a new game
             _new_game = false;
@@ -156,8 +168,17 @@ class load_state
             min::write_le<uint16_t>(stream, stat.stat_value(i));
         }
 
+        // Save the player energy
+        min::write_le<float>(stream, stat.get_energy());
+
         // Save the player experience
         min::write_le<float>(stream, stat.get_exp());
+
+        // Save the player health
+        min::write_le<float>(stream, stat.get_health());
+
+        // Save the player oxygen
+        min::write_le<float>(stream, stat.get_oxygen());
 
         // Write data to file
         save_file("bin/state", stream);
@@ -169,7 +190,9 @@ class load_state
           _default_spawn(0.0, grid_size * 0.75, 0.0),
           _look(_default_look), _spawn(_default_spawn),
           _top(0.0, grid_size - 1.0, 0.0),
-          _inv(inventory::size()), _stat{}, _exp(0.0), _new_game(true)
+          _inv(inventory::size()),
+          _stat{}, _energy(0.0), _exp(0.0), _health(0.0), _oxygen(0.0),
+          _new_game(true)
     {
         // Check that we loaded a valid point
         check_inside(grid_size);
@@ -185,9 +208,21 @@ class load_state
     {
         return _default_spawn;
     }
+    inline float get_energy() const
+    {
+        return _energy;
+    }
     inline float get_exp() const
     {
         return _exp;
+    }
+    inline float get_health() const
+    {
+        return _health;
+    }
+    inline float get_oxygen() const
+    {
+        return _oxygen;
     }
     inline const std::vector<item> &get_inventory() const
     {

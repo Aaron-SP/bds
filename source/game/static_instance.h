@@ -45,7 +45,7 @@ class static_instance
   private:
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     static constexpr size_t _DRONE_LIMIT = 10;
-    static constexpr size_t _DROP_LIMIT = 10;
+    static constexpr size_t _DROP_LIMIT = 50;
     static constexpr size_t _EXPLODE_LIMIT = 10;
     static constexpr size_t _MISS_LIMIT = 10;
 
@@ -607,7 +607,7 @@ class static_instance
             _texture_buffer.bind(_explode_tid, 0);
 
             // Set the start index for drops
-            set_start_index(245);
+            set_start_index(285);
 
             // Draw mob instances
             _buffer.draw_many(GL_TRIANGLES, _explode_inst, explode_size);
@@ -621,7 +621,7 @@ class static_instance
             _texture_buffer.bind(_miss_tid, 0);
 
             // Set the start index for missiles
-            set_start_index(255);
+            set_start_index(295);
 
             // Draw missile instances
             _buffer.draw_many(GL_TRIANGLES, _miss_inst, miss_size);
@@ -691,7 +691,7 @@ class static_instance
         _explode_index.clear();
         _miss_index.clear();
 
-        if (sim.get_scale() >= 8)
+        if (sim.get_scale() >= grid.get_chunk_scale())
         {
             cull_physics(sim, grid);
         }

@@ -76,35 +76,35 @@ class inv_id
     }
     inline inv_id bg_store_index() const
     {
-        return inv_id(_id + 6);
+        return inv_id(_id + 7);
     }
     inline inv_id store_index() const
     {
-        return inv_id(_id + 14);
+        return inv_id(_id + 15);
     }
     inline inv_id bg_key_index() const
     {
-        return inv_id(_id + 14);
+        return inv_id(_id + 15);
     }
     inline inv_id key_index() const
     {
-        return inv_id(_id + 22);
+        return inv_id(_id + 23);
     }
     inline inv_id bg_ex_index() const
     {
-        return inv_id(_id + 22);
+        return inv_id(_id + 23);
     }
     inline inv_id ex_index() const
     {
-        return inv_id(_id + 46);
+        return inv_id(_id + 47);
     }
     inline inv_id bg_cube_index() const
     {
-        return inv_id(_id + 47);
+        return inv_id(_id + 48);
     }
     inline inv_id cube_index() const
     {
-        return inv_id(_id + 56);
+        return inv_id(_id + 57);
     }
     inline inv_id to_key() const
     {
@@ -242,7 +242,7 @@ class inventory
     };
 
     static constexpr size_t _max_slots = 49;
-    static constexpr size_t _max_strings = 123;
+    static constexpr size_t _max_strings = 127;
     static constexpr size_t _cube_size = 9;
     std::array<item, _max_slots> _inv;
     std::vector<std::string> _inv_name;
@@ -460,43 +460,47 @@ class inventory
         _inv_name[90] = "Magnesium [Mg2+]";
         _inv_name[91] = "Potassium [K+]";
         _inv_name[92] = "Sodium [Na+]";
-        _inv_name[93] = "Chloride [Cl-]";
-        _inv_name[94] = "Nitrate [NO3-]";
-        _inv_name[95] = "Phosphate [(PO4)3-]";
-        _inv_name[96] = "Sulfate [(SO4)2-]";
-        _inv_name[97] = "Calcium Bar";
-        _inv_name[98] = "Copper Bar";
-        _inv_name[99] = "Iron Bar";
-        _inv_name[100] = "Magnesium Bar";
-        _inv_name[101] = "Potassium Bar";
-        _inv_name[102] = "Sodium Bar";
-        _inv_name[103] = "Gold Bar";
-        _inv_name[104] = "Silver Bar";
-        _inv_name[105] = "Hydrochloric Acid";
-        _inv_name[106] = "Nitric Acid";
-        _inv_name[107] = "Phosphoric Acid";
-        _inv_name[108] = "Sulfuric Acid";
-        _inv_name[109] = "Potassium Nitrate";
-        _inv_name[110] = "Rust";
-        _inv_name[111] = "Sulphur";
-        _inv_name[112] = "Salt";
-        _inv_name[113] = "Charcoal";
-        _inv_name[114] = "Red Phosphorus";
-        _inv_name[115] = "Urea";
-        _inv_name[116] = "Bat Guano";
-        _inv_desc[116] = "Right click to harvest";
-        _inv_name[117] = "Eggplant";
-        _inv_desc[117] = "Right click to eat._It's tender and juicy!";
-        _inv_name[118] = "Green Pepper";
-        _inv_desc[118] = "Right click to eat._It's tender and juicy!";
-        _inv_name[119] = "Red Pepper";
-        _inv_desc[119] = "Right click to eat._It's tender and juicy!";
-        _inv_name[120] = "Tomato";
+        _inv_name[93] = "Carbonate [(CO3)2-]";
+        _inv_name[94] = "Chloride [Cl-]";
+        _inv_name[95] = "Nitrate [NO3-]";
+        _inv_name[96] = "Phosphate [(PO4)3-]";
+        _inv_name[97] = "Sulfate [(SO4)2-]";
+        _inv_name[98] = "Calcium Bar";
+        _inv_name[99] = "Copper Bar";
+        _inv_name[100] = "Iron Bar";
+        _inv_name[101] = "Magnesium Bar";
+        _inv_name[102] = "Potassium Bar";
+        _inv_name[103] = "Sodium Bar";
+        _inv_name[104] = "Gold Bar";
+        _inv_name[105] = "Silver Bar";
+        _inv_name[106] = "Hydrochloric Acid";
+        _inv_name[107] = "Nitric Acid";
+        _inv_name[108] = "Phosphoric Acid";
+        _inv_name[109] = "Sulfuric Acid";
+        _inv_name[110] = "Bat Guano";
+        _inv_name[111] = "Calcium Carbonate";
+        _inv_name[112] = "Charcoal";
+        _inv_name[113] = "Magnesium Carbonate";
+        _inv_name[114] = "Potassium Nitrate";
+        _inv_name[115] = "Red Phosphorus";
+        _inv_name[116] = "Rust";
+        _inv_name[117] = "Salt";
+        _inv_name[118] = "Sulphur";
+        _inv_name[119] = "Urea";
+        _inv_name[120] = "Eggplant";
         _inv_desc[120] = "Right click to eat._It's tender and juicy!";
-        _inv_name[121] = "Battery";
-        _inv_desc[121] = "Right click to use._The power is_overwhelming!";
-        _inv_name[122] = "Ether";
-        _inv_desc[122] = "The building block of_all matter";
+        _inv_name[121] = "Green Pepper";
+        _inv_desc[121] = "Right click to eat._It's tender and juicy!";
+        _inv_name[122] = "Red Pepper";
+        _inv_desc[122] = "Right click to eat._It's tender and juicy!";
+        _inv_name[123] = "Tomato";
+        _inv_desc[123] = "Right click to eat._It's tender and juicy!";
+        _inv_name[124] = "Battery";
+        _inv_desc[124] = "Right click to use._The power is_overwhelming!";
+        _inv_name[125] = "Ether";
+        _inv_desc[125] = "The building block of_all matter";
+        _inv_name[126] = "Oxygen";
+        _inv_desc[126] = "Vital for sustaining_life!";
     }
     void set_store()
     {
@@ -681,13 +685,21 @@ class inventory
         {
             return add(id_value(item_id::POWD_RUST), add_count);
         }
-        else if (consume2(lower, id_value(item_id::POWD_KNO3), low_count, higher, id_value(item_id::POWD_CHARCOAL), high_count))
+        else if (consume2(lower, id_value(item_id::POWD_CHARCOAL), low_count, higher, id_value(item_id::POWD_KNO3), high_count))
         {
             return add(id_value(skill_id::GRENADE), add_count);
         }
         else if (consume2(lower, id_value(item_id::CAT_K), low_count, higher, id_value(item_id::AN_NO3), high_count))
         {
             return add(id_value(item_id::POWD_KNO3), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::CAT_CA), low_count, higher, id_value(item_id::AN_CARB), high_count))
+        {
+            return add(id_value(item_id::POWD_CAL_CARB), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::CAT_MG), low_count, higher, id_value(item_id::AN_CARB), high_count))
+        {
+            return add(id_value(item_id::POWD_MAG_CARB), add_count);
         }
         else if (consume2(lower, id_value(item_id::CAT_NA), low_count, higher, id_value(item_id::AN_CL), high_count))
         {
@@ -828,6 +840,21 @@ class inventory
         else if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::SHARD_G), high_count))
         {
             return add(id_value(item_id::BLK_NA), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::SHARD_G), low_count, higher, id_value(item_id::POWD_RUST), high_count))
+        {
+            add_count = 8;
+            return add(id_value(item_id::CONS_OXYGEN), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::SHARD_G), low_count, higher, id_value(item_id::POWD_CAL_CARB), high_count))
+        {
+            add_count = 8;
+            return add(id_value(item_id::CONS_OXYGEN), add_count);
+        }
+        else if (consume2(lower, id_value(item_id::SHARD_G), low_count, higher, id_value(item_id::POWD_MAG_CARB), high_count))
+        {
+            add_count = 8;
+            return add(id_value(item_id::CONS_OXYGEN), add_count);
         }
 
         // Red shard recipes
@@ -1016,7 +1043,7 @@ class inventory
         case item_id::BLK_CLAY1:
         case item_id::BLK_CLAY2:
         case item_id::BLK_STONE3:
-            return decay(index, id_value(it_id), id_value(item_id::ETHER), count, mult);
+            return decay(index, id_value(it_id), id_value(item_id::CONS_ETHER), count, mult);
         case item_id::BLK_FE:
             return decay(index, id_value(item_id::BLK_FE), id_value(item_id::CAT_FE), count, mult);
         case item_id::BLK_MG:
@@ -1037,8 +1064,8 @@ class inventory
             return decay(index, id_value(item_id::BLK_CRYS_G), id_value(item_id::SHARD_G), count, mult * 4);
         case item_id::BLK_K:
             return decay(index, id_value(item_id::BLK_K), id_value(item_id::CAT_K), count, mult);
-        case item_id::POWD_GUANO:
-            return decay(index, id_value(item_id::POWD_GUANO), id_value(item_id::POWD_KNO3), count, mult * 4);
+        case item_id::POWD_BGUANO:
+            return decay(index, id_value(item_id::POWD_BGUANO), id_value(item_id::POWD_KNO3), count, mult * 4);
         case item_id::BLK_TOM:
             return decay(index, id_value(item_id::BLK_TOM), id_value(item_id::CONS_TOM), count, mult * 4);
         case item_id::BLK_EGGP:
@@ -1064,6 +1091,9 @@ class inventory
         case item_id::CONS_BATTERY:
             count = 1;
             return decay(index, id_value(item_id::CONS_BATTERY), count);
+        case item_id::CONS_OXYGEN:
+            count = 1;
+            return decay(index, id_value(item_id::CONS_OXYGEN), count);
         default:
             break;
         }

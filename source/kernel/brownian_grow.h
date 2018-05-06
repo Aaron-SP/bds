@@ -216,7 +216,7 @@ class brownian_grow
     }
 
   public:
-    brownian_grow(const size_t scale, const size_t radius, const size_t seed, std::vector<int8_t> &write)
+    brownian_grow(std::mt19937 &gen, std::vector<int8_t> &write, const size_t scale, const size_t radius, const size_t seed)
         : _scale(scale), _seed(seed), _radius(radius)
     {
         // Check if radius is valid
@@ -227,7 +227,6 @@ class brownian_grow
 
         // Create random number generator for this thread
         std::uniform_int_distribution<size_t> gdist(_radius, _scale - _radius - 1);
-        std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
         // Randomly seed buffer
         _points.resize(_seed);

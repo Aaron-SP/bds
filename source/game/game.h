@@ -110,7 +110,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.225");
+        _ui.text().set_debug_version("VERSION: 0.1.226");
     }
     void update_alerts()
     {
@@ -189,8 +189,8 @@ class bds
     void update_ui(const float dt)
     {
         // Update player position debug text
-        const game::player &play = _world.get_player();
-        const game::stats &stat = play.get_stats();
+        game::player &play = _world.get_player();
+        game::stats &stat = play.get_stats();
         const min::vec3<float> &p = play.position();
         const min::vec3<float> &f = _state.get_camera().get_forward();
         const float health = stat.get_health();
@@ -198,11 +198,18 @@ class bds
         const size_t chunks = _world.get_chunks_in_view();
         const size_t insts = _world.get_inst_in_view();
 
-        // Update the ui overlay
-        _ui.update_text(p, f, health, energy, _fps, _idle, chunks, insts);
+        // Check if player got hit
+        if (stat.is_hit())
+        {
+            // Add stream text
+            _ui.add_stream_float("Damage: ", stat.get_hit());
 
-        // Process timer and upload changes
-        _ui.update(dt);
+            // Clear the hit flag
+            stat.clear_hit();
+        }
+
+        // Update the ui overlay, process timer and upload changes
+        _ui.update(p, f, health, energy, _fps, _idle, chunks, insts, dt);
     }
     void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
@@ -364,6 +371,7 @@ class bds
     {
         // Get player object
         game::player &player = _world.get_player();
+        const min::vec3<float> &v = player.velocity();
 
         bool update = false;
         min::camera<float> &camera = _state.get_camera();
@@ -374,6 +382,9 @@ class bds
             // Update stat alerts
             update_alerts();
 
+            // Calculate player velocity if not falling
+            const float v_mag = (player.is_falling()) ? 0.0 : v.dot(player.forward());
+
             // Get user input
             if (!_state.get_user_input())
             {
@@ -381,7 +392,7 @@ class bds
                 const auto c = get_cursor();
 
                 // Must update state properties, camera before drawing world
-                _state.update(player.position(), c, _win.get_width(), _win.get_height());
+                _state.update(player.position(), c, _win.get_width(), _win.get_height(), v_mag, dt);
 
                 // Reset cursor position
                 set_cursor_center();
@@ -399,7 +410,7 @@ class bds
                 const auto center = std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
 
                 // Must update state properties, camera before drawing world
-                _state.update(player.position(), center, _win.get_width(), _win.get_height());
+                _state.update(player.position(), center, _win.get_width(), _win.get_height(), v_mag, dt);
             }
 
             // Update the game events
@@ -438,7 +449,6 @@ class bds
         update_ui(dt);
 
         // Update the sound listener properties
-        const min::vec3<float> &v = player.velocity();
         _sound.update(camera, v, dt);
 
         // Update all uniforms

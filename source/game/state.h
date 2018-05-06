@@ -37,6 +37,7 @@ class state
     unsigned _frame_count;
     load_state _state;
     min::vec3<float> _target;
+    float _run_accum;
     bool _dead;
     bool _fix_target;
     bool _pause;
@@ -54,7 +55,7 @@ class state
         // Load camera settings
         set_camera(_state.get_spawn(), _state.get_look());
     }
-    inline void update_model_matrix()
+    inline void update_model_matrix(const float speed, const float dt)
     {
         const min::vec3<float> &f = _camera.get_forward();
         const min::vec3<float> &fup = _camera.get_frustum().get_up();
@@ -62,7 +63,18 @@ class state
 
         // Update the md5 model matrix
         const min::vec3<float> offset = _camera.get_position() + (f - fup + fr) * 0.5;
-        _model = min::mat4<float>(offset, _q);
+
+        // Accumulate frame time, reset every 180 cycles
+        _run_accum += speed * dt * 3.0;
+        _run_accum = std::fmod(_run_accum, 1130.97335529);
+
+        // Calculate running offset
+        const float stride = 0.05;
+        const float s = std::sin(_run_accum) * stride;
+        const min::vec3<float> run = (fr + fup) * s;
+
+        // Set model matrix
+        _model = min::mat4<float>(offset + run, _q);
     }
     inline min::quat<float> update_model_rotation() const
     {
@@ -89,10 +101,9 @@ class state
   public:
     state(const size_t grid_size)
         : _x{}, _y{}, _frame_count{},
-          _state(grid_size),
-          _dead(false), _fix_target(false),
-          _pause(false), _respawn(false),
-          _user_input(false)
+          _state(grid_size), _run_accum(0.0),
+          _dead(false), _fix_target(false), _pause(false),
+          _respawn(false), _user_input(false)
     {
         // Load camera
         load_camera();
@@ -142,6 +153,7 @@ class state
         // Reset flags
         _dead = false;
         _respawn = false;
+        _run_accum = 0.0;
 
         // Reload camera settings
         set_camera(_state.get_default_spawn(), _state.get_default_look());
@@ -193,7 +205,7 @@ class state
     {
         return _user_input = !_user_input;
     }
-    void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h)
+    void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h, const float speed, const float dt)
     {
         // Calculate position to move camera to
         const min::vec3<float> move = p + min::vec3<float>(0.0, 0.5, 0.0);
@@ -244,11 +256,11 @@ class state
 
                 // Check if we have looked too far on the global y axis
                 const float dy = forward.dot(min::vec3<float>::up());
-                if (dy > 0.975 && y < 0.0)
+                if (dy > 0.99 && y < 0.0)
                 {
                     y = 0.0;
                 }
-                else if (dy < -0.975 && y > 0.0)
+                else if (dy < -0.99 && y > 0.0)
                 {
                     y = 0.0;
                 }
@@ -265,7 +277,7 @@ class state
         }
 
         // Update the md5 model matrix
-        update_model_matrix();
+        update_model_matrix(speed, dt);
     }
 };
 }

@@ -275,7 +275,7 @@ class world
 
             // Randomly drop a powerup
             const uint8_t ran_drop = this->random_drop();
-            if (ran_drop < 2)
+            if (ran_drop < 4)
             {
                 const int8_t drop_id = id_value(block_id::CRYSTAL_R) + ran_drop;
                 this->_drops.add(this->random_drop_offset(point), dir, drop_id);
@@ -415,10 +415,10 @@ class world
             inv.add(id_value(item_id::CAT_NH4), count);
             break;
         case id_value(block_id::SAND1):
-            inv.add(id_value(item_id::CAT_NA), count);
+            inv.add(id_value(item_id::CAT_CA), count);
             break;
         case id_value(block_id::SAND2):
-            inv.add(id_value(item_id::CAT_FE), count);
+            inv.add(id_value(item_id::AN_CARB), count);
             break;
         case id_value(block_id::IRON):
             inv.add(id_value(item_id::POWD_RUST), count);
@@ -431,7 +431,7 @@ class world
         case id_value(block_id::LEAF2):
         case id_value(block_id::LEAF3):
         case id_value(block_id::LEAF4):
-            inv.add(id_value(item_id::POWD_GUANO), count);
+            inv.add(id_value(item_id::POWD_BGUANO), count);
             break;
         case id_value(block_id::STONE1):
         case id_value(block_id::STONE2):
@@ -516,7 +516,7 @@ class world
                 if (count == 0)
                 {
                     // Calculate random extra item
-                    if (random_drop() < 8)
+                    if (random_drop() < 16)
                     {
                         item_extra(inv, atlas);
                     }
@@ -682,7 +682,7 @@ class world
           _drops(_simulation, _instance),
           _explosives(_simulation, _instance),
           _missiles(_simulation, particles, _instance, s),
-          _drop_dist(0, 20),
+          _drop_dist(0, 40),
           _drop_off_dist(-0.5, 0.5),
           _grid_dist((grid_size * -1.0) + 1.0, grid_size - 1.0),
           _health_dist(0.75, 1.5),
@@ -750,14 +750,16 @@ class world
         // Return the block atlas id if hit
         return (hit) ? value : -2;
     }
-    inline void scatter_ray(const min::vec3<unsigned> &scale,
-                            const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f,
-                            const float size)
+    inline size_t scatter_ray(const min::vec3<unsigned> &scale,
+                              const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f,
+                              const float size)
     {
         // Values for casting rays
         min::vec3<float> target;
         size_t target_key;
         int8_t target_value;
+
+        size_t count = 0;
 
         // Launch N explode rays
         for (size_t i = 0; i < 4; i++)
@@ -777,10 +779,16 @@ class world
 
             // Check if ray points to a valid target
             const int8_t value = (target_valid) ? target_value : -2;
+            if (value >= 0)
+            {
+                count++;
+            }
 
             // Cast an explode ray on this random ray
             explode_ray(r, target, value, scale, f, size, false);
         }
+
+        return count;
     }
     inline int8_t get_atlas_id() const
     {

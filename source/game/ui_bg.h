@@ -103,6 +103,10 @@ class ui_bg
                 _stat->add_exp(10.0);
                 _stat->add_energy(50.0);
                 break;
+            case item_id::CONS_OXYGEN:
+                _stat->add_exp(25.0);
+                _stat->add_oxygen(10.0);
+                break;
             default:
                 _stat->add_exp(mult * 25.0);
                 break;
@@ -420,7 +424,7 @@ class ui_bg
     inline min::vec2<float> pos_ext(const inv_id inv) const
     {
         // Get row and col
-        const size_t row = inv.row8();
+        const size_t row = inv.row8() + 1;
         const size_t col = inv.col8();
 
         // Calculate ui element position
@@ -487,6 +491,9 @@ class ui_bg
 
         // Load experience meter
         _assets.load_exp_meter();
+
+        // Load oxygen meter
+        _assets.load_oxy_meter();
 
         // Load health meter
         _assets.load_health_meter();
@@ -1201,6 +1208,10 @@ class ui_bg
     inline void set_exp(const float exp)
     {
         _assets.set_experience(exp);
+    }
+    inline void set_oxygen(const float oxy)
+    {
+        _assets.set_oxygen(oxy);
     }
     inline void set_health(const float health)
     {

@@ -366,7 +366,7 @@ class controls
         const bool is_block = (type == item_type::block);
         const bool is_item = (type == item_type::item);
         const bool is_skill = (type == item_type::skill);
-        const bool is_ether = (id == id_value(item_id::ETHER));
+        const bool is_ether = (id == id_value(item_id::CONS_ETHER));
 
         // Selecting multiple times?
         const bool multi_click = _ui->get_selected() == inv_id(index).to_key();
@@ -932,7 +932,7 @@ class controls
         if (mode)
         {
             // Get the active atlas id or use ether if in swatch mode
-            const uint8_t consume_id = (world->get_swatch_mode()) ? id_value(item_id::ETHER) : inv.id_from_atlas(world->get_atlas_id());
+            const uint8_t consume_id = (world->get_swatch_mode()) ? id_value(item_id::CONS_ETHER) : inv.id_from_atlas(world->get_atlas_id());
 
             // Try to consume energy to create this resource
             uint8_t count = world->get_scale_size();
@@ -987,7 +987,11 @@ class controls
                 {
                     // Fire a charged explosion ray
                     const min::vec3<unsigned> radius(3, 3, 3);
-                    world->explode_ray(radius, play_ex, 100.0, true);
+                    const int8_t hit = world->explode_ray(radius, play_ex, 100.0, true);
+                    if (hit == -1)
+                    {
+                        ui->add_stream_text("Miss!");
+                    }
 
                     // Activate shoot animation
                     character->set_animation_shoot();
@@ -1011,7 +1015,11 @@ class controls
                     {
                         // Fire an explosion ray
                         const min::vec3<unsigned> radius(1, 1, 1);
-                        world->explode_ray(radius, nullptr, 20.0, false);
+                        const int8_t hit = world->explode_ray(radius, nullptr, 20.0, false);
+                        if (hit == -1)
+                        {
+                            ui->add_stream_text("Miss!");
+                        }
 
                         // Activate shoot animation
                         character->set_animation_shoot();
@@ -1147,7 +1155,11 @@ class controls
                     {
                         // Shot scatter
                         const min::vec3<unsigned> radius(1, 1, 1);
-                        world->scatter_ray(radius, nullptr, 20.0);
+                        const size_t hits = world->scatter_ray(radius, nullptr, 20.0);
+                        if (hits == 0)
+                        {
+                            ui->add_stream_text("Miss!");
+                        }
 
                         // Activate shoot animation
                         character->set_animation_shoot();
@@ -1291,36 +1303,54 @@ class controls
         // If low energy
         if (stat.is_low_energy())
         {
-            // Play low power warning
+            // Play critical warning
             _sound->play_voice_power();
 
-            // Reset low health
+            // Reset low energy
             stat.reset_low_energy();
         }
 
         // If low health
         if (stat.is_low_health())
         {
-            // Play low power warning
+            // Play critical warning
             _sound->play_voice_critical();
 
             // Reset low health
             stat.reset_low_health();
+
+            // Stream low health
+            _ui->stream_low_health();
         }
 
-        // Get health and energy
-        const float energy = stat.get_energy_fraction();
-        const float exp = stat.get_experience_fraction();
-        const float health = stat.get_health_fraction();
+        // If low oxygen
+        if (stat.is_low_oxygen())
+        {
+            // Play critical warning
+            _sound->play_voice_critical();
+
+            // Reset low oxygen
+            stat.reset_low_oxygen();
+
+            // Stream low oxygen
+            _ui->stream_low_oxygen();
+        }
 
         // Update the ui energy bar
+        const float energy = stat.get_energy_fraction();
         _ui->set_energy(energy);
 
         // Update the ui experience bar
+        const float exp = stat.get_experience_fraction();
         _ui->set_experience(exp);
 
         // Update the ui health bar
+        const float health = stat.get_health_fraction();
         _ui->set_health(health);
+
+        // Update the ui oxygen bar
+        const float oxy = stat.get_oxygen_fraction();
+        _ui->set_oxygen(oxy);
     }
     void update_skills()
     {
