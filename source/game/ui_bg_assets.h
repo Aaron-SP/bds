@@ -413,7 +413,7 @@ class ui_bg_assets
         const float suv_off = 4.0 / _image_size;
 
         // Load rect at position depending on energy
-        if (_oxy > 0.5)
+        if (_oxy > 0.25)
         {
             const min::vec4<float> oxy_coord(_x_light_blue_uv + uv_off, _y_light_blue_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
             set_rect(6, p, scale, oxy_coord);

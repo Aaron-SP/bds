@@ -138,7 +138,7 @@ class stats
         _energy = energy;
 
         // Check for low energy
-        if (above && _energy < 25.0)
+        if (above && is_low_energy())
         {
             _low_energy = true;
         }
@@ -156,7 +156,7 @@ class stats
         {
             _dead = true;
         }
-        else if (above && _health < 25.0)
+        else if (above && is_low_health())
         {
             _low_health = true;
         }
@@ -174,7 +174,7 @@ class stats
         {
             _dead = true;
         }
-        else if (above && _oxygen < 25.0)
+        else if (above && is_low_oxygen())
         {
             _low_oxygen = true;
         }
@@ -206,7 +206,7 @@ class stats
           _max_exp(100.0), _exp(0.0),
           _max_health(100.0), _health(_max_health), _low_health(false),
           _max_oxygen(100.0), _oxygen(_max_oxygen), _low_oxygen(false),
-          _hit(-1.0), _dead(false), _dirty(false), _alert(stat_alert::none),
+          _hit(0.0), _dead(false), _dirty(false), _alert(stat_alert::none),
           _attr{}, _stat{}, _sqrt_level(1.0)
     {
         // Level up
@@ -304,7 +304,19 @@ class stats
     }
     inline void clear_hit()
     {
-        _hit = -1.0;
+        _hit = 0.0;
+    }
+    inline void clear_low_energy_flag()
+    {
+        _low_energy = false;
+    }
+    inline void clear_low_health_flag()
+    {
+        _low_health = false;
+    }
+    inline void clear_low_oxygen_flag()
+    {
+        _low_oxygen = false;
     }
     inline void consume_thrust()
     {
@@ -426,7 +438,7 @@ class stats
     }
     inline bool is_hit() const
     {
-        return (_hit > -1.0);
+        return (_hit > 0.0);
     }
     inline bool is_level_up() const
     {
@@ -434,13 +446,25 @@ class stats
     }
     inline bool is_low_energy() const
     {
+        return _energy < 25.0;
+    }
+    inline bool is_low_energy_flag() const
+    {
         return _low_energy;
     }
     inline bool is_low_health() const
     {
+        return _health < 25.0;
+    }
+    inline bool is_low_health_flag() const
+    {
         return _low_health;
     }
     inline bool is_low_oxygen() const
+    {
+        return _oxygen < 25.0;
+    }
+    inline bool is_low_oxygen_flag() const
     {
         return _low_oxygen;
     }
@@ -502,18 +526,6 @@ class stats
             }
         }
     }
-    inline void reset_low_energy()
-    {
-        _low_energy = false;
-    }
-    inline void reset_low_health()
-    {
-        _low_health = false;
-    }
-    inline void reset_low_oxygen()
-    {
-        _low_oxygen = false;
-    }
     inline void respawn()
     {
         // Reset energy
@@ -530,7 +542,7 @@ class stats
         // Reset health
         _oxygen = _max_oxygen;
         _low_oxygen = false;
-        _hit = -1.0;
+        _hit = 0.0;
         _dead = false;
     }
     inline static constexpr size_t stat_str_size()

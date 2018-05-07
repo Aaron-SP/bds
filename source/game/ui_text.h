@@ -189,6 +189,9 @@ class ui_text
           _st{}, _stream_old(0), _draw_console(false), _draw_debug(false), _draw_alert(false),
           _draw_ui(false), _draw_hover(false)
     {
+        // Set the stream precision
+        _ss << std::fixed << std::setprecision(2);
+
         // Update the text buffer screen dimensions
         _text.set_screen(width, height);
         _text_bg.set_screen(width, height);
@@ -461,7 +464,7 @@ class ui_text
         clear_stream();
 
         // Update player position debug text
-        _ss << std::fixed << std::setprecision(4) << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
+        _ss << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
         update_text(_debug + 3, _ss.str());
     }
     inline void set_debug_direction(const min::vec3<float> &dir)

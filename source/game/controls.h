@@ -1301,39 +1301,43 @@ class controls
         stats &stat = play.get_stats();
 
         // If low energy
-        if (stat.is_low_energy())
+        if (stat.is_low_energy_flag())
         {
             // Play critical warning
             _sound->play_voice_power();
 
             // Reset low energy
-            stat.reset_low_energy();
+            stat.clear_low_energy_flag();
         }
 
         // If low health
-        if (stat.is_low_health())
+        if (stat.is_low_health_flag())
         {
             // Play critical warning
             _sound->play_voice_critical();
 
             // Reset low health
-            stat.reset_low_health();
+            stat.clear_low_health_flag();
 
             // Stream low health
             _ui->stream_low_health();
         }
 
         // If low oxygen
-        if (stat.is_low_oxygen())
+        if (stat.is_low_oxygen_flag())
         {
-            // Play critical warning
-            _sound->play_voice_critical();
+            // Play oxygen warning
+            _sound->play_oxygen();
 
             // Reset low oxygen
-            stat.reset_low_oxygen();
+            stat.clear_low_oxygen_flag();
 
             // Stream low oxygen
             _ui->stream_low_oxygen();
+        }
+        else if (!stat.is_low_oxygen())
+        {
+            _sound->stop_oxygen();
         }
 
         // Update the ui energy bar

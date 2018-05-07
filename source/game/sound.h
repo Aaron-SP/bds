@@ -122,50 +122,48 @@ class sound
     static constexpr size_t _miss_limit = 10;
     static constexpr size_t _sounds = 21;
     static constexpr size_t _voice_sounds = 9;
+    static constexpr float _fade_tol = 0.001;
+    static constexpr float _fade_in = _fade_tol * 2.0;
+    static constexpr float _fade_speed = 0.1;
+    static constexpr float _gain_adjust = 0.01;
     static constexpr float _land_threshold = 3.0;
     static constexpr float _max_delay = 120.0;
     static constexpr float _max_speed = 10.0;
-    static constexpr float _fade_speed = 0.1;
-    static constexpr float _fade_tol = 0.001;
-    static constexpr float _fade_in = _fade_tol * 2.0;
-    static constexpr float _gain_adjust = 0.01;
 
     // FADE FRAMES
     static constexpr float _bg_ff = 50;
     static constexpr float _charge_ff = 20;
+    static constexpr float _drone_ff = 20;
     static constexpr float _grap_ff = 20;
     static constexpr float _jet_ff = 80;
-    static constexpr float _drone_ff = 20;
     static constexpr float _miss_launch_ff = 20;
+    static constexpr float _oxygen_ff = 80;
 
     // GAINS
     static constexpr float _bg_gain = 0.05;
     static constexpr float _charge_gain = 0.35;
     static constexpr float _click_gain = 0.2;
-    static constexpr float _land_gain = 0.1;
+    static constexpr float _drone_gain = 0.125;
     static constexpr float _ex_gain = 0.65;
     static constexpr float _grap_gain = 0.6;
+    static constexpr float _land_gain = 0.1;
     static constexpr float _jet_gain = 0.5;
     static constexpr float _miss_ex_gain = 0.75;
-    static constexpr float _drone_gain = 0.125;
     static constexpr float _miss_launch_gain = 0.7;
+    static constexpr float _oxygen_gain = 0.5;
     static constexpr float _pickup_gain = 0.25;
     static constexpr float _shot_gain = 0.125;
     static constexpr float _voice_gain = 0.25;
     static constexpr float _zap_gain = 0.5;
 
     // FADES
+    static constexpr float _bg_fade = _bg_gain / _bg_ff;
+    static constexpr float _drone_fade = _drone_gain / _drone_ff;
     static constexpr float _charge_fade = _charge_gain / _charge_ff;
     static constexpr float _grap_fade = _grap_gain / _grap_ff;
     static constexpr float _jet_fade = _jet_gain / _jet_ff;
-    static constexpr float _bg_fade = _bg_gain / _bg_ff;
-    static constexpr float _drone_fade = _drone_gain / _drone_ff;
+    static constexpr float _oxygen_fade = _oxygen_gain / _oxygen_ff;
     static constexpr float _miss_launch_fade = _miss_launch_gain / _miss_launch_ff;
-
-    // GRAPPLE DROP OFF
-    static constexpr float _grap_max_dist = 100.0;
-    static constexpr float _grap_ref_dist = 8.0;
-    static constexpr float _grap_roll = 1.0;
 
     // DRONE DROP OFF
     static constexpr float _drone_max_dist = 10.0;
@@ -176,6 +174,11 @@ class sound
     static constexpr float _ex_max_dist = 100.0;
     static constexpr float _ex_ref_dist = 8.0;
     static constexpr float _ex_roll = 0.5;
+
+    // GRAPPLE DROP OFF
+    static constexpr float _grap_max_dist = 100.0;
+    static constexpr float _grap_ref_dist = 8.0;
+    static constexpr float _grap_roll = 1.0;
 
     min::sound_buffer _buffer;
     std::vector<sound_info> _si;
@@ -229,33 +232,37 @@ class sound
     {
         return _si[7];
     }
-    inline sound_info &pickup_info()
+    inline sound_info &oxygen_info()
     {
         return _si[8];
     }
-    inline sound_info &shot_info()
+    inline sound_info &pickup_info()
     {
         return _si[9];
     }
-    inline sound_info &voice_info()
+    inline sound_info &shot_info()
     {
         return _si[10];
     }
-    inline sound_info &zap_info()
+    inline sound_info &voice_info()
     {
         return _si[11];
     }
+    inline sound_info &zap_info()
+    {
+        return _si[12];
+    }
     inline sound_info &drone_info(const size_t index)
     {
-        return _si[12 + index];
+        return _si[13 + index];
     }
     inline sound_info &miss_ex_info(const size_t index)
     {
-        return _si[22 + index];
+        return _si[23 + index];
     }
     inline sound_info &miss_launch_info(const size_t index)
     {
-        return _si[32 + index];
+        return _si[33 + index];
     }
     inline static size_t v_comply()
     {
@@ -380,6 +387,40 @@ class sound
         const min::wave sound(wave);
         load_wave_sound(sound, _click_gain);
     }
+    inline void load_drone_sound()
+    {
+        // Load a WAVE file
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/drone_m.ogg");
+        const min::ogg sound(ogg);
+
+        // Load a OGG file into buffer
+        const size_t b = _buffer.add_ogg_pcm(sound);
+
+        // Get the gains and fades for this sound
+        const float gain = _drone_gain;
+        const float fade = _drone_fade;
+
+        // Create many sources
+        for (size_t i = 0; i < _drone_limit; i++)
+        {
+            _drone[i] = _buffer.add_source();
+
+            // Adjust the gain
+            _buffer.set_source_gain(_drone[i], gain);
+
+            // Set the audio to loop
+            _buffer.set_source_loop(_drone[i], true);
+
+            // Load drone settings
+            load_drone_settings(_drone[i]);
+
+            // Bind source to sound data
+            _buffer.bind(b, _drone[i]);
+
+            // Create a new sound info
+            _si.emplace_back(b, _drone[i], gain, fade);
+        }
+    }
     inline void load_explode_mono_sound()
     {
         // Load a WAVE file
@@ -438,40 +479,6 @@ class sound
         const min::mem_file &wave = memory_map::memory.get_file("data/sound/land_s.wav");
         const min::wave sound(wave);
         load_wave_sound(sound, _land_gain);
-    }
-    inline void load_drone_sound()
-    {
-        // Load a WAVE file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/drone_m.ogg");
-        const min::ogg sound(ogg);
-
-        // Load a OGG file into buffer
-        const size_t b = _buffer.add_ogg_pcm(sound);
-
-        // Get the gains and fades for this sound
-        const float gain = _drone_gain;
-        const float fade = _drone_fade;
-
-        // Create many sources
-        for (size_t i = 0; i < _drone_limit; i++)
-        {
-            _drone[i] = _buffer.add_source();
-
-            // Adjust the gain
-            _buffer.set_source_gain(_drone[i], gain);
-
-            // Set the audio to loop
-            _buffer.set_source_loop(_drone[i], true);
-
-            // Load drone settings
-            load_drone_settings(_drone[i]);
-
-            // Bind source to sound data
-            _buffer.bind(b, _drone[i]);
-
-            // Create a new sound info
-            _si.emplace_back(b, _drone[i], gain, fade);
-        }
     }
     inline void load_miss_ex_sound()
     {
@@ -537,6 +544,16 @@ class sound
             // Create a new sound info
             _si.emplace_back(b, _miss_launch[i], gain, fade);
         }
+    }
+    inline void load_oxygen_sound()
+    {
+        // Load a WAVE file
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/oxygen_s.ogg");
+        const min::ogg sound(ogg);
+        load_ogg_sound(sound, _oxygen_gain, _oxygen_fade);
+
+        // Set the audio to loop
+        _buffer.set_source_loop(oxygen_info().source(), true);
     }
     inline void load_pickup_sound()
     {
@@ -637,6 +654,9 @@ class sound
 
         // Load land sound into buffer
         load_land_sound();
+
+        // Load oxygen sound
+        load_oxygen_sound();
 
         // Load pickup sound into buffer
         load_pickup_sound();
@@ -768,6 +788,39 @@ class sound
     {
         _buffer.play_async(click_info().source());
     }
+    inline void play_drone(const size_t index, const min::vec3<float> &p)
+    {
+        sound_info &si = drone_info(index);
+
+        // Set the fade and play flags
+        si.set_fade_out(false);
+        si.set_gain(_drone_gain);
+        si.set_play(true);
+
+        // Get the sound source
+        const size_t s = si.source();
+
+        // Set the sound position and gain
+        _buffer.set_source_position(s, p);
+        _buffer.set_source_gain(s, si.gain());
+
+        // Play the sound asynchronously at full gain
+        _buffer.play_async(s);
+    }
+    inline void stop_drone(const size_t index)
+    {
+        sound_info &si = drone_info(index);
+
+        // Turn on fading
+        si.set_fade_out(true);
+    }
+    inline void update_drone(const size_t index, const min::vec3<float> &p)
+    {
+        sound_info &si = drone_info(index);
+
+        // Set the sound position
+        _buffer.set_source_position(si.source(), p);
+    }
     inline void play_explode_mono(const min::vec3<float> &p)
     {
         // Get the explode source
@@ -870,39 +923,6 @@ class sound
         // Play the sound
         _buffer.play_async(s);
     }
-    inline void play_drone(const size_t index, const min::vec3<float> &p)
-    {
-        sound_info &si = drone_info(index);
-
-        // Set the fade and play flags
-        si.set_fade_out(false);
-        si.set_gain(_drone_gain);
-        si.set_play(true);
-
-        // Get the sound source
-        const size_t s = si.source();
-
-        // Set the sound position and gain
-        _buffer.set_source_position(s, p);
-        _buffer.set_source_gain(s, si.gain());
-
-        // Play the sound asynchronously at full gain
-        _buffer.play_async(s);
-    }
-    inline void stop_drone(const size_t index)
-    {
-        sound_info &si = drone_info(index);
-
-        // Turn on fading
-        si.set_fade_out(true);
-    }
-    inline void update_drone(const size_t index, const min::vec3<float> &p)
-    {
-        sound_info &si = drone_info(index);
-
-        // Set the sound position
-        _buffer.set_source_position(si.source(), p);
-    }
     inline void play_miss_launch(const size_t index, const min::vec3<float> &p)
     {
         sound_info &si = miss_launch_info(index);
@@ -935,6 +955,28 @@ class sound
 
         // Set the sound position
         _buffer.set_source_position(si.source(), p);
+    }
+    inline void play_oxygen()
+    {
+        sound_info &si = oxygen_info();
+
+        // Set the fade and play flags
+        si.set_fade_in(true);
+        si.set_fade_out(false);
+        si.set_gain(_fade_in);
+        si.set_play(true);
+
+        // Play the sound asynchronously at full gain
+        _buffer.set_source_gain(si.source(), si.gain());
+        _buffer.play_async(si.source());
+    }
+    inline void stop_oxygen()
+    {
+        sound_info &si = oxygen_info();
+
+        // Turn on fading
+        si.set_fade_in(false);
+        si.set_fade_out(true);
     }
     inline void play_pickup()
     {
