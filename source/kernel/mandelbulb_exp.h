@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __MANDELBULB_SYM__
-#define __MANDELBULB_SYM__
+#ifndef __MANDELBULB_EXP__
+#define __MANDELBULB_EXP__
 
 #include <functional>
 #include <game/thread_pool.h>
@@ -25,7 +25,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace kernel
 {
 
-class mandelbulb_sym
+class mandelbulb_exp
 {
   private:
     int _a;
@@ -67,21 +67,21 @@ class mandelbulb_sym
         for (size_t i = 0; i < 32; i++)
         {
             // X coordinate
-            const float dx = (y0 * y0 + z0 * z0);
+            const float dx = std::exp((y0 * y0 + z0 * z0) * -1.0);
             const float dx2 = dx * dx;
             const float dx3 = dx2 * dx;
             const float dx4 = dx3 * dx;
             x1 = pow9(x0) - _a * pow7(x0) * dx + _b * pow5(x0) * dx2 - _c * pow3(x0) * dx3 + _d * x0 * dx4 + x0;
 
             // Y coordinate
-            const float dy = (z0 * z0 + x0 * x0);
+            const float dy = std::exp((z0 * z0 + x0 * x0) * -1.0);
             const float dy2 = dy * dy;
             const float dy3 = dy2 * dy;
             const float dy4 = dy3 * dy;
             y1 = pow9(y0) - _a * pow7(y0) * dy + _b * pow5(y0) * dy2 - _c * pow3(y0) * dy3 + _d * y0 * dy4 + y0;
 
             // Z coordinate
-            const float dz = (x0 * x0 + y0 * y0);
+            const float dz = std::exp((x0 * x0 + y0 * y0) * -1.0);
             const float dz2 = dz * dz;
             const float dz3 = dz2 * dz;
             const float dz4 = dz3 * dz;
@@ -110,20 +110,17 @@ class mandelbulb_sym
     }
 
   public:
-    mandelbulb_sym(std::mt19937 &rng)
+    mandelbulb_exp(std::mt19937 &rng)
     {
         // Seed the random number generator
         const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
         rng.seed(seed);
 
-        // Generate bucket tiers
-        std::uniform_int_distribution<int> bucket(0, 5);
-
-        // Calculate max value
-        const int max = 1024 >> bucket(rng);
+        // Generate random range
+        std::uniform_int_distribution<int> range(1, 15);
 
         // Generate coefficients between range
-        std::uniform_int_distribution<int> coeff(1, max);
+        std::uniform_int_distribution<int> coeff(1, range(rng));
 
         // Generate the values
         _a = coeff(rng);
@@ -131,7 +128,7 @@ class mandelbulb_sym
         _c = coeff(rng);
         _d = coeff(rng);
 
-        std::cout << "sym mandelbulb fractal: " << seed << std::endl;
+        std::cout << "exp mandelbulb fractal: " << seed << std::endl;
         std::cout << "seed: " << seed << std::endl;
         std::cout << "A: " << _a << std::endl;
         std::cout << "B: " << _b << std::endl;

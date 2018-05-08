@@ -130,11 +130,8 @@ class mandelbulb_asym
         // Calculate max value
         const int max = 1024 >> bucket(rng);
 
-        // Generate random range
-        std::uniform_int_distribution<int> range(1, max);
-
         // Generate coefficients between range
-        std::uniform_int_distribution<int> coeff(1, range(rng));
+        std::uniform_int_distribution<int> coeff(1, max);
 
         // Generate the values
         _a = coeff(rng);
@@ -150,6 +147,7 @@ class mandelbulb_asym
         _k = coeff(rng);
         _l = coeff(rng);
 
+        std::cout << "asym mandelbulb fractal: " << seed << std::endl;
         std::cout << "seed: " << seed << std::endl;
         std::cout << "A: " << _a << std::endl;
         std::cout << "B: " << _b << std::endl;
@@ -168,7 +166,6 @@ class mandelbulb_asym
     {
         // Create working function
         const auto work = [this, &grid, gsize, &f](std::mt19937 &gen, const size_t i) {
-
             // Do mandelbulb on this cell if empty
             if (grid[i] == -1)
             {

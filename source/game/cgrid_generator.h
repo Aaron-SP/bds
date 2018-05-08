@@ -22,6 +22,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <fstream>
 #include <game/work_queue.h>
 #include <kernel/mandelbulb_asym.h>
+#include <kernel/mandelbulb_exp.h>
 #include <kernel/mandelbulb_sym.h>
 #include <kernel/terrain_base.h>
 #include <kernel/terrain_height.h>
@@ -115,18 +116,36 @@ class cgrid_generator
         const float inv_scale3 = 1.0 / (scale * scale * scale);
 
         // Choose between terrain generators
-        std::mt19937 rng;
-        std::uniform_int_distribution<int> choose(1, 2);
-        if (choose(rng) % 2 == 0)
+        std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+        std::uniform_int_distribution<int> choose(1, 3);
+        const int type = choose(gen);
+        if (type == 1)
         {
-            // Filter all dead worlds less than 10% filled
+            // Filter all dead worlds less than 20% filled
             while (count * inv_scale3 < 0.20)
             {
                 // Clear out the old grid
                 clear_grid(grid);
 
                 // generate mandelbulb world using mandelbulb generator
-                kernel::mandelbulb_sym(rng).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
+                kernel::mandelbulb_sym(gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
+                    return grid_cell_center(i);
+                });
+
+                // Update count
+                count = count_grid(grid);
+            }
+        }
+        if (type == 2)
+        {
+            // Filter all dead worlds less than 20% filled
+            while (count * inv_scale3 < 0.20)
+            {
+                // Clear out the old grid
+                clear_grid(grid);
+
+                // generate mandelbulb world using mandelbulb generator
+                kernel::mandelbulb_asym(gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
                     return grid_cell_center(i);
                 });
 
@@ -137,13 +156,13 @@ class cgrid_generator
         else
         {
             // Filter all dead worlds less than 10% filled
-            while (count * inv_scale3 < 0.20)
+            while (count * inv_scale3 < 0.10)
             {
                 // Clear out the old grid
                 clear_grid(grid);
 
                 // generate mandelbulb world using mandelbulb generator
-                kernel::mandelbulb_asym(rng).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
+                kernel::mandelbulb_exp(gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
                     return grid_cell_center(i);
                 });
 
