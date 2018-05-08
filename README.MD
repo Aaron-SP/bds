@@ -113,16 +113,21 @@ The '-width' and '-height' flag changes the default window dimensions.
 ### PLAYER USAGE INSTRUCTIONS:
 
 1. Keys [WASD]: forward/left/back/right
-2. Key [Q]: switch between block edit mode and power suit mode
-3. Keys [ZXC]: scale unit block (block edit mode)
-4. Key [E]: reset scale unit block (block edit mode)
-5. Keys [1-8]: switch textures (edit mode), switch power suit skills (power suit mode)
-6. Left mouse: use skill (edit mode / power suite mode)
-7. Key [F1]: quit
-8. Key [F2]: toggle debug text
-9. Key [F3]: music up
-10. Key [F4]: music down
-11. Key [ESCAPE]: pause the game
+2. Key [TAB]: open and close inventory screen
+3. Key [Q]: drops item if hovering in inventory screen
+4. Keys [Z/X/C]: scale unit block (block place mode)
+5. Key [E]: reset scale unit block (block place mode)
+6. Key [F]: Warp to mandelbulb world (BEWARE GENERATION SLOW!)
+7. Keys [1-8]: quick item hotbar, use item, place block, equip weapon
+8. Left mouse: use skill (edit mode / power suite mode)
+9. Right mouse and hold: target and track block
+10. [SPACE] jump, can double jump after level 3
+11. [SHIFT] dash, dashs in the forward direction after level 3
+12. Key [F1]: quit
+13. Key [F2]: toggle debug text
+14. Key [F3]: music up
+15. Key [F4]: music down
+16. Key [ESCAPE]: pause the game
 
 
 ### Optimization: Help! I am lagging!
