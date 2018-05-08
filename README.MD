@@ -29,7 +29,8 @@ These build targets have been tested for compilation on Arch Linux x64 and Windo
 ### Dependencies for each platform
 
 Additional dependencies that are required and not distributed in this package include:
-- 'mgl' - Minimal Graphics Library (https://github.com/Aaron-SP/mgl)
+- 'mgl' - Minimal Graphics Library (https://github.com/Aaron-SP/mgl) 
+    - run 'make install' to copy header files into /usr/include/mgl
 - 'g++-5.4' - all platforms
 - 'freetype' - all platforms
 - 'opengl3.3+' - all platforms
