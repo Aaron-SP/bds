@@ -1,6 +1,18 @@
 # Beyond Dying Skies
 ## Repository for the Beyond Dying Skies PC game, Linux and Windows versions.
 
+Welcome to the Beyond Dying Skies GitHub repository! This is the prerelease alpha version 0.1.
+
+This package is the source code distribution of the Beyond Dying Skies, hence abbreviated BDS. The library builds on linux and win32 platforms. 
+A GNU makefile is available for compilation with GCC/MINGW for win32 platforms or GCC/X11 for linux platforms. 
+The makefile should work for both environments without modification. 
+
+### PKGBUILD
+
+If you are running Arch Linux, I have created PKGBUILD's for this project located at https://github.com/Aaron-SP/pkgbuild/blob/master/bds/PKGBUILD.
+
+### Building
+
 Verify a bin directory exists before compiling with the makefile. 
 - 'mkdir -p bin'
 
