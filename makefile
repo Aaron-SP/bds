@@ -36,12 +36,12 @@ ifdef MGL_GS_RENDER
 	MGL_RENDER = -DUSE_GS_RENDER
 endif
 
-# Enable GS rendering
+# Enable instance rendering
 ifdef MGL_INST_RENDER
 	MGL_RENDER = -DUSE_INST_RENDER
 endif
 
-# Enable GS rendering
+# Enable opengl43 features
 ifdef MGL_VB43
 	MGL_VB43 = -DMGL_VB43
 endif
