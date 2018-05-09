@@ -131,7 +131,7 @@ class mandelbulb_sym
         _c = coeff(rng);
         _d = coeff(rng);
 
-        std::cout << "sym mandelbulb fractal: " << seed << std::endl;
+        std::cout << "sym mandelbulb fractal: " << std::endl;
         std::cout << "seed: " << seed << std::endl;
         std::cout << "A: " << _a << std::endl;
         std::cout << "B: " << _b << std::endl;

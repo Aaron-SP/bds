@@ -128,7 +128,7 @@ class mandelbulb_exp
         _c = coeff(rng);
         _d = coeff(rng);
 
-        std::cout << "exp mandelbulb fractal: " << seed << std::endl;
+        std::cout << "exp mandelbulb fractal: " << std::endl;
         std::cout << "seed: " << seed << std::endl;
         std::cout << "A: " << _a << std::endl;
         std::cout << "B: " << _b << std::endl;

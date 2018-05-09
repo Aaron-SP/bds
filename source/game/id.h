@@ -146,14 +146,15 @@ enum class item_id : uint8_t
 
 enum class skill_id : uint8_t
 {
-    BEAM = 1,
-    MISSILE = 2,
-    GRAPPLE = 3,
-    JET = 4,
-    SCAN = 5,
-    GRENADE = 6,
-    CHARGE = 7,
-    SCATTER = 8
+    AUTO_BEAM = 1,
+    BEAM = 2,
+    CHARGE = 3,
+    GRAPPLE = 4,
+    GRENADE = 5,
+    JET = 6,
+    MISSILE = 7,
+    SCAN = 8,
+    SCATTER = 9
 };
 
 inline constexpr int8_t id_value(const block_id id)

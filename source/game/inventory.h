@@ -353,23 +353,24 @@ class inventory
     inline void load_strings()
     {
         _inv_name[0] = "Empty";
-        _inv_name[1] = "Beam";
-        _inv_desc[1] = "A general purpose_energy weapon firing_a singular beam";
-        _inv_name[2] = "Missile Launcher";
-        _inv_desc[2] = "An expensive_offensive projectile_weapon";
-        _inv_name[3] = "Grappling Hook";
-        _inv_desc[3] = "An energy beam_used for swinging_in the air";
-        _inv_name[4] = "Jet Pack";
-        _inv_desc[4] = "Transforms energy_into vertical thrust";
-        _inv_name[5] = "Pending Scan";
-        _inv_desc[5] = "Scan a block to_retrieve the block_type";
-        _inv_name[6] = "Grenade Launcher";
-        _inv_desc[6] = "An cheap offensive_projectile weapon";
-        _inv_name[7] = "Charge Beam";
-        _inv_desc[7] = "A general purpose_energy weapon firing_a charged beam";
-        _inv_name[8] = "Scatter Beam";
-        _inv_desc[8] = "An energy weapon_optimized for killing_drones";
-        _inv_name[9] = "Reserved";
+        _inv_name[1] = "Automatic Beam";
+        _inv_desc[1] = "A general purpose_energy weapon firing_a multiple beams";
+        _inv_name[2] = "Beam";
+        _inv_desc[2] = "A general purpose_energy weapon firing_a singular beam";
+        _inv_name[3] = "Charge Beam";
+        _inv_desc[3] = "A general purpose_energy weapon firing_a charged beam";
+        _inv_name[4] = "Grappling Hook";
+        _inv_desc[4] = "An energy beam_used for swinging_in the air";
+        _inv_name[5] = "Grenade Launcher";
+        _inv_desc[5] = "A cheap offensive_projectile weapon";
+        _inv_name[6] = "Jet Pack";
+        _inv_desc[6] = "Transforms energy_into vertical thrust";
+        _inv_name[7] = "Missile Launcher";
+        _inv_desc[7] = "An expensive_offensive projectile_weapon";
+        _inv_name[8] = "Pending Scan";
+        _inv_desc[8] = "Scan a block to_retrieve the block_type";
+        _inv_name[9] = "Scatter Beam";
+        _inv_desc[9] = "An energy weapon_optimized for killing_drones";
         _inv_name[10] = "Reserved";
         _inv_name[11] = "Reserved";
         _inv_name[12] = "Reserved";
@@ -934,28 +935,29 @@ class inventory
             return add(id_value(item_id::POWD_UREA), add_count);
         }
 
+        // Battery
+        else if (consume3(lower, id_value(item_id::BAR_NA), low_count,
+                          middle, id_value(item_id::ACID_H2SO4), mid_count,
+                          higher, id_value(item_id::POWD_SALT), high_count))
+        {
+            add_count = mult * 2;
+            return add(id_value(item_id::CONS_BATTERY), add_count);
+        }
+
+        // Auto beam
+        else if (consume3(lower, id_value(skill_id::BEAM), up_count,
+                          middle, id_value(item_id::BAR_CU), mid_count,
+                          higher, id_value(item_id::CONS_BATTERY), high_count))
+        {
+            return add(id_value(skill_id::AUTO_BEAM), add_count);
+        }
+
         // Charge beam
         else if (consume3(lower, id_value(skill_id::BEAM), up_count,
                           middle, id_value(item_id::BAR_AU), mid_count,
                           higher, id_value(item_id::BAR_SI), high_count))
         {
             return add(id_value(skill_id::CHARGE), add_count);
-        }
-
-        // Scatter beam
-        else if (consume3(lower, id_value(skill_id::BEAM), up_count,
-                          middle, id_value(item_id::BAR_FE), mid_count,
-                          higher, id_value(item_id::POWD_UREA), high_count))
-        {
-            return add(id_value(skill_id::SCATTER), add_count);
-        }
-
-        // Jet pack
-        else if (consume3(lower, id_value(item_id::BAR_FE), low_count,
-                          middle, id_value(item_id::POWD_KNO3), mid_count,
-                          higher, id_value(item_id::POWD_UREA), high_count))
-        {
-            return add(id_value(skill_id::JET), add_count);
         }
 
         // Grappling Hook
@@ -966,13 +968,20 @@ class inventory
             return add(id_value(skill_id::GRAPPLE), add_count);
         }
 
-        // Battery
-        else if (consume3(lower, id_value(item_id::BAR_NA), low_count,
-                          middle, id_value(item_id::ACID_H2SO4), mid_count,
-                          higher, id_value(item_id::POWD_SALT), high_count))
+        // Jet pack
+        else if (consume3(lower, id_value(item_id::BAR_FE), low_count,
+                          middle, id_value(item_id::POWD_KNO3), mid_count,
+                          higher, id_value(item_id::POWD_UREA), high_count))
         {
-            add_count = mult * 2;
-            return add(id_value(item_id::CONS_BATTERY), add_count);
+            return add(id_value(skill_id::JET), add_count);
+        }
+
+        // Scatter beam
+        else if (consume3(lower, id_value(skill_id::BEAM), up_count,
+                          middle, id_value(item_id::BAR_FE), mid_count,
+                          higher, id_value(item_id::POWD_UREA), high_count))
+        {
+            return add(id_value(skill_id::SCATTER), add_count);
         }
 
         // Failed to craft item

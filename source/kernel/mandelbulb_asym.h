@@ -147,7 +147,7 @@ class mandelbulb_asym
         _k = coeff(rng);
         _l = coeff(rng);
 
-        std::cout << "asym mandelbulb fractal: " << seed << std::endl;
+        std::cout << "asym mandelbulb fractal: " << std::endl;
         std::cout << "seed: " << seed << std::endl;
         std::cout << "A: " << _a << std::endl;
         std::cout << "B: " << _b << std::endl;

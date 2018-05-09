@@ -418,33 +418,37 @@ class controls
                 // Set skill mode
                 switch (id)
                 {
+                case id_value(skill_id::AUTO_BEAM):
+                    play.set_mode(play_mode::gun);
+                    skill.set_auto_mode();
+                    break;
                 case id_value(skill_id::BEAM):
                     play.set_mode(play_mode::gun);
                     skill.set_beam_mode();
                     break;
-                case id_value(skill_id::MISSILE):
+                case id_value(skill_id::CHARGE):
                     play.set_mode(play_mode::gun);
-                    skill.set_missile_mode();
+                    skill.set_charge_mode();
                     break;
                 case id_value(skill_id::GRAPPLE):
                     play.set_mode(play_mode::gun);
                     skill.set_grapple_mode();
                     break;
-                case id_value(skill_id::JET):
-                    play.set_mode(play_mode::skill);
-                    skill.set_jetpack_mode();
-                    break;
-                case id_value(skill_id::SCAN):
-                    play.set_mode(play_mode::skill);
-                    skill.set_scan_mode();
-                    break;
                 case id_value(skill_id::GRENADE):
                     play.set_mode(play_mode::gun);
                     skill.set_grenade_mode();
                     break;
-                case id_value(skill_id::CHARGE):
+                case id_value(skill_id::JET):
+                    play.set_mode(play_mode::skill);
+                    skill.set_jetpack_mode();
+                    break;
+                case id_value(skill_id::MISSILE):
                     play.set_mode(play_mode::gun);
-                    skill.set_charge_mode();
+                    skill.set_missile_mode();
+                    break;
+                case id_value(skill_id::SCAN):
+                    play.set_mode(play_mode::skill);
+                    skill.set_scan_mode();
                     break;
                 case id_value(skill_id::SCATTER):
                     play.set_mode(play_mode::gun);
@@ -768,16 +772,18 @@ class controls
         // Activate action if active
         if (play.is_action_mode())
         {
-            if (skill.is_jetpack_mode())
+            if (skill.is_auto_mode() && skill.is_off_cooldown())
             {
-                // Turn on the jets
-                play.set_jet(true);
-
-                // Play the jet sound
-                sound->play_jet();
-
-                // Lock the gun in jetpack mode
-                skill.lock();
+                if (stat.can_consume_energy(_beam_cost))
+                {
+                    // Lock the gun in beam mode
+                    skill.lock();
+                }
+                else
+                {
+                    sound->play_voice_low_power();
+                    ui->set_alert_low_power();
+                }
             }
             else if (skill.is_beam_mode() && skill.is_off_cooldown())
             {
@@ -838,6 +844,17 @@ class controls
                     sound->play_voice_low_power();
                     ui->set_alert_low_power();
                 }
+            }
+            else if (skill.is_jetpack_mode())
+            {
+                // Turn on the jets
+                play.set_jet(true);
+
+                // Play the jet sound
+                sound->play_jet();
+
+                // Lock the gun in jetpack mode
+                skill.lock();
             }
             else if (skill.is_missile_mode() && skill.is_off_cooldown())
             {
@@ -922,7 +939,6 @@ class controls
 
         // Create explode callback to play sound
         const auto play_ex = [sound](const min::vec3<float> &point, min::body<float, min::vec3> &body) {
-
             // Play the missile explosion sound - !TODO!
             sound->play_miss_ex(point);
         };
@@ -972,16 +988,10 @@ class controls
             // If skill is locked into a mode
             if (skill.is_locked())
             {
-                if (skill.is_jetpack_mode())
+                if (skill.is_auto_mode())
                 {
-                    // Turn off the jets
-                    play.set_jet(false);
-
-                    // Stop the jet sound
-                    sound->stop_jet();
-
-                    // Unlock the gun if jetpack mode
-                    skill.unlock_jetpack();
+                    // Unlock the gun if auto mode
+                    skill.unlock_auto();
                 }
                 else if (skill.is_charged())
                 {
@@ -992,6 +1002,9 @@ class controls
                     {
                         ui->add_stream_text("Miss!");
                     }
+
+                    // Set recoil
+                    state->set_recoil();
 
                     // Activate shoot animation
                     character->set_animation_shoot();
@@ -1013,25 +1026,7 @@ class controls
                     // Remove block from world, get the removed block id
                     if (stat.can_consume_energy(_beam_cost))
                     {
-                        // Fire an explosion ray
-                        const min::vec3<unsigned> radius(1, 1, 1);
-                        const int8_t hit = world->explode_ray(radius, nullptr, 20.0, false);
-                        if (hit == -1)
-                        {
-                            ui->add_stream_text("Miss!");
-                        }
-
-                        // Activate shoot animation
-                        character->set_animation_shoot();
-
-                        // Play the shot sound
-                        sound->play_shot();
-
-                        // Start beam cooldown timer
-                        skill.start_cooldown(cd_mult);
-
-                        // Consume energy
-                        stat.consume_energy(_beam_cost);
+                        control->shoot_beam();
                     }
                     else
                     {
@@ -1062,6 +1057,58 @@ class controls
                     // Unlock the gun if grapple mode
                     skill.unlock_grapple();
                 }
+                else if (skill.is_grenade_mode())
+                {
+                    uint8_t count = 1;
+                    const inv_id id = ui->get_selected();
+                    const bool consumed = inv.consume(id.index(), id_value(skill_id::GRENADE), count);
+                    if (consumed)
+                    {
+                        // Ran out of ammo
+                        if (count == 0)
+                        {
+                            play.set_mode(play_mode::none);
+                        }
+
+                        // Launch an explosive
+                        const bool launched = world->launch_explosive();
+                        if (launched)
+                        {
+                            // Set recoil
+                            state->set_recoil();
+
+                            // Activate shoot animation
+                            character->set_animation_shoot();
+
+                            // Play the shot sound
+                            sound->play_shot();
+
+                            // Start gun cooldown timer
+                            skill.start_cooldown(cd_mult);
+
+                            // Consume energy
+                            stat.consume_energy(_grenade_cost);
+                        }
+                    }
+                    else
+                    {
+                        play.set_mode(play_mode::none);
+                    }
+
+                    // Unlock the gun if grenade mode
+                    skill.unlock_grenade();
+                }
+                else if (skill.is_jetpack_mode())
+                {
+                    // Turn off the jets
+                    play.set_jet(false);
+
+                    // Stop the jet sound
+                    sound->stop_jet();
+
+                    // Unlock the gun if jetpack mode
+                    skill.unlock_jetpack();
+                }
                 else if (skill.is_missile_mode())
                 {
                     uint8_t count = 1;
@@ -1079,6 +1126,9 @@ class controls
                         const bool launched = world->launch_missile();
                         if (launched)
                         {
+                            // Set recoil
+                            state->set_recoil();
+
                             // Activate shoot animation
                             character->set_animation_shoot();
 
@@ -1110,44 +1160,6 @@ class controls
                     // Unlock the gun if scan mode
                     skill.unlock_scan();
                 }
-                else if (skill.is_grenade_mode())
-                {
-                    uint8_t count = 1;
-                    const inv_id id = ui->get_selected();
-                    const bool consumed = inv.consume(id.index(), id_value(skill_id::GRENADE), count);
-                    if (consumed)
-                    {
-                        // Ran out of ammo
-                        if (count == 0)
-                        {
-                            play.set_mode(play_mode::none);
-                        }
-
-                        // Launch an explosive
-                        const bool launched = world->launch_explosive();
-                        if (launched)
-                        {
-                            // Activate shoot animation
-                            character->set_animation_shoot();
-
-                            // Play the shot sound
-                            sound->play_shot();
-
-                            // Start gun cooldown timer
-                            skill.start_cooldown(cd_mult);
-
-                            // Consume energy
-                            stat.consume_energy(_grenade_cost);
-                        }
-                    }
-                    else
-                    {
-                        play.set_mode(play_mode::none);
-                    }
-
-                    // Unlock the gun if grenade mode
-                    skill.unlock_grenade();
-                }
                 else if (skill.is_scatter_mode())
                 {
                     // Remove block from world, get the removed block id
@@ -1160,6 +1172,9 @@ class controls
                         {
                             ui->add_stream_text("Miss!");
                         }
+
+                        // Set recoil
+                        state->set_recoil();
 
                         // Activate shoot animation
                         character->set_animation_shoot();
@@ -1295,6 +1310,39 @@ class controls
         // Simulate a key down to change equipment
         key_down(0);
     }
+    inline void shoot_beam()
+    {
+        // Get player, skill and stats
+        player &play = _world->get_player();
+        skills &skill = play.get_skills();
+        stats &stat = play.get_stats();
+
+        // Fire an explosion ray
+        const min::vec3<unsigned> radius(1, 1, 1);
+        const int8_t hit = _world->explode_ray(radius, nullptr, 20.0, false);
+        if (hit == -1)
+        {
+            _ui->add_stream_text("Miss!");
+        }
+
+        // Set recoil
+        _state->set_recoil();
+
+        // Activate shoot animation
+        _character->set_animation_shoot();
+
+        // Play the shot sound
+        _sound->play_shot();
+
+        // Get the cooldown multiplier
+        const float cd_mult = stat.get_cooldown_mult();
+
+        // Start beam cooldown timer
+        skill.start_cooldown(cd_mult);
+
+        // Consume energy
+        stat.consume_energy(_beam_cost);
+    }
     void update_stat_ui()
     {
         player &play = _world->get_player();
@@ -1358,13 +1406,31 @@ class controls
     }
     void update_skills()
     {
-        player &player = _world->get_player();
-        skills &skill = player.get_skills();
+        player &play = _world->get_player();
+        skills &skill = play.get_skills();
+        stats &stat = play.get_stats();
 
         // Check if in jetpack mode
-        if (skill.is_jetpack_mode() && skill.is_locked())
+        if (skill.is_locked() && skill.is_auto_mode() && skill.is_off_cooldown())
         {
-            const bool active = player.is_jet();
+            if (stat.can_consume_energy(_beam_cost))
+            {
+                // Lock the gun in beam mode
+                shoot_beam();
+            }
+            else
+            {
+                // Unlock the gun if auto mode
+                skill.unlock_auto();
+
+                // Low resources
+                _sound->play_voice_low_power();
+                _ui->set_alert_low_power();
+            }
+        }
+        if (skill.is_locked() && skill.is_jetpack_mode())
+        {
+            const bool active = play.is_jet();
             if (!active)
             {
                 // Stop the jet sound

@@ -29,17 +29,23 @@ class state
 {
   private:
     static constexpr unsigned _frame_average = 4;
-    min::camera<float> _camera;
-    min::quat<float> _q;
-    min::mat4<float> _model;
+    static constexpr float _recoil_x = 60.0;
+    static constexpr float _recoil_y = -60.0;
+    static constexpr unsigned _recoil_frames = 6;
+    static constexpr float _run_stride = 0.05;
+    load_state _state;
+    bool _fix_target;
+    min::vec3<float> _target;
+    unsigned _frame_count;
     float _x[_frame_average];
     float _y[_frame_average];
-    unsigned _frame_count;
-    load_state _state;
-    min::vec3<float> _target;
+    int _recoil;
+    min::camera<float> _camera;
+    min::quat<float> _q;
     float _run_accum;
+    float _run_accum_sin;
+    min::mat4<float> _model;
     bool _dead;
-    bool _fix_target;
     bool _pause;
     bool _respawn;
     bool _user_input;
@@ -67,11 +73,11 @@ class state
         // Accumulate frame time, reset every 180 cycles
         _run_accum += speed * dt * 3.0;
         _run_accum = std::fmod(_run_accum, 1130.97335529);
+        _run_accum_sin = std::sin(_run_accum);
 
         // Calculate running offset
-        const float stride = 0.05;
-        const float s = std::sin(_run_accum) * stride;
-        const min::vec3<float> run = (fr + fup) * s;
+        const float stride = _run_accum_sin * _run_stride;
+        const min::vec3<float> run = (fr + fup) * stride;
 
         // Set model matrix
         _model = min::mat4<float>(offset + run, _q);
@@ -100,10 +106,9 @@ class state
 
   public:
     state(const size_t grid_size)
-        : _x{}, _y{}, _frame_count{},
-          _state(grid_size), _run_accum(0.0),
-          _dead(false), _fix_target(false), _pause(false),
-          _respawn(false), _user_input(false)
+        : _state(grid_size), _fix_target(false), _frame_count(0), _x{}, _y{},
+          _recoil(0), _run_accum(0.0), _run_accum_sin(0.0),
+          _dead(false), _pause(false), _respawn(false), _user_input(false)
     {
         // Load camera
         load_camera();
@@ -151,12 +156,16 @@ class state
     inline void respawn()
     {
         // Reset flags
-        _dead = false;
-        _respawn = false;
-        _run_accum = 0.0;
+        _recoil = 0;
 
         // Reload camera settings
         set_camera(_state.get_default_spawn(), _state.get_default_look());
+
+        // Reset flags
+        _run_accum = 0.0;
+        _run_accum_sin = 0.0;
+        _dead = false;
+        _respawn = false;
     }
     inline void save_state(const player &p)
     {
@@ -181,6 +190,10 @@ class state
     {
         _pause = mode;
     }
+    inline void set_recoil()
+    {
+        _recoil = _recoil_frames;
+    }
     inline void set_respawn(const bool flag)
     {
         _respawn = flag;
@@ -191,11 +204,11 @@ class state
     }
     inline void track_target(min::vec3<float> target)
     {
-        // Set the look at target to track
-        _target = target;
-
         // Enable fixed look at
         _fix_target = true;
+
+        // Set the look at target to track
+        _target = target;
     }
     inline bool toggle_pause()
     {
@@ -247,6 +260,16 @@ class state
             // Average value for x and y for last N frames
             x /= _frame_average;
             y /= _frame_average;
+
+            // If we need to apply recoil
+            if (_recoil > 0)
+            {
+                x += (_run_accum_sin * _recoil_x * dt);
+                y += (_recoil_y * dt);
+
+                // Decrement recoil flag
+                _recoil--;
+            }
 
             // If the mouse coordinates moved at all
             if (std::abs(x) > 1E-3 || std::abs(y) > 1E-3)

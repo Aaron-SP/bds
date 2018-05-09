@@ -28,6 +28,7 @@ namespace game
 class skills
 {
   private:
+    static constexpr float _auto_cd = 100.0;
     static constexpr float _beam_cd = 1000.0;
     static constexpr float _charge_cd = 500.0;
     static constexpr float _charge_start = 250.0;
@@ -36,13 +37,14 @@ class skills
     static constexpr float _miss_cd = 250.0;
     enum skill_mode
     {
-        jetpack,
+        auto_beam,
         beam,
+        charge,
         grapple,
+        grenade,
+        jetpack,
         missile,
         scan,
-        grenade,
-        charge,
         scatter
     };
 
@@ -116,17 +118,22 @@ class skills
 
         return !_shoot_cooldown;
     }
-    inline bool is_charged() const
+
+    inline bool is_auto_mode() const
     {
-        return is_charge_mode() && _locked && get_charge_time() > _charge_time;
-    }
-    inline bool is_jetpack_mode() const
-    {
-        return _mode == skill_mode::jetpack;
+        return _mode == skill_mode::auto_beam;
     }
     inline bool is_beam_mode() const
     {
         return _mode == skill_mode::beam;
+    }
+    inline bool is_charged() const
+    {
+        return is_charge_mode() && _locked && get_charge_time() > _charge_time;
+    }
+    inline bool is_charge_mode() const
+    {
+        return _mode == skill_mode::charge;
     }
     inline bool is_grapple_mode() const
     {
@@ -136,6 +143,10 @@ class skills
     {
         return _mode == skill_mode::grenade;
     }
+    inline bool is_jetpack_mode() const
+    {
+        return _mode == skill_mode::jetpack;
+    }
     inline bool is_missile_mode() const
     {
         return _mode == skill_mode::missile;
@@ -143,10 +154,6 @@ class skills
     inline bool is_scan_mode() const
     {
         return _mode == skill_mode::scan;
-    }
-    inline bool is_charge_mode() const
-    {
-        return _mode == skill_mode::charge;
     }
     inline bool is_scatter_mode() const
     {
@@ -164,9 +171,17 @@ class skills
     {
         _locked = true;
     }
+    inline void set_auto_mode()
+    {
+        _mode = skill_mode::auto_beam;
+    }
     inline void set_beam_mode()
     {
         _mode = skill_mode::beam;
+    }
+    inline void set_charge_mode()
+    {
+        _mode = skill_mode::charge;
     }
     inline void set_grapple_mode()
     {
@@ -176,21 +191,17 @@ class skills
     {
         _mode = skill_mode::grenade;
     }
-    inline void set_missile_mode()
-    {
-        _mode = skill_mode::missile;
-    }
     inline void set_jetpack_mode()
     {
         _mode = skill_mode::jetpack;
     }
+    inline void set_missile_mode()
+    {
+        _mode = skill_mode::missile;
+    }
     inline void set_scan_mode()
     {
         _mode = skill_mode::scan;
-    }
-    inline void set_charge_mode()
-    {
-        _mode = skill_mode::charge;
     }
     inline void set_scatter_mode()
     {
@@ -208,6 +219,9 @@ class skills
         // Set the cooldown time
         switch (_mode)
         {
+        case skill_mode::auto_beam:
+            _cd = _auto_cd;
+            break;
         case skill_mode::beam:
             _cd = _beam_cd;
             break;
@@ -230,10 +244,25 @@ class skills
         // Update start time
         _cool = std::chrono::high_resolution_clock::now();
     }
+    inline void unlock_auto()
+    {
+        if (_mode == skill_mode::auto_beam)
+        {
+            _locked = false;
+        }
+    }
     inline void unlock_beam()
     {
         if (_mode == skill_mode::beam)
         {
+            _locked = false;
+        }
+    }
+    inline void unlock_charge()
+    {
+        if (_mode == skill_mode::charge)
+        {
+            _charging = false;
             _locked = false;
         }
     }
@@ -251,16 +280,16 @@ class skills
             _locked = false;
         }
     }
-    inline void unlock_missile()
+    inline void unlock_jetpack()
     {
-        if (_mode == skill_mode::missile)
+        if (_mode == skill_mode::jetpack)
         {
             _locked = false;
         }
     }
-    inline void unlock_jetpack()
+    inline void unlock_missile()
     {
-        if (_mode == skill_mode::jetpack)
+        if (_mode == skill_mode::missile)
         {
             _locked = false;
         }
@@ -269,14 +298,6 @@ class skills
     {
         if (_mode == skill_mode::scan)
         {
-            _locked = false;
-        }
-    }
-    inline void unlock_charge()
-    {
-        if (_mode == skill_mode::charge)
-        {
-            _charging = false;
             _locked = false;
         }
     }

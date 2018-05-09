@@ -674,20 +674,22 @@ class ui_bg
         case item_type::skill:
             switch (it.id())
             {
+            case id_value(skill_id::AUTO_BEAM):
+                return _assets.load_auto_icon(inv, p);
             case id_value(skill_id::BEAM):
                 return _assets.load_beam_icon(inv, p);
-            case id_value(skill_id::MISSILE):
-                return _assets.load_missile_icon(inv, p);
-            case id_value(skill_id::GRAPPLE):
-                return _assets.load_grapple_icon(inv, p);
-            case id_value(skill_id::JET):
-                return _assets.load_jet_icon(inv, p);
-            case id_value(skill_id::SCAN):
-                return _assets.load_scan_icon(inv, p);
-            case id_value(skill_id::GRENADE):
-                return _assets.load_grenade_icon(inv, p);
             case id_value(skill_id::CHARGE):
                 return _assets.load_charge_icon(inv, p);
+            case id_value(skill_id::GRAPPLE):
+                return _assets.load_grapple_icon(inv, p);
+            case id_value(skill_id::GRENADE):
+                return _assets.load_grenade_icon(inv, p);
+            case id_value(skill_id::JET):
+                return _assets.load_jet_icon(inv, p);
+            case id_value(skill_id::MISSILE):
+                return _assets.load_missile_icon(inv, p);
+            case id_value(skill_id::SCAN):
+                return _assets.load_scan_icon(inv, p);
             case id_value(skill_id::SCATTER):
                 return _assets.load_scatter_icon(inv, p);
             default:

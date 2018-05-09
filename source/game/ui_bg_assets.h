@@ -58,20 +58,22 @@ class ui_bg_assets
     // Icons
     static constexpr float _x_reload_uv = 4.0 / _image_size;
     static constexpr float _y_reload_uv = 40.0 / _image_size;
-    static constexpr float _x_beam_uv = 40.0 / _image_size;
+    static constexpr float _x_auto_uv = 40.0 / _image_size;
+    static constexpr float _y_auto_uv = 40.0 / _image_size;
+    static constexpr float _x_beam_uv = 76.0 / _image_size;
     static constexpr float _y_beam_uv = 40.0 / _image_size;
-    static constexpr float _x_miss_uv = 76.0 / _image_size;
-    static constexpr float _y_miss_uv = 40.0 / _image_size;
-    static constexpr float _x_grap_uv = 112.0 / _image_size;
-    static constexpr float _y_grap_uv = 40.0 / _image_size;
-    static constexpr float _x_jet_uv = 148.0 / _image_size;
-    static constexpr float _y_jet_uv = 40.0 / _image_size;
-    static constexpr float _x_scan_uv = 184.0 / _image_size;
-    static constexpr float _y_scan_uv = 40.0 / _image_size;
-    static constexpr float _x_grenade_uv = 256.0 / _image_size;
-    static constexpr float _y_grenade_uv = 40.0 / _image_size;
-    static constexpr float _x_charge_uv = 292.0 / _image_size;
+    static constexpr float _x_charge_uv = 112.0 / _image_size;
     static constexpr float _y_charge_uv = 40.0 / _image_size;
+    static constexpr float _x_grap_uv = 148.0 / _image_size;
+    static constexpr float _y_grap_uv = 40.0 / _image_size;
+    static constexpr float _x_grenade_uv = 184.0 / _image_size;
+    static constexpr float _y_grenade_uv = 40.0 / _image_size;
+    static constexpr float _x_jet_uv = 220.0 / _image_size;
+    static constexpr float _y_jet_uv = 40.0 / _image_size;
+    static constexpr float _x_miss_uv = 256.0 / _image_size;
+    static constexpr float _y_miss_uv = 40.0 / _image_size;
+    static constexpr float _x_scan_uv = 292.0 / _image_size;
+    static constexpr float _y_scan_uv = 40.0 / _image_size;
     static constexpr float _x_scatter_uv = 328.0 / _image_size;
     static constexpr float _y_scatter_uv = 40.0 / _image_size;
 
@@ -494,14 +496,6 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, grey_coord);
     }
-    inline void load_beam_icon(const inv_id id, const min::vec2<float> &p)
-    {
-        const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec4<float> beam_coord(_x_beam_uv, _y_beam_uv, _s_uv, _s_uv);
-
-        // Load rect at position
-        set_rect(id.id(), p, scale, beam_coord);
-    }
     inline void load_block_icon(const inv_id id, const int8_t block_id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
@@ -530,6 +524,30 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, beam_coord);
     }
+    inline void load_auto_icon(const inv_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> auto_coord(_x_auto_uv, _y_auto_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, auto_coord);
+    }
+    inline void load_beam_icon(const inv_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> beam_coord(_x_beam_uv, _y_beam_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, beam_coord);
+    }
+    inline void load_charge_icon(const inv_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> charge_coord(_x_charge_uv, _y_charge_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, charge_coord);
+    }
     inline void load_grapple_icon(const inv_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
@@ -537,6 +555,14 @@ class ui_bg_assets
 
         // Load rect at position
         set_rect(id.id(), p, scale, grap_coord);
+    }
+    inline void load_grenade_icon(const inv_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> gren_coord(_x_grenade_uv, _y_grenade_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, gren_coord);
     }
     inline void load_jet_icon(const inv_id id, const min::vec2<float> &p)
     {
@@ -561,22 +587,6 @@ class ui_bg_assets
 
         // Load rect at position
         set_rect(id.id(), p, scale, scan_coord);
-    }
-    inline void load_grenade_icon(const inv_id id, const min::vec2<float> &p)
-    {
-        const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec4<float> gren_coord(_x_grenade_uv, _y_grenade_uv, _s_uv, _s_uv);
-
-        // Load rect at position
-        set_rect(id.id(), p, scale, gren_coord);
-    }
-    inline void load_charge_icon(const inv_id id, const min::vec2<float> &p)
-    {
-        const min::vec2<float> scale(_s_fg, _s_fg);
-        const min::vec4<float> charge_coord(_x_charge_uv, _y_charge_uv, _s_uv, _s_uv);
-
-        // Load rect at position
-        set_rect(id.id(), p, scale, charge_coord);
     }
     inline void load_scatter_icon(const inv_id id, const min::vec2<float> &p)
     {
