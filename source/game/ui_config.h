@@ -51,8 +51,12 @@ static constexpr float _x_console_wrap = _s_console_x;
 static constexpr float _y_console_wrap = _font_size;
 static constexpr float _y_hover_wrap = _font_size;
 static constexpr float _y_ui_text = _console_dy + 24.0;
-static constexpr float _energy_dx = (_tool_space * _num_half_buttons) + (_tool_space * 0.5) + 4.0;
-static constexpr float _health_dx = _tool_start - _tool_space - 4.0;
+static constexpr float _energy_dx = (_tool_space * _num_half_buttons) + (_tool_space * 0.5) + 16.0;
+static constexpr float _health_dx = _tool_start - _tool_space - 16.0;
+
+// Health Bar Meter
+static constexpr float _bar_dy = _tool_dy - 20.0;
+static constexpr float _meter_dy = _bar_dy + 30.0;
 
 // Experience Bar
 static constexpr float _s_exp_x = _s_console_x;

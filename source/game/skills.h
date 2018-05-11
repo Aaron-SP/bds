@@ -33,8 +33,11 @@ class skills
     static constexpr float _charge_cd = 500.0;
     static constexpr float _charge_start = 250.0;
     static constexpr float _charge_time = 500.0;
+    static constexpr float _portal_start = 250.0;
+    static constexpr float _portal_charge_time = 5000.0;
     static constexpr float _gren_cd = 1000.0;
     static constexpr float _miss_cd = 250.0;
+    static constexpr float _scat_cd = 750.0;
     enum skill_mode
     {
         auto_beam,
@@ -44,6 +47,7 @@ class skills
         grenade,
         jetpack,
         missile,
+        portal,
         scan,
         scatter
     };
@@ -84,11 +88,34 @@ class skills
         // Should we start charging?
         if (!_charging)
         {
-            // Check if we have activated beam mode
+            // Check if we have activated charge mode
             if (is_charge_mode() && _locked)
             {
                 // If minimum charging has been activated
                 if (get_charge_time() > _charge_start)
+                {
+                    // Set charging debounce
+                    _charging = true;
+
+                    // Activate charging
+                    return true;
+                }
+            }
+        }
+
+        // Do not active charging
+        return false;
+    }
+    inline bool activate_portal()
+    {
+        // Should we start charging?
+        if (!_charging)
+        {
+            // Check if we have activated portal mode
+            if (is_portal_mode() && _locked)
+            {
+                // If minimum charging has been activated
+                if (get_charge_time() > _portal_start)
                 {
                     // Set charging debounce
                     _charging = true;
@@ -129,7 +156,7 @@ class skills
     }
     inline bool is_charged() const
     {
-        return is_charge_mode() && _locked && get_charge_time() > _charge_time;
+        return is_charge_mode() && _locked && (get_charge_time() > _charge_time);
     }
     inline bool is_charge_mode() const
     {
@@ -150,6 +177,14 @@ class skills
     inline bool is_missile_mode() const
     {
         return _mode == skill_mode::missile;
+    }
+    inline bool is_portal_charged() const
+    {
+        return is_portal_mode() && _locked && (get_charge_time() > _portal_charge_time);
+    }
+    inline bool is_portal_mode() const
+    {
+        return _mode == skill_mode::portal;
     }
     inline bool is_scan_mode() const
     {
@@ -199,6 +234,10 @@ class skills
     {
         _mode = skill_mode::missile;
     }
+    inline void set_portal_mode()
+    {
+        _mode = skill_mode::portal;
+    }
     inline void set_scan_mode()
     {
         _mode = skill_mode::scan;
@@ -233,6 +272,9 @@ class skills
             break;
         case skill_mode::missile:
             _cd = _miss_cd;
+            break;
+        case skill_mode::scatter:
+            _cd = _scat_cd;
             break;
         default:
             break;
@@ -291,6 +333,14 @@ class skills
     {
         if (_mode == skill_mode::missile)
         {
+            _locked = false;
+        }
+    }
+    inline void unlock_portal()
+    {
+        if (_mode == skill_mode::portal)
+        {
+            _charging = false;
             _locked = false;
         }
     }

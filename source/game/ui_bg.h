@@ -486,6 +486,12 @@ class ui_bg
             _assets.load_cursor_aim();
         }
 
+        // Load health bar
+        _assets.load_health_bar();
+
+        // Load energy bar
+        _assets.load_energy_bar();
+
         // Load energy meter
         _assets.load_energy_meter();
 
@@ -688,6 +694,8 @@ class ui_bg
                 return _assets.load_jet_icon(inv, p);
             case id_value(skill_id::MISSILE):
                 return _assets.load_missile_icon(inv, p);
+            case id_value(skill_id::PORTAL):
+                return _assets.load_portal_icon(inv, p);
             case id_value(skill_id::SCAN):
                 return _assets.load_scan_icon(inv, p);
             case id_value(skill_id::SCATTER):

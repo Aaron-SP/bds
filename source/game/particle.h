@@ -95,25 +95,32 @@ class miss_emitter : public emitter
     miss_emitter() : emitter(min::vec3<float>(), 25, 4, 0.0625, 0.125, 0.5) {}
 };
 
+enum class static_type
+{
+    explode,
+    line,
+    portal
+};
+
 class static_emitter : public emitter
 {
   private:
-    bool _is_explode;
+    static_type _type;
 
   public:
     static constexpr size_t _static_count = 1000;
-    static_emitter() : emitter(min::vec3<float>(), _static_count, 1, 0.10, 5.0, 10.0)
+    static_emitter() : emitter(min::vec3<float>(), _static_count, 1, 0.0, 5.0, 10.0)
     {
         // Set the particle system gravity
         this->_emit.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
     }
-    bool is_explode() const
+    static_type get_type() const
     {
-        return _is_explode;
+        return _type;
     }
-    void set_explode(const bool flag)
+    void set_type(const static_type type)
     {
-        _is_explode = flag;
+        _type = type;
     }
 };
 
@@ -335,7 +342,18 @@ class particle
         for (size_t i = 0; i < _static_limit; i++)
         {
             // Abort line animation
-            if (!_static[i].is_explode())
+            if (_static[i].get_type() == static_type::line)
+            {
+                _static[i].abort();
+            }
+        }
+    }
+    inline void abort_portal()
+    {
+        for (size_t i = 0; i < _static_limit; i++)
+        {
+            // Abort line animation
+            if (_static[i].get_type() == static_type::portal)
             {
                 _static[i].abort();
             }
@@ -410,9 +428,9 @@ class particle
         _static[_static_old].set_time(time);
 
         // Set static particle type
-        _static[_static_old].set_explode(true);
+        _static[_static_old].set_type(static_type::explode);
 
-        // Set the explode reference position
+        // Set the static reference position
         _static[_static_old].set_ref(p);
         _static[_static_old].w(size);
 
@@ -430,17 +448,43 @@ class particle
     }
     inline void load_static_line(const min::vec3<float> &p, const float time, const float size)
     {
+        // Get the emitter
+        static_emitter &stat = _static[_static_old];
+
         // Add time to the clock
-        _static[_static_old].set_time(time);
+        stat.set_time(time);
+
+        // Clear the accum
+        stat.emit().reset_accum();
 
         // Set static particle type
-        _static[_static_old].set_explode(false);
+        stat.set_type(static_type::line);
 
         // Set the line destination
         _line_pos = p;
 
-        // Set the explode reference position
-        _static[_static_old].w(size);
+        // Set the static reference position
+        stat.w(size);
+
+        // Increment counter
+        (++_static_old) %= _static_limit;
+    }
+    inline void load_static_portal(const float time, const float size)
+    {
+        // Get the emitter
+        static_emitter &stat = _static[_static_old];
+
+        // Add time to the clock
+        stat.set_time(time);
+
+        // Clear the accum
+        stat.emit().reset_accum();
+
+        // Set static particle type
+        stat.set_type(static_type::portal);
+
+        // Set the static reference position
+        stat.w(size);
 
         // Increment counter
         (++_static_old) %= _static_limit;
@@ -457,7 +501,99 @@ class particle
         // Set the reference position
         _miss[index].set_ref(p);
     }
-    void update(const min::camera<float> &cam, const double dt)
+    inline void update_static_explode(const size_t index, const min::frustum<float> &frust, const float dt)
+    {
+        // Get the emitter
+        static_emitter &stat = _static[index];
+
+        // Set the view flag
+        const min::vec3<float> &p = stat.emit().get_position();
+        stat.set_view(frust.point_inside(p));
+
+        // Remove some of the time
+        stat.time_dec(dt);
+
+        // Update the particle positions
+        stat.emit().step(dt);
+    }
+    inline void update_static_line(const size_t index, const min::camera<float> &cam, const float dt)
+    {
+        // Get the emitter
+        static_emitter &stat = _static[index];
+
+        // Set the view flag
+        stat.set_view(true);
+
+        // Remove some of the time
+        stat.time_dec(dt);
+
+        // Calculate camera settings
+        const min::vec3<float> cam_pos = gun_position(cam);
+
+        // Generate particles in a line
+        size_t count = 0;
+        const min::vec3<float> spacing = (_line_pos - cam_pos) * _inv_static_count;
+        const auto f = [this, &cam_pos, &count, &spacing, &stat](min::vec3<float> &position, min::vec3<float> &speed, const float accum, const float inv_mass) -> void {
+            // Calculate particle density
+            const float density = (3.75E-6 * count) + 0.00125;
+
+            // Calculate offset
+            const min::vec3<float> offset = (spacing * count) + (stat.emit().random() * density);
+
+            // Update each particle at position
+            position = cam_pos + offset;
+
+            // Update counter
+            count++;
+        };
+
+        // Update the line reference
+        stat.set_ref(cam_pos);
+
+        // Update the particle positions
+        stat.emit().set(f, dt);
+    }
+    inline void update_static_portal(const size_t index, const min::camera<float> &cam, const float dt)
+    {
+        // Get the emitter
+        static_emitter &stat = _static[index];
+
+        // Set the view flag
+        stat.set_view(true);
+
+        // Remove some of the time
+        stat.time_dec(dt);
+
+        // Calculate camera settings
+        const min::vec3<float> cam_pos = gun_position(cam);
+
+        // Generate particles in a line
+        size_t count = 0;
+        const auto f = [this, &cam, &cam_pos, &count, &stat](min::vec3<float> &position, min::vec3<float> &speed, const float accum, const float inv_mass) -> void {
+            // Spiral properties
+            const float R = 0.5;
+            const float t = accum * count * 0.05;
+            const float r = std::cos(t) * R;
+            const float f = count * 0.01;
+            const float u = std::sin(t) * R;
+
+            // Calculate offset
+            const min::vec3<float> offset = (cam.get_right() * r) + (cam.get_up() * u) + (cam.get_forward() * f);
+
+            // Update each particle at position
+            position = cam_pos + offset;
+
+            // Update counter
+            count++;
+        };
+
+        // Update the line reference
+        stat.set_ref(cam_pos);
+
+        // Update the particle positions
+        stat.emit().set(f, dt);
+    }
+    void update(const min::camera<float> &cam, const float dt)
     {
         // Unbind the last VAO to prevent scrambling buffers
         _static[0].emit().unbind();
@@ -512,53 +648,29 @@ class particle
         // Update static emitters
         for (size_t i = 0; i < _static_limit; i++)
         {
-            // Update explode
-            if (_static[i].is_explode() && _static[i].time() > 0.0)
+            // If this emitter is being animated
+            if (_static[i].time() > 0.0)
             {
-                // Set the view flag
-                const min::vec3<float> &p = _static[i].emit().get_position();
-                _static[i].set_view(frust.point_inside(p));
+                // Update explode
+                const static_type type = _static[i].get_type();
+                switch (type)
+                {
+                case static_type::explode:
 
-                // Remove some of the time
-                _static[i].time_dec(dt);
+                    // Update explode emitter
+                    update_static_explode(i, frust, dt);
+                    break;
+                case static_type::line:
 
-                // Update the particle positions
-                _static[i].emit().step(dt);
-            }
-            else if (!_static[i].is_explode() && _static[i].time() > 0.0)
-            {
-                // Set the view flag
-                _static[i].set_view(true);
+                    // Update line emitter
+                    update_static_line(i, cam, dt);
+                    break;
+                case static_type::portal:
 
-                // Remove some of the time
-                _static[i].time_dec(dt);
-
-                // Calculate camera settings
-                const min::vec3<float> cam_pos = gun_position(cam);
-
-                // Generate particles in a line
-                size_t count = 0;
-                const min::vec3<float> spacing = (_line_pos - cam_pos) * _inv_static_count;
-                const auto f = [this, &count, &cam_pos, spacing, i](min::vec3<float> &position, min::vec3<float> &speed, const float inv_mass) -> void {
-
-                    // Calculate particle density
-                    const float density = (3.75E-6 * count) + 0.00125;
-
-                    // Calculate offset
-                    const min::vec3<float> offset = (spacing * count) + (_static[i].emit().random() * density);
-
-                    // Update each particle at position
-                    position = cam_pos + offset;
-
-                    // Update counter
-                    count++;
-                };
-
-                // Update the line reference
-                _static[i].set_ref(cam_pos);
-
-                // Update the particle positions
-                _static[i].emit().set(f);
+                    // Update portal emitter
+                    update_static_portal(i, cam, dt);
+                    break;
+                }
             }
         }
     }

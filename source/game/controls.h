@@ -42,6 +42,7 @@ class controls
     static constexpr float _grapple_cost = 10.0;
     static constexpr float _grenade_cost = 20.0;
     static constexpr float _missile_cost = 20.0;
+    static constexpr float _portal_cost = 50.0;
     static constexpr float _project_dist = 3.0;
     min::window *_window;
     min::camera<float> *_camera;
@@ -121,7 +122,6 @@ class controls
         keyboard.add(min::window::key_code::KEYA);
         keyboard.add(min::window::key_code::KEYD);
         keyboard.add(min::window::key_code::KEYE);
-        keyboard.add(min::window::key_code::KEYF);
         keyboard.add(min::window::key_code::KEYZ);
         keyboard.add(min::window::key_code::KEYX);
         keyboard.add(min::window::key_code::KEYC);
@@ -167,9 +167,6 @@ class controls
 
         // Register callback function E
         keyboard.register_keydown(min::window::key_code::KEYE, controls::reset, (void *)this);
-
-        // Register callback function F
-        keyboard.register_keydown(min::window::key_code::KEYF, controls::portal, (void *)this);
 
         // Register callback function Z
         keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
@@ -446,6 +443,10 @@ class controls
                     play.set_mode(play_mode::gun);
                     skill.set_missile_mode();
                     break;
+                case id_value(skill_id::PORTAL):
+                    play.set_mode(play_mode::gun);
+                    skill.set_portal_mode();
+                    break;
                 case id_value(skill_id::SCAN):
                     play.set_mode(play_mode::skill);
                     skill.set_scan_mode();
@@ -641,18 +642,6 @@ class controls
 
         // Reset scale
         world->reset_scale();
-    }
-    static void portal(void *ptr, double step)
-    {
-        // Cast to control pointer
-        controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the state and world pointer
-        state *const state = control->get_state();
-        world *const world = control->get_world();
-
-        // Reset scale
-        world->portal(state->get_load_state());
     }
     static void ui_extend(void *ptr, double step)
     {
@@ -862,6 +851,29 @@ class controls
                 if (stat.can_consume_energy(_missile_cost))
                 {
                     // Lock the gun in missile mode
+                    skill.lock();
+                }
+                else
+                {
+                    sound->play_voice_low_power();
+                    ui->set_alert_low_power();
+                }
+            }
+            else if (skill.is_portal_mode())
+            {
+                // Try to consume energy to power this resource
+                if (stat.can_consume_energy(_portal_cost))
+                {
+                    // Consume energy
+                    stat.consume_energy(_portal_cost);
+
+                    // Play the charge sound
+                    sound->play_charge();
+
+                    // Record the start charge time
+                    skill.start_charge();
+
+                    // Lock the gun in portal mode
                     skill.lock();
                 }
                 else
@@ -1147,6 +1159,27 @@ class controls
                     // Unlock the gun if missile mode
                     skill.unlock_missile();
                 }
+                else if (skill.is_portal_mode())
+                {
+                    // Stop portal animation
+                    character->abort_animation_portal();
+
+                    // Stop the charge sound
+                    sound->stop_charge();
+
+                    // If portal is charged
+                    if (skill.is_portal_charged())
+                    {
+                        // Launch portal
+                        world->portal(state->get_load_state());
+
+                        // Play portal sound
+                        sound->play_shot();
+                    }
+
+                    // Unlock the gun if portal mode
+                    skill.unlock_portal();
+                }
                 else if (skill.is_scan_mode() && play.is_target_valid())
                 {
                     // Scan the block on this ray
@@ -1181,6 +1214,9 @@ class controls
 
                         // Play the shot sound
                         sound->play_shot();
+
+                        // Start gun cooldown timer
+                        skill.start_cooldown(cd_mult);
 
                         // Consume energy
                         stat.consume_energy(_scatter_cost);
@@ -1445,6 +1481,12 @@ class controls
         if (skill.activate_charge())
         {
             _character->set_animation_charge(*_camera);
+        }
+
+        // Activate portal animation
+        if (skill.activate_portal())
+        {
+            _character->set_animation_portal();
         }
     }
     void update_ui()

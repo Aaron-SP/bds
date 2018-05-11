@@ -76,35 +76,35 @@ class inv_id
     }
     inline inv_id bg_store_index() const
     {
-        return inv_id(_id + 7);
+        return inv_id(_id + 9);
     }
     inline inv_id store_index() const
     {
-        return inv_id(_id + 15);
+        return inv_id(_id + 17);
     }
     inline inv_id bg_key_index() const
     {
-        return inv_id(_id + 15);
+        return inv_id(_id + 17);
     }
     inline inv_id key_index() const
     {
-        return inv_id(_id + 23);
+        return inv_id(_id + 25);
     }
     inline inv_id bg_ex_index() const
     {
-        return inv_id(_id + 23);
+        return inv_id(_id + 25);
     }
     inline inv_id ex_index() const
     {
-        return inv_id(_id + 47);
+        return inv_id(_id + 49);
     }
     inline inv_id bg_cube_index() const
     {
-        return inv_id(_id + 48);
+        return inv_id(_id + 50);
     }
     inline inv_id cube_index() const
     {
-        return inv_id(_id + 57);
+        return inv_id(_id + 59);
     }
     inline inv_id to_key() const
     {
@@ -367,11 +367,12 @@ class inventory
         _inv_desc[6] = "Transforms energy_into vertical thrust";
         _inv_name[7] = "Missile Launcher";
         _inv_desc[7] = "An expensive_offensive projectile_weapon";
-        _inv_name[8] = "Pending Scan";
-        _inv_desc[8] = "Scan a block to_retrieve the block_type";
-        _inv_name[9] = "Scatter Beam";
-        _inv_desc[9] = "An energy weapon_optimized for killing_drones";
-        _inv_name[10] = "Reserved";
+        _inv_name[8] = "Portal Beam";
+        _inv_desc[8] = "It's portal time baby!";
+        _inv_name[9] = "Pending Scan";
+        _inv_desc[9] = "Scan a block to_retrieve the block_type";
+        _inv_name[10] = "Scatter Beam";
+        _inv_desc[10] = "An energy weapon_optimized for killing_drones";
         _inv_name[11] = "Reserved";
         _inv_name[12] = "Reserved";
         _inv_name[13] = "Reserved";

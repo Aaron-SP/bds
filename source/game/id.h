@@ -153,8 +153,9 @@ enum class skill_id : uint8_t
     GRENADE = 5,
     JET = 6,
     MISSILE = 7,
-    SCAN = 8,
-    SCATTER = 9
+    PORTAL = 8,
+    SCAN = 9,
+    SCATTER = 10
 };
 
 inline constexpr int8_t id_value(const block_id id)

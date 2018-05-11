@@ -92,6 +92,7 @@ class world
     // Player
     player _player;
     const min::vec3<unsigned> _ex_radius;
+    const float _top;
 
     // Skybox
     sky _sky;
@@ -183,7 +184,7 @@ class world
     inline min::vec3<float> event_spawn()
     {
         const float x = _grid_dist(_gen);
-        const float y = 50.0;
+        const float y = _top - 5.0;
         const float z = _grid_dist(_gen);
 
         return min::vec3<float>(x, y, z);
@@ -192,7 +193,6 @@ class world
     {
         // Block explosion callback
         return [this](const std::pair<min::aabbox<float, min::vec3>, int8_t> &cell) {
-
             // Check for exploding mines
             if (cell.second == id_value(block_id::SODIUM))
             {
@@ -213,7 +213,6 @@ class world
         return [this](const min::vec3<float> &point,
                       const min::vec3<unsigned> &scale,
                       const int8_t value) {
-
             // Play missile explosion sound
             this->_sound->play_miss_ex(point);
 
@@ -269,7 +268,6 @@ class world
 
         // On remove callback
         const auto f = [this, dir](const min::vec3<float> &point, const int8_t value) {
-
             // Add a drop
             this->_drops.add(this->random_drop_offset(point), dir, value);
 
@@ -477,7 +475,6 @@ class world
     {
         // Player collision callback
         const auto f = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
-
             // Get other body id, b1 is player body
             // 1 is drone
             // 2 is drop
@@ -541,7 +538,6 @@ class world
 
         // Explosive collision callback
         const auto h = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
-
             // Get other body id, b1 is explosive, 1 is drone
             if (b2.get_id() == 1)
             {
@@ -569,7 +565,6 @@ class world
 
         // Missile collision callback
         const auto j = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
-
             // Get other body id, b1 is explosive, 1 is drone
             if (b2.get_id() == 1)
             {
@@ -676,6 +671,7 @@ class world
           _edit_mode(false), _swatch_mode(false),
           _player(&_simulation, state, character_load(state)),
           _ex_radius(3, 3, 3),
+          _top(state.get_top().y()),
           _sky(uniforms),
           _instance(uniforms),
           _drones(_simulation, _instance, s),

@@ -140,6 +140,14 @@ class character
         // Abort the particle system
         _particles->abort_line();
     }
+    inline void abort_animation_portal()
+    {
+        // Set number of animation loops to zero, stops animating
+        _md5_model.get_current_animation().set_loop_count(0);
+
+        // Abort the particle system
+        _particles->abort_portal();
+    }
     inline void abort_animation_shoot()
     {
         // Set number of animation loops to zero, stops animating
@@ -178,6 +186,14 @@ class character
     {
         // Add grapple particle effects
         _particles->load_static_line(p, 86400.0, 30.0);
+
+        // Activate 999 loop of full animation
+        set_animation(_charge_index, 86400);
+    }
+    inline void set_animation_portal()
+    {
+        // Add grapple particle effects
+        _particles->load_static_portal(86400.0, 30.0);
 
         // Activate 999 loop of full animation
         set_animation(_charge_index, 86400);

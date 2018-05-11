@@ -72,9 +72,11 @@ class ui_bg_assets
     static constexpr float _y_jet_uv = 40.0 / _image_size;
     static constexpr float _x_miss_uv = 256.0 / _image_size;
     static constexpr float _y_miss_uv = 40.0 / _image_size;
-    static constexpr float _x_scan_uv = 292.0 / _image_size;
+    static constexpr float _x_portal_uv = 292.0 / _image_size;
+    static constexpr float _y_portal_uv = 40.0 / _image_size;
+    static constexpr float _x_scan_uv = 328.0 / _image_size;
     static constexpr float _y_scan_uv = 40.0 / _image_size;
-    static constexpr float _x_scatter_uv = 328.0 / _image_size;
+    static constexpr float _x_scatter_uv = 364.0 / _image_size;
     static constexpr float _y_scatter_uv = 40.0 / _image_size;
 
     // Cubes
@@ -92,12 +94,14 @@ class ui_bg_assets
     static constexpr float _y_stat_uv = 498.0 / _image_size;
     static constexpr float _x_hover_uv = 688.0 / _image_size;
     static constexpr float _y_hover_uv = 574.0 / _image_size;
+    static constexpr float _x_ui_bar_uv = 4.0 / _image_size;
+    static constexpr float _y_ui_bar_uv = 380.0 / _image_size;
 
     // Scale sizes
     static constexpr float _s_uv = 32.0 / _image_size;
-    static constexpr float _s_health_x = 32.0;
+    static constexpr float _s_health_x = 48.0;
     static constexpr float _s_health_y = 96.0;
-    static constexpr float _s_energy_x = 32.0;
+    static constexpr float _s_energy_x = 48.0;
     static constexpr float _s_energy_y = 96.0;
     static constexpr float _s_stat_x = 680.0;
     static constexpr float _s_stat_y = 266.0;
@@ -105,6 +109,10 @@ class ui_bg_assets
     static constexpr float _s_stat_uv_y = _s_stat_y / _image_size;
     static constexpr float _s_hover_uv_x = _s_hover_bg_x / _image_size;
     static constexpr float _s_hover_uv_y = _s_hover_bg_y / _image_size;
+    static constexpr float _s_ui_bar_x = 62.0;
+    static constexpr float _s_ui_bar_y = 110.0;
+    static constexpr float _s_ui_bar_uv_x = 62.0 / _image_size;
+    static constexpr float _s_ui_bar_uv_y = 110.0 / _image_size;
 
     // Menu sizes
     static constexpr float _s_menu_x = 504.0;
@@ -112,9 +120,9 @@ class ui_bg_assets
     static constexpr float _s_menu_uv_x = 504.0 / _image_size;
     static constexpr float _s_menu_uv_y = 124.0 / _image_size;
 
-    // Number of ui elements, 3 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 1
-    static constexpr size_t _base = 39;
-    static constexpr size_t _ext = 106;
+    // Number of ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 1
+    static constexpr size_t _base = 41;
+    static constexpr size_t _ext = 108;
     static constexpr size_t _ext_hover = _ext + 1;
     static constexpr size_t _max_size = _ext_hover;
 
@@ -351,29 +359,47 @@ class ui_bg_assets
         // Load rect at position
         set_rect_reset(2, p, scale, target_coord);
     }
+    inline void load_health_bar()
+    {
+        const min::vec2<float> p(_center_w + _health_dx, _bar_dy + _s_ui_bar_y * 0.5);
+        const min::vec2<float> scale(_s_ui_bar_x, _s_ui_bar_y);
+        const min::vec4<float> bar_coord(_x_ui_bar_uv, _y_ui_bar_uv, _s_ui_bar_uv_x, _s_ui_bar_uv_y);
+
+        // Load rect at position
+        set_rect_reset(3, p, scale, bar_coord);
+    }
+    inline void load_energy_bar()
+    {
+        const min::vec2<float> p(_center_w + _energy_dx, _bar_dy + _s_ui_bar_y * 0.5);
+        const min::vec2<float> scale(_s_ui_bar_x, _s_ui_bar_y);
+        const min::vec4<float> bar_coord(_x_ui_bar_uv, _y_ui_bar_uv, _s_ui_bar_uv_x, _s_ui_bar_uv_y);
+
+        // Load rect at position
+        set_rect_reset(4, p, scale, bar_coord);
+    }
     inline void load_health_meter()
     {
-        const float health = std::min<float>(1.25, _health);
+        const float health = std::min<float>(1.0, _health);
         const float y_height = _s_health_y * health;
-        const float y_offset = (y_height - _s_health_x) * 0.5 + _tool_dy;
+        const float y_offset = _meter_dy + (y_height - _s_health_x) * 0.5;
         const min::vec2<float> p(_center_w + _health_dx, y_offset);
         const min::vec2<float> scale(_s_health_x, y_height);
 
         // Load rect at position depending on health
         if (_health > 1.0)
         {
-            set_rect(3, p, scale, min::vec4<float>(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv));
+            set_rect(5, p, scale, min::vec4<float>(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv));
         }
         else
         {
-            set_rect(3, p, scale, min::vec4<float>(_x_red_uv, _y_red_uv, _s_uv, _s_uv));
+            set_rect(5, p, scale, min::vec4<float>(_x_red_uv, _y_red_uv, _s_uv, _s_uv));
         }
     }
     inline void load_energy_meter()
     {
-        const float energy = std::min<float>(1.25, _energy);
+        const float energy = std::min<float>(1.0, _energy);
         const float y_height = _s_energy_y * energy;
-        const float y_offset = (y_height - _s_energy_x) * 0.5 + _tool_dy;
+        const float y_offset = _meter_dy + (y_height - _s_energy_x) * 0.5;
         const min::vec2<float> p(_center_w + _energy_dx, y_offset);
         const min::vec2<float> scale(_s_energy_x, y_height);
         const min::vec4<float> blue_coord(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv);
@@ -381,11 +407,11 @@ class ui_bg_assets
         // Load rect at position depending on energy
         if (_energy > 1.0)
         {
-            set_rect(4, p, scale, min::vec4<float>(_x_light_blue_uv, _y_light_blue_uv, _s_uv, _s_uv));
+            set_rect(6, p, scale, min::vec4<float>(_x_light_blue_uv, _y_light_blue_uv, _s_uv, _s_uv));
         }
         else
         {
-            set_rect(4, p, scale, min::vec4<float>(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv));
+            set_rect(6, p, scale, min::vec4<float>(_x_blue_uv, _y_blue_uv, _s_uv, _s_uv));
         }
     }
     inline void load_exp_meter()
@@ -401,7 +427,7 @@ class ui_bg_assets
         const min::vec4<float> exp_coord(_x_yellow_uv + uv_off, _y_yellow_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
 
         // Load rect at position
-        set_rect(5, p, scale, exp_coord);
+        set_rect(7, p, scale, exp_coord);
     }
     inline void load_oxy_meter()
     {
@@ -418,12 +444,12 @@ class ui_bg_assets
         if (_oxy > 0.25)
         {
             const min::vec4<float> oxy_coord(_x_light_blue_uv + uv_off, _y_light_blue_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
-            set_rect(6, p, scale, oxy_coord);
+            set_rect(8, p, scale, oxy_coord);
         }
         else
         {
             const min::vec4<float> oxy_coord(_x_red_uv + uv_off, _y_red_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
-            set_rect(6, p, scale, oxy_coord);
+            set_rect(8, p, scale, oxy_coord);
         }
     }
     inline void load_bg_stat()
@@ -432,7 +458,7 @@ class ui_bg_assets
         const min::vec2<float> p(_center_w + _stat_dx, _stat_dy);
         const min::vec2<float> stat_scale(_s_stat_x, _s_stat_y);
         const min::vec4<float> stat_coord(_x_stat_uv, _y_stat_uv, _s_stat_uv_x, _s_stat_uv_y);
-        set_rect(87, p, stat_scale, stat_coord);
+        set_rect(89, p, stat_scale, stat_coord);
     }
     inline void load_bg_hover(const min::vec2<float> &p)
     {
@@ -446,7 +472,7 @@ class ui_bg_assets
         // Offset position by half width of rect
         const min::vec2<float> off = min::vec2<float>(p.x() + _s_hover_bg_x * 0.5, p.y() + hover_dy);
 
-        set_rect(106, off, scale, coord);
+        set_rect(108, off, scale, coord);
     }
     inline void load_bg_black(const inv_id id, const min::vec2<float> &p)
     {
@@ -579,6 +605,14 @@ class ui_bg_assets
 
         // Load rect at position
         set_rect(id.id(), p, scale, miss_coord);
+    }
+    inline void load_portal_icon(const inv_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> scan_coord(_x_portal_uv, _y_portal_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, scan_coord);
     }
     inline void load_scan_icon(const inv_id id, const min::vec2<float> &p)
     {
@@ -732,7 +766,7 @@ class ui_bg_assets
     }
     inline static constexpr size_t opaque_start()
     {
-        return 3;
+        return 5;
     }
     inline static constexpr size_t tooltip_start()
     {
@@ -748,11 +782,11 @@ class ui_bg_assets
     }
     inline static constexpr size_t transparent_size()
     {
-        return 3;
+        return 5;
     }
     inline static constexpr size_t ui_size()
     {
-        // 3 + 4 + 16 + 16
+        // 5 + 4 + 16 + 16
         return _base;
     }
 };
