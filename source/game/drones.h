@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __DRONES__
 #define __DRONES__
 
+#include <game/callback.h>
 #include <game/cgrid.h>
 #include <game/path.h>
 #include <game/static_instance.h>
@@ -108,18 +109,20 @@ class drone
 class drones
 {
   private:
+    static constexpr uint16_t _splash_level = 5;
+    static constexpr uint16_t _tunnel_level = 10;
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
-    typedef std::function<void(min::body<float, min::vec3> &, min::body<float, min::vec3> &)> coll_call;
     physics *_sim;
     static_instance *_inst;
     sound *_sound;
-    std::vector<min::aabbox<float, min::vec3>> _col_cells;
+    std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
     min::vec3<float> _dest;
     std::vector<path> _paths;
     std::vector<drone> _drones;
     size_t _path_old;
     coll_call _f;
     bool _disable;
+    const std::string _str;
 
     inline min::body<float, min::vec3> &body(const size_t index)
     {
@@ -175,7 +178,7 @@ class drones
         _paths[path_id].set_dead(true);
 
         // Clear drone at index
-        _inst->clear_drone(_drones[index].inst_id());
+        _inst->get_drone().clear(_drones[index].inst_id());
         _sim->clear_body(_drones[index].body_id());
         _sound->stop_drone(_drones[index].sound_id());
         _drones.erase(_drones.begin() + index);
@@ -202,7 +205,7 @@ class drones
     drones(physics &sim, static_instance &inst, sound &s)
         : _sim(&sim), _inst(&inst), _sound(&s),
           _paths(static_instance::max_drones()), _path_old(0),
-          _f(nullptr), _disable(false)
+          _f(nullptr), _disable(false), _str("DRONE")
     {
         reserve_memory();
     }
@@ -218,7 +221,7 @@ class drones
             _paths[path_id].set_dead(true);
 
             // Clear drone at index
-            _inst->clear_drone(_drones[i].inst_id());
+            _inst->get_drone().clear(_drones[i].inst_id());
             _sim->clear_body(_drones[i].body_id());
             _sound->stop_drone(_drones[i].sound_id());
         }
@@ -250,6 +253,10 @@ class drones
         // Return no remove
         return false;
     }
+    inline const std::string &get_string() const
+    {
+        return _str;
+    }
     inline const min::vec3<float> &position(const size_t index) const
     {
         // Return the drone position
@@ -270,20 +277,20 @@ class drones
     inline bool spawn(const min::vec3<float> &p, const float health)
     {
         // If full fail spawn
-        if (_inst->drone_full())
+        if (_inst->get_drone().is_full())
         {
             return false;
         }
 
         // Create a drone
-        const size_t inst_id = _inst->add_drone(p);
+        const size_t inst_id = _inst->get_drone().add(p);
 
         // Add to physics simulation
-        const min::aabbox<float, min::vec3> box = _inst->box_drone(inst_id);
+        const min::aabbox<float, min::vec3> box = _inst->get_drone().get_box(inst_id);
 
         // Get next index for body
         const size_t index = _drones.size();
-        const size_t body_id = _sim->add_body(box, 10.0, 1, index);
+        const size_t body_id = _sim->add_body(box, 10.0, id_value(static_id::DRONE), index);
 
         // Register player collision callback
         _sim->register_callback(body_id, _f);
@@ -308,7 +315,7 @@ class drones
         // Warp character to new position
         body(index).set_position(p);
     }
-    inline void update_frame(cgrid &grid, const std::function<min::vec3<float>(void)> &respawn)
+    inline void update_frame(cgrid &grid, const uint16_t player_level, const std::function<min::vec3<float>(void)> &respawn, const ex_scale_call &f)
     {
         // Do drone collisions
         const size_t size = _drones.size();
@@ -334,7 +341,7 @@ class drones
                     body(i).set_linear_velocity(step);
 
                     // Update the path data position
-                    const min::vec3<float> &p = body(i).get_position();
+                    const min::vec3<float> &p = position(i);
                     d.get_path().update(p, _dest);
                 }
                 else
@@ -366,7 +373,8 @@ class drones
             }
 
             // Get all cells that could collide
-            grid.drone_collision_cells(_col_cells, position(i));
+            const min::vec3<float> &p = position(i);
+            grid.drone_collision_cells(_col_cells, p);
 
             // Collision flag
             bool hit = false;
@@ -376,15 +384,28 @@ class drones
             for (const auto &cell : _col_cells)
             {
                 // Collide with the cell
-                const bool status = _sim->collide(body, cell);
+                const bool status = _sim->collide(body, cell.first);
 
-                // Register hit flag
+                // Register hit flag, BUG FIX, DONT COLLAPSE THIS LINE!
                 hit = hit || status;
             }
 
             // If we got a hit
             if (hit)
             {
+                // Tunnel through geometry looking for player
+                const bool first = !d.is_pathing() && _splash_level;
+                const bool second = player_level >= _tunnel_level;
+                if (first || second)
+                {
+                    // Blow up geometry around drone
+                    const min::vec3<unsigned> scale(3, 3, 3);
+
+                    // First collision, _col_cells must have a size if hit
+                    f(p, scale, _col_cells[0].second);
+                }
+
+                // Create new path
                 d.get_path().clear();
             }
         }
@@ -400,13 +421,13 @@ class drones
 
             // Update drone instance position
             const min::vec3<float> &p = body(i).get_position();
-            _inst->update_drone_position(inst_id, p);
+            _inst->get_drone().update_position(inst_id, p);
 
             // Update drone instance rotation
             const min::vec3<float> x(1.0, 0.0, 0.0);
             const min::vec3<float> dir = (look_at - p).normalize();
             const min::quat<float> q(x, dir);
-            _inst->update_drone_rotation(inst_id, q);
+            _inst->get_drone().update_rotation(inst_id, q);
 
             // Update the drone sound position
             const size_t sound_id = _drones[i].sound_id();

@@ -48,6 +48,7 @@ endif
 
 # Compile parameters
 CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math $(STATIC) $(MGL_RENDER) $(MGL_VB43)
+DEBUG = -g -std=c++14 -Wall -O1 $(STATIC) $(MGL_RENDER) $(MGL_VB43)
 NATIVE =  $(CPP) -march=native
 BUILD32 = $(CPP) -m32
 BUILD64 = $(CPP) -m64
@@ -66,6 +67,8 @@ build32: tests32
 	g++ $(LIB_SOURCES) $(BUILD32) $(GAME)  $(LINKER) 2> "game.txt"
 build64: tests64
 	g++ $(LIB_SOURCES) $(BUILD64) $(GAME)  $(LINKER) 2> "game.txt"
+debug:
+	g++ $(LIB_SOURCES) $(DEBUG) $(GAME) $(LINKER) 2> "game.txt"
 tests:	
 	g++ $(LIB_SOURCES) $(TEST_SOURCES)  $(NATIVE) $(TEST) $(LINKER) 2> "test.txt"
 tests32:	

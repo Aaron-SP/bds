@@ -142,6 +142,7 @@ enum class item_id : uint8_t
     CONS_BATTERY = 124,
     CONS_ETHER = 125,
     CONS_OXYGEN = 126,
+    CONS_KEY = 127
 };
 
 enum class skill_id : uint8_t

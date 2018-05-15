@@ -208,8 +208,11 @@ class bds
             stat.clear_hit();
         }
 
+        // Get the target string
+        const std::string &target = _world.get_target_string();
+
         // Update the ui overlay, process timer and upload changes
-        _ui.update(p, f, health, energy, _fps, _idle, chunks, insts, dt);
+        _ui.update(p, f, health, energy, _fps, _idle, chunks, insts, target, dt);
     }
     void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
@@ -230,10 +233,11 @@ class bds
 
         // Update drone and missile matrices
         const game::static_instance &instance = _world.get_instances();
-        _uniforms.update_drones(instance.get_drone_matrix());
-        _uniforms.update_drops(instance.get_drop_matrix());
-        _uniforms.update_explosives(instance.get_explosive_matrix());
-        _uniforms.update_missiles(instance.get_missile_matrix());
+        _uniforms.update_chests(instance.get_chest().get_matrix());
+        _uniforms.update_drones(instance.get_drone().get_matrix());
+        _uniforms.update_drops(instance.get_drop().get_matrix());
+        _uniforms.update_explosives(instance.get_explosive().get_matrix());
+        _uniforms.update_missiles(instance.get_missile().get_matrix());
 
         // Update md5 model bones
         if (update_bones)

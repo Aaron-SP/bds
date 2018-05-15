@@ -18,7 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __MISSILES__
 #define __MISSILES__
 
-#include <functional>
+#include <game/callback.h>
 #include <game/particle.h>
 #include <game/sound.h>
 #include <game/static_instance.h>
@@ -68,8 +68,6 @@ class missiles
 {
   private:
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
-    typedef std::function<void(min::body<float, min::vec3> &, min::body<float, min::vec3> &)> coll_call;
-    typedef std::function<void(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const int8_t value)> ex_call;
     physics *_sim;
     static_instance *_inst;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
@@ -78,6 +76,7 @@ class missiles
     std::vector<missile> _miss;
     const min::vec3<unsigned> _scale;
     coll_call _f;
+    const std::string _str;
 
     inline min::body<float, min::vec3> &body(const size_t index)
     {
@@ -100,7 +99,7 @@ class missiles
     inline void remove(const size_t index)
     {
         // Clear missiles at index
-        _inst->clear_missile(_miss[index].inst_id());
+        _inst->get_missile().clear(_miss[index].inst_id());
         _sim->clear_body(_miss[index].body_id());
         _miss.erase(_miss.begin() + index);
 
@@ -126,12 +125,15 @@ class missiles
     missiles(physics &sim, particle &part, static_instance &inst, sound &s)
         : _sim(&sim), _inst(&inst),
           _part(&part), _sound(&s),
-          _scale(3, 7, 3), _f(nullptr)
+          _scale(3, 7, 3), _f(nullptr), _str("MISSILE")
     {
         reserve_memory();
     }
-
-    inline void explode(const size_t index, const int8_t atlas, const ex_call &f)
+    inline const std::string &get_string() const
+    {
+        return _str;
+    }
+    inline void explode(const size_t index, const int8_t atlas, const ex_scale_call &f)
     {
         // Stop playing particles
         _part->abort_miss_launch(_miss[index].part_id());
@@ -151,13 +153,13 @@ class missiles
     inline bool launch_missile(const min::vec3<float> &p, const min::vec3<float> &dir)
     {
         // Are all missiles being used?
-        if (_inst->missile_full())
+        if (_inst->get_missile().is_full())
         {
             return false;
         }
 
         // Get instance id
-        const size_t inst_id = _inst->add_missile(p);
+        const size_t inst_id = _inst->get_missile().add(p);
 
         // Get particle id
         const size_t part_id = _part->get_idle_miss_launch_id();
@@ -169,7 +171,7 @@ class missiles
         const min::quat<float> q(min::vec3<float>::up(), dir);
 
         // Update the missile rotation
-        _inst->update_missile_rotation(inst_id, q);
+        _inst->get_missile().update_rotation(inst_id, q);
 
         // Set the launch particle attributes
         _part->load_miss_launch(part_id, p, dir, 86400.0, 40.0);
@@ -178,13 +180,13 @@ class missiles
         _sound->play_miss_launch(sound_id, p);
 
         // Create a box for the missile
-        const min::aabbox<float, min::vec3> box = _inst->box_missile(inst_id);
+        const min::aabbox<float, min::vec3> box = _inst->get_missile().get_box(inst_id);
 
         // Store the missile index as body data
         const size_t index = _miss.size();
 
         // Add to physics simulation
-        const size_t body_id = _sim->add_body(box, 10.0, 4, index);
+        const size_t body_id = _sim->add_body(box, 10.0, id_value(static_id::MISSILE), index);
 
         // Register player collision callback
         _sim->register_callback(body_id, _f);
@@ -205,7 +207,7 @@ class missiles
     {
         _f = f;
     }
-    inline void update_frame(const cgrid &grid, const ex_call &f)
+    inline void update_frame(const cgrid &grid, const ex_scale_call &f)
     {
         // Do missile collisions
         const size_t size = _miss.size();
@@ -245,7 +247,7 @@ class missiles
 
             // Update missile positions
             const min::vec3<float> &p = body(i).get_position();
-            _inst->update_missile_position(inst_id, p);
+            _inst->get_missile().update_position(inst_id, p);
 
             // Set particle position slightly behind the rocket opposing body velocity
             const min::vec3<float> dir = min::vec3<float>(velocity(i)).normalize();

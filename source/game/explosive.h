@@ -18,7 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __EXPLOSIVE__
 #define __EXPLOSIVE__
 
-#include <functional>
+#include <game/callback.h>
 #include <game/static_instance.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
@@ -60,10 +60,8 @@ class explosive
 class explosives
 {
   private:
-    static constexpr float _rotation_rate = 2.0;
+    static constexpr float _rotation_rate = 120.0;
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
-    typedef std::function<void(min::body<float, min::vec3> &, min::body<float, min::vec3> &)> coll_call;
-    typedef std::function<void(const min::vec3<float> &point, const min::vec3<unsigned> &scale, const int8_t value)> ex_call;
     physics *_sim;
     static_instance *_inst;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
@@ -71,6 +69,7 @@ class explosives
     const min::vec3<unsigned> _scale;
     float _angle;
     coll_call _f;
+    const std::string _str;
 
     inline min::body<float, min::vec3> &body(const size_t index)
     {
@@ -88,7 +87,7 @@ class explosives
     inline void remove(const size_t index)
     {
         // Clear explosives at index
-        _inst->clear_explosive(_ex[index].inst_id());
+        _inst->get_explosive().clear(_ex[index].inst_id());
         _sim->clear_body(_ex[index].body_id());
         _ex.erase(_ex.begin() + index);
 
@@ -113,13 +112,16 @@ class explosives
   public:
     explosives(physics &sim, static_instance &inst)
         : _sim(&sim), _inst(&inst),
-          _scale(3, 5, 3), _angle(0.0), _f(nullptr)
+          _scale(3, 5, 3), _angle(0.0), _f(nullptr), _str("EXPLOSIVE")
     {
         // Reserve memory for collision cells
         reserve_memory();
     }
-
-    inline void explode(const size_t index, const int8_t atlas, const ex_call &f)
+    inline const std::string &get_string() const
+    {
+        return _str;
+    }
+    inline void explode(const size_t index, const int8_t atlas, const ex_scale_call &f)
     {
         // Call the explosion callback function if available
         if (f)
@@ -133,22 +135,22 @@ class explosives
     inline bool launch(const min::vec3<float> &p, const min::vec3<float> &dir, const int8_t atlas)
     {
         // If all explosives have been allocated fail to launch
-        if (_inst->explosive_full())
+        if (_inst->get_explosive().is_full())
         {
             return false;
         }
 
         // Create a explosive instance
-        const size_t inst_id = _inst->add_explosive(p, atlas);
+        const size_t inst_id = _inst->get_explosive().add(p, atlas);
 
         // Create a box for the explosive
-        const min::aabbox<float, min::vec3> box = _inst->box_explosive(inst_id);
+        const min::aabbox<float, min::vec3> box = _inst->get_explosive().get_box(inst_id);
 
         // Store the explosive index as body data
         const size_t index = _ex.size();
 
         // Add to physics simulation
-        const size_t body_id = _sim->add_body(box, 10.0, 3, index);
+        const size_t body_id = _sim->add_body(box, 10.0, id_value(static_id::EXPLOSIVE), index);
 
         // Register player collision callback
         _sim->register_callback(body_id, _f);
@@ -170,7 +172,7 @@ class explosives
     {
         _f = f;
     }
-    inline void update_frame(const cgrid &grid, const ex_call &f)
+    inline void update_frame(const cgrid &grid, const ex_scale_call &f)
     {
         // Do explosive collisions
         const size_t size = _ex.size();
@@ -218,10 +220,10 @@ class explosives
 
             // Update body positions
             const min::vec3<float> &p = body(i).get_position();
-            _inst->update_explosive_position(inst_id, p);
+            _inst->get_explosive().update_position(inst_id, p);
 
             // Update body rotations
-            _inst->update_explosive_rotation(inst_id, q);
+            _inst->get_explosive().update_rotation(inst_id, q);
         }
     }
 };

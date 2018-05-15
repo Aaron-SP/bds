@@ -60,7 +60,7 @@ class ui_text
     static constexpr size_t _ui = _console + 1;
     static constexpr size_t _alert = _ui + 2;
     static constexpr size_t _debug = _alert + 1;
-    static constexpr size_t _hover = _debug + 12;
+    static constexpr size_t _hover = _debug + 13;
     static constexpr size_t _stream = _hover + 2;
     static constexpr size_t _end = _stream + _max_stream;
 
@@ -530,9 +530,18 @@ class ui_text
         _ss << "INSTANCES: " << insts;
         update_text(_debug + 10, _ss.str());
     }
+    inline void set_debug_target(const std::string &str)
+    {
+        // Clear and reset the stream
+        clear_stream();
+
+        // Update FPS and IDLE
+        _ss << "TARGET: " << str;
+        update_text(_debug + 11, _ss.str());
+    }
     inline void set_debug_version(const std::string &str)
     {
-        update_text(_debug + 11, str);
+        update_text(_debug + 12, str);
     }
     inline void toggle_draw_console()
     {

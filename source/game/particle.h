@@ -424,24 +424,34 @@ class particle
     }
     inline void load_static_explode(const min::vec3<float> &p, const min::vec3<float> &direction, const float time, const float size)
     {
+        // Skip over in use, non-explode particle systems
+        while (_static[_static_old].time() > 0.0 && _static[_static_old].get_type() != static_type::explode)
+        {
+            // Increment counter
+            (++_static_old) %= _static_limit;
+        }
+
+        // Get the emitter
+        static_emitter &stat = _static[_static_old];
+
         // Add time to the clock
-        _static[_static_old].set_time(time);
+        stat.set_time(time);
 
         // Set static particle type
-        _static[_static_old].set_type(static_type::explode);
+        stat.set_type(static_type::explode);
 
         // Set the static reference position
-        _static[_static_old].set_ref(p);
-        _static[_static_old].w(size);
+        stat.set_ref(p);
+        stat.w(size);
 
         // Update the start position
-        _static[_static_old].emit().set_position(p);
+        stat.emit().set_position(p);
 
         // Set speed direction
-        _static[_static_old].emit().set_speed(direction);
+        stat.emit().set_speed(direction);
 
         // Reset the static buffer
-        _static[_static_old].emit().reset();
+        stat.emit().reset();
 
         // Increment counter
         (++_static_old) %= _static_limit;

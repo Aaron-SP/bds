@@ -67,6 +67,7 @@ class drops
     std::vector<drop> _drops;
     float _angle;
     size_t _oldest;
+    const std::string _str;
 
     inline min::body<float, min::vec3> &body(const size_t index)
     {
@@ -83,10 +84,6 @@ class drops
 
         // Apply force to the body per mass
         b.add_force(f * b.get_mass());
-    }
-    inline float mass(const size_t index) const
-    {
-        return body(index).get_mass();
     }
     inline const min::vec3<float> &position(const size_t index) const
     {
@@ -107,14 +104,14 @@ class drops
 
   public:
     drops(physics &sim, static_instance &inst)
-        : _sim(&sim), _inst(&inst), _angle(0.0), _oldest(0)
+        : _sim(&sim), _inst(&inst), _angle(0.0), _oldest(0), _str("DROP")
     {
         reserve_memory();
     }
-    inline size_t add(const min::vec3<float> &p, const min::vec3<float> &dir, const int8_t atlas)
+    inline void add(const min::vec3<float> &p, const min::vec3<float> &dir, const int8_t atlas)
     {
         // If all boxes have been allocated, cannibalize
-        if (_inst->drop_full())
+        if (_inst->get_drop().is_full())
         {
             // Get oldest index to consume
             const size_t max_drop = static_instance::max_drops();
@@ -132,8 +129,8 @@ class drops
             body.set_linear_velocity(lv);
 
             // Update body position
-            _inst->update_drop_position(inst_id, p);
-            _inst->update_drop_atlas(inst_id, atlas);
+            _inst->get_drop().update_position(inst_id, p);
+            _inst->get_drop().update_atlas(inst_id, atlas);
             body.set_position(p);
 
             // Store the drop index as body data
@@ -142,21 +139,21 @@ class drops
             // Recreate drop
             _drops[index] = drop(body_id, inst_id, atlas);
 
-            // Return the drop index
-            return index;
+            // Return early
+            return;
         }
 
         // Create a drop instance
-        const size_t inst_id = _inst->add_drop(p, atlas);
+        const size_t inst_id = _inst->get_drop().add(p, atlas);
 
         // Create a box for the drop
-        const min::aabbox<float, min::vec3> box = _inst->box_drop(inst_id);
+        const min::aabbox<float, min::vec3> box = _inst->get_drop().get_box(inst_id);
 
         // Store the drop index as body data
         const size_t index = _drops.size();
 
         // Add to physics simulation
-        const size_t body_id = _sim->add_body(box, 10.0, 2, index);
+        const size_t body_id = _sim->add_body(box, 10.0, id_value(static_id::DROP), index);
 
         // Get the physics body for editing
         min::body<float, min::vec3> &body = _sim->get_body(body_id);
@@ -167,18 +164,19 @@ class drops
 
         // Create a new drop
         _drops.emplace_back(body_id, inst_id, atlas);
-
-        // Return the drop index
-        return _drops.size() - 1;
     }
     inline int8_t atlas(const size_t index) const
     {
         return _drops[index].atlas();
     }
+    inline const std::string &get_string() const
+    {
+        return _str;
+    }
     inline void remove(const size_t index)
     {
         // Clear drop at index
-        _inst->clear_drop(_drops[index].inst_id());
+        _inst->get_drop().clear(_drops[index].inst_id());
         _sim->clear_body(_drops[index].body_id());
         _drops.erase(_drops.begin() + index);
 
@@ -202,19 +200,29 @@ class drops
             // Get all cells that could collide
             grid.drop_collision_cells(_col_cells, position(i));
 
+            // Collision flag
+            bool hit = false;
+
             // Solve static collisions
             const size_t body = _drops[i].body_id();
             for (const auto &cell : _col_cells)
             {
-                _sim->collide(body, cell);
+                // Collide with the cell
+                const bool status = _sim->collide(body, cell);
+
+                // Register hit flag, BUG FIX, DONT COLLAPSE THIS LINE!
+                hit = hit || status;
             }
 
             // Add friction force
-            const min::vec3<float> &vel = velocity(i);
-            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
+            if (hit)
+            {
+                const min::vec3<float> &vel = velocity(i);
+                const min::vec3<float> xz(vel.x(), 0.0, vel.z());
 
-            // Add friction force opposing lateral motion
-            force(i, xz * friction);
+                // Add friction force opposing lateral motion
+                force(i, xz * friction);
+            }
         }
     }
     inline void update(const cgrid &grid, const float dt)
@@ -238,10 +246,10 @@ class drops
 
             // Update body positions
             const min::vec3<float> &p = body(i).get_position();
-            _inst->update_drop_position(inst_id, p);
+            _inst->get_drop().update_position(inst_id, p);
 
             // Update body rotations
-            _inst->update_drop_rotation(inst_id, q);
+            _inst->get_drop().update_rotation(inst_id, q);
         }
     }
 };

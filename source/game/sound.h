@@ -119,8 +119,9 @@ class sound
   private:
     static constexpr size_t _bg_sounds = 3;
     static constexpr size_t _drone_limit = 10;
-    static constexpr size_t _miss_limit = 10;
-    static constexpr size_t _sounds = 21;
+    static constexpr size_t _ex_limit = 30;
+    static constexpr size_t _miss_launch_limit = 10;
+    static constexpr size_t _sounds = 13 + _drone_limit + _ex_limit + _miss_launch_limit;
     static constexpr size_t _voice_sounds = 9;
     static constexpr float _fade_tol = 0.001;
     static constexpr float _fade_in = _fade_tol * 2.0;
@@ -141,14 +142,14 @@ class sound
 
     // GAINS
     static constexpr float _bg_gain = 0.05;
+    static constexpr float _blast_gain = 0.65;
     static constexpr float _charge_gain = 0.35;
     static constexpr float _click_gain = 0.2;
     static constexpr float _drone_gain = 0.125;
-    static constexpr float _ex_gain = 0.65;
+    static constexpr float _ex_gain = 0.75;
     static constexpr float _grap_gain = 0.6;
     static constexpr float _land_gain = 0.1;
     static constexpr float _jet_gain = 0.5;
-    static constexpr float _miss_ex_gain = 0.75;
     static constexpr float _miss_launch_gain = 0.7;
     static constexpr float _oxygen_gain = 0.5;
     static constexpr float _pickup_gain = 0.25;
@@ -187,8 +188,8 @@ class sound
     bool _bg_enable;
     std::vector<size_t> _drone;
     size_t _drone_old;
-    std::vector<size_t> _miss_ex;
-    size_t _miss_ex_old;
+    std::vector<size_t> _ex;
+    size_t _ex_old;
     std::vector<size_t> _miss_launch;
     size_t _miss_launch_old;
     std::vector<size_t> _voice;
@@ -204,19 +205,19 @@ class sound
     {
         return _si[0];
     }
-    inline sound_info &charge_info()
+    inline sound_info &blast_m_info()
     {
         return _si[1];
     }
-    inline sound_info &click_info()
+    inline sound_info &blast_s_info()
     {
         return _si[2];
     }
-    inline sound_info &explode_m_info()
+    inline sound_info &charge_info()
     {
         return _si[3];
     }
-    inline sound_info &explode_s_info()
+    inline sound_info &click_info()
     {
         return _si[4];
     }
@@ -256,13 +257,15 @@ class sound
     {
         return _si[13 + index];
     }
-    inline sound_info &miss_ex_info(const size_t index)
+    inline sound_info &ex_info(const size_t index)
     {
-        return _si[23 + index];
+        constexpr size_t offset = 13 + _drone_limit;
+        return _si[offset + index];
     }
     inline sound_info &miss_launch_info(const size_t index)
     {
-        return _si[33 + index];
+        constexpr size_t offset = 13 + _drone_limit + _ex_limit;
+        return _si[offset + index];
     }
     inline static size_t v_comply()
     {
@@ -421,25 +424,25 @@ class sound
             _si.emplace_back(b, _drone[i], gain, fade);
         }
     }
-    inline void load_explode_mono_sound()
+    inline void load_blast_mono_sound()
     {
         // Load a WAVE file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/explode_m.ogg");
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/blast_m.ogg");
         const min::ogg sound(ogg);
-        load_ogg_sound(sound, _ex_gain);
+        load_ogg_sound(sound, _blast_gain);
 
         // Load explosion settings
-        load_explosion_settings(explode_m_info().source());
+        load_explosion_settings(blast_m_info().source());
     }
-    inline void load_explode_stereo_sound()
+    inline void load_blast_stereo_sound()
     {
         // Load a WAVE file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/explode_s.ogg");
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/blast_s.ogg");
         const min::ogg sound(ogg);
-        load_ogg_sound(sound, _ex_gain);
+        load_ogg_sound(sound, _blast_gain);
 
         // Load explosion settings
-        load_explosion_settings(explode_s_info().source());
+        load_explosion_settings(blast_s_info().source());
     }
     inline void load_grapple_sound()
     {
@@ -480,35 +483,35 @@ class sound
         const min::wave sound(wave);
         load_wave_sound(sound, _land_gain);
     }
-    inline void load_miss_ex_sound()
+    inline void load_explode_sound()
     {
         // Load a WAVE file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/missile_ex_m.ogg");
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/explode_m.ogg");
         const min::ogg sound(ogg);
 
         // Load a OGG file into buffer
         const size_t b = _buffer.add_ogg_pcm(sound);
 
         // Get the gains and fades for this sound
-        const float gain = _miss_ex_gain;
+        const float gain = _ex_gain;
         const float fade = _fade_speed;
 
         // Create many sources
-        for (size_t i = 0; i < _miss_limit; i++)
+        for (size_t i = 0; i < _ex_limit; i++)
         {
-            _miss_ex[i] = _buffer.add_source();
+            _ex[i] = _buffer.add_source();
 
             // Adjust the gain
-            _buffer.set_source_gain(_miss_ex[i], gain);
+            _buffer.set_source_gain(_ex[i], gain);
 
             // Load explosion settings
-            load_explosion_settings(_miss_ex[i]);
+            load_explosion_settings(_ex[i]);
 
             // Bind source to sound data
-            _buffer.bind(b, _miss_ex[i]);
+            _buffer.bind(b, _ex[i]);
 
             // Create a new sound info
-            _si.emplace_back(b, _miss_ex[i], gain, fade);
+            _si.emplace_back(b, _ex[i], gain, fade);
         }
     }
     inline void load_miss_launch_sound()
@@ -525,7 +528,7 @@ class sound
         const float fade = _miss_launch_fade;
 
         // Create many sources
-        for (size_t i = 0; i < _miss_limit; i++)
+        for (size_t i = 0; i < _miss_launch_limit; i++)
         {
             _miss_launch[i] = _buffer.add_source();
 
@@ -622,8 +625,8 @@ class sound
     sound()
         : _music(_bg_sounds), _bg_delay(30.0), _bg_enable(false),
           _drone(_drone_limit), _drone_old(0),
-          _miss_ex(_miss_limit), _miss_ex_old(0),
-          _miss_launch(_miss_limit), _miss_launch_old(0),
+          _ex(_ex_limit), _ex_old(0),
+          _miss_launch(_miss_launch_limit), _miss_launch_old(0),
           _voice(_voice_sounds), _v_head(0), _v_delay(1.0), _v_enable(true),
           _int_dist(0, _bg_sounds - 1), _real_dist(0.0, _max_delay),
           _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
@@ -634,17 +637,17 @@ class sound
         // Load background music
         load_bg_sound();
 
+        // Load explode sound into buffer
+        load_blast_mono_sound();
+
+        // Load explode sound into buffer
+        load_blast_stereo_sound();
+
         // Load charge sound into buffer
         load_charge_sound();
 
         // Load click sound into buffer
         load_click_sound();
-
-        // Load explode sound into buffer
-        load_explode_mono_sound();
-
-        // Load explode sound into buffer
-        load_explode_stereo_sound();
 
         // Load grapple sound into buffer
         load_grapple_sound();
@@ -674,7 +677,7 @@ class sound
         load_drone_sound();
 
         // Load missile explode sound into buffer
-        load_miss_ex_sound();
+        load_explode_sound();
 
         // Load missile launch sound into buffer
         load_miss_launch_sound();
@@ -736,10 +739,10 @@ class sound
         size_t id = 0;
 
         // Scan for unused particle system
-        for (size_t i = 0; i < _miss_limit; i++)
+        for (size_t i = 0; i < _miss_launch_limit; i++)
         {
             // Start at the oldest index
-            const size_t index = (_miss_launch_old %= _miss_limit)++;
+            const size_t index = (_miss_launch_old %= _miss_launch_limit)++;
 
             // If index is unused
             if (!miss_launch_info(index).playing())
@@ -821,10 +824,10 @@ class sound
         // Set the sound position
         _buffer.set_source_position(si.source(), p);
     }
-    inline void play_explode_mono(const min::vec3<float> &p)
+    inline void play_blast_mono(const min::vec3<float> &p)
     {
         // Get the explode source
-        const size_t s = explode_m_info().source();
+        const size_t s = blast_m_info().source();
 
         // Set the sound position
         _buffer.set_source_position(s, p);
@@ -832,10 +835,10 @@ class sound
         // Play the sound
         _buffer.play_async(s);
     }
-    inline void play_explode_stereo(const min::vec3<float> &p)
+    inline void play_blast_stereo(const min::vec3<float> &p)
     {
         // Get the explode source
-        const size_t s = explode_s_info().source();
+        const size_t s = blast_s_info().source();
 
         // Set the sound position
         _buffer.set_source_position(s, p);
@@ -909,13 +912,13 @@ class sound
             _buffer.play_async(s);
         }
     }
-    inline void play_miss_ex(const min::vec3<float> &p)
+    inline void play_explode(const min::vec3<float> &p)
     {
         // Increment next explode source
-        const size_t index = (_miss_ex_old %= _miss_limit)++;
+        const size_t index = (_ex_old %= _ex_limit)++;
 
         // Get the missile explode source
-        const size_t s = miss_ex_info(index).source();
+        const size_t s = ex_info(index).source();
 
         // Set the sound position
         _buffer.set_source_position(s, p);

@@ -40,13 +40,14 @@ class uniforms
 
     std::vector<size_t> _ui_scale_id;
     std::vector<size_t> _ui_uv_id;
+    std::vector<size_t> _chest_id;
     std::vector<size_t> _drone_id;
     std::vector<size_t> _drop_id;
     std::vector<size_t> _explode_id;
     std::vector<size_t> _missile_id;
     std::vector<size_t> _bone_id;
 
-    inline void load_uniforms(const size_t ui, const size_t drones, const size_t drops, const size_t explosives, const size_t missiles, const size_t bones)
+    inline void load_uniforms(const size_t ui, const size_t chests, const size_t drones, const size_t drops, const size_t explosives, const size_t missiles, const size_t bones)
     {
         // Change light alpha for placemark
         const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
@@ -76,6 +77,13 @@ class uniforms
         for (size_t i = 0; i < ui; i++)
         {
             _ui_uv_id[i] = _ub.add_matrix(min::mat4<float>());
+        }
+
+        // Initialize chest matrices
+        _chest_id.resize(chests);
+        for (size_t i = 0; i < chests; i++)
+        {
+            _chest_id[i] = _ub.add_matrix(min::mat4<float>());
         }
 
         // Initialize drone matrices
@@ -118,10 +126,10 @@ class uniforms
     }
 
   public:
-    uniforms() : _ub(1, 405, 0)
+    uniforms() : _ub(1, 415, 0)
     {
         // Load the number of used uniforms into the buffer
-        load_uniforms(110, 10, 50, 10, 10, 100);
+        load_uniforms(110, 10, 10, 50, 10, 10, 100);
     }
     inline void bind() const
     {
@@ -161,6 +169,15 @@ class uniforms
     {
         _ub.set_matrix(model, _md5_id);
     }
+    inline void update_chests(const std::vector<min::mat4<float>> &matrices)
+    {
+        // Upload all chest matrices
+        const size_t size = matrices.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            _ub.set_matrix(matrices[i], _chest_id[i]);
+        }
+    }
     inline void update_drones(const std::vector<min::mat4<float>> &matrices)
     {
         // Upload all drone matrices
@@ -181,7 +198,7 @@ class uniforms
     }
     inline void update_explosives(const std::vector<min::mat4<float>> &matrices)
     {
-        // Upload all drop matrices
+        // Upload all explosive matrices
         const size_t size = matrices.size();
         for (size_t i = 0; i < size; i++)
         {

@@ -950,9 +950,9 @@ class controls
         }
 
         // Create explode callback to play sound
-        const auto play_ex = [sound](const min::vec3<float> &point, min::body<float, min::vec3> &body) {
+        const auto play_ex = [sound](min::body<float, min::vec3> &body, const min::vec3<float> &point) -> void {
             // Play the missile explosion sound - !TODO!
-            sound->play_miss_ex(point);
+            sound->play_explode(point);
         };
 
         // Check if we are in edit mode
@@ -1180,10 +1180,12 @@ class controls
                     // Unlock the gun if portal mode
                     skill.unlock_portal();
                 }
-                else if (skill.is_scan_mode() && play.is_target_valid())
+                else if (skill.is_scan_mode() && play.is_target_block())
                 {
+                    // Is player targetting a block?
+                    const int8_t atlas = play.get_target_atlas();
+
                     // Scan the block on this ray
-                    const int8_t atlas = play.get_target_value();
                     const item it(inv.id_from_atlas(atlas), 1);
                     const std::string &text = inv.get_name(it);
 
@@ -1278,14 +1280,10 @@ class controls
         }
 
         // Track block if player's target is a block
-        if (play.is_target_valid())
+        if (play.is_target_block())
         {
-            const int8_t value = play.get_target_value();
-            if (value >= 0)
-            {
-                // Set tracking of target
-                state->track_target(play.get_target());
-            }
+            // Set tracking of target
+            state->track_target(play.get_target().get_position());
         }
     }
     static void right_click_up(void *ptr, const uint16_t x, const uint16_t y)
@@ -1499,7 +1497,7 @@ class controls
             // Reloading
             _ui->set_cursor_reload();
         }
-        else if (player.get_target_value() == id_value(block_id::SODIUM) && _world->in_range_explosion(player.get_target()) && player.is_target_valid())
+        else if (player.is_target_block() && player.get_target_atlas() == id_value(block_id::SODIUM) && _world->in_range_explosion(player.get_target().get_position()))
         {
             _ui->set_cursor_target();
         }

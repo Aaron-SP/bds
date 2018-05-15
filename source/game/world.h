@@ -21,7 +21,9 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <game/callback.h>
 #include <game/cgrid.h>
+#include <game/chests.h>
 #include <game/drones.h>
 #include <game/drops.h>
 #include <game/explosive.h>
@@ -58,8 +60,9 @@ class world
     static constexpr float _explode_size = 100.0;
     static constexpr float _explode_speed = 5.0;
     static constexpr float _explode_time = 5.0;
-    static constexpr float _time_step = 1.0 / 180.0;
     static constexpr float _grav_mag = 10.0;
+    static constexpr float _spawn_limit = 5.0;
+    static constexpr float _time_step = 1.0 / 180.0;
     static constexpr size_t _pre_max_scale = 5;
     static constexpr size_t _pre_max_vol = _pre_max_scale * _pre_max_scale * _pre_max_scale;
     static constexpr size_t _ray_max_dist = 100;
@@ -99,10 +102,12 @@ class world
 
     // Static instances for drones and drops
     static_instance _instance;
+    chests _chests;
     drones _drones;
     drops _drops;
     explosives _explosives;
     missiles _missiles;
+    const std::string _invalid_str;
 
     // Random stuff
     std::uniform_int_distribution<uint8_t> _drop_dist;
@@ -168,7 +173,7 @@ class world
         else
         {
             // Play missile explosion sound
-            this->_sound->play_miss_ex(p);
+            this->_sound->play_explode(p);
 
             // Do explode animation
             explode_block(p, flip, scale, id_value(block_id::IRON), size);
@@ -184,28 +189,10 @@ class world
     inline min::vec3<float> event_spawn()
     {
         const float x = _grid_dist(_gen);
-        const float y = _top - 5.0;
+        const float y = _top - _spawn_limit;
         const float z = _grid_dist(_gen);
 
         return min::vec3<float>(x, y, z);
-    }
-    inline auto explode_player_call()
-    {
-        // Block explosion callback
-        return [this](const std::pair<min::aabbox<float, min::vec3>, int8_t> &cell) {
-            // Check for exploding mines
-            if (cell.second == id_value(block_id::SODIUM))
-            {
-                // Get box center for explosion point
-                const min::vec3<float> point = cell.first.get_center();
-
-                // Calculate direction
-                const min::vec3<float> dir = (_player.position() - point).normalize();
-
-                // Explode the block with radius
-                this->explode_block(point, dir, _ex_radius, cell.second, _explode_size);
-            }
-        };
     }
     inline auto explode_call()
     {
@@ -213,17 +200,36 @@ class world
         return [this](const min::vec3<float> &point,
                       const min::vec3<unsigned> &scale,
                       const int8_t value) {
-            // Play missile explosion sound
-            this->_sound->play_miss_ex(point);
-
             // Calculate direction
-            const min::vec3<float> dir = (_player.position() - point).normalize();
+            const min::vec3<float> dir = (this->_player.position() - point).normalize();
 
             // Explode the block
-            this->explode_block(point, dir, scale, value, _explode_size);
+            this->explode(point, dir, scale, value, this->_explode_size, nullptr);
         };
     }
-    inline void explode_anim(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size)
+    inline auto explode_player_call()
+    {
+        // Block explosion callback
+        return [this](const min::vec3<float> &point, const int8_t value) {
+            return this->explode_call()(point, _ex_radius, value);
+        };
+    }
+    inline auto explode_sound_call()
+    {
+        // On collision explode callback
+        return [this](const min::vec3<float> &point,
+                      const min::vec3<unsigned> &scale,
+                      const int8_t value) {
+            // Play explosion sound
+            this->_sound->play_explode(point);
+
+            // Call explode callback
+            return this->explode_call()(point, scale, value);
+        };
+    }
+    inline void explode_anim(
+        const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
+        const int8_t value, const float size)
     {
         // Calculate explosion speed
         const min::vec3<float> speed = dir * _explode_speed;
@@ -245,14 +251,12 @@ class world
         float power = 25.0;
         if (in_range && value == id_value(block_id::SODIUM))
         {
-            // Play explode sound
             power *= 16.0;
-            _sound->play_explode_stereo(point);
+            _sound->play_blast_stereo(point);
         }
         else if (value == id_value(block_id::SODIUM))
         {
-            // Play explode sound
-            _sound->play_explode_mono(point);
+            _sound->play_blast_mono(point);
         }
 
         // If explode hasn't been flagged yet
@@ -261,11 +265,10 @@ class world
             _player.explode(dir, power, ex_size, sq_dist, value);
         }
     }
-    inline void explode_block(const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale, const int8_t value, const float size)
+    inline void explode_block(
+        const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
+        const int8_t value, const float size)
     {
-        // Offset explosion radius for geometry removal
-        const min::vec3<float> center = center_radius(point, scale);
-
         // On remove callback
         const auto f = [this, dir](const min::vec3<float> &point, const int8_t value) {
             // Add a drop
@@ -280,6 +283,16 @@ class world
             }
         };
 
+        // Do explode with callback
+        explode(point, dir, scale, value, size, f);
+    }
+    inline void explode(
+        const min::vec3<float> &point, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
+        const int8_t value, const float size, const set_call &f)
+    {
+        // Offset explosion radius for geometry removal
+        const min::vec3<float> center = center_radius(point, scale);
+
         // If we removed geometry do explode animation
         const min::vec3<int> offset(1, 1, 1);
         _grid.set_geometry(center, scale, offset, -1, f);
@@ -287,73 +300,116 @@ class world
         // Do explode animation
         explode_anim(point, dir, scale, value, size);
     }
-    bool explode_ray(const min::ray<float, min::vec3> &r,
-                     const min::vec3<float> &target,
-                     const int8_t value,
-                     const min::vec3<unsigned> &scale,
-                     const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f,
-                     const float size, const bool is_charge)
+    bool explode_ray_body(min::body<float, min::vec3> &b, const min::ray<float, min::vec3> &r,
+                          const min::vec3<unsigned> &scale, const float size, const bool is_charge)
     {
-        // Check for collisions with a physics body
-        const std::vector<uint16_t> &map = _simulation.get_index_map();
-        const std::vector<std::pair<uint16_t, min::vec3<float>>> &cols = _simulation.get_collisions(r);
-
-        // Iterate through all the hits
-        const size_t hits = cols.size();
-        for (size_t i = 0; i < hits; i++)
+        // Check if body isn't dead
+        if (!b.is_dead())
         {
-            // Get the body
-            const min::body<float, min::vec3> &b = _simulation.get_body(map[cols[i].first]);
+            // Get the explosion direction, cache
+            const min::vec3<float> &dir = r.get_direction();
 
-            // Check if body isn't dead and if body is a drone
-            if (!b.is_dead() && b.get_id() == 1)
+            // Switch on body type
+            const size_t body_id = b.get_id();
+            switch (body_id)
+            {
+            case id_value(static_id::PLAYER):
+                break;
+            case id_value(static_id::CHEST):
+                break;
+            case id_value(static_id::DRONE):
             {
                 // Get the drone index from the body
-                const size_t drone_index = b.get_data().index;
-
-                // Get the explosion direction, cache
-                const min::vec3<float> &dir = r.get_direction();
+                const size_t index = b.get_data().index;
 
                 // Choose damage type and add the damage multiplier to it
                 const float damage = _player.get_stats().do_damage((is_charge) ? _damage_charge : _damage_beam);
 
                 // Do damage to the drone
-                drone_damage(drone_index, scale, dir, size, damage);
-
-                // Exit out early no terrain hit
-                return false;
+                drone_damage(index, scale, dir, size, damage);
+                break;
             }
+            default:
+            {
+                // Apply force to the body per mass along ray direction
+                b.add_force(dir * b.get_mass() * 5000.0);
+                break;
+            }
+            }
+
+            // We hit a body
+            return true;
         }
 
-        // Get the atlas of target block, remove if hit
-        if (value >= 0)
+        // Didn't hit anything
+        return false;
+    }
+    void explode_ray_block(const min::vec3<float> &point, const int8_t atlas,
+                           const min::vec3<unsigned> &scale,
+                           const ray_call &f, const float size)
+    {
+        // Invoke the function callback if provided
+        if (f)
         {
-            // Invoke the function callback if provided
-            if (f)
-            {
-                // Get character body
-                min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+            // Get character body
+            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
-                // Call function callback
-                f(target, body);
-            }
-
-            // Calculate direction
-            const min::vec3<float> dir = (_player.position() - target).normalize();
-
-            // Explode block
-            if (value == id_value(block_id::SODIUM))
-            {
-                explode_block(target, dir, _ex_radius, value, size);
-            }
-            else
-            {
-                explode_block(target, dir, scale, value, size);
-            }
+            // Call function callback
+            f(body, point);
         }
 
-        // Return terrain hit
-        return true;
+        // Calculate direction
+        const min::vec3<float> dir = (_player.position() - point).normalize();
+
+        // Explode block
+        if (atlas == id_value(block_id::SODIUM))
+        {
+            explode_block(point, dir, _ex_radius, atlas, size);
+        }
+        else
+        {
+            explode_block(point, dir, scale, atlas, size);
+        }
+    }
+    int8_t explode_ray(const min::ray<float, min::vec3> &r, const target &t,
+                       const min::vec3<unsigned> &scale, const ray_call &f, const float size, const bool is_charge)
+    {
+        // Get the target id
+        const target_id tid = t.get_id();
+        switch (tid)
+        {
+        case target_id::BLOCK:
+        {
+            // Check if ray points to a valid target
+            const int8_t atlas = t.get_atlas();
+
+            // Call explode ray for block collision at target position
+            explode_ray_block(t.get_position(), atlas, scale, f, size);
+
+            return atlas;
+        }
+        case target_id::BODY:
+        {
+            // Get the target body id
+            const uint16_t body_id = t.get_body_index();
+
+            // Get the body being targeted
+            min::body<float, min::vec3> &b = _simulation.get_body(body_id);
+
+            // Call explode ray for body collision
+            if (explode_ray_body(b, r, scale, size, is_charge))
+            {
+                // We hit a body
+                return -2;
+            }
+            break;
+        }
+        default:
+            break;
+        }
+
+        // Didn't hit anything
+        return -1;
     }
     // Generates the preview geometry and adds it to preview buffer
     inline void generate_preview()
@@ -461,8 +517,8 @@ class world
     }
     inline void reserve_memory(const size_t view_chunk_size)
     {
-        // Reserve space in the simulation
-        _simulation.reserve(static_instance::max_alloc());
+        // Reserve space in the simulation for static instances and player
+        _simulation.reserve(static_instance::max_alloc() + 1);
 
         // Reserve space in the preview mesh
         _terr_mesh.vertex.reserve(_pre_max_vol);
@@ -476,10 +532,8 @@ class world
         // Player collision callback
         const auto f = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
             // Get other body id, b1 is player body
-            // 1 is drone
-            // 2 is drop
             const size_t id = b2.get_id();
-            if (id == 1)
+            if (id == id_value(static_id::DRONE))
             {
                 // If player is not dead attack
                 if (!this->_player.is_dead())
@@ -491,7 +545,7 @@ class world
                     this->_sound->play_zap();
                 }
             }
-            else if (id == 2)
+            else if (id == id_value(static_id::DROP))
             {
                 // Get the drop index from the body
                 const size_t index = b2.get_data().index;
@@ -538,8 +592,8 @@ class world
 
         // Explosive collision callback
         const auto h = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
-            // Get other body id, b1 is explosive, 1 is drone
-            if (b2.get_id() == 1)
+            // Get other body id, b1 is explosive
+            if (b2.get_id() == id_value(static_id::DRONE))
             {
                 // Get the explode index from the body
                 const size_t exp_index = b1.get_data().index;
@@ -565,8 +619,8 @@ class world
 
         // Missile collision callback
         const auto j = [this](min::body<float, min::vec3> &b1, min::body<float, min::vec3> &b2) {
-            // Get other body id, b1 is explosive, 1 is drone
-            if (b2.get_id() == 1)
+            // Get other body id, b1 is missile
+            if (b2.get_id() == id_value(static_id::DRONE))
             {
                 // Get the explode index from the body
                 const size_t miss_index = b1.get_data().index;
@@ -614,8 +668,9 @@ class world
         const float friction = -10.0 / steps;
         const float drop_friction = friction * 0.5;
 
-        // Solve the physics simulation
+        // Get player position and player level
         const min::vec3<float> &p = _player.position();
+        const uint16_t player_level = _player.get_stats().level();
 
         // Send drones after the player
         _drones.set_destination(p);
@@ -626,21 +681,27 @@ class world
             // Update the player on this frame
             _player.update_frame(_grid, friction, explode_player_call());
 
+            // Update chests on this frame
+            _chests.update_frame(min::vec3<float>(0.0, _grav_mag, 0.0));
+
             // Update drones on this frame
-            _drones.update_frame(_grid, drone_respawn_call());
+            _drones.update_frame(_grid, player_level, drone_respawn_call(), explode_sound_call());
 
             // Update drops on this frame
             _drops.update_frame(_grid, drop_friction);
 
             // Update explosives on this frame
-            _explosives.update_frame(_grid, explode_call());
+            _explosives.update_frame(_grid, explode_sound_call());
 
             // Update missiles on this frame
-            _missiles.update_frame(_grid, explode_call());
+            _missiles.update_frame(_grid, explode_sound_call());
 
             // Solve all collisions
             _simulation.solve(_time_step, _damping);
         }
+
+        // Update the chest positions
+        _chests.update();
 
         // Update the drones positions
         _drones.update(_grid, p);
@@ -674,13 +735,15 @@ class world
           _top(state.get_top().y()),
           _sky(uniforms),
           _instance(uniforms),
+          _chests(_simulation, _instance),
           _drones(_simulation, _instance, s),
           _drops(_simulation, _instance),
           _explosives(_simulation, _instance),
           _missiles(_simulation, particles, _instance, s),
+          _invalid_str("Invalid"),
           _drop_dist(0, 40),
           _drop_off_dist(-0.5, 0.5),
-          _grid_dist((grid_size * -1.0) + 1.0, grid_size - 1.0),
+          _grid_dist((grid_size * -1.0) + _spawn_limit, grid_size - _spawn_limit),
           _health_dist(0.75, 1.5),
           _scat_dist(-0.1, 0.1),
           _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
@@ -730,31 +793,12 @@ class world
         // Draw the sky, uses geometry VAO -- HACK!
         _sky.draw();
     }
-    int8_t explode_ray(const min::vec3<unsigned> &scale,
-                       const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f,
-                       const float size, const bool is_charge)
+    int8_t explode_ray(const min::vec3<unsigned> &scale, const ray_call &f, const float size, const bool is_charge)
     {
-        // Use player's target as ray destination
-        const min::vec3<float> &target = _player.get_target();
-
-        // Check if ray points to a valid target
-        const int8_t value = (_player.is_target_valid()) ? _player.get_target_value() : -2;
-
-        // Launch a ray along player's viewing ray
-        const bool hit = explode_ray(_player.ray(), target, value, scale, f, size, is_charge);
-
-        // Return the block atlas id if hit
-        return (hit) ? value : -2;
+        return explode_ray(_player.ray(), _player.get_target(), scale, f, size, is_charge);
     }
-    inline size_t scatter_ray(const min::vec3<unsigned> &scale,
-                              const std::function<void(const min::vec3<float> &, min::body<float, min::vec3> &)> &f,
-                              const float size)
+    inline size_t scatter_ray(const min::vec3<unsigned> &scale, const ray_call &f, const float size)
     {
-        // Values for casting rays
-        min::vec3<float> target;
-        size_t target_key;
-        int8_t target_value;
-
         size_t count = 0;
 
         // Launch N explode rays
@@ -768,20 +812,16 @@ class world
 
             // Generate a random ray from the projection
             const min::vec3<float> dest = _player.projection() + offset;
-            const min::ray<float, min::vec3> r(_player.position(), dest);
+            const min::ray<float, min::vec3> r(_player.ray().get_origin(), dest);
 
-            // Trace a ray to the destination point to find placement position, return point is snapped
-            const bool target_valid = _grid.ray_trace_last_key(r, _ray_max_dist, target, target_key, target_value);
+            // Launch a target ray
+            const target t = _player.target_ray(_grid, r, _ray_max_dist);
 
-            // Check if ray points to a valid target
-            const int8_t value = (target_valid) ? target_value : -2;
-            if (value >= 0)
+            // Cast an explode ray on this random ray
+            if (explode_ray(r, t, scale, f, size, false) != -1)
             {
                 count++;
             }
-
-            // Cast an explode ray on this random ray
-            explode_ray(r, target, value, scale, f, size, false);
         }
 
         return count;
@@ -790,13 +830,17 @@ class world
     {
         return _atlas_id;
     }
-    inline bool get_swatch_mode() const
-    {
-        return _swatch_mode;
-    }
     inline size_t get_chunks_in_view() const
     {
         return _view_chunk_index.size();
+    }
+    inline const drones &get_drones() const
+    {
+        return _drones;
+    }
+    inline const drops &get_drops() const
+    {
+        return _drops;
     }
     inline bool get_edit_mode() const
     {
@@ -822,17 +866,63 @@ class world
     {
         return _player;
     }
-    inline const drones &get_drones() const
-    {
-        return _drones;
-    }
-    inline const drops &get_drops() const
-    {
-        return _drops;
-    }
     inline const min::mat4<float> get_preview_matrix() const
     {
         return min::mat4<float>(_preview);
+    }
+    inline bool get_swatch_mode() const
+    {
+        return _swatch_mode;
+    }
+    inline const std::string &get_target_string() const
+    {
+        const target &t = _player.get_target();
+        const target_id tid = t.get_id();
+
+        switch (tid)
+        {
+        case target_id::BLOCK:
+        {
+            // Get the player inventory
+            const inventory &inv = _player.get_inventory();
+
+            // Create item from atlas
+            const item it(inv.id_from_atlas(t.get_atlas()), 1);
+
+            // Look up item name
+            return inv.get_name(it);
+        }
+        case target_id::BODY:
+        {
+            // Get the body being targeted
+            const min::body<float, min::vec3> &b = _simulation.get_body(t.get_body_index());
+
+            // Get the body id
+            const size_t body_id = b.get_id();
+
+            // Get the body id
+            switch (body_id)
+            {
+            case id_value(static_id::CHEST):
+                return _chests.get_string();
+            case id_value(static_id::DRONE):
+                return _drones.get_string();
+            case id_value(static_id::DROP):
+                return _drops.get_string();
+            case id_value(static_id::EXPLOSIVE):
+                return _explosives.get_string();
+            case id_value(static_id::MISSILE):
+                return _missiles.get_string();
+            default:
+                return _invalid_str;
+            }
+        }
+        default:
+            return _invalid_str;
+        }
+
+        // Invalid string
+        return _invalid_str;
     }
     inline bool hook_set()
     {

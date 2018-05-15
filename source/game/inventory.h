@@ -242,7 +242,7 @@ class inventory
     };
 
     static constexpr size_t _max_slots = 49;
-    static constexpr size_t _max_strings = 127;
+    static constexpr size_t _max_strings = 128;
     static constexpr size_t _cube_size = 9;
     std::array<item, _max_slots> _inv;
     std::vector<std::string> _inv_name;
@@ -503,6 +503,8 @@ class inventory
         _inv_desc[125] = "The building block of_all matter";
         _inv_name[126] = "Oxygen";
         _inv_desc[126] = "Vital for sustaining_life!";
+        _inv_name[127] = "Rusty Key";
+        _inv_desc[127] = "It's old and rusty._Perhaps this opens_something!";
     }
     void set_store()
     {

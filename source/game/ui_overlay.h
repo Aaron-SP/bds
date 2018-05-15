@@ -379,7 +379,8 @@ class ui_overlay
     }
     inline void update(const min::vec3<float> &p, const min::vec3<float> &dir,
                        const float health, const float energy, const double fps,
-                       const double idle, const size_t chunks, const size_t insts, const float dt)
+                       const double idle, const size_t chunks, const size_t insts,
+                       const std::string &target, const float dt)
     {
         // Update bg
         _bg.update();
@@ -395,6 +396,7 @@ class ui_overlay
             _text.set_debug_idle(idle);
             _text.set_debug_chunks(chunks);
             _text.set_debug_insts(insts);
+            _text.set_debug_target(target);
         }
 
         // Update ui text

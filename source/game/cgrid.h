@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __CHUNK_GRID__
 
 #include <chrono>
+#include <game/callback.h>
 #include <game/cgrid_generator.h>
 #include <game/file.h>
 #include <game/swatch.h>
@@ -344,7 +345,6 @@ class cgrid
 
         // Create cubic function, for each cell in cubic space
         const auto f = [this, chunk_key](const size_t i, const size_t j, const size_t k, const size_t key) {
-
             // cell should always be in the chunk, if not empty
             const int8_t atlas = _grid[key];
             if (atlas != -1)
@@ -872,7 +872,7 @@ class cgrid
 
         return min::vec3<float>(std::floor(x) + 0.5, std::round(y), std::floor(z) + 0.5);
     }
-    inline void drone_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
+    inline void drone_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
@@ -980,7 +980,6 @@ class cgrid
 
         // Create cubic function, for each cell in cubic space
         const auto f = [this, &sw](const size_t i, const size_t j, const size_t k, const size_t key) {
-
             // Get the value of this grid point
             const int8_t value = this->_grid[key];
 
@@ -999,7 +998,6 @@ class cgrid
 
         // Create cubic function, for each cell in cubic space
         const auto f = [this, &mesh, &atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
-
             // Add data to mesh for each cell
             const min::vec3<float> p = grid_cell(key);
             mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), atlas));
@@ -1021,14 +1019,12 @@ class cgrid
 
         // Create cubic function, for each cell in cubic space
         const auto f = [this, &mesh, &sw](const size_t i, const size_t j, const size_t k, const size_t key) {
-
             // If the cell is not empty
             const int8_t value = sw.get(i, j, k);
 
             // Add data to mesh for each cell
             const min::vec3<float> p = grid_cell(key);
             mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), value));
-
         };
 
         // Store start point => (0,0,0),
@@ -1196,7 +1192,6 @@ class cgrid
         {
             // Create cubic function, for each cell in cubic space
             const auto f = [this, &out, &sw](const size_t i, const size_t j, const size_t k, const size_t key) {
-
                 // Count changed blocks
                 const int8_t value = sw.get(i, j, k);
                 if (_grid[key] != value)
@@ -1226,7 +1221,7 @@ class cgrid
         return out;
     }
     unsigned set_geometry(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
-                          const int8_t atlas_id, const std::function<void(const min::vec3<float> &, const int8_t)> &callback)
+                          const int8_t atlas_id, const set_call &callback)
     {
         // Modified geometry
         unsigned out = 0;
@@ -1241,7 +1236,6 @@ class cgrid
         {
             // Create cubic function, for each cell in cubic space
             const auto f = [this, &out, atlas_id, callback](const size_t i, const size_t j, const size_t k, const size_t key) {
-
                 // Get the old value
                 const int8_t old_value = _grid[key];
 
@@ -1272,7 +1266,6 @@ class cgrid
         {
             // Create cubic function, for each cell in cubic space
             const auto f = [this, &out, atlas_id](const size_t i, const size_t j, const size_t k, const size_t key) {
-
                 // Count changed blocks
                 if (_grid[key] != atlas_id)
                 {
@@ -1337,7 +1330,6 @@ class cgrid
 
         // Create cubic function, for each chunk in cubic space
         const auto f = [this, &cam, &count, &weight_center](const min::vec3<float> &p) {
-
             // Create chunk bounding box
             const min::aabbox<float, min::vec3> box = this->create_chunk_box(p);
 

@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __PLAYER__
 #define __PLAYER__
 
+#include <game/callback.h>
 #include <game/cgrid.h>
 #include <game/inventory.h>
 #include <game/load_state.h>
@@ -38,6 +39,75 @@ enum play_mode
     gun,
     place,
     skill,
+};
+
+enum class target_id
+{
+    BLOCK,
+    BODY,
+    INVALID
+};
+
+class target
+{
+  private:
+    union target_value {
+        uint16_t body_id;
+        int8_t atlas;
+        target_value(const uint16_t i) : body_id(i) {}
+        target_value(const int8_t a) : atlas(a) {}
+    };
+
+  private:
+    target_id _id;
+    size_t _key;
+    min::vec3<float> _position;
+    target_value _value;
+
+  public:
+    target()
+        : _id(target_id::INVALID), _key(0), _value(static_cast<int8_t>(-2)) {}
+
+    int8_t &atlas()
+    {
+        return _value.atlas;
+    }
+    target_id get_id() const
+    {
+        return _id;
+    }
+    const min::vec3<float> &get_position() const
+    {
+        return _position;
+    }
+    int8_t get_atlas() const
+    {
+        return _value.atlas;
+    }
+    uint16_t get_body_index() const
+    {
+        return _value.body_id;
+    }
+    size_t &key()
+    {
+        return _key;
+    }
+    min::vec3<float> &position()
+    {
+        return _position;
+    }
+    void set_body_index(const uint16_t id)
+    {
+        _value.body_id = id;
+    }
+    void set_id(const target_id id)
+    {
+        _id = id;
+    }
+    void set_position(const min::vec3<float> &p)
+    {
+        _position = p;
+    }
 };
 
 class player
@@ -61,10 +131,7 @@ class player
     min::vec3<float> _forward;
     min::vec3<float> _project;
     min::ray<float, min::vec3> _ray;
-    min::vec3<float> _target;
-    size_t _target_key;
-    int8_t _target_value;
-    bool _target_valid;
+    target _target;
     bool _airborn;
     bool _falling;
     size_t _land_count;
@@ -234,8 +301,8 @@ class player
     player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const load_state &state, const size_t body_id)
         : _sim(sim), _body_id(body_id),
           _exploded(false), _explode_id(-1),
-          _hooked(false), _hook_length(0.0), _target_key(0), _target_value(-2), _target_valid(false),
-          _airborn(false), _falling(false), _land_count(0), _jump_count(0), _landed(false), _jet(false),
+          _hooked(false), _hook_length(0.0), _airborn(false), _falling(false),
+          _land_count(0), _jump_count(0), _landed(false), _jet(false),
           _mode(play_mode::none)
     {
         // Reserve space for collision cells
@@ -330,17 +397,13 @@ class player
     {
         return _stats;
     }
-    inline const min::vec3<float> &get_target() const
+    inline const target &get_target() const
     {
         return _target;
     }
-    inline size_t get_target_key() const
+    inline int8_t get_target_atlas() const
     {
-        return _target_key;
-    }
-    inline int8_t get_target_value() const
-    {
-        return _target_value;
+        return _target.get_atlas();
     }
     inline void hook_abort()
     {
@@ -375,9 +438,13 @@ class player
     {
         return _landed;
     }
-    inline bool is_target_valid() const
+    inline bool is_target_block() const
     {
-        return _target_valid;
+        return _target.get_id() == target_id::BLOCK;
+    }
+    inline bool is_target_body() const
+    {
+        return _target.get_id() == target_id::BODY;
     }
     inline void dash()
     {
@@ -491,13 +558,13 @@ class player
     inline bool set_hook()
     {
         // Get the atlas of target block, if hit a block remove it
-        if (_target_value >= 0)
+        if (is_target_block() && _target.get_atlas() >= 0)
         {
             // Enable hooking
             _hooked = true;
 
             // Set hook point
-            _hook = _target;
+            _hook = _target.get_position();
 
             // Calculate the hook length
             _hook_length = (_hook - position()).magnitude();
@@ -527,8 +594,74 @@ class player
         // Cache ray from camera to destination
         _ray = min::ray<float, min::vec3>(cam.get_position(), _project);
 
+        // Update camera target
+        _target = target_ray(grid, _ray, max_dist);
+    }
+    inline target target_ray(const cgrid &grid, const min::ray<float, min::vec3> &r, const size_t max_dist) const
+    {
+        // Output target
+        target out;
+
+        // Get ray origin
+        const min::vec3<float> &ray_pos = r.get_origin();
+
         // Trace a ray to the destination point to find placement position, return point is snapped
-        _target_valid = grid.ray_trace_last_key(_ray, max_dist, _target, _target_key, _target_value);
+        const bool target_valid = grid.ray_trace_last_key(r, max_dist, out.position(), out.key(), out.atlas());
+
+        // If ray is invalid or doesn't hit any blocks
+        if (!target_valid || out.get_atlas() < 0)
+        {
+            out.set_id(target_id::INVALID);
+        }
+        else
+        {
+            // Set target id to block
+            out.set_id(target_id::BLOCK);
+        }
+
+        // Calculate distance to block
+        const min::vec3<float> block_diff = out.position() - ray_pos;
+        float min_dist = block_diff.dot(block_diff);
+
+        // Check for collisions with a physics body before block
+        const std::vector<uint16_t> &map = _sim->get_index_map();
+        const std::vector<std::pair<uint16_t, min::vec3<float>>> &cols = _sim->get_collisions(r);
+
+        // Iterate through all the hits
+        const size_t hits = cols.size();
+        for (size_t i = 0; i < hits; i++)
+        {
+            // Get the body and body id
+            const uint16_t body_index = map[cols[i].first];
+            const min::body<float, min::vec3> &b = _sim->get_body(body_index);
+            if (!b.is_dead() && body_index != _body_id)
+            {
+                // Get the body position
+                const min::vec3<float> &p = b.get_position();
+
+                // Calculate distance between body and player
+                const min::vec3<float> body_diff = p - ray_pos;
+                const float body_dist = body_diff.dot(body_diff);
+
+                // If this body is closer
+                if (body_dist < min_dist)
+                {
+                    // Update the target information
+                    out.set_id(target_id::BODY);
+                    out.set_position(p);
+                    out.set_body_index(body_index);
+
+                    // Update the minimum distance
+                    min_dist = body_dist;
+
+                    // Take first hit and break out
+                    break;
+                }
+            }
+        }
+
+        // Return this target
+        return out;
     }
     inline const min::vec3<float> &velocity() const
     {
@@ -545,8 +678,7 @@ class player
         // Warp character to new position
         body().set_position(p);
     }
-    inline void update_frame(const cgrid &grid, const float friction,
-                             const std::function<void(const std::pair<min::aabbox<float, min::vec3>, int8_t> &)> &ex)
+    inline void update_frame(const cgrid &grid, const float friction, const ex_call &ex)
     {
         // Check if player is still in the grid
         const min::vec3<float> &p = position();
@@ -564,18 +696,19 @@ class player
             // Detect if player has landed
             if (collide)
             {
+                // Check if we landed
                 const min::vec3<float> center = cell.first.get_center();
                 if (center.y() < p.y())
                 {
                     landed = true;
                 }
-            }
 
-            // If we collided with cell
-            if (collide && !is_exploded())
-            {
-                // Call explosion callback
-                ex(cell);
+                // If we collided with a sodium cell and we haven't exploded yet
+                if (!is_exploded() && cell.second == id_value(block_id::SODIUM))
+                {
+                    // Call explosion callback
+                    ex(cell.first.get_center(), cell.second);
+                }
             }
         }
 
