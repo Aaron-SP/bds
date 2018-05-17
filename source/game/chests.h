@@ -97,7 +97,7 @@ class chests
   public:
     chests(physics &sim, static_instance &inst)
         : _sim(&sim), _inst(&inst),
-          _oldest(0), _str("CHEST")
+          _oldest(0), _str("Chest")
     {
         reserve_memory();
     }
@@ -149,13 +149,17 @@ class chests
             body(i).set_data(min::body_data(i));
         }
     }
-    inline void update_frame(const min::vec3<float> &g)
+    inline void update_frame()
     {
+        // Get gravity acceleration
+        const min::vec3<float> inv_g(0.0, _grav_mag, 0.0);
+
         // Keep chest from moving in simulation
         const size_t size = _chests.size();
         for (size_t i = 0; i < size; i++)
         {
-            set_position(i, g);
+            // Apply normal force at surface
+            set_position(i, inv_g);
         }
     }
     inline void update()

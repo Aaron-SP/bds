@@ -34,7 +34,7 @@ class state
     static constexpr unsigned _recoil_frames = 6;
     static constexpr float _run_stride = 0.05;
     load_state _state;
-    bool _fix_target;
+    bool _tracking;
     min::vec3<float> _target;
     unsigned _frame_count;
     float _x[_frame_average];
@@ -106,16 +106,12 @@ class state
 
   public:
     state(const size_t grid_size)
-        : _state(grid_size), _fix_target(false), _frame_count(0), _x{}, _y{},
+        : _state(grid_size), _tracking(false), _frame_count(0), _x{}, _y{},
           _recoil(0), _run_accum(0.0), _run_accum_sin(0.0),
           _dead(false), _pause(false), _respawn(false), _user_input(false)
     {
         // Load camera
         load_camera();
-    }
-    inline void abort_tracking()
-    {
-        _fix_target = false;
     }
     inline min::camera<float> &get_camera()
     {
@@ -141,6 +137,10 @@ class state
     {
         return _pause;
     }
+    inline bool get_tracking() const
+    {
+        return _tracking;
+    }
     inline bool get_user_input() const
     {
         return _user_input;
@@ -156,6 +156,7 @@ class state
     inline void respawn()
     {
         // Reset flags
+        _tracking = false;
         _recoil = 0;
 
         // Reload camera settings
@@ -202,13 +203,15 @@ class state
     {
         _user_input = mode;
     }
-    inline void track_target(min::vec3<float> target)
+    inline void set_target(const min::vec3<float> &target)
     {
-        // Enable fixed look at
-        _fix_target = true;
-
         // Set the look at target to track
         _target = target;
+    }
+    inline void set_tracking(const bool flag)
+    {
+        // Enable fixed look at
+        _tracking = flag;
     }
     inline bool toggle_pause()
     {
@@ -224,7 +227,7 @@ class state
         const min::vec3<float> move = p + min::vec3<float>(0.0, 0.5, 0.0);
 
         // Check if we are fixing look at target
-        if (_fix_target)
+        if (_tracking)
         {
             // Set camera start position and look position
             _camera.set(move, _target);

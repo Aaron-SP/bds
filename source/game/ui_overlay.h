@@ -229,7 +229,6 @@ class ui_overlay
     }
     inline void set_console_string(const std::string &str)
     {
-        // Update the console text
         _text.update_console(str);
     }
     inline void set_cursor_aim()
@@ -259,6 +258,15 @@ class ui_overlay
     inline void set_experience(const float exp)
     {
         _bg.set_exp(exp);
+    }
+    inline void set_focus(const bool flag)
+    {
+        _bg.set_draw_focus(flag);
+        _text.set_draw_focus(flag);
+    }
+    inline void set_focus_string(const std::string &str)
+    {
+        _text.update_focus(str);
     }
     inline void set_health(const float health)
     {
@@ -365,6 +373,10 @@ class ui_overlay
         _text.toggle_draw_console();
         _bg.toggle_draw_console();
     }
+    inline void toggle_debug_text()
+    {
+        _text.toggle_draw_debug();
+    }
     inline void toggle_extend()
     {
         // Toggle bg and text extended flags
@@ -372,10 +384,6 @@ class ui_overlay
 
         // Force reloading of hover flag
         _text.set_draw_hover(false);
-    }
-    inline void toggle_debug_text()
-    {
-        _text.toggle_draw_debug();
     }
     inline void update(const min::vec3<float> &p, const min::vec3<float> &dir,
                        const float health, const float energy, const double fps,

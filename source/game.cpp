@@ -195,13 +195,6 @@ int main(int argc, char *argv[])
             {
                 // Parse uint
                 parse_uint(argv[i], grid);
-
-                // Warn user that grid sizes not compatible
-                std::cout << "Resizing the grid: deleting old save caches" << std::endl;
-
-                // Erase previous state files
-                game::erase_file("bin/state");
-                game::erase_file("bin/world.bmesh");
             }
             else if (input.compare("-view") == 0)
             {

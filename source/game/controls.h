@@ -455,6 +455,10 @@ class controls
                     play.set_mode(play_mode::gun);
                     skill.set_scatter_mode();
                     break;
+                case id_value(skill_id::SPEED):
+                    play.set_mode(play_mode::none);
+                    skill.set_speed_mode();
+                    break;
                 default:
                     play.set_mode(play_mode::none);
                     break;
@@ -1279,23 +1283,23 @@ class controls
             return;
         }
 
-        // Track block if player's target is a block
-        if (play.is_target_block())
-        {
-            // Set tracking of target
-            state->track_target(play.get_target().get_position());
-        }
+        // Start camera tracking
+        state->set_tracking(true);
+
+        // Set tracking of target
+        const target &t = play.get_target();
+        state->set_target(t.get_position());
     }
     static void right_click_up(void *ptr, const uint16_t x, const uint16_t y)
     {
-        // Cast to control pointer
+        // Get the state and ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-
-        // Get the state pointer
         state *const state = control->get_state();
+        ui_overlay *const ui = control->get_ui();
 
         // Stop camera tracking
-        state->abort_tracking();
+        state->set_tracking(false);
+        ui->set_focus(false);
     }
     static void jump(void *ptr, double step)
     {
@@ -1485,6 +1489,27 @@ class controls
         if (skill.activate_portal())
         {
             _character->set_animation_portal();
+        }
+
+        // Track block if player's target is a block
+        if (_state->get_tracking())
+        {
+            const target &t = play.get_track_target();
+            if (t.get_id() != target_id::INVALID)
+            {
+                // Set tracking of target
+                _state->set_target(t.get_position());
+
+                // Update the ui focus
+                _ui->set_focus(true);
+                _ui->set_focus_string(_world->get_target_string());
+            }
+            else
+            {
+                // Abort
+                _state->set_tracking(false);
+                _ui->set_focus(false);
+            }
         }
     }
     void update_ui()

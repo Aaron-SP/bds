@@ -57,7 +57,8 @@ class ui_text
   private:
     static constexpr size_t _max_stream = 10;
     static constexpr size_t _console = 0;
-    static constexpr size_t _ui = _console + 1;
+    static constexpr size_t _focus = _console + 1;
+    static constexpr size_t _ui = _focus + 1;
     static constexpr size_t _alert = _ui + 2;
     static constexpr size_t _debug = _alert + 1;
     static constexpr size_t _hover = _debug + 13;
@@ -88,9 +89,10 @@ class ui_text
     std::array<stream_text, _max_stream> _st;
     size_t _stream_old;
     std::ostringstream _ss;
+    bool _draw_alert;
     bool _draw_console;
     bool _draw_debug;
-    bool _draw_alert;
+    bool _draw_focus;
     bool _draw_ui;
     bool _draw_hover;
 
@@ -131,6 +133,9 @@ class ui_text
         // Position the console element
         const uint16_t w2 = (width / 2);
         _text.set_text_center(_console, w2, _console_dy);
+
+        // Position the focus element
+        _text.set_text_center(_focus, w2, height - _focus_dy);
 
         // Position the ui elements
         _text.set_text_location(_ui, w2 + _ui_health_dx, _y_ui_text);
@@ -186,8 +191,9 @@ class ui_text
           _prog(_vertex, _fragment),
           _text("data/fonts/open_sans.ttf", _font_size),
           _text_bg("data/fonts/open_sans.ttf", _ui_font_size),
-          _st{}, _stream_old(0), _draw_console(false), _draw_debug(false), _draw_alert(false),
-          _draw_ui(false), _draw_hover(false)
+          _st{}, _stream_old(0),
+          _draw_alert(false), _draw_console(false), _draw_debug(false),
+          _draw_focus(false), _draw_ui(false), _draw_hover(false)
     {
         // Set the stream precision
         _ss << std::fixed << std::setprecision(2);
@@ -203,10 +209,17 @@ class ui_text
         load_program_index();
 
         // Add 1 console entries
-        for (size_t i = _console; i < _ui; i++)
+        for (size_t i = _console; i < _focus; i++)
         {
             add_text("", 0, 0);
             _text.set_line_wrap(i, _x_console_wrap, _y_console_wrap);
+        }
+
+        // Add 1 focus entries
+        for (size_t i = _focus; i < _ui; i++)
+        {
+            add_text("", 0, 0);
+            _text.set_line_wrap(i, _x_focus_wrap, _y_focus_wrap);
         }
 
         // Add 2 ui entries
@@ -287,24 +300,28 @@ class ui_text
         set_reference(1.0, 1.0, 1.0);
 
         // Minimize draw calls by lumping togetherness
-        if (_draw_console && _draw_ui && _draw_alert && _draw_debug)
+        if (_draw_console && _draw_focus && _draw_ui && _draw_alert && _draw_debug)
         {
             _text.draw(_console, _hover - 1);
         }
-        else if (_draw_console && _draw_ui && _draw_alert && !_draw_debug)
+        else if (_draw_console && _draw_focus && _draw_ui && _draw_alert && !_draw_debug)
         {
             _text.draw(_console, _debug - 1);
         }
-        else if (_draw_console && _draw_ui && !_draw_alert && !_draw_debug)
+        else if (_draw_console && _draw_focus && _draw_ui && !_draw_alert && !_draw_debug)
         {
             _text.draw(_console, _alert - 1);
         }
-        else if (_draw_console && _draw_ui && !_draw_alert && _draw_debug)
+        else if (_draw_console && _draw_focus && _draw_ui && !_draw_alert && _draw_debug)
         {
             _text.draw(_console, _alert - 1);
             _text.draw(_debug, _hover - 1);
         }
-        else if (_draw_console && !_draw_ui && !_draw_alert && !_draw_debug)
+        else if (_draw_console && _draw_focus && !_draw_ui && !_draw_alert && !_draw_debug)
+        {
+            _text.draw(_console, _ui - 1);
+        }
+        else if (_draw_console && !_draw_focus && !_draw_ui && !_draw_alert && !_draw_debug)
         {
             _text.draw(_console);
         }
@@ -313,7 +330,11 @@ class ui_text
             // For all other permutations
             if (_draw_console)
             {
-                _text.draw(_console, _ui - 1);
+                _text.draw(_console, _focus - 1);
+            }
+            if (_draw_focus)
+            {
+                _text.draw(_focus, _ui - 1);
             }
             if (_draw_ui)
             {
@@ -400,6 +421,10 @@ class ui_text
     {
         return _draw_debug;
     }
+    inline void set_draw_alert(const bool flag)
+    {
+        _draw_alert = flag;
+    }
     inline void set_draw_console(const bool flag)
     {
         _draw_console = flag;
@@ -408,9 +433,9 @@ class ui_text
     {
         _draw_debug = flag;
     }
-    inline void set_draw_alert(const bool flag)
+    inline void set_draw_focus(const bool flag)
     {
-        _draw_alert = flag;
+        _draw_focus = flag;
     }
     inline void set_draw_hover(const bool flag)
     {
@@ -551,6 +576,10 @@ class ui_text
     {
         _draw_debug = !_draw_debug;
     }
+    inline void toggle_draw_focus()
+    {
+        _draw_focus = !_draw_focus;
+    }
     inline void update_console(const std::string &str)
     {
         // Update console text
@@ -562,6 +591,18 @@ class ui_text
         // Get the center width
         const uint16_t w2 = size.first / 2;
         _text.set_text_center(_console, w2, _console_dy);
+    }
+    inline void update_focus(const std::string &str)
+    {
+        // Update focus text
+        update_text(_focus, str);
+
+        // Get the screen dimensions
+        const std::pair<float, float> size = _text.get_screen_size();
+
+        // Get the center width
+        const uint16_t w2 = size.first / 2;
+        _text.set_text_center(_focus, w2, size.second - _focus_dy);
     }
     inline void update_ui(const float health, const float energy)
     {

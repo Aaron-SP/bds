@@ -38,15 +38,16 @@ class drone
     size_t _path_id;
     size_t _sound_id;
     std::vector<path> *_paths;
-    size_t _idle;
     float _health;
+    size_t _idle;
+    size_t _launch;
 
   public:
     drone(const size_t body_id, const size_t inst_id,
           const size_t path_id, const size_t sound_id, std::vector<path> *const vp,
           const min::vec3<float> &p, const min::vec3<float> &dest, const float health)
         : _body_id(body_id), _inst_id(inst_id), _path_id(path_id),
-          _sound_id(sound_id), _paths(vp), _idle(0), _health(health)
+          _sound_id(sound_id), _paths(vp), _health(health), _idle(0), _launch(0)
     {
         // Reset path and update with new info
         get_path().set_dead(false);
@@ -72,6 +73,10 @@ class drone
     {
         _inst_id--;
     }
+    inline void dec_launch()
+    {
+        _launch--;
+    }
     inline path &get_path()
     {
         return (*_paths)[_path_id];
@@ -84,21 +89,29 @@ class drone
     {
         return _inst_id;
     }
-    inline bool is_pathing() const
+    inline bool is_idle() const
     {
-        return _idle == 0;
+        return _idle != 0;
+    }
+    inline bool is_launching() const
+    {
+        return _launch == 0;
     }
     inline size_t path_id() const
     {
         return _path_id;
     }
-    inline void set_idle(const size_t N)
+    inline void set_idle(const size_t frames)
     {
-        _idle = N;
+        _idle = frames;
     }
     inline size_t sound_id() const
     {
         return _sound_id;
+    }
+    inline void set_launch(const size_t frames)
+    {
+        _launch = frames;
     }
     inline min::vec3<float> step(cgrid &grid, const float speed)
     {
@@ -109,8 +122,9 @@ class drone
 class drones
 {
   private:
-    static constexpr uint16_t _splash_level = 5;
-    static constexpr uint16_t _tunnel_level = 10;
+    static constexpr uint16_t _missile_level = 5;
+    static constexpr uint16_t _splash_level = 10;
+    static constexpr uint16_t _tunnel_level = 15;
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *_sim;
     static_instance *_inst;
@@ -205,7 +219,7 @@ class drones
     drones(physics &sim, static_instance &inst, sound &s)
         : _sim(&sim), _inst(&inst), _sound(&s),
           _paths(static_instance::max_drones()), _path_old(0),
-          _f(nullptr), _disable(false), _str("DRONE")
+          _f(nullptr), _disable(false), _str("Drone")
     {
         reserve_memory();
     }
@@ -329,7 +343,7 @@ class drones
                 drone &d = _drones[i];
 
                 // Only path if not idling
-                if (d.is_pathing())
+                if (!d.is_idle())
                 {
                     // Get remaining distance
                     const float remain = d.get_path().get_remain();
@@ -348,6 +362,12 @@ class drones
                 {
                     // Decrement idle frame count
                     d.dec_idle();
+                }
+
+                // Decrement launch counter
+                if (!d.is_launching())
+                {
+                    d.dec_launch();
                 }
             }
         }
@@ -394,9 +414,9 @@ class drones
             if (hit)
             {
                 // Tunnel through geometry looking for player
-                const bool first = !d.is_pathing() && _splash_level;
-                const bool second = player_level >= _tunnel_level;
-                if (first || second)
+                const bool splash = d.is_idle() && (player_level >= _splash_level);
+                const bool tunnel = player_level >= _tunnel_level;
+                if (splash || tunnel)
                 {
                     // Blow up geometry around drone
                     const min::vec3<unsigned> scale(3, 3, 3);
@@ -410,22 +430,43 @@ class drones
             }
         }
     }
-    inline void update(cgrid &grid, const min::vec3<float> &look_at)
+    inline void update(cgrid &grid, const min::vec3<float> &player_pos, const uint16_t player_level, const miss_call &f)
     {
         // Update all drone positions
         const size_t size = _drones.size();
         for (size_t i = 0; i < size; i++)
         {
+            // Get the drone
+            drone &d = _drones[i];
+
             // Get instance and sound id
-            const size_t inst_id = _drones[i].inst_id();
+            const size_t inst_id = d.inst_id();
 
             // Update drone instance position
             const min::vec3<float> &p = body(i).get_position();
             _inst->get_drone().update_position(inst_id, p);
 
+            // Calculate distance to player
+            const min::vec3<float> diff = player_pos - p;
+            const float dist = diff.magnitude();
+            const min::vec3<float> dir = (dist > 0.01) ? diff * (1.0 / dist) : diff;
+
+            // Should we launch missiles
+            const bool launch = (player_level >= _missile_level) && d.is_launching() && dist < 5.0;
+            if (launch)
+            {
+                // Launch missile
+                if (f)
+                {
+                    f(p, p + dir);
+                }
+
+                // Set cooldown
+                d.set_launch(1800);
+            }
+
             // Update drone instance rotation
             const min::vec3<float> x(1.0, 0.0, 0.0);
-            const min::vec3<float> dir = (look_at - p).normalize();
             const min::quat<float> q(x, dir);
             _inst->get_drone().update_rotation(inst_id, q);
 

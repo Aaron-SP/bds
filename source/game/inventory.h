@@ -373,7 +373,8 @@ class inventory
         _inv_desc[9] = "Scan a block to_retrieve the block_type";
         _inv_name[10] = "Scatter Beam";
         _inv_desc[10] = "An energy weapon_optimized for killing_drones";
-        _inv_name[11] = "Reserved";
+        _inv_name[11] = "Speed Boots";
+        _inv_desc[11] = "Sometimes you just_need to run for it!";
         _inv_name[12] = "Reserved";
         _inv_name[13] = "Reserved";
         _inv_name[14] = "Reserved";

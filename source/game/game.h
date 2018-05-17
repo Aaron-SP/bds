@@ -110,7 +110,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.227");
+        _ui.text().set_debug_version("VERSION: 0.1.236");
     }
     void update_alerts()
     {
@@ -421,7 +421,7 @@ class bds
             _events.update(_world, _ui, dt);
 
             // Update the world state
-            _world.update(camera, dt);
+            _world.update(camera, _state.get_tracking(), dt);
 
             // Update the particle system
             _particles.set_velocity(player.velocity());

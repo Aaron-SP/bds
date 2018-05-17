@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __STATS__
 
 #include <array>
+#include <cstdint>
 #include <string>
 
 namespace game
@@ -388,6 +389,10 @@ class stats
     inline float get_health() const
     {
         return _health;
+    }
+    inline float get_max_health() const
+    {
+        return _max_health;
     }
     inline float get_health_fraction() const
     {

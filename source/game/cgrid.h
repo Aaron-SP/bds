@@ -758,6 +758,9 @@ class cgrid
     }
 
   public:
+    constexpr static float _player_dx = 0.45;
+    constexpr static float _player_dy = 0.95;
+    constexpr static float _player_dz = 0.45;
     cgrid(const size_t chunk_size, const size_t grid_scale, const size_t view_chunk_size)
         : _grid_scale(grid_scale * 2),
           _grid(_grid_scale * _grid_scale * _grid_scale, -1),
@@ -851,7 +854,7 @@ class cgrid
     static inline min::aabbox<float, min::vec3> player_box(const min::vec3<float> &p)
     {
         // Create box at center
-        const min::vec3<float> half_extent(0.45, 0.95, 0.45);
+        const min::vec3<float> half_extent(_player_dx, _player_dy, _player_dz);
 
         // Return the box
         return min::aabbox<float, min::vec3>(p - half_extent, p + half_extent);
@@ -1034,10 +1037,6 @@ class cgrid
 
         // Run the function
         cubic_grid(start, sw.get_offset(), sw.get_length(), f);
-    }
-    inline int8_t ray_trace_key(const size_t key) const
-    {
-        return _grid[key];
     }
     inline bool ray_trace_last_key(const min::ray<float, min::vec3> &r, const size_t length, min::vec3<float> &point, size_t &key, int8_t &value) const
     {

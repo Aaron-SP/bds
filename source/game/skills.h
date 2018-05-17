@@ -49,7 +49,8 @@ class skills
         missile,
         portal,
         scan,
-        scatter
+        scatter,
+        speed
     };
 
     skill_mode _mode;
@@ -194,6 +195,10 @@ class skills
     {
         return _mode == skill_mode::scatter;
     }
+    inline bool is_speed_mode() const
+    {
+        return _mode == skill_mode::speed;
+    }
     inline bool is_locked() const
     {
         return _locked;
@@ -245,6 +250,10 @@ class skills
     inline void set_scatter_mode()
     {
         _mode = skill_mode::scatter;
+    }
+    inline void set_speed_mode()
+    {
+        _mode = skill_mode::speed;
     }
     inline void start_charge()
     {
@@ -354,6 +363,13 @@ class skills
     inline void unlock_scatter()
     {
         if (_mode == skill_mode::scatter)
+        {
+            _locked = false;
+        }
+    }
+    inline void unlock_speed()
+    {
+        if (_mode == skill_mode::speed)
         {
             _locked = false;
         }

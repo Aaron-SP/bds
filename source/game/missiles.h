@@ -86,10 +86,16 @@ class missiles
     {
         return _sim->get_body(_miss[index].body_id());
     }
-    inline const min::vec3<float> &position(const size_t index) const
+    inline void explode(const size_t index, const int8_t atlas, const ex_scale_call &f)
     {
-        // Return the explosive position
-        return body(index).get_position();
+        // Call the explosion callback function if available
+        if (f)
+        {
+            f(position(index), _scale, atlas);
+        }
+
+        // Blow up the missile
+        explode(index);
     }
     inline const min::vec3<float> &velocity(const size_t index) const
     {
@@ -125,15 +131,11 @@ class missiles
     missiles(physics &sim, particle &part, static_instance &inst, sound &s)
         : _sim(&sim), _inst(&inst),
           _part(&part), _sound(&s),
-          _scale(3, 7, 3), _f(nullptr), _str("MISSILE")
+          _scale(3, 7, 3), _f(nullptr), _str("Missile")
     {
         reserve_memory();
     }
-    inline const std::string &get_string() const
-    {
-        return _str;
-    }
-    inline void explode(const size_t index, const int8_t atlas, const ex_scale_call &f)
+    inline void explode(const size_t index)
     {
         // Stop playing particles
         _part->abort_miss_launch(_miss[index].part_id());
@@ -141,14 +143,16 @@ class missiles
         // Stop playing launch sound
         _sound->stop_miss_launch(_miss[index].sound_id());
 
-        // Call the explosion callback function if available
-        if (f)
-        {
-            f(position(index), _scale, atlas);
-        }
-
-        // Blow up the grenade
+        // Blow up the missile
         remove(index);
+    }
+    inline const min::vec3<unsigned> &get_scale() const
+    {
+        return _scale;
+    }
+    inline const std::string &get_string() const
+    {
+        return _str;
     }
     inline bool launch_missile(const min::vec3<float> &p, const min::vec3<float> &dir)
     {
@@ -202,6 +206,11 @@ class missiles
 
         // Return launch success
         return true;
+    }
+    inline const min::vec3<float> &position(const size_t index) const
+    {
+        // Return the explosive position
+        return body(index).get_position();
     }
     inline void set_collision_callback(const coll_call &f)
     {

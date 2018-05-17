@@ -63,6 +63,7 @@ class ui_bg
     // Misc
     bool _clicking;
     inv_id _click;
+    bool _focus;
     bool _hovering;
     bool _minimized;
     inv_id _hover;
@@ -121,11 +122,18 @@ class ui_bg
         _stream.clear();
         _stream.str(std::string());
     }
+    inline void draw_focus_ui() const
+    {
+        // Get the start of the opaque ui
+        const size_t start = _assets.focus_start();
+        set_start_index(start);
+
+        // Draw extended ui elements
+        const size_t size = _assets.focus_size();
+        _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
+    }
     inline void draw_opaque_extend() const
     {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_ui_id, 0);
-
         // Get the start of the opaque ui
         const size_t start = _assets.opaque_start();
         set_start_index(start);
@@ -136,9 +144,6 @@ class ui_bg
     }
     inline void draw_opaque_base() const
     {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_ui_id, 0);
-
         // Get the start of the opaque ui
         const size_t start = _assets.opaque_start();
         set_start_index(start);
@@ -149,17 +154,11 @@ class ui_bg
     }
     inline void draw_title() const
     {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_title_id, 0);
-
         // Draw the first thing in the buffer, title screen
         _vb.draw_many(GL_TRIANGLES, _mesh_id, 1);
     }
     inline void draw_tooltip_ui() const
     {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_ui_id, 0);
-
         // Get the start of the opaque ui
         const size_t start = _assets.tooltip_start();
         set_start_index(start);
@@ -170,9 +169,6 @@ class ui_bg
     }
     inline void draw_transparent_ui() const
     {
-        // Bind the ui texture for drawing
-        _tbuffer.bind(_ui_id, 0);
-
         // Get the start of the transparent ui
         const size_t trans_start = _assets.transparent_start();
         set_start_index(trans_start);
@@ -510,6 +506,9 @@ class ui_bg
         // Load stat background
         _assets.load_bg_stat();
 
+        // Load focus background
+        _assets.load_bg_focus();
+
         // Load hover background
         _assets.load_bg_hover(p);
     }
@@ -700,6 +699,8 @@ class ui_bg
                 return _assets.load_scan_icon(inv, p);
             case id_value(skill_id::SCATTER):
                 return _assets.load_scatter_icon(inv, p);
+            case id_value(skill_id::SPEED):
+                return _assets.load_speed_icon(inv, p);
             default:
                 return;
             }
@@ -939,7 +940,7 @@ class ui_bg
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)), _mesh_id(0),
-          _clicking(false), _click(0), _hovering(false), _minimized(false), _hover(0), _select(inv.begin_key()),
+          _clicking(false), _click(0), _focus(false), _hovering(false), _minimized(false), _hover(0), _select(inv.begin_key()),
           _assets(width, height), _inv(&inv), _stat(&stat), _text(&text), _grid(screen_box(width, height))
     {
         // Format string stream
@@ -1016,17 +1017,33 @@ class ui_bg
         // If we are drawing the title screen
         if (_assets.get_draw_title())
         {
+            // Bind the ui texture for drawing
+            _tbuffer.bind(_title_id, 0);
+
+            // Draw title
             draw_title();
         }
         else if (_assets.get_draw_ex())
         {
+            // Bind the ui texture for drawing
+            _tbuffer.bind(_ui_id, 0);
+
             // Draw extended ui?
             draw_opaque_extend();
         }
         else
         {
+            // Bind the ui texture for drawing
+            _tbuffer.bind(_ui_id, 0);
+
             // Draw only base ui
             draw_opaque_base();
+        }
+
+        // Draw focus UI
+        if (_focus)
+        {
+            draw_focus_ui();
         }
     }
     inline void draw_tooltips() const
@@ -1039,7 +1056,10 @@ class ui_bg
             // Bind the ui program
             _prog.use();
 
-            // Draw tooltip ui
+            // Bind the ui texture for drawing
+            _tbuffer.bind(_ui_id, 0);
+
+            // Draw tooltips
             draw_tooltip_ui();
         }
     }
@@ -1052,6 +1072,9 @@ class ui_bg
 
             // Bind the ui program
             _prog.use();
+
+            // Bind the ui texture for drawing
+            _tbuffer.bind(_ui_id, 0);
 
             // Draw transparent ui
             draw_transparent_ui();
@@ -1218,6 +1241,10 @@ class ui_bg
     inline void set_exp(const float exp)
     {
         _assets.set_experience(exp);
+    }
+    inline void set_draw_focus(const bool flag)
+    {
+        _focus = flag;
     }
     inline void set_oxygen(const float oxy)
     {

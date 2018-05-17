@@ -79,10 +79,16 @@ class explosives
     {
         return _sim->get_body(_ex[index].body_id());
     }
-    inline const min::vec3<float> &position(const size_t index) const
+    inline void explode(const size_t index, const int8_t atlas, const ex_scale_call &f)
     {
-        // Return the explosive position
-        return body(index).get_position();
+        // Call the explosion callback function if available
+        if (f)
+        {
+            f(position(index), _scale, atlas);
+        }
+
+        // Blow up the grenade
+        explode(index);
     }
     inline void remove(const size_t index)
     {
@@ -112,25 +118,22 @@ class explosives
   public:
     explosives(physics &sim, static_instance &inst)
         : _sim(&sim), _inst(&inst),
-          _scale(3, 5, 3), _angle(0.0), _f(nullptr), _str("EXPLOSIVE")
+          _scale(3, 5, 3), _angle(0.0), _f(nullptr), _str("Explosive")
     {
         // Reserve memory for collision cells
         reserve_memory();
     }
+    inline void explode(const size_t index)
+    {
+        remove(index);
+    }
+    inline const min::vec3<unsigned> &get_scale() const
+    {
+        return _scale;
+    }
     inline const std::string &get_string() const
     {
         return _str;
-    }
-    inline void explode(const size_t index, const int8_t atlas, const ex_scale_call &f)
-    {
-        // Call the explosion callback function if available
-        if (f)
-        {
-            f(position(index), _scale, atlas);
-        }
-
-        // Blow up the grenade
-        remove(index);
     }
     inline bool launch(const min::vec3<float> &p, const min::vec3<float> &dir, const int8_t atlas)
     {
@@ -167,6 +170,11 @@ class explosives
 
         // Return launch success
         return true;
+    }
+    inline const min::vec3<float> &position(const size_t index) const
+    {
+        // Return the explosive position
+        return body(index).get_position();
     }
     inline void set_collision_callback(const coll_call &f)
     {

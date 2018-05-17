@@ -117,7 +117,7 @@ class player
     static constexpr float _fall_threshold = -1.0;
     static constexpr float _grav_mag = 10.0;
     static constexpr float _jet_cost = 0.25;
-    static constexpr float _project_dist = 1.5;
+    static constexpr float _project_dist = 2.0;
 
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
     size_t _body_id;
@@ -132,6 +132,7 @@ class player
     min::vec3<float> _project;
     min::ray<float, min::vec3> _ray;
     target _target;
+    target _track_target;
     bool _airborn;
     bool _falling;
     size_t _land_count;
@@ -204,7 +205,8 @@ class player
     {
         // Reset the jump condition if collided with cell, and moving in Y axis
         const min::vec3<float> &v = velocity();
-        _airborn = std::abs(v.y()) >= _air_threshold;
+        const float abs_v_y = std::abs(v.y());
+        _airborn = abs_v_y >= _air_threshold;
         _falling = v.y() <= _fall_threshold;
 
         // If we collided with a block and we are not falling, signal landing
@@ -226,12 +228,23 @@ class player
                 if (speed > 20.0)
                 {
                     // Lethal damage
-                    _stats.consume_health(speed * 5.0);
+                    const float percent = speed * 0.05;
+                    _stats.consume_health(percent * _stats.get_max_health());
                 }
                 else if (speed > 10.0)
                 {
-                    _stats.consume_health(speed * 2.5);
+                    const float percent = speed * 0.025;
+                    _stats.consume_health(percent * _stats.get_max_health());
                 }
+            }
+            else if (abs_v_y < 0.25)
+            {
+                // Clamp Y velocity
+                body().set_linear_velocity(min::vec3<float>(v.x(), 0.0, v.z()));
+
+                // Apply normal force at surface
+                const min::vec3<float> inv_g(0.0, _grav_mag, 0.0);
+                force(inv_g);
             }
         }
         else if (!_landed && _falling)
@@ -273,8 +286,17 @@ class player
             const min::vec3<float> &vel = velocity();
             const min::vec3<float> xz(vel.x(), 0.0, vel.z());
 
-            // Add friction force opposing lateral motion
-            force(xz * friction);
+            // If we are in speed mode
+            if (_skills.is_speed_mode())
+            {
+                // Add reduced friction force opposing lateral motion
+                force(xz * friction * 0.5);
+            }
+            else
+            {
+                // Add friction force opposing lateral motion
+                force(xz * friction);
+            }
         }
     }
     inline void update_stats()
@@ -347,8 +369,18 @@ class player
             _explode_id = value;
 
             // Calculate damage
-            const float factor = power * size / sq_dist;
-            _stats.damage(factor * 0.005);
+            // Max power = 400
+            // Max size = 63
+            // Min dist = 1
+            // Denom = 200 * 63 * 1 = 12600
+            // Damage multipler = 3
+            constexpr float percent_mult = 3.0 / 25200.0;
+            const float min_dist = 1.0;
+            const float factor = power * size / std::max(sq_dist, min_dist);
+
+            // Calculate percent damage of max health
+            const float percent = factor * percent_mult;
+            _stats.damage(percent * _stats.get_max_health());
 
             // Signal explode signal
             _exploded = true;
@@ -400,6 +432,10 @@ class player
     inline const target &get_target() const
     {
         return _target;
+    }
+    inline const target &get_track_target() const
+    {
+        return _track_target;
     }
     inline int8_t get_target_atlas() const
     {
@@ -583,20 +619,6 @@ class player
     {
         _mode = mode;
     }
-    inline void set_target(const cgrid &grid, min::camera<float> &cam, const size_t max_dist)
-    {
-        // Cache the forward vector
-        _forward = cam.get_forward();
-
-        // Calculate new point to add
-        _project = cam.project_point(_project_dist);
-
-        // Cache ray from camera to destination
-        _ray = min::ray<float, min::vec3>(cam.get_position(), _project);
-
-        // Update camera target
-        _target = target_ray(grid, _ray, max_dist);
-    }
     inline target target_ray(const cgrid &grid, const min::ray<float, min::vec3> &r, const size_t max_dist) const
     {
         // Output target
@@ -698,7 +720,12 @@ class player
             {
                 // Check if we landed
                 const min::vec3<float> center = cell.first.get_center();
-                if (center.y() < p.y())
+
+                // Calculate minimum gap between player
+                constexpr float min_dist = cgrid::_player_dy + 0.475;
+
+                // Compare distances
+                if (p.y() - center.y() >= min_dist)
                 {
                     landed = true;
                 }
@@ -712,6 +739,35 @@ class player
             }
         }
 
+        // Cast a ray to see hovering over a cell
+        if (!landed)
+        {
+            // Cast ray below player
+            target t;
+            min::ray<float, min::vec3> r(p, p - min::vec3<float>::up());
+
+            // Trace a ray to the block below player to detect if player is falling
+            const bool target_valid = grid.ray_trace_last_key(r, 2.0, t.position(), t.key(), t.atlas());
+            if (target_valid)
+            {
+                // Calculate maximum gap between player
+                constexpr float max_dist = cgrid::_player_dy + 0.505;
+
+                // Compare distances
+                if (p.y() - t.get_position().y() <= max_dist)
+                {
+                    landed = true;
+
+                    // If we walk over a sodium cell and we haven't exploded yet
+                    if (!is_exploded() && t.get_atlas() == id_value(block_id::SODIUM))
+                    {
+                        // Call explosion callback
+                        ex(t.get_position(), t.get_atlas());
+                    }
+                }
+            }
+        }
+
         // Update the landed state
         update_land(landed);
 
@@ -720,6 +776,45 @@ class player
 
         // Update the player stats
         update_stats();
+    }
+    inline void update(min::camera<float> &cam)
+    {
+        // Cache the forward vector
+        _forward = cam.get_forward();
+
+        // Calculate new point to add
+        _project = cam.project_point(_project_dist);
+
+        // Cache ray from camera to destination
+        _ray = min::ray<float, min::vec3>(cam.get_position(), _project);
+    }
+    inline void update_target(const cgrid &grid, const bool track_target, const size_t max_dist)
+    {
+        // Update camera target
+        _target = target_ray(grid, _ray, max_dist);
+
+        // If we should update the target
+        if (!track_target)
+        {
+            _track_target = _target;
+        }
+        else if (_track_target.get_id() == target_id::BODY)
+        {
+            // Get the target body
+            const uint16_t body_index = _track_target.get_body_index();
+            const min::body<float, min::vec3> &b = _sim->get_body(body_index);
+
+            // If body is not dead yet
+            if (!b.is_dead())
+            {
+                // Update target position only
+                _track_target.set_position(b.get_position());
+            }
+            else
+            {
+                _track_target.set_id(target_id::INVALID);
+            }
+        }
     }
 };
 }

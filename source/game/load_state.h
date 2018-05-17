@@ -18,10 +18,12 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __LOAD_STATE__
 #define __LOAD_STATE__
 
+#include <cstdint>
 #include <game/file.h>
 #include <game/inventory.h>
 #include <game/stats.h>
 #include <iostream>
+#include <limits>
 #include <min/vec3.h>
 #include <stdexcept>
 #include <vector>
@@ -31,6 +33,7 @@ namespace game
 class load_state
 {
   private:
+    uint32_t _grid_size;
     min::vec3<float> _default_look;
     min::vec3<float> _default_spawn;
     min::vec3<float> _look;
@@ -44,11 +47,11 @@ class load_state
     float _oxygen;
     bool _new_game;
 
-    inline void check_inside(const float grid_size)
+    inline void check_inside()
     {
         // Compute the min and max dimension of grid
-        const float min = grid_size * -1.0;
-        const float max = grid_size;
+        const float min = _grid_size * -1.0;
+        const float max = _grid_size;
 
         // Compute the min and max bounds of grid
         const min::vec3<float> gmin(min, min, min);
@@ -74,7 +77,7 @@ class load_state
             }
         }
     }
-    inline void state_load_file(const size_t grid_size)
+    inline void state_load_file()
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
@@ -87,6 +90,23 @@ class load_state
         {
             // Character position
             size_t next = 0;
+
+            // Read grid size from stream
+            const uint32_t grid_size = min::read_le<uint32_t>(stream, next);
+            if (grid_size != _grid_size)
+            {
+                // Warn user that grid sizes not compatible
+                std::cout << "Resizing the grid: deleting old save caches" << std::endl;
+
+                // Erase previous state files
+                game::erase_file("bin/state");
+                game::erase_file("bin/world.bmesh");
+
+                // Early return
+                return;
+            }
+
+            // Read position from stream
             const float x = min::read_le<float>(stream, next);
             const float y = min::read_le<float>(stream, next);
             const float z = min::read_le<float>(stream, next);
@@ -105,6 +125,16 @@ class load_state
             // Load inventory data from stream
             const size_t start = inventory::begin_key();
             const size_t end = inventory::end_cube();
+            const uint32_t inv_length = end - start;
+            const uint32_t read_inv_size = min::read_le<uint32_t>(stream, next);
+
+            // Check inventory array size
+            if (read_inv_size > inventory::size() || read_inv_size != inv_length)
+            {
+                throw std::runtime_error("load_state: incompatible inventory size");
+            }
+
+            // Copy data
             for (size_t i = start; i < end; i++)
             {
                 const uint8_t id = min::read_le<uint8_t>(stream, next);
@@ -114,6 +144,15 @@ class load_state
 
             // Load stats from stream
             const size_t stat_size = stats::stat_str_size();
+            const uint32_t read_stat_size = min::read_le<uint32_t>(stream, next);
+
+            // Check inventory array size
+            if (read_stat_size != stat_size)
+            {
+                throw std::runtime_error("load_state: incompatible stat size");
+            }
+
+            // Copy data
             for (size_t i = 0; i < stat_size; i++)
             {
                 _stat[i] = min::read_le<uint16_t>(stream, next);
@@ -140,6 +179,9 @@ class load_state
         // Create output stream for saving world
         std::vector<uint8_t> stream;
 
+        // Write the grid size into stream
+        min::write_le<uint32_t>(stream, _grid_size);
+
         // Write position into stream
         min::write_le<float>(stream, p.x());
         min::write_le<float>(stream, p.y());
@@ -154,6 +196,8 @@ class load_state
         // Write inventory data into stream
         const size_t start = inv.begin_key();
         const size_t end = inv.end_cube();
+        const uint32_t inv_length = end - start;
+        min::write_le<uint32_t>(stream, inv_length);
         for (size_t i = start; i < end; i++)
         {
             const item &it = inv[i];
@@ -162,7 +206,8 @@ class load_state
         }
 
         // Write stats into stream
-        const size_t stat_size = stat.stat_str_size();
+        const uint32_t stat_size = stat.stat_str_size();
+        min::write_le<uint32_t>(stream, stat_size);
         for (size_t i = 0; i < stat_size; i++)
         {
             min::write_le<uint16_t>(stream, stat.stat_value(i));
@@ -185,20 +230,27 @@ class load_state
     }
 
   public:
-    load_state(const float grid_size)
-        : _default_look(1.0, grid_size * 0.75, 0.0),
-          _default_spawn(0.0, grid_size * 0.75, 0.0),
+    load_state(const size_t grid_size)
+        : _grid_size(static_cast<uint32_t>(grid_size)),
+          _default_look(1.0, _grid_size * 0.75, 0.0),
+          _default_spawn(0.0, _grid_size * 0.75, 0.0),
           _look(_default_look), _spawn(_default_spawn),
-          _top(0.0, grid_size - 1.0, 0.0),
+          _top(0.0, _grid_size - 1.0, 0.0),
           _inv(inventory::size()),
           _stat{}, _energy(0.0), _exp(0.0), _health(0.0), _oxygen(0.0),
           _new_game(true)
     {
+        // Check for integer overflow
+        if (grid_size > std::numeric_limits<uint32_t>::max())
+        {
+            throw std::runtime_error("load_state: integer overflow detected, aborting");
+        }
+
         // Check that we loaded a valid point
-        check_inside(grid_size);
+        check_inside();
 
         // Load state
-        state_load_file(grid_size);
+        state_load_file();
     }
     inline const min::vec3<float> &get_default_look() const
     {

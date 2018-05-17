@@ -78,6 +78,8 @@ class ui_bg_assets
     static constexpr float _y_scan_uv = 40.0 / _image_size;
     static constexpr float _x_scatter_uv = 364.0 / _image_size;
     static constexpr float _y_scatter_uv = 40.0 / _image_size;
+    static constexpr float _x_speed_uv = 400.0 / _image_size;
+    static constexpr float _y_speed_uv = 40.0 / _image_size;
 
     // Cubes
     static constexpr float _x_block_uv = 4.0 / _image_size;
@@ -90,6 +92,8 @@ class ui_bg_assets
     static constexpr float _y_dead_uv = 896.0 / _image_size;
     static constexpr float _x_pause_uv = 4.0 / _image_size;
     static constexpr float _y_pause_uv = 768.0 / _image_size;
+    static constexpr float _x_focus_uv = 688.0 / _image_size;
+    static constexpr float _y_focus_uv = 768.0 / _image_size;
     static constexpr float _x_stat_uv = 4.0 / _image_size;
     static constexpr float _y_stat_uv = 498.0 / _image_size;
     static constexpr float _x_hover_uv = 688.0 / _image_size;
@@ -103,6 +107,8 @@ class ui_bg_assets
     static constexpr float _s_health_y = 96.0;
     static constexpr float _s_energy_x = 48.0;
     static constexpr float _s_energy_y = 96.0;
+    static constexpr float _s_focus_uv_x = _s_focus_x / _image_size;
+    static constexpr float _s_focus_uv_y = _s_focus_y / _image_size;
     static constexpr float _s_stat_x = 680.0;
     static constexpr float _s_stat_y = 266.0;
     static constexpr float _s_stat_uv_x = _s_stat_x / _image_size;
@@ -120,11 +126,11 @@ class ui_bg_assets
     static constexpr float _s_menu_uv_x = 504.0 / _image_size;
     static constexpr float _s_menu_uv_y = 124.0 / _image_size;
 
-    // Number of ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 1
+    // Number of ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 1 + 1
     static constexpr size_t _base = 41;
-    static constexpr size_t _ext = 108;
-    static constexpr size_t _ext_hover = _ext + 1;
-    static constexpr size_t _max_size = _ext_hover;
+    static constexpr size_t _focus = 108;
+    static constexpr size_t _ext_hover = _focus + 1;
+    static constexpr size_t _max_size = _ext_hover + 1;
 
     // Rect Instance stuff
     std::vector<min::mat3<float>> _v;
@@ -460,6 +466,14 @@ class ui_bg_assets
         const min::vec4<float> stat_coord(_x_stat_uv, _y_stat_uv, _s_stat_uv_x, _s_stat_uv_y);
         set_rect(89, p, stat_scale, stat_coord);
     }
+    inline void load_bg_focus()
+    {
+        // Load focus rect at position
+        const min::vec2<float> p(_center_w + _focus_dx, _height - _focus_dy);
+        const min::vec2<float> focus_scale(_s_focus_x, _s_focus_y);
+        const min::vec4<float> focus_coord(_x_focus_uv, _y_focus_uv, _s_focus_uv_x, _s_focus_uv_y);
+        set_rect(108, p, focus_scale, focus_coord);
+    }
     inline void load_bg_hover(const min::vec2<float> &p)
     {
         // Load hover rect at position
@@ -472,7 +486,7 @@ class ui_bg_assets
         // Offset position by half width of rect
         const min::vec2<float> off = min::vec2<float>(p.x() + _s_hover_bg_x * 0.5, p.y() + hover_dy);
 
-        set_rect(108, off, scale, coord);
+        set_rect(109, off, scale, coord);
     }
     inline void load_bg_black(const inv_id id, const min::vec2<float> &p)
     {
@@ -630,6 +644,14 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, scat_coord);
     }
+    inline void load_speed_icon(const inv_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg, _s_fg);
+        const min::vec4<float> speed_coord(_x_speed_uv, _y_speed_uv, _s_uv, _s_uv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, speed_coord);
+    }
     inline void set_draw_console(const bool flag)
     {
         _draw_console = flag;
@@ -756,13 +778,21 @@ class ui_bg_assets
         // Return toolbar position
         return min::vec2<float>(x, y);
     }
+    inline static constexpr size_t focus_start()
+    {
+        return _focus;
+    }
+    inline static constexpr size_t focus_size()
+    {
+        return 1;
+    }
     inline static constexpr size_t opaque_ext_size()
     {
-        return _ext - opaque_start();
+        return _focus - opaque_start();
     }
     inline static constexpr size_t opaque_base_size()
     {
-        return ui_size() - opaque_start();
+        return _base - opaque_start();
     }
     inline static constexpr size_t opaque_start()
     {
@@ -770,7 +800,7 @@ class ui_bg_assets
     }
     inline static constexpr size_t tooltip_start()
     {
-        return _ext;
+        return _ext_hover;
     }
     inline static constexpr size_t tooltip_size()
     {
