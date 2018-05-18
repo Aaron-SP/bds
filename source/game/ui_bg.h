@@ -1379,7 +1379,7 @@ class ui_bg
                 _stream << static_cast<int>(it.count());
 
                 // Might require a shift in the future
-                _text->set_text(_stream.str(), ui.index());
+                _text->set_text(ui.index(), _stream.str());
 
                 // Update the slot
                 update_inv_slot(ui, it);
@@ -1409,7 +1409,7 @@ class ui_bg
                 _stream << _stat->attr_str(i) << ": " << _stat->attr_value(i);
 
                 // Add attr descriptor and value text
-                _text->set_text(_stream.str(), index, p.x(), p.y());
+                _text->set_text(index, _stream.str(), p.x(), p.y());
             }
 
             // Update stat text
@@ -1424,7 +1424,7 @@ class ui_bg
                 const size_t index = stat_off + (i * 2);
 
                 // Add stat descriptor and value text
-                _text->set_text(_stat->stat_str(i), index, p.x(), p.y());
+                _text->set_text(index, _stat->stat_str(i), p.x(), p.y());
 
                 // Get stat value
                 const uint16_t value = _stat->stat_value(i);
@@ -1435,7 +1435,7 @@ class ui_bg
 
                 // Set stat text at offset
                 const size_t dx = stat_offset(value);
-                _text->set_text(_stream.str(), index + 1, p.x() + dx, p.y());
+                _text->set_text(index + 1, _stream.str(), p.x() + dx, p.y());
             }
         }
 

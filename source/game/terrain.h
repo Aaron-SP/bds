@@ -134,10 +134,13 @@ class terrain
         // Update to use preview
         glUniform1i(_pre_loc, 0);
 
+        // Bind VAO
+        _gb.bind();
+
         // For all chunk meshes
         for (const auto &i : index)
         {
-            // Bind VAO
+            // Bind array buffer
             _gb.bind_buffer(i);
 
             // Draw graph-mesh
@@ -717,10 +720,13 @@ class terrain
         // Update to use preview
         glUniform1i(_pre_loc, 0);
 
+        // Bind VAO
+        _gb.bind();
+
         // For all chunk meshes
         for (const auto &i : index)
         {
-            // Bind VAO
+            // Bind array buffer
             _gb.bind_buffer(i);
 
             // Draw graph-mesh

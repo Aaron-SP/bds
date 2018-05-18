@@ -86,6 +86,11 @@ class ui_text
     // Buffer for holding text
     min::text_buffer _text;
     min::text_buffer _text_bg;
+    std::vector<size_t> _indices;
+    size_t _main_batch;
+    size_t _stream_batch;
+    size_t _tt1_batch;
+    size_t _tt2_batch;
     std::array<stream_text, _max_stream> _st;
     size_t _stream_old;
     std::ostringstream _ss;
@@ -179,9 +184,91 @@ class ui_text
         // Set the sampler reference point
         glUniform3f(_index_location, x, y, z);
     }
-    inline void update_text(const size_t index, const std::string &s)
+    inline void update_main_batch()
     {
-        _text.set_text(s, index);
+        // Clear all indices
+        _indices.clear();
+
+        // Minimize draw calls by lumping togetherness
+        // For all other permutations
+        if (_draw_console)
+        {
+            for (size_t i = _console; i < _focus; i++)
+            {
+                _indices.push_back(i);
+            }
+        }
+        if (_draw_focus)
+        {
+            for (size_t i = _focus; i < _ui; i++)
+            {
+                _indices.push_back(i);
+            }
+        }
+        if (_draw_ui)
+        {
+            for (size_t i = _ui; i < _alert; i++)
+            {
+                _indices.push_back(i);
+            }
+        }
+        if (_draw_alert)
+        {
+            for (size_t i = _alert; i < _debug; i++)
+            {
+                _indices.push_back(i);
+            }
+        }
+        if (_draw_debug)
+        {
+            for (size_t i = _debug; i < _hover; i++)
+            {
+                _indices.push_back(i);
+            }
+        }
+
+        // Upload the text glyphs to the GPU
+        _main_batch = _text.upload_batch(0, _indices);
+    }
+    inline void update_stream_batch()
+    {
+        // Clear all indices
+        _indices.clear();
+
+        // Draw stream text
+        for (size_t i = _stream; i < _end; i++)
+        {
+            // If we have time
+            const float time = _st[i - _stream].get_time();
+            if (time > 0.0)
+            {
+                _indices.push_back(i);
+            }
+        }
+
+        // Upload the text glyphs to the GPU
+        _stream_batch = _text.upload_batch(1, _indices);
+    }
+    inline void update_tooltip_batch()
+    {
+        // If hovering
+        if (_draw_hover)
+        {
+            // Clear all indices
+            _indices.clear();
+
+            // Upload the text glyphs to the GPU
+            const size_t hover = _hover;
+            _indices.push_back(hover);
+            _tt1_batch = _text.upload_batch(2, _indices);
+
+            // Clear all indices
+            _indices.clear();
+
+            // Upload the text glyphs to the GPU
+            _indices.push_back(hover + 1);
+            _tt2_batch = _text.upload_batch(3, _indices);
+        }
     }
 
   public:
@@ -189,9 +276,9 @@ class ui_text
         : _vertex(memory_map::memory.get_file("data/shader/text.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _text("data/fonts/open_sans.ttf", _font_size),
+          _text("data/fonts/open_sans.ttf", _font_size, 4),
           _text_bg("data/fonts/open_sans.ttf", _ui_font_size),
-          _st{}, _stream_old(0),
+          _main_batch(0), _stream_batch(0), _tt1_batch(0), _tt2_batch(0), _st{}, _stream_old(0),
           _draw_alert(false), _draw_console(false), _draw_debug(false),
           _draw_focus(false), _draw_ui(false), _draw_hover(false)
     {
@@ -282,7 +369,7 @@ class ui_text
         const size_t text_index = _stream + index;
 
         // Update the stream text
-        update_text(text_index, str);
+        _text.set_text(text_index, str);
 
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();
@@ -299,92 +386,21 @@ class ui_text
         // Set reference to white
         set_reference(1.0, 1.0, 1.0);
 
-        // Minimize draw calls by lumping togetherness
-        if (_draw_console && _draw_focus && _draw_ui && _draw_alert && _draw_debug)
+        // Draw batch
+        if (_main_batch > 0)
         {
-            _text.draw(_console, _hover - 1);
-        }
-        else if (_draw_console && _draw_focus && _draw_ui && _draw_alert && !_draw_debug)
-        {
-            _text.draw(_console, _debug - 1);
-        }
-        else if (_draw_console && _draw_focus && _draw_ui && !_draw_alert && !_draw_debug)
-        {
-            _text.draw(_console, _alert - 1);
-        }
-        else if (_draw_console && _draw_focus && _draw_ui && !_draw_alert && _draw_debug)
-        {
-            _text.draw(_console, _alert - 1);
-            _text.draw(_debug, _hover - 1);
-        }
-        else if (_draw_console && _draw_focus && !_draw_ui && !_draw_alert && !_draw_debug)
-        {
-            _text.draw(_console, _ui - 1);
-        }
-        else if (_draw_console && !_draw_focus && !_draw_ui && !_draw_alert && !_draw_debug)
-        {
-            _text.draw(_console);
-        }
-        else
-        {
-            // For all other permutations
-            if (_draw_console)
-            {
-                _text.draw(_console, _focus - 1);
-            }
-            if (_draw_focus)
-            {
-                _text.draw(_focus, _ui - 1);
-            }
-            if (_draw_ui)
-            {
-                _text.draw(_ui, _alert - 1);
-            }
-            if (_draw_alert)
-            {
-                _text.draw(_alert, _debug - 1);
-            }
-            if (_draw_debug)
-            {
-                _text.draw(_debug, _hover - 1);
-            }
+            _text.bind_buffer(0);
+            _text.draw_batch(_main_batch);
         }
 
         // Set reference to red
         set_reference(0.9, 0.3, 0.2);
 
-        // Draw stream text
-        for (size_t i = _stream; i < _end; i++)
+        // Draw batch
+        if (_stream_batch > 0)
         {
-            // Record start index
-            const size_t start = i;
-
-            // If we have time
-            const float time = _st[i - _stream].get_time();
-            if (time > 0.0)
-            {
-                // Find adjacent runs to draw
-                size_t end = start;
-                for (size_t j = i + 1; j < _end; j++)
-                {
-                    const float inner_time = _st[j - _stream].get_time();
-                    if (inner_time <= 0.0)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        // Assign new end index
-                        end = j;
-
-                        // Increment
-                        i++;
-                    }
-                }
-
-                // Draw adjacent range
-                _text.draw(start, end);
-            }
+            _text.bind_buffer(1);
+            _text.draw_batch(_stream_batch);
         }
 
         // Set reference to white
@@ -403,14 +419,22 @@ class ui_text
         {
             bind();
 
-            // Draw titles
-            _text.draw(_hover, _hover + 1);
+            // Draw tt1 batch
+            if (_tt1_batch > 0)
+            {
+                _text.bind_buffer(2);
+                _text.draw_batch(_tt1_batch);
+            }
 
             // Set reference to orange
             set_reference(0.985, 0.765, 0.482);
 
-            // Draw description
-            _text.draw(_hover + 1, _stream - 1);
+            // Draw tt2 batch
+            if (_tt2_batch > 0)
+            {
+                _text.bind_buffer(3);
+                _text.draw_batch(_tt2_batch);
+            }
         }
     }
     inline min::text_buffer &get_bg_text()
@@ -463,7 +487,7 @@ class ui_text
 
         // Title text
         _ss << title;
-        update_text(_debug, _ss.str());
+        _text.set_text(_debug, _ss.str());
     }
     inline void set_debug_vendor(const char *vendor)
     {
@@ -472,7 +496,7 @@ class ui_text
 
         // Vendor text
         _ss << vendor;
-        update_text(_debug + 1, _ss.str());
+        _text.set_text(_debug + 1, _ss.str());
     }
     inline void set_debug_renderer(const char *renderer)
     {
@@ -481,7 +505,7 @@ class ui_text
 
         // Renderer text
         _ss << renderer;
-        update_text(_debug + 2, _ss.str());
+        _text.set_text(_debug + 2, _ss.str());
     }
     inline void set_debug_position(const min::vec3<float> &p)
     {
@@ -490,7 +514,7 @@ class ui_text
 
         // Update player position debug text
         _ss << "POS- X: " << p.x() << ", Y: " << p.y() << ", Z: " << p.z();
-        update_text(_debug + 3, _ss.str());
+        _text.set_text(_debug + 3, _ss.str());
     }
     inline void set_debug_direction(const min::vec3<float> &dir)
     {
@@ -499,7 +523,7 @@ class ui_text
 
         // Update player direction debug text
         _ss << "DIR- X: " << dir.x() << ", Y: " << dir.y() << ", Z: " << dir.z();
-        update_text(_debug + 4, _ss.str());
+        _text.set_text(_debug + 4, _ss.str());
     }
     inline void set_debug_health(const float health)
     {
@@ -508,7 +532,7 @@ class ui_text
 
         // Update the energy text
         _ss << "HEALTH: " << health;
-        update_text(_debug + 5, _ss.str());
+        _text.set_text(_debug + 5, _ss.str());
     }
     inline void set_debug_energy(const float energy)
     {
@@ -517,7 +541,7 @@ class ui_text
 
         // Update the energy text
         _ss << "ENERGY: " << energy;
-        update_text(_debug + 6, _ss.str());
+        _text.set_text(_debug + 6, _ss.str());
     }
     inline void set_debug_fps(const float fps)
     {
@@ -526,7 +550,7 @@ class ui_text
 
         // Update FPS and IDLE
         _ss << "FPS: " << std::round(fps);
-        update_text(_debug + 7, _ss.str());
+        _text.set_text(_debug + 7, _ss.str());
     }
     inline void set_debug_idle(const double idle)
     {
@@ -535,7 +559,7 @@ class ui_text
 
         // Update FPS and IDLE
         _ss << "IDLE: " << idle;
-        update_text(_debug + 8, _ss.str());
+        _text.set_text(_debug + 8, _ss.str());
     }
     inline void set_debug_chunks(const size_t chunks)
     {
@@ -544,7 +568,7 @@ class ui_text
 
         // Update FPS and IDLE
         _ss << "CHUNKS: " << chunks;
-        update_text(_debug + 9, _ss.str());
+        _text.set_text(_debug + 9, _ss.str());
     }
     inline void set_debug_insts(const size_t insts)
     {
@@ -553,7 +577,7 @@ class ui_text
 
         // Update FPS and IDLE
         _ss << "INSTANCES: " << insts;
-        update_text(_debug + 10, _ss.str());
+        _text.set_text(_debug + 10, _ss.str());
     }
     inline void set_debug_target(const std::string &str)
     {
@@ -562,11 +586,11 @@ class ui_text
 
         // Update FPS and IDLE
         _ss << "TARGET: " << str;
-        update_text(_debug + 11, _ss.str());
+        _text.set_text(_debug + 11, _ss.str());
     }
     inline void set_debug_version(const std::string &str)
     {
-        update_text(_debug + 12, str);
+        _text.set_text(_debug + 12, str);
     }
     inline void toggle_draw_console()
     {
@@ -582,27 +606,21 @@ class ui_text
     }
     inline void update_console(const std::string &str)
     {
-        // Update console text
-        update_text(_console, str);
-
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();
 
         // Get the center width
         const uint16_t w2 = size.first / 2;
-        _text.set_text_center(_console, w2, _console_dy);
+        _text.set_text_center(_console, str, w2, _console_dy);
     }
     inline void update_focus(const std::string &str)
     {
-        // Update focus text
-        update_text(_focus, str);
-
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();
 
         // Get the center width
         const uint16_t w2 = size.first / 2;
-        _text.set_text_center(_focus, w2, size.second - _focus_text_dy);
+        _text.set_text_center(_focus, str, w2, size.second - _focus_text_dy);
     }
     inline void update_ui(const float health, const float energy)
     {
@@ -611,33 +629,26 @@ class ui_text
 
         // Update the energy text
         _ss << static_cast<int>(std::round(health));
-        update_text(_ui, _ss.str());
+        _text.set_text(_ui, _ss.str());
 
         // Clear and reset the _stream
         clear_stream();
 
         // Update the energy text
         _ss << static_cast<int>(std::round(energy));
-        update_text(_ui + 1, _ss.str());
+        _text.set_text(_ui + 1, _ss.str());
     }
     inline void update_ui_alert(const std::string &alert)
     {
-        // Update the alert text
-        update_text(_alert, alert);
-
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();
 
         // Get the center width
         const uint16_t w2 = size.first / 2;
-        _text.set_text_center(_alert, w2, size.second + _alert_dy);
+        _text.set_text_center(_alert, alert, w2, size.second + _alert_dy);
     }
     inline void update_hover(const min::vec2<float> &p, const std::string &name, const std::string &info)
     {
-        // Update the hover text
-        update_text(_hover, name);
-        update_text(_hover + 1, info);
-
         // Get the screen dimensions
         const std::pair<float, float> size = _text.get_screen_size();
         const uint16_t half_height = size.second / 2;
@@ -649,13 +660,13 @@ class ui_text
         const float hover_name_dy = _hover_name_dy + hover_offset;
         const float x_name = p.x() + _hover_name_dx;
         const float y_name = p.y() + hover_name_dy;
-        _text.set_text_center(_hover, x_name, y_name);
+        _text.set_text_center(_hover, name, x_name, y_name);
 
         // Calculate info location and position element
         const float hover_info_dy = _hover_info_dy + hover_offset;
         const float x_info = p.x() + _hover_info_dx;
         const float y_info = p.y() + hover_info_dy;
-        _text.set_text_location(_hover + 1, x_info, y_info);
+        _text.set_text(_hover + 1, info, x_info, y_info);
     }
     inline void update_stream(const float dt)
     {
@@ -686,13 +697,19 @@ class ui_text
             }
         }
     }
-    inline void upload() const
+    inline void upload()
     {
         // Unbind the last VAO to prevent scrambling buffers
         _text.unbind();
 
-        // Upload the text glyphs to the GPU
-        _text.upload();
+        // Batch text into buffer
+        update_main_batch();
+
+        // Batch stream text into second buffer
+        update_stream_batch();
+
+        // Batch tooltip text into third and fourth buffer
+        update_tooltip_batch();
     }
 };
 }
