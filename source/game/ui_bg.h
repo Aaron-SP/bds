@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _UI_BACKGROUND__
 #define _UI_BACKGROUND__
 
+#include <game/id.h>
 #include <game/inventory.h>
 #include <game/memory_map.h>
 #include <game/stats.h>
@@ -41,9 +42,8 @@ namespace game
 class ui_bg
 {
   private:
-    constexpr static size_t _text_size = 20;
-    constexpr static float _inv_ui_dx = (_s_fg - _ui_font_size) * 0.5;
-    constexpr static float _inv_ui_dy = -(_s_fg / 2.0);
+    constexpr static size_t _border = 6;
+    constexpr static size_t _text_spacing = _ui_font_size + _border;
 
     // OpenGL stuff
     min::shader _vertex;
@@ -62,12 +62,12 @@ class ui_bg
 
     // Misc
     bool _clicking;
-    inv_id _click;
+    ui_id _click;
     bool _focus;
     bool _hovering;
     bool _minimized;
-    inv_id _hover;
-    inv_id _select;
+    ui_id _hover;
+    ui_id _select;
 
     // Background assets
     ui_bg_assets _assets;
@@ -230,10 +230,10 @@ class ui_bg
         for (size_t i = bs; i < es; i++)
         {
             // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
+            const ui_id ui = ui_id(i);
 
             // Get ui position
-            const min::vec2<float> p = pos_store(inv);
+            const min::vec2<float> p = pos_store(ui);
 
             // Add shape to buffer
             _shapes.push_back(_assets.inv_box(p));
@@ -245,7 +245,7 @@ class ui_bg
             _stream << static_cast<int>((*_inv)[i].count());
 
             // Add text for each box
-            _text->add_text(_stream.str(), p.x() + _inv_ui_dx, p.y() + _inv_ui_dy);
+            _text->add_text(_stream.str(), p.x() + _item_count_dx, p.y() + _item_count_dy);
         }
 
         // Get start and end of keys
@@ -256,10 +256,10 @@ class ui_bg
         for (size_t i = bk; i < ek; i++)
         {
             // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
+            const ui_id ui(i);
 
             // Get ui position
-            const min::vec2<float> p = pos_key(inv);
+            const min::vec2<float> p = pos_key(ui);
 
             // Add shape to buffer
             _shapes.push_back(_assets.inv_box(p));
@@ -271,7 +271,7 @@ class ui_bg
             _stream << static_cast<int>((*_inv)[i].count());
 
             // Add text for each box
-            _text->add_text(_stream.str(), p.x() + _inv_ui_dx, p.y() + _inv_ui_dy);
+            _text->add_text(_stream.str(), p.x() + _item_count_dx, p.y() + _item_count_dy);
         }
 
         // Get start and end of keys
@@ -282,10 +282,10 @@ class ui_bg
         for (size_t i = be; i < ee; i++)
         {
             // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
+            const ui_id ui(i);
 
             // Get ui extended position
-            const min::vec2<float> p = pos_ext(inv);
+            const min::vec2<float> p = pos_ext(ui);
 
             // Add shape to buffer
             _shapes.push_back(_assets.inv_box(p));
@@ -297,7 +297,7 @@ class ui_bg
             _stream << static_cast<int>((*_inv)[i].count());
 
             // Add text for each box
-            _text->add_text(_stream.str(), p.x() + _inv_ui_dx, p.y() + _inv_ui_dy);
+            _text->add_text(_stream.str(), p.x() + _item_count_dx, p.y() + _item_count_dy);
         }
 
         // Get start and end of keys
@@ -308,10 +308,10 @@ class ui_bg
         for (size_t i = bc; i < ec; i++)
         {
             // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
+            const ui_id ui(i);
 
             // Get ui extended position
-            const min::vec2<float> p = pos_cube(inv);
+            const min::vec2<float> p = pos_cube(ui);
 
             // Add shape to buffer
             _shapes.push_back(_assets.inv_box(p));
@@ -323,7 +323,7 @@ class ui_bg
             _stream << static_cast<int>((*_inv)[i].count());
 
             // Add text for each box
-            _text->add_text(_stream.str(), p.x() + _inv_ui_dx, p.y() + _inv_ui_dy);
+            _text->add_text(_stream.str(), p.x() + _item_count_dx, p.y() + _item_count_dy);
         }
 
         // Add attr text
@@ -331,7 +331,7 @@ class ui_bg
         for (size_t i = 0; i < attr_size; i++)
         {
             // Get attr text position
-            const min::vec2<float> p = _assets.attr_position(i, _text_size);
+            const min::vec2<float> p = _assets.attr_position(i, _text_spacing);
 
             // Add attr string to stream
             clear_stream();
@@ -346,7 +346,7 @@ class ui_bg
         for (size_t i = 0; i < stat_size; i++)
         {
             // Get stat text position
-            const min::vec2<float> p = _assets.stat_position(i, _text_size);
+            const min::vec2<float> p = _assets.stat_position(i, _text_spacing);
 
             // Add stat descriptor and value text
             _text->add_text(_stat->stat_str(i), p.x(), p.y());
@@ -408,38 +408,38 @@ class ui_bg
             _title_id = _tbuffer.add_dds_texture(tex);
         }
     }
-    inline min::vec2<float> pos_cube(const inv_id inv) const
+    inline min::vec2<float> pos_cube(const ui_id ui) const
     {
         // Get row and col
-        const size_t row = inv.row3();
-        const size_t col = inv.col3();
+        const size_t row = ui.row3();
+        const size_t col = ui.col3();
 
         // Calculate ui element position
         return _assets.cube_position(row, col);
     }
-    inline min::vec2<float> pos_ext(const inv_id inv) const
+    inline min::vec2<float> pos_ext(const ui_id ui) const
     {
         // Get row and col
-        const size_t row = inv.row8() + 1;
-        const size_t col = inv.col8();
+        const size_t row = ui.row8() + 1;
+        const size_t col = ui.col8();
 
         // Calculate ui element position
         return _assets.toolbar_position(row, col);
     }
-    inline min::vec2<float> pos_key(const inv_id inv) const
+    inline min::vec2<float> pos_key(const ui_id ui) const
     {
         // Get row and col
         const size_t row = 0;
-        const size_t col = inv.col8();
+        const size_t col = ui.col8();
 
         // Calculate ui element position
         return _assets.toolbar_position(row, col);
     }
-    inline min::vec2<float> pos_store(const inv_id inv) const
+    inline min::vec2<float> pos_store(const ui_id ui) const
     {
         // Get row and col
         const size_t row = 0;
-        const size_t col = inv.col8();
+        const size_t col = ui.col8();
 
         // Calculate ui element position
         return _assets.store_position(row, col);
@@ -543,18 +543,18 @@ class ui_bg
     inline void select_click()
     {
         // Get the ui type
-        const inv_type type = _click.type();
+        const ui_type type = _click.type();
 
         // Determine inventory type to update bg color
-        if (type == inv_type::cube)
+        if (type == ui_type::cube)
         {
             _assets.load_bg_light_blue(_click.bg_cube_index(), pos_cube(_click));
         }
-        else if (type == inv_type::extend)
+        else if (type == ui_type::extend)
         {
             _assets.load_bg_light_blue(_click.bg_ex_index(), pos_ext(_click));
         }
-        else if (type == inv_type::key)
+        else if (type == ui_type::key)
         {
             _assets.load_bg_light_blue(_click.bg_key_index(), pos_key(_click));
         }
@@ -569,20 +569,20 @@ class ui_bg
         if (_hovering)
         {
             // Get the ui type
-            const inv_type type = _hover.type();
+            const ui_type type = _hover.type();
 
             if (_clicking)
             {
                 // Determine inventory type to update bg color
-                if (type == inv_type::cube)
+                if (type == ui_type::cube)
                 {
                     _assets.load_bg_white(_hover.bg_cube_index(), pos_cube(_hover));
                 }
-                else if (type == inv_type::extend)
+                else if (type == ui_type::extend)
                 {
                     _assets.load_bg_white(_hover.bg_ex_index(), pos_ext(_hover));
                 }
-                else if (type == inv_type::key)
+                else if (type == ui_type::key)
                 {
                     _assets.load_bg_white(_hover.bg_key_index(), pos_key(_hover));
                 }
@@ -594,15 +594,15 @@ class ui_bg
             else
             {
                 // Determine inventory type to update bg color
-                if (type == inv_type::cube)
+                if (type == ui_type::cube)
                 {
                     _assets.load_bg_yellow(_hover.bg_cube_index(), pos_cube(_hover));
                 }
-                else if (type == inv_type::extend)
+                else if (type == ui_type::extend)
                 {
                     _assets.load_bg_yellow(_hover.bg_ex_index(), pos_ext(_hover));
                 }
-                else if (type == inv_type::key)
+                else if (type == ui_type::key)
                 {
                     _assets.load_bg_yellow(_hover.bg_key_index(), pos_key(_hover));
                 }
@@ -613,10 +613,10 @@ class ui_bg
             }
         }
     }
-    inline void set_click_down(const inv_id inv)
+    inline void set_click_down(const ui_id ui)
     {
         // If we are unclicking
-        if (_clicking && _click == inv)
+        if (_clicking && _click == ui)
         {
             unselect_click();
 
@@ -629,7 +629,7 @@ class ui_bg
             unselect_click();
 
             // Swap inventory
-            _inv->swap(_click.index(), inv.index());
+            _inv->swap(_click.index(), ui.index());
 
             // Disable clicking
             _clicking = false;
@@ -637,7 +637,7 @@ class ui_bg
         else
         {
             // Set selected index
-            _click = inv;
+            _click = ui;
 
             // Select hover
             select_click();
@@ -646,10 +646,10 @@ class ui_bg
             _clicking = true;
         }
     }
-    inline void set_hover_down(const inv_id inv)
+    inline void set_hover_down(const ui_id ui)
     {
         // Already hovering here?
-        if (_hovering && _hover == inv)
+        if (_hovering && _hover == ui)
         {
             return;
         }
@@ -658,59 +658,59 @@ class ui_bg
         unselect_hover();
 
         // Set selected index
-        _hover = inv;
+        _hover = ui;
 
         // Set hovering
         _hovering = true;
 
         // If key is not selected or clicked change color
-        const bool clicked = (_clicking && _click == inv);
-        if (!clicked && _select != inv)
+        const bool clicked = (_clicking && _click == ui);
+        if (!clicked && _select != ui)
         {
             // Select hover
             select_hover();
         }
     }
-    inline void set_inventory(const inv_id inv, const item &it, const min::vec2<float> &p)
+    inline void set_inventory(const ui_id ui, const item &it, const min::vec2<float> &p)
     {
         // Draw key icon overlay based on type
         const item_type type = it.type();
         switch (type)
         {
         case item_type::empty:
-            return _assets.load_empty_icon(inv, p);
+            return _assets.load_empty_icon(ui, p);
         case item_type::skill:
             switch (it.id())
             {
             case id_value(skill_id::AUTO_BEAM):
-                return _assets.load_auto_icon(inv, p);
+                return _assets.load_auto_icon(ui, p);
             case id_value(skill_id::BEAM):
-                return _assets.load_beam_icon(inv, p);
+                return _assets.load_beam_icon(ui, p);
             case id_value(skill_id::CHARGE):
-                return _assets.load_charge_icon(inv, p);
+                return _assets.load_charge_icon(ui, p);
             case id_value(skill_id::GRAPPLE):
-                return _assets.load_grapple_icon(inv, p);
+                return _assets.load_grapple_icon(ui, p);
             case id_value(skill_id::GRENADE):
-                return _assets.load_grenade_icon(inv, p);
+                return _assets.load_grenade_icon(ui, p);
             case id_value(skill_id::JET):
-                return _assets.load_jet_icon(inv, p);
+                return _assets.load_jet_icon(ui, p);
             case id_value(skill_id::MISSILE):
-                return _assets.load_missile_icon(inv, p);
+                return _assets.load_missile_icon(ui, p);
             case id_value(skill_id::PORTAL):
-                return _assets.load_portal_icon(inv, p);
+                return _assets.load_portal_icon(ui, p);
             case id_value(skill_id::SCAN):
-                return _assets.load_scan_icon(inv, p);
+                return _assets.load_scan_icon(ui, p);
             case id_value(skill_id::SCATTER):
-                return _assets.load_scatter_icon(inv, p);
+                return _assets.load_scatter_icon(ui, p);
             case id_value(skill_id::SPEED):
-                return _assets.load_speed_icon(inv, p);
+                return _assets.load_speed_icon(ui, p);
             default:
                 return;
             }
         case item_type::block:
-            return _assets.load_block_icon(inv, it.to_block_id(), p);
+            return _assets.load_block_icon(ui, it.to_block_id(), p);
         case item_type::item:
-            return _assets.load_item_icon(inv, it.to_item_id(), p);
+            return _assets.load_item_icon(ui, it.to_item_id(), p);
         }
     }
     inline void set_start_index(const GLint start_index) const
@@ -753,18 +753,18 @@ class ui_bg
         else
         {
             // Get the ui type
-            const inv_type type = _click.type();
+            const ui_type type = _click.type();
 
             // Determine inventory type to update bg color
-            if (type == inv_type::cube)
+            if (type == ui_type::cube)
             {
                 _assets.load_bg_black(_click.bg_cube_index(), pos_cube(_click));
             }
-            else if (type == inv_type::extend)
+            else if (type == ui_type::extend)
             {
                 _assets.load_bg_black(_click.bg_ex_index(), pos_ext(_click));
             }
-            else if (type == inv_type::key)
+            else if (type == ui_type::key)
             {
                 _assets.load_bg_black(_click.bg_key_index(), pos_key(_click));
             }
@@ -784,18 +784,18 @@ class ui_bg
             if (!skip)
             {
                 // Get the ui type
-                const inv_type type = _hover.type();
+                const ui_type type = _hover.type();
 
                 // Determine inventory type to update bg color
-                if (type == inv_type::cube)
+                if (type == ui_type::cube)
                 {
                     _assets.load_bg_black(_hover.bg_cube_index(), pos_cube(_hover));
                 }
-                else if (type == inv_type::extend)
+                else if (type == ui_type::extend)
                 {
                     _assets.load_bg_black(_hover.bg_ex_index(), pos_ext(_hover));
                 }
-                else if (type == inv_type::key)
+                else if (type == ui_type::key)
                 {
                     _assets.load_bg_black(_hover.bg_key_index(), pos_key(_hover));
                 }
@@ -816,16 +816,16 @@ class ui_bg
         for (size_t i = bs; i < es; i++)
         {
             // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
+            const ui_id ui(i);
 
             // Calculate icon position
-            const min::vec2<float> p = pos_store(inv);
+            const min::vec2<float> p = pos_store(ui);
 
             // Update the black bg icon
-            _assets.load_bg_black(inv.bg_store_index(), p);
+            _assets.load_bg_black(ui.bg_store_index(), p);
 
             // Update the icon
-            set_inventory(inv.store_index(), (*_inv)[i], p);
+            set_inventory(ui.store_index(), (*_inv)[i], p);
         }
     }
     inline void update_cube()
@@ -838,16 +838,16 @@ class ui_bg
         for (size_t i = bc; i < ec; i++)
         {
             // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
+            const ui_id ui(i);
 
             // Calculate icon position
-            const min::vec2<float> p = pos_cube(inv);
+            const min::vec2<float> p = pos_cube(ui);
 
             // Update the black bg icon
-            _assets.load_bg_black(inv.bg_cube_index(), p);
+            _assets.load_bg_black(ui.bg_cube_index(), p);
 
             // Update the icon
-            set_inventory(inv.cube_index(), (*_inv)[i], p);
+            set_inventory(ui.cube_index(), (*_inv)[i], p);
         }
     }
     inline void update_key()
@@ -860,16 +860,16 @@ class ui_bg
         for (size_t i = bk; i < ek; i++)
         {
             // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
+            const ui_id ui(i);
 
             // Calculate icon position
-            const min::vec2<float> p = pos_key(inv);
+            const min::vec2<float> p = pos_key(ui);
 
             // Update the black bg icon
-            _assets.load_bg_black(inv.bg_key_index(), p);
+            _assets.load_bg_black(ui.bg_key_index(), p);
 
             // Update the icon
-            set_inventory(inv.key_index(), (*_inv)[i], p);
+            set_inventory(ui.key_index(), (*_inv)[i], p);
         }
     }
     inline void update_extend()
@@ -882,16 +882,16 @@ class ui_bg
         for (size_t i = be; i < ee; i++)
         {
             // Offset this index for a ui bg key
-            const inv_id inv = inv_id(i);
+            const ui_id ui(i);
 
             // Calculate icon position
-            const min::vec2<float> p = pos_ext(inv);
+            const min::vec2<float> p = pos_ext(ui);
 
             // Update the black bg icon
-            _assets.load_bg_black(inv.bg_ex_index(), p);
+            _assets.load_bg_black(ui.bg_ex_index(), p);
 
             // Update the icon
-            set_inventory(inv.ex_index(), (*_inv)[i], p);
+            set_inventory(ui.ex_index(), (*_inv)[i], p);
         }
     }
     inline void update_inventory()
@@ -914,27 +914,27 @@ class ui_bg
         // Select hovered key
         select_hover();
     }
-    inline void update_inv_slot(const inv_id inv, const item &it)
+    inline void update_inv_slot(const ui_id ui, const item &it)
     {
         // Get the ui type
-        const inv_type type = inv.type();
+        const ui_type type = ui.type();
 
         // Determine inventory type to update icon
-        if (type == inv_type::cube)
+        if (type == ui_type::cube)
         {
-            set_inventory(inv.cube_index(), it, pos_cube(inv));
+            set_inventory(ui.cube_index(), it, pos_cube(ui));
         }
-        else if (type == inv_type::extend)
+        else if (type == ui_type::extend)
         {
-            set_inventory(inv.ex_index(), it, pos_ext(inv));
+            set_inventory(ui.ex_index(), it, pos_ext(ui));
         }
-        else if (type == inv_type::key)
+        else if (type == ui_type::key)
         {
-            set_inventory(inv.key_index(), it, pos_key(inv));
+            set_inventory(ui.key_index(), it, pos_key(ui));
         }
         else
         {
-            set_inventory(inv.store_index(), it, pos_store(inv));
+            set_inventory(ui.store_index(), it, pos_store(ui));
         }
     }
 
@@ -1109,7 +1109,7 @@ class ui_bg
     {
         return _assets.get_scale();
     }
-    inline inv_id get_selected() const
+    inline ui_id get_selected() const
     {
         return _select;
     }
@@ -1150,7 +1150,7 @@ class ui_bg
                     hit = true;
 
                     // Highlight the inventory cell
-                    set_hover_down(inv_id(map[h]));
+                    set_hover_down(ui_id(map[h]));
                 }
             }
 
@@ -1267,7 +1267,7 @@ class ui_bg
         unselect();
 
         // Set selected index
-        _select = inv_id(index).to_key();
+        _select = ui_id(index).to_key();
 
         // If select a clicked cell 'unclick it'
         if (_clicking && _select == _click)
@@ -1282,28 +1282,28 @@ class ui_bg
     {
         const min::vec2<float> p = _assets.toolbar_position(0, index);
 
-        // Convert index to inv_id
-        const inv_id inv = inv_id(index).to_key();
+        // Convert index to ui_id
+        const ui_id ui = ui_id(index).to_key();
 
         // Set background color
-        _assets.load_bg_red(inv.bg_key_index(), p);
+        _assets.load_bg_red(ui.bg_key_index(), p);
     }
     inline void set_key_up(const size_t index)
     {
         // Calculate ui element position
         const min::vec2<float> p = _assets.toolbar_position(0, index);
 
-        // Convert index to inv_id
-        const inv_id inv = inv_id(index).to_key();
+        // Convert index to ui_id
+        const ui_id ui = ui_id(index).to_key();
 
         // Set background color
-        if (_select.id() == inv.id())
+        if (_select.id() == ui.id())
         {
-            _assets.load_bg_yellow(inv.bg_key_index(), p);
+            _assets.load_bg_yellow(ui.bg_key_index(), p);
         }
         else
         {
-            _assets.load_bg_black(inv.bg_key_index(), p);
+            _assets.load_bg_black(ui.bg_key_index(), p);
         }
     }
     inline void set_menu_dead()
@@ -1367,22 +1367,22 @@ class ui_bg
         if (_inv->is_dirty())
         {
             // Get all updated slots
-            const std::vector<inv_id> &updates = _inv->get_updates();
+            const std::vector<ui_id> &updates = _inv->get_updates();
 
             // Update all slots
-            for (auto i : updates)
+            for (auto ui : updates)
             {
-                const item &it = (*_inv)[i.index()];
+                const item &it = (*_inv)[ui.index()];
 
                 // Update item count text
                 clear_stream();
                 _stream << static_cast<int>(it.count());
 
                 // Might require a shift in the future
-                _text->set_text(_stream.str(), i.index());
+                _text->set_text(_stream.str(), ui.index());
 
                 // Update the slot
-                update_inv_slot(i, it);
+                update_inv_slot(ui, it);
             }
         }
 
@@ -1399,7 +1399,7 @@ class ui_bg
             for (size_t i = 0; i < attr_size; i++)
             {
                 // Get attr text position
-                const min::vec2<float> p = _assets.attr_position(i, _text_size);
+                const min::vec2<float> p = _assets.attr_position(i, _text_spacing);
 
                 // Get text buffer offset
                 const size_t index = attr_off + i;
@@ -1418,7 +1418,7 @@ class ui_bg
             for (size_t i = 0; i < stat_size; i++)
             {
                 // Get stat text position
-                const min::vec2<float> p = _assets.stat_position(i, _text_size);
+                const min::vec2<float> p = _assets.stat_position(i, _text_spacing);
 
                 // Get text buffer offset
                 const size_t index = stat_off + (i * 2);

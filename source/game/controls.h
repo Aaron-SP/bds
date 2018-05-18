@@ -366,7 +366,7 @@ class controls
         const bool is_ether = (id == id_value(item_id::CONS_ETHER));
 
         // Selecting multiple times?
-        const bool multi_click = _ui->get_selected() == inv_id(index).to_key();
+        const bool multi_click = _ui->get_selected() == ui_id(index).to_key();
 
         // If not locked
         if (!locked)
@@ -968,7 +968,7 @@ class controls
 
             // Try to consume energy to create this resource
             uint8_t count = world->get_scale_size();
-            const inv_id id = ui->get_selected();
+            const ui_id id = ui->get_selected();
             const bool consumed = inv.consume(id.index(), consume_id, count);
             if (consumed)
             {
@@ -1076,7 +1076,7 @@ class controls
                 else if (skill.is_grenade_mode())
                 {
                     uint8_t count = 1;
-                    const inv_id id = ui->get_selected();
+                    const ui_id id = ui->get_selected();
                     const bool consumed = inv.consume(id.index(), id_value(skill_id::GRENADE), count);
                     if (consumed)
                     {
@@ -1128,7 +1128,7 @@ class controls
                 else if (skill.is_missile_mode())
                 {
                     uint8_t count = 1;
-                    const inv_id id = ui->get_selected();
+                    const ui_id id = ui->get_selected();
                     const bool consumed = inv.consume(id.index(), id_value(skill_id::MISSILE), count);
                     if (consumed)
                     {

@@ -519,7 +519,7 @@ class ui_bg_assets
 
         set_rect(110, off, scale, coord);
     }
-    inline void load_bg_black(const inv_id id, const min::vec2<float> &p)
+    inline void load_bg_black(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> black_coord(_x_black_uv, _y_black_uv, _s_uv, _s_uv);
@@ -527,7 +527,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, black_coord);
     }
-    inline void load_bg_red(const inv_id id, const min::vec2<float> &p)
+    inline void load_bg_red(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> red_coord(_x_red_uv, _y_red_uv, _s_uv, _s_uv);
@@ -535,7 +535,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, red_coord);
     }
-    inline void load_bg_yellow(const inv_id id, const min::vec2<float> &p)
+    inline void load_bg_yellow(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> yellow_coord(_x_yellow_uv, _y_yellow_uv, _s_uv, _s_uv);
@@ -543,7 +543,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, yellow_coord);
     }
-    inline void load_bg_white(const inv_id id, const min::vec2<float> &p)
+    inline void load_bg_white(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> white_coord(_x_white_uv, _y_white_uv, _s_uv, _s_uv);
@@ -551,7 +551,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, white_coord);
     }
-    inline void load_bg_light_blue(const inv_id id, const min::vec2<float> &p)
+    inline void load_bg_light_blue(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg, _s_bg);
         const min::vec4<float> white_coord(_x_light_blue_uv, _y_light_blue_uv, _s_uv, _s_uv);
@@ -559,7 +559,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, white_coord);
     }
-    inline void load_empty_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_empty_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> grey_coord(_x_grey_uv, _y_grey_uv, _s_uv, _s_uv);
@@ -567,7 +567,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, grey_coord);
     }
-    inline void load_block_icon(const inv_id id, const int8_t block_id, const min::vec2<float> &p)
+    inline void load_block_icon(const ui_id id, const int8_t block_id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
 
@@ -581,7 +581,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, beam_coord);
     }
-    inline void load_item_icon(const inv_id id, const int8_t item_id, const min::vec2<float> &p)
+    inline void load_item_icon(const ui_id id, const int8_t item_id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
 
@@ -595,7 +595,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, beam_coord);
     }
-    inline void load_auto_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_auto_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> auto_coord(_x_auto_uv, _y_auto_uv, _s_uv, _s_uv);
@@ -603,7 +603,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, auto_coord);
     }
-    inline void load_beam_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_beam_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> beam_coord(_x_beam_uv, _y_beam_uv, _s_uv, _s_uv);
@@ -611,7 +611,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, beam_coord);
     }
-    inline void load_charge_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_charge_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> charge_coord(_x_charge_uv, _y_charge_uv, _s_uv, _s_uv);
@@ -619,7 +619,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, charge_coord);
     }
-    inline void load_grapple_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_grapple_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> grap_coord(_x_grap_uv, _y_grap_uv, _s_uv, _s_uv);
@@ -627,7 +627,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, grap_coord);
     }
-    inline void load_grenade_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_grenade_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> gren_coord(_x_grenade_uv, _y_grenade_uv, _s_uv, _s_uv);
@@ -635,7 +635,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, gren_coord);
     }
-    inline void load_jet_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_jet_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> jet_coord(_x_jet_uv, _y_jet_uv, _s_uv, _s_uv);
@@ -643,7 +643,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, jet_coord);
     }
-    inline void load_missile_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_missile_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> miss_coord(_x_miss_uv, _y_miss_uv, _s_uv, _s_uv);
@@ -651,7 +651,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, miss_coord);
     }
-    inline void load_portal_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_portal_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> scan_coord(_x_portal_uv, _y_portal_uv, _s_uv, _s_uv);
@@ -659,7 +659,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, scan_coord);
     }
-    inline void load_scan_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_scan_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> scan_coord(_x_scan_uv, _y_scan_uv, _s_uv, _s_uv);
@@ -667,7 +667,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, scan_coord);
     }
-    inline void load_scatter_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_scatter_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> scat_coord(_x_scatter_uv, _y_scatter_uv, _s_uv, _s_uv);
@@ -675,7 +675,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, scat_coord);
     }
-    inline void load_speed_icon(const inv_id id, const min::vec2<float> &p)
+    inline void load_speed_icon(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
         const min::vec4<float> speed_coord(_x_speed_uv, _y_speed_uv, _s_uv, _s_uv);

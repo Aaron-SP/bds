@@ -172,6 +172,113 @@ inline constexpr uint8_t id_value(const skill_id id)
 {
     return static_cast<uint8_t>(id);
 }
+
+enum class ui_type
+{
+    store,
+    key,
+    extend,
+    cube
+};
+
+class ui_id
+{
+  private:
+    uint8_t _id;
+
+  public:
+    ui_id() : _id(0) {}
+    ui_id(const uint8_t id) : _id(id) {}
+    inline bool operator==(const ui_id other) const
+    {
+        return _id == other.id();
+    }
+    inline bool operator!=(const ui_id other) const
+    {
+        return _id != other.id();
+    }
+    inline size_t row3() const
+    {
+        return (_id - 40) / 3;
+    }
+    inline size_t col3() const
+    {
+        return (_id - 40) % 3;
+    }
+    inline size_t row8() const
+    {
+        return _id / 8;
+    }
+    inline size_t col8() const
+    {
+        return _id & 7;
+    }
+    inline uint8_t id() const
+    {
+        return _id;
+    }
+    inline size_t index() const
+    {
+        return _id;
+    }
+    inline ui_id bg_store_index() const
+    {
+        return ui_id(_id + 9);
+    }
+    inline ui_id store_index() const
+    {
+        return ui_id(_id + 17);
+    }
+    inline ui_id bg_key_index() const
+    {
+        return ui_id(_id + 17);
+    }
+    inline ui_id key_index() const
+    {
+        return ui_id(_id + 25);
+    }
+    inline ui_id bg_ex_index() const
+    {
+        return ui_id(_id + 25);
+    }
+    inline ui_id ex_index() const
+    {
+        return ui_id(_id + 49);
+    }
+    inline ui_id bg_cube_index() const
+    {
+        return ui_id(_id + 50);
+    }
+    inline ui_id cube_index() const
+    {
+        return ui_id(_id + 59);
+    }
+    inline ui_id to_key() const
+    {
+        return ui_id(_id + 8);
+    }
+    inline ui_type type() const
+    {
+        if (_id >= 40)
+        {
+            // Cube type
+            return ui_type::cube;
+        }
+        if (_id >= 16)
+        {
+            // Extended type
+            return ui_type::extend;
+        }
+        else if (_id >= 8)
+        {
+            // Key type
+            return ui_type::key;
+        }
+
+        // Store type
+        return ui_type::store;
+    }
+};
 }
 
 #endif

@@ -180,7 +180,7 @@ class ui_overlay
     {
         return _bg.get_scale();
     }
-    inline inv_id get_selected() const
+    inline ui_id get_selected() const
     {
         return _bg.get_selected();
     }

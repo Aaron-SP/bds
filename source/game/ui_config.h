@@ -41,9 +41,12 @@ static constexpr float _s_hover_bg_y = 190.0;
 static constexpr float _s_hover_text_x = 260.0;
 static constexpr float _s_hover_text_y = 190.0;
 
+static constexpr size_t _ui_font_size = 14;
+constexpr static float _item_count_dx = (_s_fg - _ui_font_size) * 0.5;
+constexpr static float _item_count_dy = _s_fg * -0.5;
+
 // Console and UI Text
 static constexpr size_t _font_size = 28;
-static constexpr size_t _ui_font_size = 14;
 static constexpr float _console_dy = (_tool_dy * 2.0) + 4.0;
 static constexpr float _s_console_x = 400.0;
 static constexpr float _s_console_y = 40.0;

@@ -26,113 +26,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-enum class inv_type
-{
-    store,
-    key,
-    extend,
-    cube
-};
-
-class inv_id
-{
-  private:
-    uint8_t _id;
-
-  public:
-    inv_id() : _id(0) {}
-    inv_id(const uint8_t id) : _id(id) {}
-    inline bool operator==(const inv_id other) const
-    {
-        return _id == other.id();
-    }
-    inline bool operator!=(const inv_id other) const
-    {
-        return _id != other.id();
-    }
-    inline size_t row3() const
-    {
-        return (_id - 40) / 3;
-    }
-    inline size_t col3() const
-    {
-        return (_id - 40) % 3;
-    }
-    inline size_t row8() const
-    {
-        return _id / 8;
-    }
-    inline size_t col8() const
-    {
-        return _id & 7;
-    }
-    inline uint8_t id() const
-    {
-        return _id;
-    }
-    inline size_t index() const
-    {
-        return _id;
-    }
-    inline inv_id bg_store_index() const
-    {
-        return inv_id(_id + 9);
-    }
-    inline inv_id store_index() const
-    {
-        return inv_id(_id + 17);
-    }
-    inline inv_id bg_key_index() const
-    {
-        return inv_id(_id + 17);
-    }
-    inline inv_id key_index() const
-    {
-        return inv_id(_id + 25);
-    }
-    inline inv_id bg_ex_index() const
-    {
-        return inv_id(_id + 25);
-    }
-    inline inv_id ex_index() const
-    {
-        return inv_id(_id + 49);
-    }
-    inline inv_id bg_cube_index() const
-    {
-        return inv_id(_id + 50);
-    }
-    inline inv_id cube_index() const
-    {
-        return inv_id(_id + 59);
-    }
-    inline inv_id to_key() const
-    {
-        return inv_id(_id + 8);
-    }
-    inline inv_type type() const
-    {
-        if (_id >= 40)
-        {
-            // Cube type
-            return inv_type::cube;
-        }
-        if (_id >= 16)
-        {
-            // Extended type
-            return inv_type::extend;
-        }
-        else if (_id >= 8)
-        {
-            // Key type
-            return inv_type::key;
-        }
-
-        // Store type
-        return inv_type::store;
-    }
-};
-
 enum class item_type
 {
     empty,
@@ -247,7 +140,7 @@ class inventory
     std::array<item, _max_slots> _inv;
     std::vector<std::string> _inv_name;
     std::vector<std::string> _inv_desc;
-    std::vector<inv_id> _update;
+    std::vector<ui_id> _update;
     std::array<craft_item, _cube_size> _craft;
 
     inline std::pair<bool, uint8_t> decay(const uint8_t index, const uint8_t consume_id, uint8_t &count)
@@ -1142,7 +1035,7 @@ class inventory
     {
         return _inv_desc[it.id()];
     }
-    inline const std::vector<inv_id> &get_updates() const
+    inline const std::vector<ui_id> &get_updates() const
     {
         return _update;
     }
