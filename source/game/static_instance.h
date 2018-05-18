@@ -325,7 +325,7 @@ class static_instance
 
         // Add to asset buffer
         const size_t limit = _CHEST_LIMIT;
-        _assets.emplace_back(iid, tid, 225, limit, box3);
+        _assets.emplace_back(iid, tid, 245, limit, box3);
     }
     inline void load_drone_model()
     {
@@ -350,7 +350,7 @@ class static_instance
 
         // Add to asset buffer
         const size_t limit = _DRONE_LIMIT;
-        _assets.emplace_back(iid, tid, 235, limit, box3);
+        _assets.emplace_back(iid, tid, 255, limit, box3);
     }
     inline void load_drop_explode_model()
     {
@@ -397,9 +397,9 @@ class static_instance
 
         // Add to asset buffer
         const size_t drop_limit = _DROP_LIMIT;
-        _assets.emplace_back(iid, tid, 245, drop_limit, box);
+        _assets.emplace_back(iid, tid, 265, drop_limit, box);
         const size_t explode_limit = _EXPLODE_LIMIT;
-        _assets.emplace_back(iid, tid, 295, explode_limit, box);
+        _assets.emplace_back(iid, tid, 315, explode_limit, box);
     }
     inline void load_missile_model()
     {
@@ -424,7 +424,7 @@ class static_instance
 
         // Add to asset buffer
         const size_t limit = _MISS_LIMIT;
-        _assets.emplace_back(iid, tid, 305, limit, box3);
+        _assets.emplace_back(iid, tid, 325, limit, box3);
     }
     inline void load_models()
     {

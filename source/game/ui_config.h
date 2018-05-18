@@ -53,9 +53,11 @@ static constexpr float _s_focus_x = 320.0;
 static constexpr float _s_focus_y = 90.0;
 static constexpr float _x_focus_wrap = _s_focus_x;
 static constexpr float _y_focus_wrap = _font_size;
+static constexpr float _s_focus_bar_x = _s_focus_x - 50.0;
+static constexpr float _s_focus_bar_y = 8.0;
 static constexpr float _y_hover_wrap = _font_size;
 static constexpr float _y_ui_text = _console_dy + 24.0;
-static constexpr float _energy_dx = (_tool_space * _num_half_buttons) + (_tool_space * 0.5) + 16.0;
+static constexpr float _energy_dx = (_tool_space * (_num_half_buttons + 0.5)) + 16.0;
 static constexpr float _health_dx = _tool_start - _tool_space - 16.0;
 
 // Health Bar Meter
@@ -92,6 +94,9 @@ static constexpr float _cube_dy = 461;
 static constexpr float _cube_space = 42.0;
 static constexpr float _focus_dx = 0.0;
 static constexpr float _focus_dy = 120.0;
+static constexpr float _focus_bar_dx = (_s_focus_bar_y - _s_focus_bar_x) * 0.5;
+static constexpr float _focus_bar_dy = _focus_dy + _font_size * 0.5;
+static constexpr float _focus_text_dy = _focus_dy - _font_size * 0.5;
 static constexpr float _stat_dx = 0.0;
 static constexpr float _stat_dy = 458.0;
 static constexpr float _stat_text_dx = 110.0;

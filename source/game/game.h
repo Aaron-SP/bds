@@ -171,6 +171,9 @@ class bds
             // Check for debounce
             if (!_state.is_dead())
             {
+                // Close GUI if up
+                _controls.die();
+
                 // Set menu for dead
                 _ui.set_menu_dead();
 
@@ -208,11 +211,11 @@ class bds
             stat.clear_hit();
         }
 
-        // Get the target string
-        const std::string &target = _world.get_target_string();
+        // Get the target info
+        const auto info = _world.get_target_info(play.get_target());
 
         // Update the ui overlay, process timer and upload changes
-        _ui.update(p, f, health, energy, _fps, _idle, chunks, insts, target, dt);
+        _ui.update(p, f, health, energy, _fps, _idle, chunks, insts, *info.first, dt);
     }
     void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {

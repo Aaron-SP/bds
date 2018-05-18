@@ -264,6 +264,10 @@ class ui_overlay
         _bg.set_draw_focus(flag);
         _text.set_draw_focus(flag);
     }
+    inline void set_focus_bar(const float bar)
+    {
+        _bg.set_focus_bar(bar);
+    }
     inline void set_focus_string(const std::string &str)
     {
         _text.update_focus(str);

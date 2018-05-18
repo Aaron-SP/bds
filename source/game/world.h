@@ -929,10 +929,10 @@ class world
     {
         return _swatch_mode;
     }
-    inline const std::string &get_target_string() const
+    inline std::pair<const std::string *, float> get_target_info(const target &t) const
     {
-        const target &t = _player.get_target();
         const target_id tid = t.get_id();
+        const float no_health = -1.0;
 
         switch (tid)
         {
@@ -945,7 +945,7 @@ class world
             const item it(inv.id_from_atlas(t.get_atlas()), 1);
 
             // Look up item name
-            return inv.get_name(it);
+            return std::make_pair(&inv.get_name(it), no_health);
         }
         case target_id::BODY:
         {
@@ -959,25 +959,29 @@ class world
             switch (body_id)
             {
             case id_value(static_id::CHEST):
-                return _chests.get_string();
+                return std::make_pair(&_chests.get_string(), no_health);
             case id_value(static_id::DRONE):
-                return _drones.get_string();
+            {
+                const size_t drone_index = b.get_data().index;
+                const float percent = _drones.get_health_percent(drone_index);
+                return std::make_pair(&_drones.get_string(), percent);
+            }
             case id_value(static_id::DROP):
-                return _drops.get_string();
+                return std::make_pair(&_drops.get_string(), no_health);
             case id_value(static_id::EXPLOSIVE):
-                return _explosives.get_string();
+                return std::make_pair(&_explosives.get_string(), no_health);
             case id_value(static_id::MISSILE):
-                return _missiles.get_string();
+                return std::make_pair(&_missiles.get_string(), no_health);
             default:
-                return _invalid_str;
+                break;
             }
         }
         default:
-            return _invalid_str;
+            break;
         }
 
         // Invalid string
-        return _invalid_str;
+        return std::make_pair(&_invalid_str, no_health);
     }
     inline bool hook_set()
     {

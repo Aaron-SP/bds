@@ -38,6 +38,7 @@ class drone
     size_t _path_id;
     size_t _sound_id;
     std::vector<path> *_paths;
+    float _max_health;
     float _health;
     size_t _idle;
     size_t _launch;
@@ -47,7 +48,7 @@ class drone
           const size_t path_id, const size_t sound_id, std::vector<path> *const vp,
           const min::vec3<float> &p, const min::vec3<float> &dest, const float health)
         : _body_id(body_id), _inst_id(inst_id), _path_id(path_id),
-          _sound_id(sound_id), _paths(vp), _health(health), _idle(0), _launch(0)
+          _sound_id(sound_id), _paths(vp), _max_health(health), _health(health), _idle(0), _launch(0)
     {
         // Reset path and update with new info
         get_path().set_dead(false);
@@ -76,6 +77,18 @@ class drone
     inline void dec_launch()
     {
         _launch--;
+    }
+    inline float get_health() const
+    {
+        return _health;
+    }
+    inline float get_max_health() const
+    {
+        return _max_health;
+    }
+    inline float get_health_percent() const
+    {
+        return _health / _max_health;
     }
     inline path &get_path()
     {
@@ -266,6 +279,10 @@ class drones
 
         // Return no remove
         return false;
+    }
+    inline float get_health_percent(const size_t index) const
+    {
+        return _drones[index].get_health_percent();
     }
     inline const std::string &get_string() const
     {

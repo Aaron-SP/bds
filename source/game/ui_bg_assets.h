@@ -126,10 +126,10 @@ class ui_bg_assets
     static constexpr float _s_menu_uv_x = 504.0 / _image_size;
     static constexpr float _s_menu_uv_y = 124.0 / _image_size;
 
-    // Number of ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 1 + 1
+    // Number of ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 2 + 1
     static constexpr size_t _base = 41;
     static constexpr size_t _focus = 108;
-    static constexpr size_t _ext_hover = _focus + 1;
+    static constexpr size_t _ext_hover = _focus + 2;
     static constexpr size_t _max_size = _ext_hover + 1;
 
     // Rect Instance stuff
@@ -145,6 +145,7 @@ class ui_bg_assets
     float _exp;
     float _health;
     float _oxy;
+    float _focus_bar;
     float _cursor_angle;
     bool _draw_console;
     bool _draw_ex;
@@ -225,7 +226,7 @@ class ui_bg_assets
         : _v(_max_size), _uv(_max_size),
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
-          _energy(0.0), _exp(0.0), _health(1.0), _oxy(1.0), _cursor_angle(0.0),
+          _energy(0.0), _exp(0.0), _health(1.0), _oxy(1.0), _focus_bar(1.0), _cursor_angle(0.0),
           _draw_console(false), _draw_ex(false), _draw_menu(0), _draw_title(true) {}
 
     inline bool get_draw_console() const
@@ -259,6 +260,10 @@ class ui_bg_assets
     inline bool get_draw_title() const
     {
         return _draw_title;
+    }
+    inline bool get_focus_bar() const
+    {
+        return _focus_bar > 0.0;
     }
     inline uint16_t get_width() const
     {
@@ -430,7 +435,8 @@ class ui_bg_assets
         // Offset texture to prevent blurring edges
         const float uv_off = 2.0 / _image_size;
         const float suv_off = 4.0 / _image_size;
-        const min::vec4<float> exp_coord(_x_yellow_uv + uv_off, _y_yellow_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
+        const float adj_uv = _s_uv - suv_off;
+        const min::vec4<float> exp_coord(_x_yellow_uv + uv_off, _y_yellow_uv + uv_off, adj_uv, adj_uv);
 
         // Load rect at position
         set_rect(7, p, scale, exp_coord);
@@ -445,16 +451,17 @@ class ui_bg_assets
         // Offset texture to prevent blurring edges
         const float uv_off = 2.0 / _image_size;
         const float suv_off = 4.0 / _image_size;
+        const float adj_uv = _s_uv - suv_off;
 
         // Load rect at position depending on energy
         if (_oxy > 0.25)
         {
-            const min::vec4<float> oxy_coord(_x_light_blue_uv + uv_off, _y_light_blue_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
+            const min::vec4<float> oxy_coord(_x_light_blue_uv + uv_off, _y_light_blue_uv + uv_off, adj_uv, adj_uv);
             set_rect(8, p, scale, oxy_coord);
         }
         else
         {
-            const min::vec4<float> oxy_coord(_x_red_uv + uv_off, _y_red_uv + uv_off, _s_uv - suv_off, _s_uv - suv_off);
+            const min::vec4<float> oxy_coord(_x_red_uv + uv_off, _y_red_uv + uv_off, adj_uv, adj_uv);
             set_rect(8, p, scale, oxy_coord);
         }
     }
@@ -474,6 +481,30 @@ class ui_bg_assets
         const min::vec4<float> focus_coord(_x_focus_uv, _y_focus_uv, _s_focus_uv_x, _s_focus_uv_y);
         set_rect(108, p, focus_scale, focus_coord);
     }
+    inline void load_focus_meter()
+    {
+        const float x_width = _s_focus_bar_x * _focus_bar;
+        const float x_offset = _center_w + (x_width - _s_focus_bar_y) * 0.5 + _focus_bar_dx;
+        const min::vec2<float> p(x_offset, _height - _focus_bar_dy);
+        const min::vec2<float> scale(x_width, _s_focus_bar_y);
+
+        // Offset texture to prevent blurring edges
+        const float uv_off = 2.0 / _image_size;
+        const float suv_off = 4.0 / _image_size;
+        const float adj_uv = _s_uv - suv_off;
+
+        // Load rect at position depending on focus
+        if (_focus_bar > 0.5)
+        {
+            const min::vec4<float> meter_coord(_x_yellow_uv + uv_off, _y_yellow_uv + uv_off, adj_uv, adj_uv);
+            set_rect(109, p, scale, meter_coord);
+        }
+        else
+        {
+            const min::vec4<float> meter_coord(_x_red_uv + uv_off, _y_red_uv + uv_off, adj_uv, adj_uv);
+            set_rect(109, p, scale, meter_coord);
+        }
+    }
     inline void load_bg_hover(const min::vec2<float> &p)
     {
         // Load hover rect at position
@@ -486,7 +517,7 @@ class ui_bg_assets
         // Offset position by half width of rect
         const min::vec2<float> off = min::vec2<float>(p.x() + _s_hover_bg_x * 0.5, p.y() + hover_dy);
 
-        set_rect(109, off, scale, coord);
+        set_rect(110, off, scale, coord);
     }
     inline void load_bg_black(const inv_id id, const min::vec2<float> &p)
     {
@@ -685,7 +716,7 @@ class ui_bg_assets
         // Set energy in percent
         _energy = energy;
 
-        // Set the size of the health bar
+        // Set the size of the energy bar
         load_energy_meter();
     }
     inline void set_experience(const float exp)
@@ -693,8 +724,15 @@ class ui_bg_assets
         // Set experience in percent
         _exp = exp;
 
-        // Set the size of the health bar
+        // Set the size of the exp bar
         load_exp_meter();
+    }
+    inline void set_focus_bar(const float bar)
+    {
+        _focus_bar = bar;
+
+        // Set the size of the focus bar
+        load_focus_meter();
     }
     inline void set_health(const float health)
     {
@@ -712,7 +750,7 @@ class ui_bg_assets
         // Set experience in percent
         _oxy = oxy;
 
-        // Set the size of the health bar
+        // Set the size of the oxygen bar
         load_oxy_meter();
     }
     inline void set_screen(const uint16_t width, const uint16_t height)
@@ -785,6 +823,10 @@ class ui_bg_assets
     inline static constexpr size_t focus_size()
     {
         return 1;
+    }
+    inline static constexpr size_t focus_bar_size()
+    {
+        return 2;
     }
     inline static constexpr size_t opaque_ext_size()
     {

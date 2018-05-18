@@ -133,6 +133,7 @@ class player
     min::ray<float, min::vec3> _ray;
     target _target;
     target _track_target;
+    bool _target_update;
     bool _airborn;
     bool _falling;
     size_t _land_count;
@@ -323,7 +324,8 @@ class player
     player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const load_state &state, const size_t body_id)
         : _sim(sim), _body_id(body_id),
           _exploded(false), _explode_id(-1),
-          _hooked(false), _hook_length(0.0), _airborn(false), _falling(false),
+          _hooked(false), _hook_length(0.0), 
+          _target_update(false), _airborn(false), _falling(false),
           _land_count(0), _jump_count(0), _landed(false), _jet(false),
           _mode(play_mode::none)
     {
@@ -348,6 +350,10 @@ class player
     inline min::body<float, min::vec3> &body()
     {
         return _sim->get_body(_body_id);
+    }
+    inline void clear_target_update()
+    {
+        _target_update = false;
     }
     inline void drone_collide(const min::vec3<float> &p)
     {
@@ -481,6 +487,10 @@ class player
     inline bool is_target_body() const
     {
         return _target.get_id() == target_id::BODY;
+    }
+    inline bool is_target_update() const
+    {
+        return _target_update;
     }
     inline void dash()
     {
@@ -797,6 +807,7 @@ class player
         if (!track_target)
         {
             _track_target = _target;
+            _target_update = true;
         }
         else if (_track_target.get_id() == target_id::BODY)
         {
@@ -813,6 +824,7 @@ class player
             else
             {
                 _track_target.set_id(target_id::INVALID);
+                _target_update = true;
             }
         }
     }

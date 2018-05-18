@@ -1343,6 +1343,18 @@ class controls
         // Update the screen size for ui and text
         ui->set_screen(min::vec2<float>(w, h), width, height);
     }
+    void die()
+    {
+        // Stop camera tracking
+        _state->set_tracking(false);
+        _ui->set_focus(false);
+
+        // If extended close it
+        if (_ui->is_extended())
+        {
+            ui_extend((void *)this, 0.0);
+        }
+    }
     void respawn()
     {
         // Simulate a key down to change equipment
@@ -1502,7 +1514,20 @@ class controls
 
                 // Update the ui focus
                 _ui->set_focus(true);
-                _ui->set_focus_string(_world->get_target_string());
+
+                // Get the target info
+                const auto info = _world->get_target_info(t);
+                _ui->set_focus_bar(info.second);
+
+                // Update the focus text info
+                if (play.is_target_update())
+                {
+                    // Set the focus text info
+                    _ui->set_focus_string(*info.first);
+
+                    // Clear target update debouncer
+                    play.clear_target_update();
+                }
             }
             else
             {

@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __STATS__
 
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <string>
 

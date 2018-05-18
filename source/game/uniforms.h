@@ -126,10 +126,10 @@ class uniforms
     }
 
   public:
-    uniforms() : _ub(1, 415, 0)
+    uniforms() : _ub(1, 435, 0)
     {
         // Load the number of used uniforms into the buffer
-        load_uniforms(110, 10, 10, 50, 10, 10, 100);
+        load_uniforms(120, 10, 10, 50, 10, 10, 100);
     }
     inline void bind() const
     {

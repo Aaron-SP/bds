@@ -135,7 +135,7 @@ class ui_text
         _text.set_text_center(_console, w2, _console_dy);
 
         // Position the focus element
-        _text.set_text_center(_focus, w2, height - _focus_dy);
+        _text.set_text_center(_focus, w2, height - _focus_text_dy);
 
         // Position the ui elements
         _text.set_text_location(_ui, w2 + _ui_health_dx, _y_ui_text);
@@ -602,7 +602,7 @@ class ui_text
 
         // Get the center width
         const uint16_t w2 = size.first / 2;
-        _text.set_text_center(_focus, w2, size.second - _focus_dy);
+        _text.set_text_center(_focus, w2, size.second - _focus_text_dy);
     }
     inline void update_ui(const float health, const float energy)
     {

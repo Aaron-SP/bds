@@ -129,7 +129,7 @@ class ui_bg
         set_start_index(start);
 
         // Draw extended ui elements
-        const size_t size = _assets.focus_size();
+        const size_t size = (_assets.get_focus_bar()) ? _assets.focus_bar_size() : _assets.focus_size();
         _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
     }
     inline void draw_opaque_extend() const
@@ -508,6 +508,9 @@ class ui_bg
 
         // Load focus background
         _assets.load_bg_focus();
+
+        // Load focus meter
+        _assets.load_focus_meter();
 
         // Load hover background
         _assets.load_bg_hover(p);
@@ -1220,6 +1223,10 @@ class ui_bg
         // Reload console data
         _assets.load_console_bg();
     }
+    inline void set_draw_focus(const bool flag)
+    {
+        _focus = flag;
+    }
     inline void set_draw_title(const bool flag)
     {
         _assets.set_draw_title(flag);
@@ -1242,9 +1249,9 @@ class ui_bg
     {
         _assets.set_experience(exp);
     }
-    inline void set_draw_focus(const bool flag)
+    inline void set_focus_bar(const float bar)
     {
-        _focus = flag;
+        _assets.set_focus_bar(bar);
     }
     inline void set_oxygen(const float oxy)
     {
