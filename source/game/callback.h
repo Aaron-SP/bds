@@ -27,9 +27,11 @@ namespace game
 
 // Collision constants
 static constexpr float _grav_mag = 10.0;
+static constexpr size_t _physics_frames = 180;
 
 // Callbacks
 typedef std::function<void(min::body<float, min::vec3> &, min::body<float, min::vec3> &)> coll_call;
+typedef std::function<std::pair<float, float>(const float, const float, const int8_t)> dmg_call;
 typedef std::function<void(const min::vec3<float> &, const int8_t)> ex_call;
 typedef std::function<void(const min::vec3<float> &, const min::vec3<unsigned> &, const int8_t)> ex_scale_call;
 typedef std::function<void(const min::vec3<float> &, const min::vec3<float> &)> miss_call;

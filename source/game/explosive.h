@@ -135,7 +135,7 @@ class explosives
     {
         return _str;
     }
-    inline bool launch(const min::vec3<float> &p, const min::vec3<float> &dir, const int8_t atlas)
+    inline bool launch(const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<float> &vel, const min::vec3<float> &up, const int8_t atlas)
     {
         // If all explosives have been allocated fail to launch
         if (_inst->get_explosive().is_full())
@@ -162,7 +162,7 @@ class explosives
         min::body<float, min::vec3> &body = _sim->get_body(body_id);
 
         // Set body linear velocity
-        const min::vec3<float> lv = min::vec3<float>(0.0, 5.0, 0.0) + dir * 20.0;
+        const min::vec3<float> lv = vel + (up * 5.0) + (dir * 20.0);
         body.set_linear_velocity(lv);
 
         // Create a new explosive

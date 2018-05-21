@@ -23,6 +23,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/ui_bg.h>
 #include <game/ui_text.h>
 #include <string>
+#include <utility>
 
 namespace game
 {
@@ -36,6 +37,7 @@ class ui_overlay
     const std::string _action_fail;
     const std::string _ast;
     const std::string _health;
+    const std::string _inside;
     const std::string _intro;
     const std::string _level;
     const std::string _oxygen;
@@ -75,6 +77,7 @@ class ui_overlay
           _action_fail("Can't use or craft that item!"),
           _ast("Incoming asteroids, take cover!"),
           _health("Low Health!"),
+          _inside("Can't place block inside player!"),
           _intro("You awaken in an unfamiliar, mysterious place."),
           _level("Level up!"),
           _oxygen("Low Oxygen!"),
@@ -83,7 +86,7 @@ class ui_overlay
           _res("Not enough blocks/ether for that operation!"),
           _swarm("Space pirates have invaded your planet!"),
           _swarm_kill("Space pirates pillaged all your belongings!"),
-          _thrust("Level up! Thrusters are now online!"),
+          _thrust("Thrusters are now online!"),
           _time(-1.0), _mult(1) {}
 
     void add_stream_float(const std::string &str, const float value)
@@ -97,35 +100,47 @@ class ui_overlay
     inline bool action_hover()
     {
         // Check if we failed action
-        const bool action = _bg.action_hover(_mult);
-        if (!action)
+        const std::pair<bool, ui_id> action = _bg.action_hover(_mult);
+        if (!action.first && action.second.type() != ui_type::button)
         {
             set_alert_action_fail();
         }
 
         // Return action status
-        return action;
+        return action.first;
     }
     inline bool action_select()
     {
         // Check if we failed action
-        const bool action = _bg.action_select(_mult);
-        if (!action)
+        const std::pair<bool, ui_id> action = _bg.action_select(_mult);
+        if (!action.first && action.second.type() != ui_type::button)
         {
             set_alert_action_fail();
         }
 
         // Return action status
-        return action;
+        return action.first;
     }
-    inline bool click()
+    inline void blink_console()
+    {
+        _text.toggle_draw_console();
+        _bg.toggle_draw_console();
+
+        // Upload the changed text
+        _text.upload();
+    }
+    inline bool click_down()
     {
         if (_bg.is_extended())
         {
-            return _bg.click();
+            return _bg.click_down();
         }
 
         return false;
+    }
+    inline void click_up()
+    {
+        return _bg.click_up();
     }
     inline void draw_opaque() const
     {
@@ -195,10 +210,10 @@ class ui_overlay
     inline bool overlap(const min::vec2<float> &p)
     {
         // Test for overlap on UI
-        const bool overlap = _bg.overlap(p);
+        const std::pair<bool, ui_id> overlap = _bg.overlap(p);
 
         // Show tooltips here!
-        if (overlap)
+        if (overlap.first && overlap.second.type() != ui_type::button)
         {
             // Get the hover text
             const std::string &name = _bg.get_hover_name();
@@ -217,7 +232,7 @@ class ui_overlay
         }
 
         // Are we overlapping a UI element?
-        return overlap;
+        return overlap.first;
     }
     inline void reset_menu()
     {
@@ -323,6 +338,10 @@ class ui_overlay
     inline void set_alert_asteroid()
     {
         set_ui_alert(_ast, 5.0, 4);
+    }
+    inline void set_alert_block_inside()
+    {
+        set_ui_alert(_inside, 2.0, 1);
     }
     inline void set_alert_intro()
     {

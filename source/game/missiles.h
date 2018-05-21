@@ -154,7 +154,7 @@ class missiles
     {
         return _str;
     }
-    inline bool launch_missile(const min::vec3<float> &p, const min::vec3<float> &dir)
+    inline bool launch_missile(const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<float> &vel)
     {
         // Are all missiles being used?
         if (_inst->get_missile().is_full())
@@ -199,7 +199,7 @@ class missiles
         min::body<float, min::vec3> &body = _sim->get_body(body_id);
 
         // Set body linear velocity
-        body.set_linear_velocity(dir * 30.0);
+        body.set_linear_velocity(vel + (dir * 30.0));
 
         // Create a new missile
         _miss.emplace_back(body_id, inst_id, part_id, sound_id);

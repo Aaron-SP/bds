@@ -116,13 +116,14 @@ class player
     static constexpr float _air_threshold = 1.0;
     static constexpr float _fall_threshold = -1.0;
     static constexpr float _grav_mag = 10.0;
-    static constexpr float _jet_cost = 0.25;
-    static constexpr float _project_dist = 2.0;
+    static constexpr float _project_dist = 1.59;
 
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
     size_t _body_id;
     std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
     inventory _inv;
+    unsigned _damage_cd;
+    unsigned _explode_cd;
     bool _exploded;
     int8_t _explode_id;
     bool _hooked;
@@ -268,10 +269,10 @@ class player
         }
         else if (_jet)
         {
-            if (_stats.can_consume_energy(_jet_cost))
+            if (_stats.can_consume_jet())
             {
                 // Consume energy
-                _stats.consume_energy(_jet_cost);
+                _stats.consume_jet();
 
                 // Apply force to player body
                 force(min::vec3<float>(0.0, 11.0, 0.0));
@@ -323,8 +324,9 @@ class player
   public:
     player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const load_state &state, const size_t body_id)
         : _sim(sim), _body_id(body_id),
+          _damage_cd(0), _explode_cd(0),
           _exploded(false), _explode_id(-1),
-          _hooked(false), _hook_length(0.0), 
+          _hooked(false), _hook_length(0.0),
           _target_update(false), _airborn(false), _falling(false),
           _land_count(0), _jump_count(0), _landed(false), _jet(false),
           _mode(play_mode::none)
@@ -340,7 +342,8 @@ class player
 
             // Copy loaded stats
             _stats.fill(state.get_stats(), state.get_energy(),
-                        state.get_exp(), state.get_health(), state.get_oxygen());
+                        state.get_exp(), state.get_health(),
+                        state.get_oxygen(), state.get_stat_points());
         }
     }
     inline const min::body<float, min::vec3> &body() const
@@ -358,41 +361,32 @@ class player
     inline void drone_collide(const min::vec3<float> &p)
     {
         // Apply damage to player
-        _stats.damage(_stats.level() * 2.5);
+        const float dmg_frac = _stats.level() * 0.01;
+        _stats.damage(_stats.get_max_health() * dmg_frac);
 
         // Calculate collision direction towards player
         const min::vec3<float> dir = (position() - p).normalize();
 
         // Add a kick force
         force(dir * 1000.0);
+
+        // Set the damage cooldown
+        _damage_cd = _physics_frames;
     }
-    inline void explode(const min::vec3<float> &dir, const float power, const float size, const float sq_dist, const int8_t value)
+    inline void explode(const min::vec3<float> &dir, const float ex_force, const float dmg_frac, const int8_t value)
     {
         // If we haven't been exploded take damage
         if (!_exploded)
         {
-            // Record what we hit
-            _explode_id = value;
-
-            // Calculate damage
-            // Max power = 400
-            // Max size = 63
-            // Min dist = 1
-            // Denom = 200 * 63 * 1 = 12600
-            // Damage multipler = 3
-            constexpr float percent_mult = 3.0 / 25200.0;
-            const float min_dist = 1.0;
-            const float factor = power * size / std::max(sq_dist, min_dist);
-
-            // Calculate percent damage of max health
-            const float percent = factor * percent_mult;
-            _stats.damage(percent * _stats.get_max_health());
-
             // Signal explode signal
             _exploded = true;
 
-            // Apply force to the player body
-            force(dir * factor);
+            // Record what we hit
+            _explode_id = value;
+
+            // Apply damage and force to the player
+            _stats.damage(_stats.get_max_health() * dmg_frac);
+            force(dir * ex_force);
         }
     }
     inline void force(const min::vec3<float> &f)
@@ -495,7 +489,7 @@ class player
     inline void dash()
     {
         // If not hooked
-        if (!_hooked && _stats.can_thrust())
+        if (!_hooked && _stats.can_consume_thrust())
         {
             // Consume energy
             _stats.consume_thrust();
@@ -518,7 +512,7 @@ class player
                 // Add force to the player body
                 force(min::vec3<float>(0.0, 900.0, 0.0));
             }
-            else if (_jump_count == 1 && _stats.can_thrust())
+            else if (_jump_count == 1 && _stats.can_consume_thrust())
             {
                 // Increment jump count
                 _jump_count++;
@@ -531,9 +525,17 @@ class player
             }
         }
     }
+    inline bool is_damageable() const
+    {
+        return (_damage_cd == 0) && !is_dead();
+    }
     inline bool is_dead() const
     {
         return _stats.is_dead();
+    }
+    inline bool is_explodeable() const
+    {
+        return (_explode_cd == 0) && !is_dead();
     }
     inline const min::vec3<float> &land_velocity() const
     {
@@ -600,6 +602,10 @@ class player
 
         // Reset stats
         _stats.respawn();
+    }
+    inline void set_explode_cd()
+    {
+        _explode_cd = 5;
     }
     inline bool set_hook()
     {
@@ -776,6 +782,16 @@ class player
                     }
                 }
             }
+        }
+
+        // Proces damage and explode cooldowns
+        if (_damage_cd > 0)
+        {
+            _damage_cd--;
+        }
+        if (_explode_cd > 0)
+        {
+            _explode_cd--;
         }
 
         // Update the landed state

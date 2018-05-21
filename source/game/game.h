@@ -110,7 +110,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.236");
+        _ui.text().set_debug_version("VERSION: 0.1.240");
     }
     void update_alerts()
     {
@@ -126,7 +126,6 @@ class bds
             _ui.set_alert_level();
             break;
         case game::stat_alert::thruster:
-            _sound.play_voice_level();
             _sound.play_voice_thrust_alert();
             _ui.set_alert_thruster();
             break;
@@ -284,7 +283,7 @@ class bds
     }
     void blink_console_message()
     {
-        _ui.toggle_console();
+        _ui.blink_console();
     }
     bool check_gl_error() const
     {

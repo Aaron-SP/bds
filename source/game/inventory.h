@@ -492,39 +492,39 @@ class inventory
         // Failed to add all items
         return false;
     }
-    inline static size_t begin_store()
+    inline static constexpr size_t begin_store()
     {
         return 0;
     }
-    inline static size_t end_store()
+    inline static constexpr size_t end_store()
     {
         return 8;
     }
-    inline static size_t begin_key()
+    inline static constexpr size_t begin_key()
     {
         return 8;
     }
-    inline static size_t end_key()
+    inline static constexpr size_t end_key()
     {
         return 16;
     }
-    inline static size_t begin_extend()
+    inline static constexpr size_t begin_extend()
     {
         return 16;
     }
-    inline static size_t end_extend()
+    inline static constexpr size_t end_extend()
     {
         return 40;
     }
-    inline static size_t begin_cube()
+    inline static constexpr size_t begin_cube()
     {
         return 40;
     }
-    inline static size_t end_cube()
+    inline static constexpr size_t end_cube()
     {
         return begin_cube() + _cube_size;
     }
-    inline static size_t size()
+    inline static constexpr size_t size()
     {
         return _max_slots;
     }

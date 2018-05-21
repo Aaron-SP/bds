@@ -54,6 +54,14 @@ class ui_bg_assets
     static constexpr float _y_light_blue_uv = 4.0 / _image_size;
     static constexpr float _x_grey_uv = 292.0 / _image_size;
     static constexpr float _y_grey_uv = 4.0 / _image_size;
+    static constexpr float _x_hover_stat_uv = 328.0 / _image_size;
+    static constexpr float _y_hover_stat_uv = 4.0 / _image_size;
+    static constexpr float _x_click_stat_uv = 344.0 / _image_size;
+    static constexpr float _y_click_stat_uv = 4.0 / _image_size;
+    static constexpr float _x_grey_stat_uv = 328.0 / _image_size;
+    static constexpr float _y_grey_stat_uv = 20.0 / _image_size;
+    static constexpr float _x_red_stat_uv = 344.0 / _image_size;
+    static constexpr float _y_red_stat_uv = 20.0 / _image_size;
 
     // Icons
     static constexpr float _x_reload_uv = 4.0 / _image_size;
@@ -102,6 +110,7 @@ class ui_bg_assets
     static constexpr float _y_ui_bar_uv = 380.0 / _image_size;
 
     // Scale sizes
+    static constexpr float _s_suv = 16.0 / _image_size;
     static constexpr float _s_uv = 32.0 / _image_size;
     static constexpr float _s_health_x = 48.0;
     static constexpr float _s_health_y = 96.0;
@@ -126,9 +135,9 @@ class ui_bg_assets
     static constexpr float _s_menu_uv_x = 504.0 / _image_size;
     static constexpr float _s_menu_uv_y = 124.0 / _image_size;
 
-    // Number of ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 2 + 1
+    // Number of ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 6 + 2 + 1
     static constexpr size_t _base = 41;
-    static constexpr size_t _focus = 108;
+    static constexpr size_t _focus = 114;
     static constexpr size_t _ext_hover = _focus + 2;
     static constexpr size_t _max_size = _ext_hover + 1;
 
@@ -285,6 +294,14 @@ class ui_bg_assets
     {
         // Create a box from the screen
         const min::vec2<float> half(_s_inv, _s_inv);
+
+        // Return the inv_box
+        return min::aabbox<float, min::vec2>(p - half, p + half);
+    }
+    inline static min::aabbox<float, min::vec2> stat_box(const min::vec2<float> &p)
+    {
+        // Create a box from the screen
+        const min::vec2<float> half(_s_stat, _s_stat);
 
         // Return the inv_box
         return min::aabbox<float, min::vec2>(p - half, p + half);
@@ -479,7 +496,7 @@ class ui_bg_assets
         const min::vec2<float> p(_center_w + _focus_dx, _height - _focus_dy);
         const min::vec2<float> focus_scale(_s_focus_x, _s_focus_y);
         const min::vec4<float> focus_coord(_x_focus_uv, _y_focus_uv, _s_focus_uv_x, _s_focus_uv_y);
-        set_rect(108, p, focus_scale, focus_coord);
+        set_rect(114, p, focus_scale, focus_coord);
     }
     inline void load_focus_meter()
     {
@@ -497,12 +514,12 @@ class ui_bg_assets
         if (_focus_bar > 0.5)
         {
             const min::vec4<float> meter_coord(_x_yellow_uv + uv_off, _y_yellow_uv + uv_off, adj_uv, adj_uv);
-            set_rect(109, p, scale, meter_coord);
+            set_rect(115, p, scale, meter_coord);
         }
         else
         {
             const min::vec4<float> meter_coord(_x_red_uv + uv_off, _y_red_uv + uv_off, adj_uv, adj_uv);
-            set_rect(109, p, scale, meter_coord);
+            set_rect(115, p, scale, meter_coord);
         }
     }
     inline void load_bg_hover(const min::vec2<float> &p)
@@ -517,7 +534,7 @@ class ui_bg_assets
         // Offset position by half width of rect
         const min::vec2<float> off = min::vec2<float>(p.x() + _s_hover_bg_x * 0.5, p.y() + hover_dy);
 
-        set_rect(110, off, scale, coord);
+        set_rect(116, off, scale, coord);
     }
     inline void load_bg_black(const ui_id id, const min::vec2<float> &p)
     {
@@ -683,6 +700,38 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, speed_coord);
     }
+    inline void load_stat_click(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_sfg, _s_sfg);
+        const min::vec4<float> stat_coord(_x_click_stat_uv, _y_click_stat_uv, _s_suv, _s_suv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, stat_coord);
+    }
+    inline void load_stat_grey(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_sfg, _s_sfg);
+        const min::vec4<float> stat_coord(_x_grey_stat_uv, _y_grey_stat_uv, _s_suv, _s_suv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, stat_coord);
+    }
+    inline void load_stat_hover(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_sfg, _s_sfg);
+        const min::vec4<float> stat_coord(_x_hover_stat_uv, _y_hover_stat_uv, _s_suv, _s_suv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, stat_coord);
+    }
+    inline void load_stat_red(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_sfg, _s_sfg);
+        const min::vec4<float> stat_coord(_x_red_stat_uv, _y_red_stat_uv, _s_suv, _s_suv);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, stat_coord);
+    }
     inline void set_draw_console(const bool flag)
     {
         _draw_console = flag;
@@ -771,7 +820,7 @@ class ui_bg_assets
     {
         _draw_ex = !_draw_ex;
     }
-    inline min::vec2<float> attr_position(const size_t row, const size_t size) const
+    inline min::vec2<float> attr_position(const unsigned row, const unsigned size) const
     {
         // Calculate offset from center for this stat text element
         const float x = _center_w + _attr_text_dx;
@@ -780,7 +829,16 @@ class ui_bg_assets
         // Return toolbar position
         return min::vec2<float>(x, y);
     }
-    inline min::vec2<float> cube_position(const size_t row, const size_t col) const
+    inline min::vec2<float> button_position(const unsigned row, const unsigned col) const
+    {
+        // Calculate offset from center for this toolbar element
+        const float x = (_center_w + _button_dx) + (col * _button_space);
+        const float y = _button_dy - (row * _button_space);
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
+    }
+    inline min::vec2<float> cube_position(const unsigned row, const unsigned col) const
     {
         // Calculate offset from center for this toolbar element
         const float x = (_center_w + _cube_dx) + (col * _cube_space);
@@ -789,7 +847,7 @@ class ui_bg_assets
         // Return toolbar position
         return min::vec2<float>(x, y);
     }
-    inline min::vec2<float> stat_position(const size_t row, const size_t size) const
+    inline min::vec2<float> stat_position(const unsigned row, const unsigned size) const
     {
         // Calculate offset from center for this stat text element
         const float x = _center_w + _stat_text_dx;
@@ -798,7 +856,7 @@ class ui_bg_assets
         // Return toolbar position
         return min::vec2<float>(x, y);
     }
-    inline min::vec2<float> store_position(const size_t row, const size_t col) const
+    inline min::vec2<float> store_position(const unsigned row, const unsigned col) const
     {
         // Calculate offset from center for this toolbar element
         const float x = (_center_w + _tool_start) + (col * _tool_space);
@@ -807,7 +865,7 @@ class ui_bg_assets
         // Return toolbar position
         return min::vec2<float>(x, y);
     }
-    inline min::vec2<float> toolbar_position(const size_t row, const size_t col) const
+    inline min::vec2<float> toolbar_position(const unsigned row, const unsigned col) const
     {
         // Calculate offset from center for this toolbar element
         const float x = (_center_w + _tool_start) + (col * _tool_space);

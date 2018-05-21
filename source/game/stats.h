@@ -21,6 +21,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <game/callback.h>
 #include <string>
 
 namespace game
@@ -41,15 +42,25 @@ class stats
     static constexpr float _oxygen_consume = 0.001;
     static constexpr float _health_regen = 2.5;
     static constexpr float _energy_regen = 5.0;
-    static constexpr size_t _max_attr = 8;
+    static constexpr size_t _max_attr = 10;
+    static constexpr size_t _max_attr_str = _max_attr - 2;
     static constexpr size_t _max_stats = 7;
-    static constexpr float _per_second = 1.0 / 180.0;
-    float _max_energy;
+    static constexpr float _per_second = 1.0 / _physics_frames;
+
+    // Costs
+    static constexpr float _beam_cost = 5.0;
+    static constexpr float _charge_cost = 10.0;
+    static constexpr float _grapple_cost = 0.1;
+    static constexpr float _grenade_cost = 10.0;
+    static constexpr float _jet_cost = 0.25;
+    static constexpr float _missile_cost = 10.0;
+    static constexpr float _portal_cost = 0.5;
+    static constexpr float _scatter_cost = 20.0;
+
     float _energy;
     bool _low_energy;
     float _max_exp;
     float _exp;
-    float _max_health;
     float _health;
     bool _low_health;
     float _max_oxygen;
@@ -61,11 +72,24 @@ class stats
     stat_alert _alert;
     std::array<float, _max_attr> _attr;
     std::array<uint16_t, _max_stats> _stat;
+    uint16_t _stat_points;
     float _sqrt_level;
 
+    inline float calc_damage_mult() const
+    {
+        return 1.0 + (std::log10(power() * 4.0) * (_sqrt_level - 1) * 0.75);
+    }
+    inline float calc_thrust_consume() const
+    {
+        return 1.08 / std::log10(speed() * _sqrt_level + 1.0);
+    }
     inline float calc_damage_reduc() const
     {
         return std::log10(vital()) * (_sqrt_level * 0.05);
+    }
+    inline float calc_cooldown_reduc() const
+    {
+        return std::log10(cooldown()) * (_sqrt_level * 0.075);
     }
     inline float calc_health_regen() const
     {
@@ -83,53 +107,96 @@ class stats
     {
         return (_energy_consume / _sqrt_level) * _per_second;
     }
-    inline float calc_thrust_consume() const
+    inline float calc_max_health() const
     {
-        return 108.0 / std::log10(speed() * _sqrt_level + 1.0);
+        return std::log10(vital()) * (_sqrt_level * 100.0);
     }
-    inline float calc_cooldown_reduc() const
+    inline float calc_max_energy() const
     {
-        return std::log10(cooldown()) * (_sqrt_level * 0.075);
-    }
-    inline float calc_damage_mult() const
-    {
-        return 1.0 + (std::log10(power() * 4.0) * (_sqrt_level - 1) * 0.75);
+        return std::log10(cooldown()) * (_sqrt_level * 33.333);
     }
     inline float calc_max_exp() const
     {
         return std::floor(600.0 * std::exp(_sqrt_level * 1.2));
     }
-    inline float get_damage_reduc() const
+    inline bool can_consume_energy(const float energy) const
     {
-        return _attr[0];
-    }
-    inline float get_health_regen() const
-    {
-        return _attr[1];
-    }
-    inline float get_energy_regen() const
-    {
-        return _attr[2];
-    }
-    inline float get_health_consume() const
-    {
-        return _attr[3];
-    }
-    inline float get_energy_consume() const
-    {
-        return _attr[4];
-    }
-    inline float get_thrust_consume() const
-    {
-        return _attr[5];
-    }
-    inline float get_cooldown_reduc() const
-    {
-        return _attr[6];
+        // Try to consume energy
+        if (_energy >= energy)
+        {
+            return true;
+        }
+
+        // Not enough energy
+        return false;
     }
     inline float get_damage_mult() const
     {
-        return _attr[7];
+        return _attr[0];
+    }
+    inline float get_thrust_cost_frac() const
+    {
+        return _attr[1];
+    }
+    inline float get_damage_reduc() const
+    {
+        return _attr[2];
+    }
+    inline float get_cooldown_reduc() const
+    {
+        return _attr[3];
+    }
+    inline float get_health_regen() const
+    {
+        return _attr[4];
+    }
+    inline float get_energy_regen() const
+    {
+        return _attr[5];
+    }
+    inline float get_health_consume() const
+    {
+        return _attr[8];
+    }
+    inline float get_energy_consume() const
+    {
+        return _attr[9];
+    }
+    inline float get_beam_cost() const
+    {
+        return get_damage_mult() * _beam_cost;
+    }
+    inline float get_charge_cost() const
+    {
+        return get_damage_mult() * _charge_cost;
+    }
+    inline float get_grapple_cost() const
+    {
+        return get_max_energy() * _grapple_cost;
+    }
+    inline float get_grenade_cost() const
+    {
+        return get_damage_mult() * _grenade_cost;
+    }
+    inline float get_jet_cost() const
+    {
+        return get_max_energy() * _jet_cost;
+    }
+    inline float get_missile_cost() const
+    {
+        return get_damage_mult() * _missile_cost;
+    }
+    inline float get_portal_cost() const
+    {
+        return get_max_energy() * _portal_cost;
+    }
+    inline float get_scatter_cost() const
+    {
+        return get_damage_mult() * _scatter_cost;
+    }
+    inline float get_thrust_cost() const
+    {
+        return get_max_energy() * get_thrust_cost_frac();
     }
     inline void set_energy(const float energy)
     {
@@ -184,41 +251,37 @@ class stats
     void update_cache()
     {
         // Cache the sqrt of level
-        _sqrt_level = std::sqrt(_stat[6]);
+        _sqrt_level = std::sqrt(level());
 
         // Update attributes
-        _attr[0] = calc_damage_reduc();
-        _attr[1] = calc_health_regen();
-        _attr[2] = calc_energy_regen();
-        _attr[3] = calc_health_consume();
-        _attr[4] = calc_energy_consume();
-        _attr[5] = calc_thrust_consume();
-        _attr[6] = calc_cooldown_reduc();
-        _attr[7] = calc_damage_mult();
+        _attr[0] = calc_damage_mult();
+        _attr[1] = calc_thrust_consume();
+        _attr[2] = calc_damage_reduc();
+        _attr[3] = calc_cooldown_reduc();
+        _attr[4] = calc_health_regen();
+        _attr[5] = calc_energy_regen();
+        _attr[6] = calc_max_health();
+        _attr[7] = calc_max_energy();
+        _attr[8] = calc_health_consume();
+        _attr[9] = calc_energy_consume();
 
         // Update max experience
         _max_exp = calc_max_exp();
     }
 
   public:
-    static std::array<std::string, _max_attr> _attr_str;
+    static std::array<std::string, _max_attr_str> _attr_str;
     static std::array<std::string, _max_stats> _stat_str;
     stats()
-        : _max_energy(100.0), _energy(_max_energy), _low_energy(false),
+        : _energy(10.0), _low_energy(false),
           _max_exp(100.0), _exp(0.0),
-          _max_health(100.0), _health(_max_health), _low_health(false),
+          _health(70.0), _low_health(false),
           _max_oxygen(100.0), _oxygen(_max_oxygen), _low_oxygen(false),
           _hit(0.0), _dead(false), _dirty(false), _alert(stat_alert::none),
-          _attr{}, _stat{}, _sqrt_level(1.0)
+          _attr{}, _stat{4, 3, 5, 2, 0, 3, 1}, _stat_points(0), _sqrt_level(1.0)
     {
-        // Level up
-        level_up();
-
-        // Clean first time
-        clean();
-
-        // Clear any alerts
-        clear_alert();
+        // Update the stat cache
+        update_cache();
     }
 
     inline void add_energy(const float energy)
@@ -254,7 +317,7 @@ class stats
     }
     inline static constexpr size_t attr_str_size()
     {
-        return _max_attr;
+        return _max_attr_str;
     }
     inline static const std::string &attr_str(const size_t index)
     {
@@ -266,35 +329,20 @@ class stats
         switch (index)
         {
         case 0:
-            return _attr[index] * 100.0;
+            return _attr[index];
         case 1:
-            return _attr[index] * 180.0;
-        case 2:
-            return _attr[index] * 180.0;
-        case 3:
-            return _attr[index] * 180.0;
-        case 4:
-            return _attr[index] * 180.0;
-        case 6:
             return _attr[index] * 100.0;
+        case 2:
+            return _attr[index] * 100.0;
+        case 3:
+            return _attr[index] * 100.0;
+        case 4:
+            return _attr[index] * _physics_frames;
+        case 5:
+            return _attr[index] * _physics_frames;
         default:
             return _attr[index];
         }
-    }
-    inline bool can_consume_energy(const float energy) const
-    {
-        // Try to consume energy
-        if (_energy >= energy)
-        {
-            return true;
-        }
-
-        // Not enough energy
-        return false;
-    }
-    inline bool can_thrust() const
-    {
-        return can_consume_energy(get_thrust_consume());
     }
     inline void clean()
     {
@@ -320,9 +368,77 @@ class stats
     {
         _low_oxygen = false;
     }
+    inline bool can_consume_beam() const
+    {
+        return can_consume_energy(get_beam_cost());
+    }
+    inline bool can_consume_charge() const
+    {
+        return can_consume_energy(get_charge_cost());
+    }
+    inline bool can_consume_grapple() const
+    {
+        return can_consume_energy(get_grapple_cost());
+    }
+    inline bool can_consume_grenade() const
+    {
+        return can_consume_energy(get_grenade_cost());
+    }
+    inline bool can_consume_jet() const
+    {
+        return can_consume_energy(get_jet_cost());
+    }
+    inline bool can_consume_missile() const
+    {
+        return can_consume_energy(get_missile_cost());
+    }
+    inline bool can_consume_portal() const
+    {
+        return can_consume_energy(get_portal_cost());
+    }
+    inline bool can_consume_scatter() const
+    {
+        return can_consume_energy(get_scatter_cost());
+    }
+    inline bool can_consume_thrust() const
+    {
+        return can_consume_energy(get_thrust_cost());
+    }
+    inline void consume_beam()
+    {
+        consume_energy(get_beam_cost());
+    }
+    inline void consume_charge()
+    {
+        consume_energy(get_charge_cost());
+    }
+    inline void consume_grapple()
+    {
+        consume_energy(get_grapple_cost());
+    }
+    inline void consume_grenade()
+    {
+        consume_energy(get_grenade_cost());
+    }
+    inline void consume_jet()
+    {
+        consume_energy(get_jet_cost());
+    }
+    inline void consume_missile()
+    {
+        consume_energy(get_missile_cost());
+    }
+    inline void consume_portal()
+    {
+        consume_energy(get_portal_cost());
+    }
+    inline void consume_scatter()
+    {
+        consume_energy(get_scatter_cost());
+    }
     inline void consume_thrust()
     {
-        consume_energy(get_thrust_consume());
+        consume_energy(get_thrust_cost());
     }
     inline void consume_energy(const float energy)
     {
@@ -369,7 +485,7 @@ class stats
     }
     inline float get_energy_fraction() const
     {
-        return _energy / _max_energy;
+        return _energy / get_max_energy();
     }
     inline float get_exp() const
     {
@@ -381,7 +497,7 @@ class stats
     }
     inline float get_mob_exp() const
     {
-        return _max_exp / _stat[6];
+        return _max_exp / level();
     }
     inline float get_experience_fraction() const
     {
@@ -391,13 +507,17 @@ class stats
     {
         return _health;
     }
+    inline float get_max_energy() const
+    {
+        return _attr[7];
+    }
     inline float get_max_health() const
     {
-        return _max_health;
+        return _attr[6];
     }
     inline float get_health_fraction() const
     {
-        return _health / _max_health;
+        return _health / get_max_health();
     }
     inline float get_hit() const
     {
@@ -411,7 +531,11 @@ class stats
     {
         return _oxygen / _max_oxygen;
     }
-    inline void fill(const std::array<uint16_t, _max_stats> &stat, const float energy, const float exp, const float health, const float oxygen)
+    inline uint16_t get_stat_points() const
+    {
+        return _stat_points;
+    }
+    inline void fill(const std::array<uint16_t, _max_stats> &stat, const float energy, const float exp, const float health, const float oxygen, const uint16_t stats)
     {
         // Copy stats into stat array
         for (size_t i = 0; i < _max_stats; i++)
@@ -433,6 +557,13 @@ class stats
 
         // Set the oxygen
         set_oxygen(oxygen);
+
+        // Set the stat points
+        _stat_points = stats;
+    }
+    inline bool has_stat_points() const
+    {
+        return _stat_points > 0;
     }
     inline bool is_dead() const
     {
@@ -452,7 +583,7 @@ class stats
     }
     inline bool is_low_energy() const
     {
-        return _energy < 25.0;
+        return _energy < get_max_energy() * 0.25;
     }
     inline bool is_low_energy_flag() const
     {
@@ -460,7 +591,7 @@ class stats
     }
     inline bool is_low_health() const
     {
-        return _health < 25.0;
+        return _health < get_max_health() * 0.25;
     }
     inline bool is_low_health_flag() const
     {
@@ -477,72 +608,74 @@ class stats
     inline void regen_energy()
     {
         // Absorb this amount of energy if not full
-        if (_energy < _max_energy)
+        const float max_energy = get_max_energy();
+        if (_energy < max_energy)
         {
             // Calculate energy change
             const float energy = get_energy_regen();
             _energy += energy;
 
             // Cap energy at max_energy
-            if (_energy > _max_energy)
+            if (_energy > max_energy)
             {
-                _energy = _max_energy;
+                _energy = max_energy;
             }
         }
         // Consume energy if over full
-        else if (_energy > _max_energy)
+        else if (_energy > max_energy)
         {
             // Calculate energy change
             const float energy = get_energy_consume();
             _energy -= energy;
 
             // Cap energy at max_energy
-            if (_energy < _max_energy)
+            if (_energy < max_energy)
             {
-                _energy = _max_energy;
+                _energy = max_energy;
             }
         }
     }
     inline void regen_health()
     {
         // Absorb this amount of health if not full
-        if (_health < _max_health)
+        const float max_health = get_max_health();
+        if (_health < max_health)
         {
             // Calculate health change
             const float health = get_health_regen();
             _health += health;
 
             // Cap health at max_health
-            if (_health > _max_health)
+            if (_health > max_health)
             {
-                _health = _max_health;
+                _health = max_health;
             }
         }
         // Consume health if over full
-        else if (_health > _max_health)
+        else if (_health > max_health)
         {
             // Calculate health change
             const float health = get_health_consume();
             _health -= health;
 
             // Cap health at max_health
-            if (_health < _max_health)
+            if (_health < max_health)
             {
-                _health = _max_health;
+                _health = max_health;
             }
         }
     }
     inline void respawn()
     {
         // Reset energy
-        _energy = _max_energy;
+        _energy = get_max_energy();
         _low_energy = false;
 
         // Reset experience
         _exp = 0.0;
 
         // Reset health
-        _health = _max_health;
+        _health = get_max_health();
         _low_health = false;
 
         // Reset health
@@ -550,6 +683,32 @@ class stats
         _low_oxygen = false;
         _hit = 0.0;
         _dead = false;
+    }
+    inline void set_point(const size_t index)
+    {
+        if (_stat_points > 0)
+        {
+            // Are thrusters offline?
+            const bool thrust_above = get_thrust_cost_frac() > 1.0;
+
+            // Subtract stat point
+            _stat_points--;
+
+            // Allocate stat point
+            _stat[index]++;
+
+            // Update the stat cache
+            update_cache();
+
+            // Set thrust alert if enabled
+            if (thrust_above && get_thrust_cost_frac() <= 1.0)
+            {
+                _alert = stat_alert::thruster;
+            }
+
+            // Set dirty flag
+            _dirty = true;
+        }
     }
     inline static constexpr size_t stat_str_size()
     {
@@ -594,25 +753,16 @@ class stats
     inline void level_up()
     {
         // Update stats
-        _stat[0] += 4;
-        _stat[1] += 3;
-        _stat[2] += 5;
-        _stat[3] += 2;
-        _stat[5] += 3;
         _stat[6]++;
+
+        // Add stat points
+        _stat_points += 5;
 
         // Update the stat cache
         update_cache();
 
-        // Set alert on update
-        if (_stat[6] == 3)
-        {
-            _alert = stat_alert::thruster;
-        }
-        else
-        {
-            _alert = stat_alert::level;
-        }
+        // Set level alert
+        _alert = stat_alert::level;
 
         // Set dirty flag
         _dirty = true;
@@ -620,8 +770,8 @@ class stats
 };
 
 // Initialize public static string stats
-std::array<std::string, stats::attr_str_size()> stats::_attr_str = {"Damage Reduction (%)", "Health Regen (/s)", "Energy Regen (/s)", "Health Consume (/s)", "Energy Consume (/s)", "Thrust Cost (E)", "Cooldown Reduction (%)", "Damage Multiplier"};
-std::array<std::string, stats::stat_str_size()> stats::_stat_str = {"Force", "Dynamism", "Tenacity", "Tranquility", "Vision", "Zeal", "Level"};
+std::array<std::string, stats::attr_str_size()> stats::_attr_str = {"Damage Multiplier", "Thrust Cost (%)", "Damage Reduction (%)", "Cooldown Reduction (%)", "Health Regen (/s)", "Energy Regen (/s)", "Max Health", "Max Energy"};
+std::array<std::string, stats::stat_str_size()> stats::_stat_str = {"Power", "Dynamism", "Tenacity", "Tranquility", "Vision", "Zeal", "Level"};
 }
 
 #endif

@@ -21,13 +21,15 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 // Everything scales on this value
+static constexpr float _s_sfg = 16.0;
 static constexpr float _s_fg = 32.0;
 
 // Base scale
 static constexpr size_t _num_buttons = 8;
 static constexpr size_t _num_half_buttons = _num_buttons / 2;
-static constexpr float _s_inv = _s_fg / 2;
 static constexpr float _s_bg = _s_fg + 8.0;
+static constexpr float _s_inv = _s_fg * 0.5;
+static constexpr float _s_stat = _s_sfg * 0.5;
 
 // Inventory
 static constexpr float _store_dy = _s_bg + 8.0;
@@ -92,6 +94,9 @@ static constexpr float _y_stream_wrap = _y_console_wrap;
 // Extended UI
 static constexpr float _attr_text_dx = -304.0;
 static constexpr float _attr_text_dy = 540.0;
+static constexpr float _button_dx = 250.0;
+static constexpr float _button_dy = 545;
+static constexpr float _button_space = 20.0;
 static constexpr float _cube_dx = -42.0;
 static constexpr float _cube_dy = 461;
 static constexpr float _cube_space = 42.0;

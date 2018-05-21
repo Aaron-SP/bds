@@ -135,6 +135,7 @@ class drone
 class drones
 {
   private:
+    static constexpr size_t _drone_cooldown = _physics_frames * 10;
     static constexpr uint16_t _missile_level = 5;
     static constexpr uint16_t _splash_level = 10;
     static constexpr uint16_t _tunnel_level = 15;
@@ -264,8 +265,8 @@ class drones
         // Apply a force on the drone body when hit
         force(index, dir * (dam * 100.0));
 
-        // Knock the drone offline for 180 physics frames == 1 sec
-        d.set_idle(180);
+        // Knock the drone offline for physics frames == 1 sec
+        d.set_idle(_physics_frames);
 
         // Do damage and return if dead
         if (d.damage(dam))
@@ -479,7 +480,7 @@ class drones
                 }
 
                 // Set cooldown
-                d.set_launch(1800);
+                d.set_launch(_drone_cooldown);
             }
 
             // Update drone instance rotation

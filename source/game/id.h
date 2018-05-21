@@ -178,7 +178,8 @@ enum class ui_type
     store,
     key,
     extend,
-    cube
+    cube,
+    button
 };
 
 class ui_id
@@ -197,19 +198,19 @@ class ui_id
     {
         return _id != other.id();
     }
-    inline size_t row3() const
+    inline unsigned row3() const
     {
         return (_id - 40) / 3;
     }
-    inline size_t col3() const
+    inline unsigned col3() const
     {
         return (_id - 40) % 3;
     }
-    inline size_t row8() const
+    inline unsigned row8() const
     {
         return _id / 8;
     }
-    inline size_t col8() const
+    inline unsigned col8() const
     {
         return _id & 7;
     }
@@ -237,11 +238,11 @@ class ui_id
     {
         return ui_id(_id + 25);
     }
-    inline ui_id bg_ex_index() const
+    inline ui_id bg_ext_index() const
     {
         return ui_id(_id + 25);
     }
-    inline ui_id ex_index() const
+    inline ui_id ext_index() const
     {
         return ui_id(_id + 49);
     }
@@ -253,18 +254,27 @@ class ui_id
     {
         return ui_id(_id + 59);
     }
+    inline ui_id button_index() const
+    {
+        return ui_id(_id + 59);
+    }
     inline ui_id to_key() const
     {
         return ui_id(_id + 8);
     }
     inline ui_type type() const
     {
-        if (_id >= 40)
+        if (_id >= 49)
+        {
+            // Button type
+            return ui_type::button;
+        }
+        else if (_id >= 40)
         {
             // Cube type
             return ui_type::cube;
         }
-        if (_id >= 16)
+        else if (_id >= 16)
         {
             // Extended type
             return ui_type::extend;

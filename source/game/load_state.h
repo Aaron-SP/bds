@@ -45,6 +45,7 @@ class load_state
     float _exp;
     float _health;
     float _oxygen;
+    uint16_t _stat_points;
     bool _new_game;
 
     inline void check_inside()
@@ -170,6 +171,9 @@ class load_state
             // Load oxygen from stream
             _oxygen = min::read_le<float>(stream, next);
 
+            // Load stats from stream
+            _stat_points = min::read_le<uint16_t>(stream, next);
+
             // Flag that this is not a new game
             _new_game = false;
         }
@@ -225,6 +229,9 @@ class load_state
         // Save the player oxygen
         min::write_le<float>(stream, stat.get_oxygen());
 
+        // Save the player stats
+        min::write_le<uint16_t>(stream, stat.get_stat_points());
+
         // Write data to file
         save_file("bin/state", stream);
     }
@@ -237,7 +244,7 @@ class load_state
           _look(_default_look), _spawn(_default_spawn),
           _top(0.0, _grid_size - 1.0, 0.0),
           _inv(inventory::size()),
-          _stat{}, _energy(0.0), _exp(0.0), _health(0.0), _oxygen(0.0),
+          _stat{}, _energy(0.0), _exp(0.0), _health(0.0), _oxygen(0.0), _stat_points(0),
           _new_game(true)
     {
         // Check for integer overflow
@@ -275,6 +282,10 @@ class load_state
     inline float get_oxygen() const
     {
         return _oxygen;
+    }
+    inline uint16_t get_stat_points() const
+    {
+        return _stat_points;
     }
     inline const std::vector<item> &get_inventory() const
     {

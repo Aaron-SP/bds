@@ -36,13 +36,6 @@ namespace game
 class controls
 {
   private:
-    static constexpr float _beam_cost = 5.0;
-    static constexpr float _charge_cost = 10.0;
-    static constexpr float _scatter_cost = 20.0;
-    static constexpr float _grapple_cost = 10.0;
-    static constexpr float _grenade_cost = 20.0;
-    static constexpr float _missile_cost = 20.0;
-    static constexpr float _portal_cost = 50.0;
     static constexpr float _project_dist = 3.0;
     min::window *_window;
     min::camera<float> *_camera;
@@ -748,7 +741,7 @@ class controls
         if (input)
         {
             // Do mouse click on UI
-            if (ui->click())
+            if (ui->click_down())
             {
                 // Play click sound
                 sound->play_click();
@@ -767,7 +760,7 @@ class controls
         {
             if (skill.is_auto_mode() && skill.is_off_cooldown())
             {
-                if (stat.can_consume_energy(_beam_cost))
+                if (stat.can_consume_beam())
                 {
                     // Lock the gun in beam mode
                     skill.lock();
@@ -780,7 +773,7 @@ class controls
             }
             else if (skill.is_beam_mode() && skill.is_off_cooldown())
             {
-                if (stat.can_consume_energy(_beam_cost))
+                if (stat.can_consume_beam())
                 {
                     // Lock the gun in beam mode
                     skill.lock();
@@ -793,7 +786,7 @@ class controls
             }
             else if (skill.is_charge_mode() && skill.is_off_cooldown())
             {
-                if (stat.can_consume_energy(_charge_cost))
+                if (stat.can_consume_charge())
                 {
                     // Play the charge sound
                     sound->play_charge();
@@ -813,14 +806,14 @@ class controls
             else if (skill.is_grapple_mode())
             {
                 // Try to consume energy to power this resource
-                if (stat.can_consume_energy(_grapple_cost))
+                if (stat.can_consume_grapple())
                 {
                     // Fire grappling hook
                     const bool hit = world->hook_set();
                     if (hit)
                     {
                         // Consume energy
-                        stat.consume_energy(_grapple_cost);
+                        stat.consume_grapple();
 
                         // Activate grapple animation
                         character->set_animation_grapple(play.get_hook_point());
@@ -852,7 +845,7 @@ class controls
             else if (skill.is_missile_mode() && skill.is_off_cooldown())
             {
                 // Try to consume energy to create missile
-                if (stat.can_consume_energy(_missile_cost))
+                if (stat.can_consume_missile())
                 {
                     // Lock the gun in missile mode
                     skill.lock();
@@ -866,10 +859,10 @@ class controls
             else if (skill.is_portal_mode())
             {
                 // Try to consume energy to power this resource
-                if (stat.can_consume_energy(_portal_cost))
+                if (stat.can_consume_portal())
                 {
                     // Consume energy
-                    stat.consume_energy(_portal_cost);
+                    stat.consume_portal();
 
                     // Play the charge sound
                     sound->play_charge();
@@ -894,7 +887,7 @@ class controls
             else if (skill.is_grenade_mode() && skill.is_off_cooldown())
             {
                 // Try to consume energy to create grenade
-                if (stat.can_consume_energy(_grenade_cost))
+                if (stat.can_consume_grenade())
                 {
                     // Lock the gun in grenade mode
                     skill.lock();
@@ -907,7 +900,7 @@ class controls
             }
             else if (skill.is_scatter_mode() && skill.is_off_cooldown())
             {
-                if (stat.can_consume_energy(_scatter_cost))
+                if (stat.can_consume_scatter())
                 {
                     // Lock the gun in scatter mode
                     skill.lock();
@@ -940,6 +933,9 @@ class controls
         // Get the cooldown multiplier
         const float cd_mult = play.get_stats().get_cooldown_mult();
 
+        // Click up event
+        ui->click_up();
+
         // Do we need to release skill lock
         if (!skill.is_locked())
         {
@@ -969,31 +965,37 @@ class controls
             // Try to consume energy to create this resource
             uint8_t count = world->get_scale_size();
             const ui_id id = ui->get_selected();
-            const bool consumed = inv.consume(id.index(), consume_id, count);
-            if (consumed)
+            if (world->can_add_block())
             {
-                // Calculate new point to add
-                const min::vec3<float> point = cam->project_point(_project_dist);
-
-                // Create a ray from camera to destination
-                const min::ray<float, min::vec3> r(cam->get_position(), point);
-
-                // Add block to world
-                world->add_block(r);
-
-                // If remaining count is zero disable edit mode
-                if (count == 0)
+                if (inv.consume(id.index(), consume_id, count))
                 {
-                    // Reset scale
-                    world->reset_scale();
+                    // Calculate new point to add
+                    const min::vec3<float> point = cam->project_point(_project_dist);
 
-                    // Disable edit mode
-                    world->set_edit_mode(false, false, false);
+                    // Create a ray from camera to destination
+                    const min::ray<float, min::vec3> r(cam->get_position(), point);
+
+                    // Add block to world
+                    world->add_block(r);
+
+                    // If remaining count is zero disable edit mode
+                    if (count == 0)
+                    {
+                        // Reset scale
+                        world->reset_scale();
+
+                        // Disable edit mode
+                        world->set_edit_mode(false, false, false);
+                    }
+                }
+                else
+                {
+                    ui->set_alert_low_resource();
                 }
             }
             else
             {
-                ui->set_alert_low_resource();
+                ui->set_alert_block_inside();
             }
         }
         else if (play.is_action_mode())
@@ -1013,7 +1015,7 @@ class controls
                 {
                     // Fire a charged explosion ray
                     const min::vec3<unsigned> radius(3, 3, 3);
-                    const int8_t hit = world->explode_ray(radius, play_ex, 100.0, true);
+                    const int8_t hit = world->explode_ray(radius, 100.0, true, play_ex);
                     if (hit == -1)
                     {
                         ui->add_stream_text("Miss!");
@@ -1029,7 +1031,7 @@ class controls
                     skill.start_cooldown(cd_mult);
 
                     // Consume energy
-                    stat.consume_energy(_charge_cost);
+                    stat.consume_charge();
 
                     // Stop the charge sound
                     sound->stop_charge();
@@ -1040,7 +1042,7 @@ class controls
                 else if (skill.is_beam_mode() || skill.is_charge_mode())
                 {
                     // Remove block from world, get the removed block id
-                    if (stat.can_consume_energy(_beam_cost))
+                    if (stat.can_consume_beam())
                     {
                         control->shoot_beam();
                     }
@@ -1087,7 +1089,7 @@ class controls
                         }
 
                         // Launch an explosive
-                        const bool launched = world->launch_explosive();
+                        const bool launched = world->launch_explosive(cam->get_up());
                         if (launched)
                         {
                             // Set recoil
@@ -1103,7 +1105,7 @@ class controls
                             skill.start_cooldown(cd_mult);
 
                             // Consume energy
-                            stat.consume_energy(_grenade_cost);
+                            stat.consume_grenade();
                         }
                     }
                     else
@@ -1152,7 +1154,7 @@ class controls
                             skill.start_cooldown(cd_mult);
 
                             // Consume energy
-                            stat.consume_energy(_missile_cost);
+                            stat.consume_missile();
                         }
                     }
                     else
@@ -1202,11 +1204,11 @@ class controls
                 else if (skill.is_scatter_mode())
                 {
                     // Remove block from world, get the removed block id
-                    if (stat.can_consume_energy(_scatter_cost))
+                    if (stat.can_consume_scatter())
                     {
                         // Shot scatter
                         const min::vec3<unsigned> radius(1, 1, 1);
-                        const size_t hits = world->scatter_ray(radius, nullptr, 20.0);
+                        const size_t hits = world->scatter_ray(radius, 20.0, nullptr);
                         if (hits == 0)
                         {
                             ui->add_stream_text("Miss!");
@@ -1225,7 +1227,7 @@ class controls
                         skill.start_cooldown(cd_mult);
 
                         // Consume energy
-                        stat.consume_energy(_scatter_cost);
+                        stat.consume_scatter();
                     }
                     else
                     {
@@ -1369,7 +1371,7 @@ class controls
 
         // Fire an explosion ray
         const min::vec3<unsigned> radius(1, 1, 1);
-        const int8_t hit = _world->explode_ray(radius, nullptr, 20.0, false);
+        const int8_t hit = _world->explode_ray(radius, 20.0, false, nullptr);
         if (hit == -1)
         {
             _ui->add_stream_text("Miss!");
@@ -1391,7 +1393,7 @@ class controls
         skill.start_cooldown(cd_mult);
 
         // Consume energy
-        stat.consume_energy(_beam_cost);
+        stat.consume_beam();
     }
     void update_stat_ui()
     {
@@ -1463,7 +1465,7 @@ class controls
         // Check if in jetpack mode
         if (skill.is_locked() && skill.is_auto_mode() && skill.is_off_cooldown())
         {
-            if (stat.can_consume_energy(_beam_cost))
+            if (stat.can_consume_beam())
             {
                 // Lock the gun in beam mode
                 shoot_beam();
