@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __EXPLOSIVE__
 
 #include <game/callback.h>
+#include <game/id.h>
 #include <game/static_instance.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
@@ -33,13 +34,13 @@ class explosive
   private:
     size_t _body_id;
     size_t _inst_id;
-    int8_t _atlas;
+    block_id _atlas;
 
   public:
-    explosive(const size_t body_id, const size_t inst_id, const int8_t atlas)
+    explosive(const size_t body_id, const size_t inst_id, const block_id atlas)
         : _body_id(body_id), _inst_id(inst_id), _atlas(atlas) {}
 
-    inline int8_t atlas() const
+    inline block_id atlas() const
     {
         return _atlas;
     }
@@ -64,7 +65,7 @@ class explosives
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *_sim;
     static_instance *_inst;
-    std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
+    std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     std::vector<explosive> _ex;
     const min::vec3<unsigned> _scale;
     float _angle;
@@ -79,7 +80,7 @@ class explosives
     {
         return _sim->get_body(_ex[index].body_id());
     }
-    inline void explode(const size_t index, const int8_t atlas, const ex_scale_call &f)
+    inline void explode(const size_t index, const block_id atlas, const ex_scale_call &f)
     {
         // Call the explosion callback function if available
         if (f)
@@ -135,7 +136,7 @@ class explosives
     {
         return _str;
     }
-    inline bool launch(const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<float> &vel, const min::vec3<float> &up, const int8_t atlas)
+    inline bool launch(const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<float> &vel, const min::vec3<float> &up, const block_id atlas)
     {
         // If all explosives have been allocated fail to launch
         if (_inst->get_explosive().is_full())

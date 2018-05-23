@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __MISSILES__
 
 #include <game/callback.h>
+#include <game/id.h>
 #include <game/particle.h>
 #include <game/sound.h>
 #include <game/static_instance.h>
@@ -70,7 +71,7 @@ class missiles
     typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *_sim;
     static_instance *_inst;
-    std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
+    std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     particle *_part;
     sound *_sound;
     std::vector<missile> _miss;
@@ -86,7 +87,7 @@ class missiles
     {
         return _sim->get_body(_miss[index].body_id());
     }
-    inline void explode(const size_t index, const int8_t atlas, const ex_scale_call &f)
+    inline void explode(const size_t index, const block_id atlas, const ex_scale_call &f)
     {
         // Call the explosion callback function if available
         if (f)

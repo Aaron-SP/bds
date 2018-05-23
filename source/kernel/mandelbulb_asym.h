@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __MANDELBULB_ASYM__
 
 #include <functional>
+#include <game/id.h>
 #include <game/thread_pool.h>
 #include <min/vec3.h>
 
@@ -56,7 +57,7 @@ class mandelbulb_asym
     {
         return x * x * x;
     }
-    inline int8_t do_mandelbulb(const min::vec3<float> &p, const size_t size)
+    inline game::block_id do_mandelbulb(const min::vec3<float> &p, const size_t size)
     {
         // Copy point
         float x0, x1;
@@ -111,10 +112,10 @@ class mandelbulb_asym
         // If we converged return atlas
         if (converged)
         {
-            return iterations % 24;
+            return static_cast<game::block_id>(iterations % 24);
         }
 
-        return -1;
+        return game::block_id::EMPTY;
     }
 
   public:
@@ -162,12 +163,12 @@ class mandelbulb_asym
         std::cout << "K: " << _k << std::endl;
         std::cout << "L: " << _l << std::endl;
     }
-    inline void generate(game::thread_pool &pool, std::vector<int8_t> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
+    inline void generate(game::thread_pool &pool, std::vector<game::block_id> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
     {
         // Create working function
         const auto work = [this, &grid, gsize, &f](std::mt19937 &gen, const size_t i) {
             // Do mandelbulb on this cell if empty
-            if (grid[i] == -1)
+            if (grid[i] == game::block_id::EMPTY)
             {
                 grid[i] = do_mandelbulb(f(i), gsize);
             }

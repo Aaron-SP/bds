@@ -97,15 +97,14 @@ class ui_bg
         const size_t index = ui.index();
 
         // Choose between crafting and decaying
-        const std::pair<bool, uint8_t> p = (index >= _inv->begin_cube() && index < _inv->end_cube())
+        const std::pair<bool, item_id> p = (index >= _inv->begin_cube() && index < _inv->end_cube())
                                                ? _inv->craft(index, mult)
                                                : _inv->decay(index, mult);
 
         // If decaying consumables add stat points
-        const item_id it_id = static_cast<item_id>(p.second);
         if (p.first)
         {
-            switch (it_id)
+            switch (p.second)
             {
             case item_id::CONS_EGGP:
             case item_id::CONS_GR_PEP:
@@ -859,27 +858,27 @@ class ui_bg
         case item_type::skill:
             switch (it.id())
             {
-            case id_value(skill_id::AUTO_BEAM):
+            case item_id::AUTO_BEAM:
                 return _assets.load_auto_icon(ui, p);
-            case id_value(skill_id::BEAM):
+            case item_id::BEAM:
                 return _assets.load_beam_icon(ui, p);
-            case id_value(skill_id::CHARGE):
+            case item_id::CHARGE:
                 return _assets.load_charge_icon(ui, p);
-            case id_value(skill_id::GRAPPLE):
+            case item_id::GRAPPLE:
                 return _assets.load_grapple_icon(ui, p);
-            case id_value(skill_id::GRENADE):
+            case item_id::GRENADE:
                 return _assets.load_grenade_icon(ui, p);
-            case id_value(skill_id::JET):
+            case item_id::JET:
                 return _assets.load_jet_icon(ui, p);
-            case id_value(skill_id::MISSILE):
+            case item_id::MISSILE:
                 return _assets.load_missile_icon(ui, p);
-            case id_value(skill_id::PORTAL):
+            case item_id::PORTAL:
                 return _assets.load_portal_icon(ui, p);
-            case id_value(skill_id::SCAN):
+            case item_id::SCAN:
                 return _assets.load_scan_icon(ui, p);
-            case id_value(skill_id::SCATTER):
+            case item_id::SCATTER:
                 return _assets.load_scatter_icon(ui, p);
-            case id_value(skill_id::SPEED):
+            case item_id::SPEED:
                 return _assets.load_speed_icon(ui, p);
             default:
                 return;
@@ -1201,11 +1200,11 @@ class ui_bg
     }
     inline const std::string &get_hover_info() const
     {
-        return (_hover.type() != ui_type::button) ? _inv->get_info((*_inv)[_hover.index()]) : _invalid_str;
+        return (_hover.type() != ui_type::button) ? _inv->get_info((*_inv)[_hover.index()].id()) : _invalid_str;
     }
     inline const std::string &get_hover_name() const
     {
-        return (_hover.type() != ui_type::button) ? _inv->get_name((*_inv)[_hover.index()]) : _invalid_str;
+        return (_hover.type() != ui_type::button) ? _inv->get_name((*_inv)[_hover.index()].id()) : _invalid_str;
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
@@ -1226,6 +1225,10 @@ class ui_bg
     inline bool is_extended() const
     {
         return _assets.get_draw_ex();
+    }
+    inline bool is_focused() const
+    {
+        return _focus;
     }
     inline std::pair<bool, ui_id> overlap(const min::vec2<float> &p)
     {
@@ -1362,7 +1365,7 @@ class ui_bg
     {
         _assets.set_experience(exp);
     }
-    inline void set_focus_bar(const float bar)
+    inline void set_focus(const float bar)
     {
         _assets.set_focus_bar(bar);
     }
@@ -1558,7 +1561,7 @@ class ui_bg
             // Update all button icons
             for (size_t i = bb; i < eb; i++)
             {
-                if (!_hovering || _hovering && _hover != i)
+                if (!_hovering || (_hovering && _hover.index() != i))
                 {
                     stat_unselect(ui_id(i));
                 }

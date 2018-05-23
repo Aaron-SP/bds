@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __DROPS__
 #define __DROPS__
 
+#include <game/id.h>
 #include <game/static_instance.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
@@ -32,13 +33,13 @@ class drop
   private:
     size_t _body_id;
     size_t _inst_id;
-    int8_t _atlas;
+    block_id _atlas;
 
   public:
-    drop(const size_t body_id, const size_t inst_id, const int8_t atlas)
+    drop(const size_t body_id, const size_t inst_id, const block_id atlas)
         : _body_id(body_id), _inst_id(inst_id), _atlas(atlas) {}
 
-    inline int8_t atlas() const
+    inline block_id atlas() const
     {
         return _atlas;
     }
@@ -108,7 +109,7 @@ class drops
     {
         reserve_memory();
     }
-    inline void add(const min::vec3<float> &p, const min::vec3<float> &dir, const int8_t atlas)
+    inline void add(const min::vec3<float> &p, const min::vec3<float> &dir, const block_id atlas)
     {
         // If all boxes have been allocated, cannibalize
         if (_inst->get_drop().is_full())
@@ -165,7 +166,7 @@ class drops
         // Create a new drop
         _drops.emplace_back(body_id, inst_id, atlas);
     }
-    inline int8_t atlas(const size_t index) const
+    inline block_id atlas(const size_t index) const
     {
         return _drops[index].atlas();
     }

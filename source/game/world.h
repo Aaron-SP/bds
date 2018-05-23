@@ -86,8 +86,9 @@ class world
     min::vec3<float> _preview;
     min::vec3<unsigned> _scale;
     bool _edit_mode;
-    int8_t _atlas_id;
+    block_id _atlas_id;
     swatch _swatch;
+    unsigned _swatch_cost;
     bool _swatch_mode;
     bool _swatch_copy_place;
 
@@ -128,13 +129,13 @@ class world
     {
         // On collision explode callback
         return [this](void) {
-            return this->event_spawn();
+            return this->spawn_event();
         };
     }
     inline auto drone_dmg_call()
     {
         // On damage callback
-        return [this](const float sq_dist, const float ex_size, const int8_t atlas) -> std::pair<float, float> {
+        return [this](const float sq_dist, const float ex_size, const block_id atlas) -> std::pair<float, float> {
             // Calculate damage
             // Max power = 40
             // Max size = 63
@@ -144,7 +145,7 @@ class world
             // Damage multipler = 0.1 - 3
             const float fraction = this->_ex_mult(_gen) / 25200.0;
             const float min_dist = 1.0;
-            const float power = (atlas == id_value(block_id::SODIUM)) ? 40.0 : 10.0;
+            const float power = (atlas == block_id::SODIUM) ? 40.0 : 10.0;
             const float force = power * ex_size / std::max(sq_dist, min_dist);
             const float dmg_frac = force * fraction;
 
@@ -155,7 +156,7 @@ class world
     inline auto default_dmg_call()
     {
         // On damage callback
-        return [this](const float sq_dist, const float ex_size, const int8_t atlas) -> std::pair<float, float> {
+        return [this](const float sq_dist, const float ex_size, const block_id atlas) -> std::pair<float, float> {
             // Calculate damage
             // Max power = 400
             // Max size = 63
@@ -165,7 +166,7 @@ class world
             // Damage multipler = 0.1 - 3
             const float fraction = this->_ex_mult(_gen) / 25200.0;
             const float min_dist = 1.0;
-            const float power = (atlas == id_value(block_id::SODIUM)) ? 400.0 : 100.0;
+            const float power = (atlas == block_id::SODIUM) ? 400.0 : 100.0;
             const float force = power * ex_size / std::max(sq_dist, min_dist);
             const float dmg_frac = force * fraction;
 
@@ -178,7 +179,7 @@ class world
         // On collision explode callback
         return [this, d](const min::vec3<float> &p,
                          const min::vec3<unsigned> &scale,
-                         const int8_t atlas) {
+                         const block_id atlas) {
             // Calculate direction
             const min::vec3<float> dir = this->direction(this->_player.position(), p);
 
@@ -189,7 +190,7 @@ class world
     inline auto explode_player_call()
     {
         // Block explosion callback
-        return [this](const min::vec3<float> &p, const int8_t atlas) {
+        return [this](const min::vec3<float> &p, const block_id atlas) {
             return this->explode_call(this->default_dmg_call())(p, _ex_radius, atlas);
         };
     }
@@ -198,7 +199,7 @@ class world
         // On collision explode callback
         return [this, d](const min::vec3<float> &p,
                          const min::vec3<unsigned> &scale,
-                         const int8_t atlas) {
+                         const block_id atlas) {
             // Play explosion sound
             this->_sound->play_explode(p);
 
@@ -227,7 +228,7 @@ class world
         const min::vec3<int> offset(1, 1, 1);
 
         // Offset remove radius for geometry removal
-        return _grid.set_geometry(_grid.snap(center_radius(p, scale)), scale, offset, -1, nullptr);
+        return _grid.set_geometry(_grid.snap(center_radius(p, scale)), scale, offset, block_id::EMPTY, nullptr);
     }
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {
@@ -257,7 +258,7 @@ class world
         // Return the character body id
         return _char_id;
     }
-    inline void drop_block(const min::vec3<float> &p, const min::vec3<float> &dir, const int8_t atlas)
+    inline void drop_block(const min::vec3<float> &p, const min::vec3<float> &dir, const block_id atlas)
     {
         // Add a drop
         _drops.add(random_drop_offset(p), dir, atlas);
@@ -266,7 +267,7 @@ class world
         const uint8_t ran_drop = random_drop();
         if (ran_drop < 4)
         {
-            const int8_t drop_id = id_value(block_id::CRYSTAL_R) + ran_drop;
+            const block_id drop_id = static_cast<block_id>(id_value(block_id::CRYSTAL_R) + ran_drop);
             _drops.add(random_drop_offset(p), dir, drop_id);
         }
     }
@@ -286,7 +287,7 @@ class world
             _player.get_stats().add_exp(exp);
 
             // Block atlas ID
-            const int8_t atlas = id_value(block_id::SODIUM);
+            const block_id atlas = block_id::SODIUM;
 
             // Do explode animation for sodium
             min::vec3<unsigned> ex_scale(3, 5, 3);
@@ -301,7 +302,7 @@ class world
             this->_sound->play_explode(p);
 
             // Block atlas ID
-            const int8_t atlas = id_value(block_id::IRON);
+            const block_id atlas = block_id::IRON;
 
             // Do explode animation
             explode(p, flip, scale, atlas, size, nullptr, drone_dmg_call());
@@ -310,17 +311,9 @@ class world
             drop_block(p + flip, flip, atlas);
         }
     }
-    inline min::vec3<float> event_spawn()
-    {
-        const float x = _grid_dist(_gen);
-        const float y = _top - _spawn_limit;
-        const float z = _grid_dist(_gen);
-
-        return min::vec3<float>(x, y, z);
-    }
     inline std::tuple<bool, float, float> explode_anim(
         const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
-        const int8_t atlas, const float size)
+        const block_id atlas, const float size)
     {
         // Calculate explosion speed
         const min::vec3<float> speed = dir * _explode_speed;
@@ -333,12 +326,12 @@ class world
         const bool in_range = std::get<0>(pack);
 
         // If block is lava, play exploding sound
-        if (in_range && atlas == id_value(block_id::SODIUM))
+        if (in_range && atlas == block_id::SODIUM)
         {
             // Prefer stereo if close to the explosion
             _sound->play_blast_stereo(p);
         }
-        else if (atlas == id_value(block_id::SODIUM))
+        else if (atlas == block_id::SODIUM)
         {
             _sound->play_blast_mono(p);
         }
@@ -348,10 +341,10 @@ class world
     }
     inline void explode_block(
         const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
-        const int8_t atlas, const float size)
+        const block_id atlas, const float size)
     {
         // On remove callback
-        const auto f = [this, dir](const min::vec3<float> &p, const int8_t atlas) {
+        const auto f = [this, dir](const min::vec3<float> &p, const block_id atlas) {
             this->drop_block(p, dir, atlas);
         };
 
@@ -360,14 +353,14 @@ class world
     }
     inline void explode(
         const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
-        const int8_t atlas, const float size, const set_call &f, const dmg_call &d)
+        const block_id atlas, const float size, const set_call &f, const dmg_call &d)
     {
         // Offset explosion radius for geometry removal
         const min::vec3<float> center = center_radius(p, scale);
 
         // If we removed geometry do explode animation
         const min::vec3<int> offset(1, 1, 1);
-        _grid.set_geometry(center, scale, offset, -1, f);
+        _grid.set_geometry(center, scale, offset, block_id::EMPTY, f);
 
         // Do explode animation
         const auto pack = explode_anim(p, dir, scale, atlas, size);
@@ -431,7 +424,7 @@ class world
         // Didn't hit anything
         return false;
     }
-    void explode_ray_block(const min::vec3<float> &p, const int8_t atlas,
+    void explode_ray_block(const min::vec3<float> &p, const block_id atlas,
                            const min::vec3<unsigned> &scale, const float size,
                            const ray_call &f)
     {
@@ -449,7 +442,7 @@ class world
         const min::vec3<float> dir = direction(_player.position(), p);
 
         // Explode block
-        if (atlas == id_value(block_id::SODIUM))
+        if (atlas == block_id::SODIUM)
         {
             explode_block(p, dir, _ex_radius, atlas, size);
         }
@@ -458,8 +451,8 @@ class world
             explode_block(p, dir, scale, atlas, size);
         }
     }
-    int8_t explode_ray(const min::ray<float, min::vec3> &r, const target &t,
-                       const min::vec3<unsigned> &scale, const float size, const bool is_charge, const ray_call &f)
+    block_id explode_ray(const min::ray<float, min::vec3> &r, const target &t,
+                         const min::vec3<unsigned> &scale, const float size, const bool is_charge, const ray_call &f)
     {
         // Get the target id
         const target_id tid = t.get_id();
@@ -468,7 +461,7 @@ class world
         case target_id::BLOCK:
         {
             // Check if ray points to a valid target
-            const int8_t atlas = t.get_atlas();
+            const block_id atlas = t.get_atlas();
 
             // Call explode ray for block collision at target position
             explode_ray_block(t.get_position(), atlas, scale, size, f);
@@ -487,7 +480,7 @@ class world
             if (explode_ray_body(b, r, scale, size, is_charge))
             {
                 // We hit a body
-                return -2;
+                return block_id::INVALID;
             }
             break;
         }
@@ -496,7 +489,7 @@ class world
         }
 
         // Didn't hit anything
-        return -1;
+        return block_id::EMPTY;
     }
     // Generates the preview geometry and adds it to preview buffer
     inline void generate_preview()
@@ -537,46 +530,48 @@ class world
         // Check if character is too close to the explosion
         return {sq_dist < ex_squared_radius, ex_squared_radius, sq_dist};
     }
-    inline void item_extra(inventory &inv, const int8_t atlas)
+    inline void item_extra(inventory &inv, const block_id atlas)
     {
         // Add extra pickup to inventory
         uint8_t count = 1;
         switch (atlas)
         {
-        case id_value(block_id::GRASS1):
-            inv.add(id_value(item_id::AN_PHOS), count);
+        case block_id::GRASS1:
+            inv.add(item_id::AN_PHOS, count);
             break;
-        case id_value(block_id::GRASS2):
-            inv.add(id_value(item_id::AN_SULPH), count);
+        case block_id::GRASS2:
+            inv.add(item_id::AN_SULPH, count);
             break;
-        case id_value(block_id::DIRT1):
-            inv.add(id_value(item_id::CAT_K), count);
+        case block_id::DIRT1:
+            inv.add(item_id::CAT_K, count);
             break;
-        case id_value(block_id::DIRT2):
-            inv.add(id_value(item_id::CAT_NH4), count);
+        case block_id::DIRT2:
+            inv.add(item_id::CAT_NH4, count);
             break;
-        case id_value(block_id::SAND1):
-            inv.add(id_value(item_id::CAT_CA), count);
+        case block_id::SAND1:
+            inv.add(item_id::CAT_CA, count);
             break;
-        case id_value(block_id::SAND2):
-            inv.add(id_value(item_id::AN_CARB), count);
+        case block_id::SAND2:
+            inv.add(item_id::AN_CARB, count);
             break;
-        case id_value(block_id::IRON):
-            inv.add(id_value(item_id::POWD_RUST), count);
+        case block_id::IRON:
+            inv.add(item_id::POWD_RUST, count);
             break;
-        case id_value(block_id::WOOD1):
-        case id_value(block_id::WOOD2):
-            inv.add(id_value(item_id::POWD_CHARCOAL), count);
+        case block_id::WOOD1:
+        case block_id::WOOD2:
+            inv.add(item_id::POWD_CHARCOAL, count);
             break;
-        case id_value(block_id::LEAF1):
-        case id_value(block_id::LEAF2):
-        case id_value(block_id::LEAF3):
-        case id_value(block_id::LEAF4):
-            inv.add(id_value(item_id::POWD_BGUANO), count);
+        case block_id::LEAF1:
+        case block_id::LEAF2:
+        case block_id::LEAF3:
+        case block_id::LEAF4:
+            inv.add(item_id::POWD_BGUANO, count);
             break;
-        case id_value(block_id::STONE1):
-        case id_value(block_id::STONE2):
-            inv.add(id_value(item_id::POWD_SALT), count);
+        case block_id::STONE1:
+        case block_id::STONE2:
+            inv.add(item_id::POWD_SALT, count);
+            break;
+        default:
             break;
         }
     }
@@ -641,14 +636,14 @@ class world
                 inventory &inv = this->_player.get_inventory();
 
                 // Get block atlas id
-                const int8_t atlas = this->_drops.atlas(index);
+                const block_id atlas = this->_drops.atlas(index);
 
                 // Get the atlas id from the drop
-                const uint8_t inv_id = inv.id_from_atlas(atlas);
+                const item_id it_id = id_from_atlas(atlas);
 
                 // Add drop to inventory
                 uint8_t count = 1;
-                inv.add(inv_id, count);
+                inv.add(it_id, count);
 
                 // If we picked it up
                 if (count == 0)
@@ -691,7 +686,7 @@ class world
                     this->_explosives.explode(exp_index);
 
                     // Explode player
-                    explode_sound_call(drone_dmg_call())(this->_explosives.position(exp_index), this->_explosives.get_scale(), -1);
+                    explode_sound_call(drone_dmg_call())(this->_explosives.position(exp_index), this->_explosives.get_scale(), block_id::EMPTY);
                 }
             }
             else if (b2.get_id() == id_value(static_id::DRONE))
@@ -729,7 +724,7 @@ class world
                     this->_missiles.explode(miss_index);
 
                     // Explode player
-                    explode_sound_call(drone_dmg_call())(this->_missiles.position(miss_index), this->_missiles.get_scale(), -1);
+                    explode_sound_call(drone_dmg_call())(this->_missiles.position(miss_index), this->_missiles.get_scale(), block_id::EMPTY);
                 }
             }
             else if (b2.get_id() == id_value(static_id::DRONE))
@@ -752,6 +747,22 @@ class world
         };
 
         _missiles.set_collision_callback(j);
+    }
+    inline min::vec3<float> spawn_event()
+    {
+        const float x = _grid_dist(_gen);
+        const float y = _top - _spawn_limit;
+        const float z = _grid_dist(_gen);
+
+        return min::vec3<float>(x, y, z);
+    }
+    inline min::vec3<float> spawn_random()
+    {
+        const float x = _grid_dist(_gen);
+        const float y = _grid_dist(_gen);
+        const float z = _grid_dist(_gen);
+
+        return min::vec3<float>(x, y, z);
     }
     inline void update_all_chunks()
     {
@@ -838,7 +849,8 @@ class world
           _cached_offset(1, 1, 1),
           _preview_offset(1, 1, 1),
           _scale(1, 1, 1),
-          _edit_mode(false), _swatch_mode(false),
+          _edit_mode(false),
+          _swatch_cost(0), _swatch_mode(false),
           _player(&_simulation, state, character_load(state)),
           _ex_radius(3, 3, 3),
           _top(state.get_top().y()),
@@ -870,6 +882,26 @@ class world
 
         // Update chunks
         update_all_chunks();
+
+        // Load chests if this is a new game
+        if (state.is_new_game())
+        {
+            while (spawn_chest(spawn_random()))
+            {
+            }
+        }
+        else
+        {
+            // Get the chests to load
+            const std::vector<min::vec3<float>> &chests = state.get_chests();
+
+            // Load the persisted chests
+            const size_t size = chests.size();
+            for (size_t i = 0; i < size; i++)
+            {
+                spawn_chest(chests[i]);
+            }
+        }
     }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {
@@ -914,40 +946,11 @@ class world
         // Draw the sky, uses geometry VAO -- HACK!
         _sky.draw();
     }
-    int8_t explode_ray(const min::vec3<unsigned> &scale, const float size, const bool is_charge, const ray_call &f)
+    block_id explode_ray(const min::vec3<unsigned> &scale, const float size, const bool is_charge, const ray_call &f)
     {
         return explode_ray(_player.ray(), _player.get_target(), scale, size, is_charge, f);
     }
-    inline size_t scatter_ray(const min::vec3<unsigned> &scale, const float size, const ray_call &f)
-    {
-        size_t count = 0;
-
-        // Launch N explode rays
-        for (size_t i = 0; i < 4; i++)
-        {
-            // Generate a random scatter offset
-            const float x = _scat_dist(_gen);
-            const float y = _scat_dist(_gen);
-            const float z = _scat_dist(_gen);
-            const min::vec3<float> offset(x, y, z);
-
-            // Generate a random ray from the projection
-            const min::vec3<float> dest = _player.projection() + offset;
-            const min::ray<float, min::vec3> r(_player.ray().get_origin(), dest);
-
-            // Launch a target ray
-            const target t = _player.target_ray(_grid, r, _ray_max_dist);
-
-            // Cast an explode ray on this random ray
-            if (explode_ray(r, t, scale, size, false, f) != -1)
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-    inline int8_t get_atlas_id() const
+    inline block_id get_atlas_id() const
     {
         return _atlas_id;
     }
@@ -971,7 +974,7 @@ class world
     {
         return _grid;
     }
-    inline const static_instance &get_instances() const
+    inline const static_instance &get_instance() const
     {
         return _instance;
     }
@@ -991,6 +994,14 @@ class world
     {
         return min::mat4<float>(_preview);
     }
+    inline uint8_t get_scale_size() const
+    {
+        return _scale.x() * _scale.y() * _scale.z();
+    }
+    inline unsigned get_swatch_cost() const
+    {
+        return _swatch_cost;
+    }
     inline bool get_swatch_mode() const
     {
         return _swatch_mode;
@@ -1008,10 +1019,10 @@ class world
             const inventory &inv = _player.get_inventory();
 
             // Create item from atlas
-            const item it(inv.id_from_atlas(t.get_atlas()), 1);
+            const item_id id = id_from_atlas(t.get_atlas());
 
             // Look up item name
-            return std::make_pair(&inv.get_name(it), no_health);
+            return std::make_pair(&inv.get_name(id), no_health);
         }
         case target_id::BODY:
         {
@@ -1057,6 +1068,15 @@ class world
     {
         return std::get<0>(in_range_explode(_player.position(), p, _ex_radius));
     }
+    inline bool is_edit_mode() const
+    {
+        return _edit_mode;
+    }
+    inline void kill_drones()
+    {
+        // Kill all the drones
+        _drones.clear();
+    }
     inline bool launch_explosive(const min::vec3<float> &up)
     {
         // Get player look direction
@@ -1068,7 +1088,7 @@ class world
         _player.set_explode_cd();
 
         // Launch an explosive in front of player
-        return _explosives.launch(p, dir, v, up, id_value(block_id::SODIUM));
+        return _explosives.launch(p, dir, v, up, block_id::SODIUM);
     }
     inline bool launch_missile()
     {
@@ -1086,7 +1106,7 @@ class world
     inline void load_swatch()
     {
         // Load data into swatch
-        _grid.load_swatch(_swatch, _preview, _preview_offset, _scale);
+        _swatch_cost = _grid.load_swatch(_swatch, _preview, _preview_offset, _scale);
 
         // Generate new preview
         generate_preview();
@@ -1108,16 +1128,26 @@ class world
         // Remove geometry around player
         block_remove(spawn, _ex_radius);
 
+        // Remove all chests and spawn new ones
+        _chests.clear();
+        while (spawn_chest(spawn_random()))
+        {
+        }
+
         // Update chunks
         update_all_chunks();
     }
-    inline void respawn(const min::vec3<float> &p)
+    inline void random_item()
+    {
+        _player.get_inventory().random_item();
+    }
+    inline void respawn(const load_state &state)
     {
         // Respawn player
-        _player.respawn();
+        _player.respawn(state);
 
         // Spawn character position
-        _player.warp(ray_spawn(p));
+        _player.warp(ray_spawn(state.get_default_spawn()));
 
         // Zero out character velocity
         _player.velocity(min::vec3<float>());
@@ -1139,11 +1169,84 @@ class world
             _preview_offset = _cached_offset;
         }
     }
-    inline uint8_t get_scale_size() const
+    inline size_t scatter_ray(const min::vec3<unsigned> &scale, const float size, const ray_call &f)
     {
-        return _scale.x() * _scale.y() * _scale.z();
+        size_t count = 0;
+
+        // Launch N explode rays
+        for (size_t i = 0; i < 4; i++)
+        {
+            // Generate a random scatter offset
+            const float x = _scat_dist(_gen);
+            const float y = _scat_dist(_gen);
+            const float z = _scat_dist(_gen);
+            const min::vec3<float> offset(x, y, z);
+
+            // Generate a random ray from the projection
+            const min::vec3<float> dest = _player.projection() + offset;
+            const min::ray<float, min::vec3> r(_player.ray().get_origin(), dest);
+
+            // Launch a target ray
+            const target t = _player.target_ray(_grid, r, _ray_max_dist);
+
+            // Cast an explode ray on this random ray
+            if (explode_ray(r, t, scale, size, false, f) != block_id::EMPTY)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
-    inline void set_atlas_id(const int8_t id)
+    inline std::pair<bool, static_id> select_target(const target &t)
+    {
+        const target_id tid = t.get_id();
+        switch (tid)
+        {
+        case target_id::BODY:
+        {
+            // Get the body being targeted
+            const min::body<float, min::vec3> &b = _simulation.get_body(t.get_body_index());
+
+            // Get the body id
+            const size_t body_id = b.get_id();
+
+            // Get the body id
+            switch (body_id)
+            {
+            case id_value(static_id::CHEST):
+            {
+                // If player has keys
+                uint8_t count = 1;
+                if (_player.get_inventory().consume(item_id::CONS_KEY, count))
+                {
+                    // Get the index from the body
+                    const size_t index = b.get_data().index;
+                    _chests.remove(index);
+
+                    // Give player a random item
+                    random_item();
+
+                    // Chest selected
+                    return std::make_pair(true, static_id::CHEST);
+                }
+                else
+                {
+                    return std::make_pair(false, static_id::CHEST);
+                }
+            }
+            default:
+                break;
+            }
+        }
+        default:
+            break;
+        }
+
+        // No selection
+        return std::make_pair(false, static_id::PLAYER);
+    }
+    inline void set_atlas_id(const block_id id)
     {
         // Only applicable in edit mode
         if (_edit_mode)
@@ -1226,12 +1329,15 @@ class world
     {
         const min::vec3<float> zero;
         const min::vec3<float> down(0.0, -1.0, 0.0);
-        _explosives.launch(event_spawn(), down, zero, zero, id_value(block_id::SODIUM));
+        _explosives.launch(spawn_event(), down, zero, zero, block_id::SODIUM);
     }
-    inline void kill_drones()
+    inline bool spawn_chest(const min::vec3<float> &position)
     {
-        // Kill all the drones
-        _drones.clear();
+        // This point is snapped to the grid
+        const min::vec3<float> p = _grid.set_geometry_box_3x3(position);
+
+        // Add the chest
+        return _chests.add(min::vec3<float>(p.x(), p.y() - 1.0, p.z()));
     }
     inline void spawn_drone()
     {
@@ -1239,7 +1345,7 @@ class world
         const float drone_health = _player.get_stats().get_drone_health() * _health_dist(_gen);
 
         // Spawn one drone
-        _drones.spawn(event_spawn(), drone_health);
+        _drones.spawn(spawn_event(), drone_health);
     }
     inline void toggle_swatch_copy_place()
     {
@@ -1265,6 +1371,9 @@ class world
 
         // Get surrounding chunks for drawing
         _grid.update_view_chunk_index(cam, _view_chunk_index);
+
+        // Flush out the update chunks
+        _grid.flush_chunk_updates();
 
 // Only used for instance rendering
 #ifdef USE_INST_RENDER
@@ -1295,7 +1404,7 @@ class world
         // swatch_copy_place == true is copy, == false is default place mode
         if (_swatch_copy_place)
         {
-            int8_t value;
+            block_id value;
             _preview = _grid.ray_trace_last(r, 6, value);
         }
         else

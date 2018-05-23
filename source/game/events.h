@@ -35,8 +35,8 @@ class events
     float _ast;
     float _ast_timer;
     float _ast_tick;
-    float _swarm;
-    bool _is_swarm;
+    float _drone;
+    bool _is_drone;
     size_t _spawned;
     std::uniform_real_distribution<float> _dist;
     std::mt19937 _gen;
@@ -45,19 +45,19 @@ class events
     {
         _ast = _dist(_gen);
     }
-    inline void reset_swarm()
+    inline void reset_drone()
     {
-        _swarm = _dist(_gen);
+        _drone = _dist(_gen);
     }
     inline void update_ast(world &w, ui_overlay &ui, const float dt)
     {
         // If time for asteroids
         if (_ast <= 0.0 && _ast_timer < 0.0)
         {
-            // Enable swarm alert
+            // Enable drone alert
             ui.set_alert_asteroid();
 
-            // Set that swarm is occuring
+            // Set that drone is occuring
             _ast_timer = _ast_duration;
             _ast_tick = _ast_duration;
         }
@@ -100,69 +100,73 @@ class events
             _ast -= dt;
         }
     }
-    inline void update_swarm(world &w, ui_overlay &ui, const float dt)
+    inline void update_drone(world &w, ui_overlay &ui, const float dt)
     {
         // Are the drones dead?
         const bool drones_dead = w.get_drones().size() == 0;
 
-        // If drones are dead and its time for a swarm
-        if (drones_dead && _swarm <= 0.0)
+        // If drones are dead and its time for a drone
+        if (drones_dead && _drone <= 0.0)
         {
-            // Enable swarm alert
-            ui.set_alert_swarm();
+            // Enable drone alert
+            ui.set_alert_drone();
 
             // Reset the timer
-            reset_swarm();
+            reset_drone();
 
             // Spawn a drone
             w.spawn_drone();
 
-            // Reset the swarm spawn counter
+            // Reset the drone spawn counter
             _spawned = 1;
 
-            // Set that swarm is occuring
-            _is_swarm = true;
+            // Set that drone is occuring
+            _is_drone = true;
         }
         else if (drones_dead)
         {
             // Debouncer for setting alert message
-            if (_is_swarm)
+            if (_is_drone)
             {
                 // Disable alert
                 ui.set_alert_peace();
 
-                // Disable swarm
-                _is_swarm = false;
+                // Disable drone
+                _is_drone = false;
             }
 
             // Decrement event timer
-            _swarm -= dt;
+            _drone -= dt;
         }
     }
 
   public:
     events() : _ast(-1.0), _ast_timer(-1.0), _ast_tick(0.0),
-               _swarm(-1.0), _is_swarm(false), _spawned(_spawn_count), _dist(180.0, 360.0),
+               _drone(-1.0), _is_drone(false), _spawned(_spawn_count), _dist(300.0, 600.0),
                _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
     {
         // Reset the ast time
         reset_ast();
 
-        // Reset the swarm time
-        reset_swarm();
+        // Reset the drone time
+        reset_drone();
+    }
+    inline float get_drone_time() const
+    {
+        return _drone;
     }
     inline void reset(world &w, ui_overlay &ui)
     {
-        if (_is_swarm)
+        if (_is_drone)
         {
             // Kill the drones
             w.kill_drones();
 
             // Disable alert
-            ui.set_alert_swarm_kill();
+            ui.set_alert_drone_kill();
 
-            // Disable swarm
-            _is_swarm = false;
+            // Disable drone
+            _is_drone = false;
         }
     }
     inline void update(world &w, ui_overlay &ui, const float dt)
@@ -170,8 +174,8 @@ class events
         // Update ast event
         update_ast(w, ui, dt);
 
-        // Update swarm event
-        update_swarm(w, ui, dt);
+        // Update drone event
+        update_drone(w, ui, dt);
     }
     inline void update_second(world &w)
     {
@@ -179,7 +183,7 @@ class events
         stats &stat = w.get_player().get_stats();
 
         // Spawn drones for each player level
-        if (_is_swarm && _spawned < stat.level())
+        if (_is_drone && _spawned < stat.level())
         {
             // Spawn a drone
             w.spawn_drone();

@@ -25,6 +25,8 @@ namespace game
 
 enum class block_id : int8_t
 {
+    INVALID = -2,
+    EMPTY = -1,
     GRASS1 = 0,
     GRASS2 = 1,
     DIRT1 = 2,
@@ -60,8 +62,31 @@ enum class block_id : int8_t
     GREEN_PEPPER = 35
 };
 
+inline constexpr bool not_empty(const block_id id)
+{
+    return static_cast<int8_t>(id) >= 0;
+}
+
+inline constexpr int ether_cost(const block_id id)
+{
+    return static_cast<int8_t>(id) + 1;
+}
+
 enum class item_id : uint8_t
 {
+    EMPTY = 0,
+    AUTO_BEAM = 1,
+    BEAM = 2,
+    CHARGE = 3,
+    GRAPPLE = 4,
+    GRENADE = 5,
+    JET = 6,
+    MISSILE = 7,
+    PORTAL = 8,
+    SCAN = 9,
+    SCATTER = 10,
+    SPEED = 11,
+
     BLK_GRASS1 = 17,
     BLK_GRASS2 = 18,
     BLK_DIRT1 = 19,
@@ -145,21 +170,6 @@ enum class item_id : uint8_t
     CONS_KEY = 127
 };
 
-enum class skill_id : uint8_t
-{
-    AUTO_BEAM = 1,
-    BEAM = 2,
-    CHARGE = 3,
-    GRAPPLE = 4,
-    GRENADE = 5,
-    JET = 6,
-    MISSILE = 7,
-    PORTAL = 8,
-    SCAN = 9,
-    SCATTER = 10,
-    SPEED = 11
-};
-
 inline constexpr int8_t id_value(const block_id id)
 {
     return static_cast<int8_t>(id);
@@ -168,9 +178,16 @@ inline constexpr uint8_t id_value(const item_id id)
 {
     return static_cast<uint8_t>(id);
 }
-inline constexpr uint8_t id_value(const skill_id id)
+
+inline static constexpr block_id id_to_atlas(const item_id id)
 {
-    return static_cast<uint8_t>(id);
+    // Convert inventory id to cube atlas
+    return static_cast<block_id>(id_value(id) - 17);
+}
+inline static constexpr item_id id_from_atlas(const block_id id)
+{
+    // Convert from atlas to inventory id
+    return static_cast<item_id>(id_value(id) + 17);
 }
 
 enum class ui_type

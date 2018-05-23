@@ -20,6 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/callback.h>
 #include <game/cgrid.h>
+#include <game/id.h>
 #include <game/path.h>
 #include <game/static_instance.h>
 #include <min/aabbox.h>
@@ -143,7 +144,7 @@ class drones
     physics *_sim;
     static_instance *_inst;
     sound *_sound;
-    std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
+    std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     min::vec3<float> _dest;
     std::vector<path> _paths;
     std::vector<drone> _drones;

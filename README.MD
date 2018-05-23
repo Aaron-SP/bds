@@ -98,6 +98,10 @@ The '-view' flag is an optional parameter for controlling how many chunks are vi
 The '-width' and '-height' flag changes the default window dimensions.
 - Example: 'bin/game -width 1600 -height 900' will create a window width of 1600 pixels and height of 900 pixels.
 
+#### -hardcore flag
+The '-hardcore' flag changes the game mode between normal and hardcore difficulty. In hardcore mode, the player will lose all inventory upon death!
+- Example: 'bin/game -hardcore 1' will turn on hardcore mode.
+
 ### SCREENSHOTS!
 
 #### Title Screen
@@ -116,18 +120,19 @@ The '-width' and '-height' flag changes the default window dimensions.
 1. Keys [WASD]: forward/left/back/right
 2. Key [TAB]: open and close inventory screen
 3. Key [Q]: drops item if hovering in inventory screen
-4. Keys [Z/X/C]: scale unit block (block place mode)
-5. Key [E]: reset scale unit block (block place mode)
-6. Keys [1-8]: quick item hotbar, use item, place block, equip weapon
-7. Left mouse: use skill (edit mode / power suite mode)
-8. Right mouse and hold: target and track block
-9. [SPACE] jump, can double jump after level 3
-10. [SHIFT] dash, dashs in the forward direction after level 3
-11. Key [F1]: quit
-12. Key [F2]: toggle debug text
-13. Key [F3]: music up
-14. Key [F4]: music down
-15. Key [ESCAPE]: pause the game
+4. Key [E]: select current target
+5. Keys [Z/X/C]: scale unit block (block place mode)
+6. Key [R]: reset scale unit block (block place mode)
+7. Keys [1-8]: quick item hotbar, use item, place block, equip weapon
+8. Left mouse: use skill (edit mode / power suite mode)
+9. Right mouse and hold: target and track block
+10. [SPACE] jump, can double jump after level 3
+11. [SHIFT] dash, dashs in the forward direction after level 3
+12. Key [F1]: quit
+13. Key [F2]: toggle debug text
+14. Key [F3]: music up
+15. Key [F4]: music down
+16. Key [ESCAPE]: pause the game
 
 ### Segmentation Fault: I crashed the game!
 If you crash the game, compile the game with debug settings with 'make debug' and run the game in GDB. 'gdb bin/game' should suffice. When GDB loads, type 'run' to launch the game inside the GDB debugger. When the game crashes/freezes, go to the GDB window and type 'where' and GDB should print a stacktrace using debug symbols. This GDB stacktrace allows developers to figure out the function that crashed the game and expedites the debug process, and hopefully will lead to getting those critical bugs fixed.

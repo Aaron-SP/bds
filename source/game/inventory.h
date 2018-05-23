@@ -20,6 +20,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <array>
 #include <game/id.h>
+#include <limits>
+#include <random>
 #include <utility>
 #include <vector>
 
@@ -39,12 +41,21 @@ class item
   private:
     uint8_t _id;
     uint8_t _count;
+    uint8_t _prim;
+    uint8_t _sec;
+    uint8_t _level;
 
   public:
-    item() : _id(0), _count(0) {}
-    item(const uint8_t id, const uint8_t count)
-        : _id(id), _count(count) {}
+    item() : _id(0), _count(0), _prim(0), _sec(0), _level(0) {}
+    item(const item_id id, const uint8_t count,
+         const uint8_t prim, const uint8_t sec, const uint8_t level)
+        : _id(id_value(id)), _count(count),
+          _prim(prim), _sec(sec), _level(level) {}
 
+    bool operator<(const item &other) const
+    {
+        return _id < other._id;
+    }
     inline uint8_t to_block_id() const
     {
         return _id - 17;
@@ -61,22 +72,29 @@ class item
     {
         return _count;
     }
-    inline void drop()
-    {
-        _id = 0;
-        _count = 0;
-    }
-    inline void empty()
-    {
-        _id = 0;
-    }
-    inline uint8_t id() const
-    {
-        return _id;
-    }
-    inline item_id id_enum() const
+    inline item_id id() const
     {
         return static_cast<item_id>(_id);
+    }
+    inline uint8_t level() const
+    {
+        return _level;
+    }
+    inline uint8_t prim() const
+    {
+        return _prim;
+    }
+    inline uint8_t sec() const
+    {
+        return _sec;
+    }
+    inline void set_count(const uint8_t count)
+    {
+        _count = count;
+    }
+    inline void set_empty()
+    {
+        _id = 0;
     }
     inline void stack(uint8_t &count)
     {
@@ -130,10 +148,11 @@ class inventory
         }
         bool operator<(const craft_item &other) const
         {
-            return (_item.id() < other.get_item().id());
+            return _item < other.get_item();
         }
     };
 
+    static constexpr size_t _drop_count = 5;
     static constexpr size_t _max_slots = 49;
     static constexpr size_t _max_strings = 128;
     static constexpr size_t _cube_size = 9;
@@ -142,18 +161,25 @@ class inventory
     std::vector<std::string> _inv_desc;
     std::vector<ui_id> _update;
     std::array<craft_item, _cube_size> _craft;
+    std::uniform_int_distribution<size_t> _drop_dist;
+    std::uniform_int_distribution<uint8_t> _item_dist;
+    std::uniform_int_distribution<uint8_t> _prim_dist;
+    std::uniform_int_distribution<uint8_t> _sec_dist;
+    std::uniform_int_distribution<uint8_t> _level_dist;
+    std::mt19937 _gen;
 
-    inline std::pair<bool, uint8_t> decay(const uint8_t index, const uint8_t consume_id, uint8_t &count)
+    inline std::pair<bool, item_id> decay(const uint8_t index, const item_id consume_id, uint8_t &count)
     {
         // Only consume item do not convert
         return std::make_pair(consume(index, consume_id, count), consume_id);
     }
-    inline std::pair<bool, uint8_t> decay(const uint8_t index, const uint8_t consume_id, const uint8_t add_id, uint8_t &count, const uint8_t add_count)
+    inline std::pair<bool, item_id> decay(const uint8_t index, const item_id consume_id, const item_id add_id, uint8_t &count, const uint8_t add_count)
     {
-        const uint8_t old_count = count;
-
         // Did we decay anything?
         bool status = false;
+
+        // Cache item for reset
+        item cache = _inv[index];
 
         // Transform one item into another
         if (consume(index, consume_id, count))
@@ -164,7 +190,7 @@ class inventory
             // If we couldn't add the item rollback consume
             if (!add(add_id, count))
             {
-                _inv[index] = item(consume_id, old_count);
+                _inv[index] = cache;
             }
             else
             {
@@ -174,7 +200,7 @@ class inventory
 
         return std::make_pair(status, consume_id);
     }
-    inline void consume(const size_t index, item &it, uint8_t &count)
+    inline void consume_item(const size_t index, item &it, uint8_t &count)
     {
         // Consume the inventory count
         it.consume(count);
@@ -185,15 +211,15 @@ class inventory
         // If count is zero set empty ID
         if (it.count() == 0)
         {
-            it.empty();
+            it.set_empty();
         }
 
         // Store update index
         _update.emplace_back(index);
     }
     inline bool consume2(
-        const size_t index_1, const uint8_t id_1, uint8_t &count_1,
-        const size_t index_2, const uint8_t id_2, uint8_t &count_2)
+        const size_t index_1, const item_id id_1, uint8_t &count_1,
+        const size_t index_2, const item_id id_2, uint8_t &count_2)
     {
         // Get the current item
         item &it_1 = _inv[index_1];
@@ -206,8 +232,8 @@ class inventory
         if (it1_pass && it2_pass)
         {
             // Consume both resources
-            consume(index_1, it_1, count_1);
-            consume(index_2, it_2, count_2);
+            consume_item(index_1, it_1, count_1);
+            consume_item(index_2, it_2, count_2);
 
             // Return that we consumed the resource
             return true;
@@ -216,9 +242,9 @@ class inventory
         return false;
     }
     inline bool consume3(
-        const size_t index_1, const uint8_t id_1, uint8_t &count_1,
-        const size_t index_2, const uint8_t id_2, uint8_t &count_2,
-        const size_t index_3, const uint8_t id_3, uint8_t &count_3)
+        const size_t index_1, const item_id id_1, uint8_t &count_1,
+        const size_t index_2, const item_id id_2, uint8_t &count_2,
+        const size_t index_3, const item_id id_3, uint8_t &count_3)
     {
         // Get the current item
         item &it_1 = _inv[index_1];
@@ -233,9 +259,9 @@ class inventory
         if ((it1_pass && it2_pass) && it3_pass)
         {
             // Consume both resources
-            consume(index_1, it_1, count_1);
-            consume(index_2, it_2, count_2);
-            consume(index_3, it_3, count_3);
+            consume_item(index_1, it_1, count_1);
+            consume_item(index_2, it_2, count_2);
+            consume_item(index_3, it_3, count_3);
 
             // Return that we consumed the resource
             return true;
@@ -400,14 +426,60 @@ class inventory
         _inv_name[127] = "Rusty Key";
         _inv_desc[127] = "It's old and rusty._Perhaps this opens_something!";
     }
+    item make_item(const item_id id, const uint8_t count)
+    {
+        const uint8_t p_stat = _prim_dist(_gen);
+        const uint8_t s_stat = _sec_dist(_gen);
+        const uint8_t i_lvl = _level_dist(_gen);
+
+        // Return item
+        return item(id, count, p_stat, s_stat, i_lvl);
+    }
     void set_store()
     {
-        _inv[begin_store()] = item(id_value(skill_id::BEAM), 1);
-        _inv[begin_store() + 1] = item(id_value(skill_id::SCAN), 1);
+        _inv[begin_store()] = make_item(item_id::BEAM, 1);
+        _inv[begin_store() + 1] = make_item(item_id::SCAN, 1);
+    }
+    inline bool stack(const size_t one, const size_t two)
+    {
+        // Try to stack items if same type
+        if (_inv[one].id() == _inv[two].id())
+        {
+            uint8_t count = _inv[one].count();
+            _inv[two].stack(count);
+
+            // If items are left
+            if (count > 0)
+            {
+                _inv[one].set_count(count);
+            }
+            else
+            {
+                // Discard empty item
+                _inv[one].set_empty();
+            }
+
+            // Submit indices for updating
+            _update.emplace_back(one);
+            _update.emplace_back(two);
+
+            // Return that we stacked
+            return true;
+        }
+
+        // Return that we didn't stack
+        return false;
     }
 
   public:
-    inventory() : _inv{}, _inv_name(_max_strings), _inv_desc(_max_strings), _craft{}
+    inventory()
+        : _inv{}, _inv_name(_max_strings), _inv_desc(_max_strings), _craft{},
+          _drop_dist(begin_key(), end_cube() - 1),
+          _item_dist(id_value(item_id::AUTO_BEAM), id_value(item_id::SPEED)),
+          _prim_dist(0, 255),
+          _sec_dist(0, 255),
+          _level_dist(0, 255),
+          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
     {
         // Load inv` strings
         load_strings();
@@ -438,10 +510,10 @@ class inventory
     {
         return _inv[index + begin_store()];
     }
-    inline bool add(const uint8_t id, uint8_t &count)
+    inline bool add(const item_id id, uint8_t &count)
     {
         // Search for item of same id in slots
-        const size_t size = _inv.size();
+        const size_t size = end_cube();
 
         // First pass, prefer searching all slots for a stack
         for (size_t i = begin_key(); i < size; i++)
@@ -474,9 +546,9 @@ class inventory
             item &it = _inv[i];
 
             // Is this slot empty?
-            if (it.id() == 0)
+            if (it.id() == item_id::EMPTY)
             {
-                it = item(id, count);
+                it = make_item(id, count);
 
                 // Store update index
                 _update.emplace_back(i);
@@ -532,10 +604,10 @@ class inventory
     {
         _update.clear();
     }
-    inline bool consume(const uint8_t id, uint8_t &count)
+    inline bool consume(const item_id id, uint8_t &count)
     {
         // Search for item of same id in slots
-        const size_t size = _inv.size();
+        const size_t size = end_cube();
         for (size_t i = begin_key(); i < size; i++)
         {
             // Try to consume this index
@@ -548,7 +620,7 @@ class inventory
         // Return that we failed to consume
         return false;
     }
-    inline bool consume(const size_t index, const uint8_t id, uint8_t &count)
+    inline bool consume(const size_t index, const item_id id, uint8_t &count)
     {
         // Get the current item
         item &it = _inv[index];
@@ -556,13 +628,92 @@ class inventory
         // Is this the item I want?
         if (it.id() == id && it.count() >= count)
         {
-            consume(index, it, count);
+            consume_item(index, it, count);
 
             // Return that we consumed the resource
             return true;
         }
 
         return false;
+    }
+    inline bool consume_multi(const item_id id, const unsigned count)
+    {
+        unsigned total = 0;
+
+        // Count the number of items we got
+        const size_t size = end_cube();
+        for (size_t i = begin_key(); i < size; i++)
+        {
+            // Count the resource
+            if (_inv[i].id() == id)
+            {
+                total += _inv[i].count();
+            }
+        }
+
+        // If we have enough items
+        if (total >= count)
+        {
+            // Reset total for countdown
+            total = count;
+
+            // Begin consuming
+            for (size_t i = begin_key(); i < size; i++)
+            {
+                // Get the current item
+                item &it = _inv[i];
+
+                // Try to consume this index
+                if (it.id() == id)
+                {
+                    // Get the item count
+                    const uint8_t available = it.count();
+                    if (total > available)
+                    {
+                        // Consume resource
+                        uint8_t count = available;
+                        consume_item(i, it, count);
+
+                        // Decriment total consumed
+                        total -= available;
+                    }
+                    else
+                    {
+                        // Consume resource
+                        uint8_t count = static_cast<uint8_t>(total);
+                        consume_item(i, it, count);
+
+                        // Return that we finished consuming
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // Return that we failed to consume
+        return false;
+    }
+    inline bool random_item()
+    {
+        // Get a random skill ID
+        const item_id id = static_cast<item_id>(_item_dist(_gen));
+
+        // Set the item count
+        uint8_t count = 1;
+
+        // Create item in store
+        switch (id)
+        {
+        case item_id::GRENADE:
+        case item_id::MISSILE:
+            count = 16;
+            break;
+        default:
+            break;
+        }
+
+        // Add skill to inventory
+        return add(id, count);
     }
     inline bool recipe_2(const uint8_t mult)
     {
@@ -579,229 +730,234 @@ class inventory
         uint8_t add_count = mult;
 
         // Try to craft a recipe
-        if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::CAT_H), high_count))
+        if (consume2(lower, item_id::BLK_FE, low_count, higher, item_id::CAT_H, high_count))
         {
-            return add(id_value(item_id::POWD_RUST), add_count);
+            return add(item_id::POWD_RUST, add_count);
         }
-        else if (consume2(lower, id_value(item_id::POWD_CHARCOAL), low_count, higher, id_value(item_id::POWD_KNO3), high_count))
+        else if (consume2(lower, item_id::POWD_CHARCOAL, low_count, higher, item_id::POWD_KNO3, high_count))
         {
-            return add(id_value(skill_id::GRENADE), add_count);
+            return add(item_id::GRENADE, add_count);
         }
-        else if (consume2(lower, id_value(item_id::CAT_K), low_count, higher, id_value(item_id::AN_NO3), high_count))
+        else if (consume2(lower, item_id::CAT_K, low_count, higher, item_id::AN_NO3, high_count))
         {
-            return add(id_value(item_id::POWD_KNO3), add_count);
+            return add(item_id::POWD_KNO3, add_count);
         }
-        else if (consume2(lower, id_value(item_id::CAT_CA), low_count, higher, id_value(item_id::AN_CARB), high_count))
+        else if (consume2(lower, item_id::CAT_CA, low_count, higher, item_id::AN_CARB, high_count))
         {
-            return add(id_value(item_id::POWD_CAL_CARB), add_count);
+            return add(item_id::POWD_CAL_CARB, add_count);
         }
-        else if (consume2(lower, id_value(item_id::CAT_MG), low_count, higher, id_value(item_id::AN_CARB), high_count))
+        else if (consume2(lower, item_id::CAT_MG, low_count, higher, item_id::AN_CARB, high_count))
         {
-            return add(id_value(item_id::POWD_MAG_CARB), add_count);
+            return add(item_id::POWD_MAG_CARB, add_count);
         }
-        else if (consume2(lower, id_value(item_id::CAT_NA), low_count, higher, id_value(item_id::AN_CL), high_count))
+        else if (consume2(lower, item_id::CAT_NA, low_count, higher, item_id::AN_CL, high_count))
         {
-            return add(id_value(item_id::POWD_SALT), add_count);
+            return add(item_id::POWD_SALT, add_count);
         }
-        else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_CL), high_count))
+        else if (consume2(lower, item_id::CAT_H, low_count, higher, item_id::AN_CL, high_count))
         {
-            return add(id_value(item_id::ACID_HCL), add_count);
+            return add(item_id::ACID_HCL, add_count);
         }
-        else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_NO3), high_count))
+        else if (consume2(lower, item_id::CAT_H, low_count, higher, item_id::AN_NO3, high_count))
         {
-            return add(id_value(item_id::ACID_HNO3), add_count);
+            return add(item_id::ACID_HNO3, add_count);
         }
-        else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_PHOS), high_count))
+        else if (consume2(lower, item_id::CAT_H, low_count, higher, item_id::AN_PHOS, high_count))
         {
-            return add(id_value(item_id::ACID_H3PO4), add_count);
+            return add(item_id::ACID_H3PO4, add_count);
         }
-        else if (consume2(lower, id_value(item_id::CAT_H), low_count, higher, id_value(item_id::AN_SULPH), high_count))
+        else if (consume2(lower, item_id::CAT_H, low_count, higher, item_id::AN_SULPH, high_count))
         {
-            return add(id_value(item_id::ACID_H2SO4), add_count);
+            return add(item_id::ACID_H2SO4, add_count);
         }
 
         // Blue shard recipes
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_CA), high_count))
+        else if (consume2(lower, item_id::SHARD_B, low_count, higher, item_id::CAT_CA, high_count))
         {
-            return add(id_value(item_id::BLK_CA), add_count);
+            return add(item_id::BLK_CA, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_CU), high_count))
+        else if (consume2(lower, item_id::SHARD_B, low_count, higher, item_id::CAT_CU, high_count))
         {
-            return add(id_value(item_id::BLK_CU), add_count);
+            return add(item_id::BLK_CU, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_FE), high_count))
+        else if (consume2(lower, item_id::SHARD_B, low_count, higher, item_id::CAT_FE, high_count))
         {
-            return add(id_value(item_id::BLK_FE), add_count);
+            return add(item_id::BLK_FE, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_MG), high_count))
+        else if (consume2(lower, item_id::SHARD_B, low_count, higher, item_id::CAT_MG, high_count))
         {
-            return add(id_value(item_id::BLK_MG), add_count);
+            return add(item_id::BLK_MG, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_K), high_count))
+        else if (consume2(lower, item_id::SHARD_B, low_count, higher, item_id::CAT_K, high_count))
         {
-            return add(id_value(item_id::BLK_K), add_count);
+            return add(item_id::BLK_K, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::CAT_NA), high_count))
+        else if (consume2(lower, item_id::SHARD_B, low_count, higher, item_id::CAT_NA, high_count))
         {
-            return add(id_value(item_id::BLK_NA), add_count);
+            return add(item_id::BLK_NA, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::AN_NO3), high_count))
+        else if (consume2(lower, item_id::SHARD_B, low_count, higher, item_id::AN_NO3, high_count))
         {
-            return add(id_value(item_id::CAT_NH4), add_count);
+            return add(item_id::CAT_NH4, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::AN_PHOS), high_count))
+        else if (consume2(lower, item_id::SHARD_B, low_count, higher, item_id::AN_PHOS, high_count))
         {
-            return add(id_value(item_id::POWD_RED_PHOS), add_count);
+            return add(item_id::POWD_RED_PHOS, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_B), low_count, higher, id_value(item_id::AN_SULPH), high_count))
+        else if (consume2(lower, item_id::SHARD_B, low_count, higher, item_id::AN_SULPH, high_count))
         {
-            return add(id_value(item_id::POWD_SULPHUR), add_count);
+            return add(item_id::POWD_SULPHUR, add_count);
         }
 
         // Green shard recipes
-        else if (consume2(lower, id_value(item_id::BLK_CLAY1), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_CLAY1, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_STONE1), add_count);
+            return add(item_id::BLK_STONE1, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_CLAY2), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_CLAY2, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_STONE2), add_count);
+            return add(item_id::BLK_STONE2, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_STONE1), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_STONE1, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_CA), add_count);
+            return add(item_id::BLK_CA, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_STONE2), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_STONE2, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_CA), add_count);
+            return add(item_id::BLK_CA, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_CA), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_CA, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_MG), add_count);
+            return add(item_id::BLK_MG, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_MG), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_MG, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_K), add_count);
+            return add(item_id::BLK_K, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_K), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_K, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_CU), add_count);
+            return add(item_id::BLK_CU, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_LEAF1), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_LEAF1, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_TOM), add_count);
+            return add(item_id::BLK_TOM, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_LEAF2), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_LEAF2, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_EGGP), add_count);
+            return add(item_id::BLK_EGGP, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_LEAF3), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_LEAF3, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_GR_PEP), add_count);
+            return add(item_id::BLK_GR_PEP, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_LEAF4), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_LEAF4, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_RED_PEP), add_count);
+            return add(item_id::BLK_RED_PEP, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_SAND1), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_SAND1, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_DIRT1), add_count);
+            return add(item_id::BLK_DIRT1, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_SAND2), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_SAND2, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_DIRT2), add_count);
+            return add(item_id::BLK_DIRT2, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_DIRT1), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_DIRT1, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_GRASS1), add_count);
+            return add(item_id::BLK_GRASS1, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_DIRT2), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_DIRT2, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_GRASS2), add_count);
+            return add(item_id::BLK_GRASS2, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_GRASS1), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_GRASS1, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_WOOD1), add_count);
+            return add(item_id::BLK_WOOD1, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_GRASS2), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_GRASS2, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_WOOD2), add_count);
+            return add(item_id::BLK_WOOD2, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_WOOD1), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_WOOD1, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_FE), add_count);
+            return add(item_id::BLK_FE, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_WOOD2), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_WOOD2, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_FE), add_count);
+            return add(item_id::BLK_FE, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::SHARD_G), high_count))
+        else if (consume2(lower, item_id::BLK_FE, low_count, higher, item_id::SHARD_G, high_count))
         {
-            return add(id_value(item_id::BLK_NA), add_count);
+            return add(item_id::BLK_NA, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_G), low_count, higher, id_value(item_id::POWD_RUST), high_count))
+        else if (consume2(lower, item_id::SHARD_G, low_count, higher, item_id::POWD_RUST, high_count))
         {
             add_count = 8;
-            return add(id_value(item_id::CONS_OXYGEN), add_count);
+            return add(item_id::CONS_OXYGEN, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_G), low_count, higher, id_value(item_id::POWD_CAL_CARB), high_count))
+        else if (consume2(lower, item_id::SHARD_G, low_count, higher, item_id::POWD_CAL_CARB, high_count))
         {
             add_count = 8;
-            return add(id_value(item_id::CONS_OXYGEN), add_count);
+            return add(item_id::CONS_OXYGEN, add_count);
         }
-        else if (consume2(lower, id_value(item_id::SHARD_G), low_count, higher, id_value(item_id::POWD_MAG_CARB), high_count))
+        else if (consume2(lower, item_id::SHARD_G, low_count, higher, item_id::POWD_MAG_CARB, high_count))
         {
             add_count = 8;
-            return add(id_value(item_id::CONS_OXYGEN), add_count);
+            return add(item_id::CONS_OXYGEN, add_count);
         }
 
         // Red shard recipes
-        else if (consume2(lower, id_value(item_id::BLK_WOOD1), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_WOOD1, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::POWD_CHARCOAL), add_count);
+            return add(item_id::POWD_CHARCOAL, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_WOOD2), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_WOOD2, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::POWD_CHARCOAL), add_count);
+            return add(item_id::POWD_CHARCOAL, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_CA), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_CA, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::BAR_CA), add_count);
+            return add(item_id::BAR_CA, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_CU), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_CU, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::BAR_CU), add_count);
+            return add(item_id::BAR_CU, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_FE), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_FE, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::BAR_FE), add_count);
+            return add(item_id::BAR_FE, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_MG), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_MG, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::BAR_MG), add_count);
+            return add(item_id::BAR_MG, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_K), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_K, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::BAR_K), add_count);
+            return add(item_id::BAR_K, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_NA), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_NA, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::BAR_NA), add_count);
+            return add(item_id::BAR_NA, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_AU), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_AU, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::BAR_AU), add_count);
+            return add(item_id::BAR_AU, add_count);
         }
-        else if (consume2(lower, id_value(item_id::BLK_SI), low_count, higher, id_value(item_id::SHARD_R), high_count))
+        else if (consume2(lower, item_id::BLK_SI, low_count, higher, item_id::SHARD_R, high_count))
         {
-            return add(id_value(item_id::BAR_SI), add_count);
+            return add(item_id::BAR_SI, add_count);
         }
 
         // Missiles
-        else if (consume2(lower, id_value(item_id::BAR_FE), low_count, higher, id_value(item_id::BAR_NA), high_count))
+        else if (consume2(lower, item_id::BAR_FE, low_count, higher, item_id::BAR_NA, high_count))
         {
             uint8_t add_count = 4 * mult;
-            return add(id_value(skill_id::MISSILE), add_count);
+            return add(item_id::MISSILE, add_count);
+        }
+        // Keys
+        else if (consume2(lower, item_id::BAR_FE, low_count, higher, item_id::BAR_SI, high_count))
+        {
+            return add(item_id::CONS_KEY, add_count);
         }
 
         // Failed to craft item
@@ -825,66 +981,66 @@ class inventory
         uint8_t add_count = mult;
 
         // Urea
-        if (consume3(lower, id_value(item_id::SHARD_B), low_count,
-                     middle, id_value(item_id::CAT_NH4), mid_count,
-                     higher, id_value(item_id::POWD_CHARCOAL), high_count))
+        if (consume3(lower, item_id::SHARD_B, low_count,
+                     middle, item_id::CAT_NH4, mid_count,
+                     higher, item_id::POWD_CHARCOAL, high_count))
         {
-            return add(id_value(item_id::POWD_UREA), add_count);
+            return add(item_id::POWD_UREA, add_count);
         }
 
         // Battery
-        else if (consume3(lower, id_value(item_id::BAR_NA), low_count,
-                          middle, id_value(item_id::ACID_H2SO4), mid_count,
-                          higher, id_value(item_id::POWD_SALT), high_count))
+        else if (consume3(lower, item_id::BAR_NA, low_count,
+                          middle, item_id::ACID_H2SO4, mid_count,
+                          higher, item_id::POWD_SALT, high_count))
         {
             add_count = mult * 2;
-            return add(id_value(item_id::CONS_BATTERY), add_count);
+            return add(item_id::CONS_BATTERY, add_count);
         }
 
         // Auto beam
-        else if (consume3(lower, id_value(skill_id::BEAM), up_count,
-                          middle, id_value(item_id::BAR_CU), mid_count,
-                          higher, id_value(item_id::CONS_BATTERY), high_count))
+        else if (consume3(lower, item_id::BEAM, up_count,
+                          middle, item_id::BAR_CU, mid_count,
+                          higher, item_id::CONS_BATTERY, high_count))
         {
-            return add(id_value(skill_id::AUTO_BEAM), add_count);
+            return add(item_id::AUTO_BEAM, add_count);
         }
 
         // Charge beam
-        else if (consume3(lower, id_value(skill_id::BEAM), up_count,
-                          middle, id_value(item_id::BAR_AU), mid_count,
-                          higher, id_value(item_id::BAR_SI), high_count))
+        else if (consume3(lower, item_id::BEAM, up_count,
+                          middle, item_id::BAR_AU, mid_count,
+                          higher, item_id::BAR_SI, high_count))
         {
-            return add(id_value(skill_id::CHARGE), add_count);
+            return add(item_id::CHARGE, add_count);
         }
 
         // Grappling Hook
-        else if (consume3(lower, id_value(item_id::BAR_FE), low_count,
-                          middle, id_value(item_id::BAR_AU), mid_count,
-                          higher, id_value(item_id::POWD_RED_PHOS), high_count))
+        else if (consume3(lower, item_id::BAR_FE, low_count,
+                          middle, item_id::BAR_AU, mid_count,
+                          higher, item_id::POWD_RED_PHOS, high_count))
         {
-            return add(id_value(skill_id::GRAPPLE), add_count);
+            return add(item_id::GRAPPLE, add_count);
         }
 
         // Jet pack
-        else if (consume3(lower, id_value(item_id::BAR_FE), low_count,
-                          middle, id_value(item_id::POWD_KNO3), mid_count,
-                          higher, id_value(item_id::POWD_UREA), high_count))
+        else if (consume3(lower, item_id::BAR_FE, low_count,
+                          middle, item_id::POWD_KNO3, mid_count,
+                          higher, item_id::POWD_UREA, high_count))
         {
-            return add(id_value(skill_id::JET), add_count);
+            return add(item_id::JET, add_count);
         }
 
         // Scatter beam
-        else if (consume3(lower, id_value(skill_id::BEAM), up_count,
-                          middle, id_value(item_id::BAR_FE), mid_count,
-                          higher, id_value(item_id::POWD_UREA), high_count))
+        else if (consume3(lower, item_id::BEAM, up_count,
+                          middle, item_id::BAR_FE, mid_count,
+                          higher, item_id::POWD_UREA, high_count))
         {
-            return add(id_value(skill_id::SCATTER), add_count);
+            return add(item_id::SCATTER, add_count);
         }
 
         // Failed to craft item
         return false;
     }
-    inline std::pair<bool, uint8_t> craft(const size_t index, const uint8_t mult)
+    inline std::pair<bool, item_id> craft(const size_t index, const uint8_t mult)
     {
         size_t craft_size = 0;
         const size_t begin = begin_cube();
@@ -901,7 +1057,7 @@ class inventory
         {
             const size_t craft_index = begin + i;
             const item &it = _inv[craft_index];
-            if (it.id() != 0)
+            if (it.id() != item_id::EMPTY)
             {
                 _craft[craft_size++] = craft_item(craft_index, it);
             }
@@ -913,23 +1069,23 @@ class inventory
         case 1:
             return decay(index, mult);
         case 2:
-            return std::make_pair(recipe_2(mult), 0);
+            return std::make_pair(recipe_2(mult), item_id::EMPTY);
         case 3:
-            return std::make_pair(recipe_3(mult), 0);
+            return std::make_pair(recipe_3(mult), item_id::EMPTY);
         default:
             break;
         }
 
         // Return that we failed to craft
-        return std::make_pair(false, 0);
+        return std::make_pair(false, item_id::EMPTY);
     }
-    inline std::pair<bool, uint8_t> decay(const size_t index, const uint8_t mult)
+    inline std::pair<bool, item_id> decay(const size_t index, const uint8_t mult)
     {
         // Get the item
         const item &it = _inv[index];
 
         uint8_t count = mult;
-        const item_id it_id = it.id_enum();
+        const item_id it_id = it.id();
         switch (it_id)
         {
         case item_id::BLK_GRASS1:
@@ -949,57 +1105,57 @@ class inventory
         case item_id::BLK_CLAY1:
         case item_id::BLK_CLAY2:
         case item_id::BLK_STONE3:
-            return decay(index, id_value(it_id), id_value(item_id::CONS_ETHER), count, mult);
+            return decay(index, it_id, item_id::CONS_ETHER, count, mult);
         case item_id::BLK_FE:
-            return decay(index, id_value(item_id::BLK_FE), id_value(item_id::CAT_FE), count, mult);
+            return decay(index, item_id::BLK_FE, item_id::CAT_FE, count, mult);
         case item_id::BLK_MG:
-            return decay(index, id_value(item_id::BLK_MG), id_value(item_id::CAT_MG), count, mult);
+            return decay(index, item_id::BLK_MG, item_id::CAT_MG, count, mult);
         case item_id::BLK_CU:
-            return decay(index, id_value(item_id::BLK_CU), id_value(item_id::CAT_CU), count, mult);
+            return decay(index, item_id::BLK_CU, item_id::CAT_CU, count, mult);
         case item_id::BLK_NA:
-            return decay(index, id_value(item_id::BLK_NA), id_value(item_id::CAT_NA), count, mult);
+            return decay(index, item_id::BLK_NA, item_id::CAT_NA, count, mult);
         case item_id::BLK_CA:
-            return decay(index, id_value(item_id::BLK_CA), id_value(item_id::CAT_CA), count, mult);
+            return decay(index, item_id::BLK_CA, item_id::CAT_CA, count, mult);
         case item_id::BLK_CRYS_R:
-            return decay(index, id_value(item_id::BLK_CRYS_R), id_value(item_id::SHARD_R), count, mult * 4);
+            return decay(index, item_id::BLK_CRYS_R, item_id::SHARD_R, count, mult * 4);
         case item_id::BLK_CRYS_P:
-            return decay(index, id_value(item_id::BLK_CRYS_P), id_value(item_id::SHARD_P), count, mult * 4);
+            return decay(index, item_id::BLK_CRYS_P, item_id::SHARD_P, count, mult * 4);
         case item_id::BLK_CRYS_B:
-            return decay(index, id_value(item_id::BLK_CRYS_B), id_value(item_id::SHARD_B), count, mult * 4);
+            return decay(index, item_id::BLK_CRYS_B, item_id::SHARD_B, count, mult * 4);
         case item_id::BLK_CRYS_G:
-            return decay(index, id_value(item_id::BLK_CRYS_G), id_value(item_id::SHARD_G), count, mult * 4);
+            return decay(index, item_id::BLK_CRYS_G, item_id::SHARD_G, count, mult * 4);
         case item_id::BLK_K:
-            return decay(index, id_value(item_id::BLK_K), id_value(item_id::CAT_K), count, mult);
+            return decay(index, item_id::BLK_K, item_id::CAT_K, count, mult);
         case item_id::POWD_BGUANO:
-            return decay(index, id_value(item_id::POWD_BGUANO), id_value(item_id::POWD_KNO3), count, mult * 4);
+            return decay(index, item_id::POWD_BGUANO, item_id::POWD_KNO3, count, mult * 4);
         case item_id::BLK_TOM:
-            return decay(index, id_value(item_id::BLK_TOM), id_value(item_id::CONS_TOM), count, mult * 4);
+            return decay(index, item_id::BLK_TOM, item_id::CONS_TOM, count, mult * 4);
         case item_id::BLK_EGGP:
-            return decay(index, id_value(item_id::BLK_EGGP), id_value(item_id::CONS_EGGP), count, mult * 4);
+            return decay(index, item_id::BLK_EGGP, item_id::CONS_EGGP, count, mult * 4);
         case item_id::BLK_RED_PEP:
-            return decay(index, id_value(item_id::BLK_RED_PEP), id_value(item_id::CONS_RED_PEP), count, mult * 4);
+            return decay(index, item_id::BLK_RED_PEP, item_id::CONS_RED_PEP, count, mult * 4);
         case item_id::BLK_GR_PEP:
-            return decay(index, id_value(item_id::BLK_GR_PEP), id_value(item_id::CONS_GR_PEP), count, mult * 4);
+            return decay(index, item_id::BLK_GR_PEP, item_id::CONS_GR_PEP, count, mult * 4);
         case item_id::CAT_NH4:
-            return decay(index, id_value(item_id::CAT_NH4), id_value(item_id::AN_NO3), count, mult);
+            return decay(index, item_id::CAT_NH4, item_id::AN_NO3, count, mult);
         case item_id::CONS_EGGP:
             count = 1;
-            return decay(index, id_value(item_id::CONS_EGGP), id_value(item_id::AN_CL), count, 1);
+            return decay(index, item_id::CONS_EGGP, item_id::AN_CL, count, 1);
         case item_id::CONS_GR_PEP:
             count = 1;
-            return decay(index, id_value(item_id::CONS_GR_PEP), id_value(item_id::AN_CL), count, 1);
+            return decay(index, item_id::CONS_GR_PEP, item_id::AN_CL, count, 1);
         case item_id::CONS_RED_PEP:
             count = 1;
-            return decay(index, id_value(item_id::CONS_RED_PEP), id_value(item_id::CAT_H), count, 1);
+            return decay(index, item_id::CONS_RED_PEP, item_id::CAT_H, count, 1);
         case item_id::CONS_TOM:
             count = 1;
-            return decay(index, id_value(item_id::CONS_TOM), id_value(item_id::CAT_H), count, 1);
+            return decay(index, item_id::CONS_TOM, item_id::CAT_H, count, 1);
         case item_id::CONS_BATTERY:
             count = 1;
-            return decay(index, id_value(item_id::CONS_BATTERY), count);
+            return decay(index, item_id::CONS_BATTERY, count);
         case item_id::CONS_OXYGEN:
             count = 1;
-            return decay(index, id_value(item_id::CONS_OXYGEN), count);
+            return decay(index, item_id::CONS_OXYGEN, count);
         default:
             break;
         }
@@ -1012,7 +1168,7 @@ class inventory
     }
     inline void drop(const size_t index)
     {
-        _inv[index].drop();
+        _inv[index].set_empty();
 
         // Store update index
         _update.emplace_back(index);
@@ -1020,88 +1176,63 @@ class inventory
     inline void fill(const std::vector<item> &inv)
     {
         // Write inventory data into stream
-        const size_t start = begin_key();
+        const size_t start = begin_store();
         const size_t end = end_cube();
         for (size_t i = start; i < end; i++)
         {
             _inv[i] = inv[i];
         }
     }
-    inline const std::string &get_name(const item &it) const
+    inline const std::string &get_name(const item_id id) const
     {
-        return _inv_name[it.id()];
+        return _inv_name[id_value(id)];
     }
-    inline const std::string &get_info(const item &it) const
+    inline const std::string &get_info(const item_id id) const
     {
-        return _inv_desc[it.id()];
+        return _inv_desc[id_value(id)];
     }
     inline const std::vector<ui_id> &get_updates() const
     {
         return _update;
     }
-    inline static constexpr int8_t id_to_atlas(const uint8_t id)
+    inline void respawn(const bool hardcore)
     {
-        // Convert inventory id to cube atlas
-        return id - 17;
-    }
-    inline static constexpr uint8_t id_from_atlas(const int8_t id)
-    {
-        // Convert from atlas to inventory id
-        return id + 17;
-    }
-    inline static constexpr int8_t id_to_item(const uint8_t id)
-    {
-        // Convert inventory id to cube atlas
-        return id - 81;
-    }
-    inline void respawn()
-    {
-        std::fill(_inv.begin(), _inv.end(), item());
-
-        // Create items in the store
-        set_store();
-
-        // Flag all dirty
-        _update.resize(_inv.size());
-        std::iota(_update.begin(), _update.end(), 0);
-    }
-    inline bool stack(const size_t one, const size_t two)
-    {
-        // Try to stack items if same type
-        const uint8_t id = _inv[one].id();
-        if (id == _inv[two].id())
+        if (hardcore)
         {
-            uint8_t count = _inv[one].count();
-            _inv[two].stack(count);
+            // Wipe inventory
+            std::fill(_inv.begin(), _inv.end(), item());
 
-            // If items are left
-            if (count > 0)
-            {
-                _inv[one] = item(id, count);
-            }
-            else
-            {
-                // Discard empty item
-                _inv[one].drop();
-            }
+            // Create items in the store
+            set_store();
 
-            // Submit indices for updating
-            _update.emplace_back(one);
-            _update.emplace_back(two);
-
-            // Return that we stacked
-            return true;
+            // Flag all dirty
+            _update.resize(_inv.size());
+            std::iota(_update.begin(), _update.end(), 0);
         }
+        else
+        {
+            // Drop 5 random item slots
+            for (size_t i = 0; i < _drop_count; i++)
+            {
+                // Calculate random index to drop
+                const size_t index = _drop_dist(_gen);
+                if (_inv[index].type() != item_type::empty)
+                {
+                    // Drop item
+                    _inv[index].set_empty();
 
-        // Return that we didn't stack
-        return false;
+                    // Set update index
+                    _update.push_back(index);
+                }
+            }
+        }
     }
     inline void swap(const size_t one, const size_t two)
     {
         // If swapping with store
         if (one >= begin_store() && one < end_store())
         {
-            if (_inv[two].id() == 0)
+            if (_inv[two].id() == item_id::EMPTY)
             {
                 _inv[two] = _inv[one];
 
@@ -1111,7 +1242,7 @@ class inventory
         }
         else if (two >= begin_store() && two < end_store())
         {
-            if (_inv[one].id() == 0)
+            if (_inv[one].id() == item_id::EMPTY)
             {
                 _inv[one] = _inv[two];
 

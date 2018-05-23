@@ -127,6 +127,20 @@ class chests
         // Return chest added
         return true;
     }
+    inline void clear()
+    {
+        // Remove all the chests
+        const size_t size = _chests.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            // Clear chest at index
+            _inst->get_chest().clear(_chests[i].inst_id());
+            _sim->clear_body(_chests[i].body_id());
+        }
+
+        // Clear all the chests
+        _chests.clear();
+    }
     inline const std::string &get_string() const
     {
         return _str;

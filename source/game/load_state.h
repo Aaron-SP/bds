@@ -20,7 +20,9 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cstdint>
 #include <game/file.h>
+#include <game/id.h>
 #include <game/inventory.h>
+#include <game/static_instance.h>
 #include <game/stats.h>
 #include <iostream>
 #include <limits>
@@ -46,7 +48,9 @@ class load_state
     float _health;
     float _oxygen;
     uint16_t _stat_points;
+    std::vector<min::vec3<float>> _chests;
     bool _new_game;
+    uint8_t _game_mode;
 
     inline void check_inside()
     {
@@ -124,7 +128,7 @@ class load_state
             _look = min::vec3<float>(lx, ly, lz);
 
             // Load inventory data from stream
-            const size_t start = inventory::begin_key();
+            const size_t start = inventory::begin_store();
             const size_t end = inventory::end_cube();
             const uint32_t inv_length = end - start;
             const uint32_t read_inv_size = min::read_le<uint32_t>(stream, next);
@@ -138,9 +142,12 @@ class load_state
             // Copy data
             for (size_t i = start; i < end; i++)
             {
-                const uint8_t id = min::read_le<uint8_t>(stream, next);
+                const item_id id = static_cast<item_id>(min::read_le<uint8_t>(stream, next));
                 const uint8_t count = min::read_le<uint8_t>(stream, next);
-                _inv[i] = item(id, count);
+                const uint8_t prim = min::read_le<uint8_t>(stream, next);
+                const uint8_t sec = min::read_le<uint8_t>(stream, next);
+                const uint8_t level = min::read_le<uint8_t>(stream, next);
+                _inv[i] = item(id, count, prim, sec, level);
             }
 
             // Load stats from stream
@@ -174,11 +181,49 @@ class load_state
             // Load stats from stream
             _stat_points = min::read_le<uint16_t>(stream, next);
 
+            // Load the game mode
+            const uint8_t game_mode = min::read_le<uint8_t>(stream, next);
+            if (_game_mode == 2)
+            {
+                // Keep the loaded flag
+                _game_mode = game_mode;
+            }
+            else if (_game_mode != game_mode)
+            {
+                // Alert mode switch to user
+                if (_game_mode == 1)
+                {
+                    std::cout << "Switching game mode to HARDCORE!" << std::endl;
+                }
+                else
+                {
+                    std::cout << "Switching game mode to NORMAL!" << std::endl;
+                }
+            }
+
+            // Load the chest positions
+            const size_t chest_size = min::read_le<uint32_t>(stream, next);
+            if (chest_size > static_instance::max_chests())
+            {
+                throw std::runtime_error("load_state: incompatible chest size");
+            }
+
+            // Copy data
+            for (size_t i = 0; i < chest_size; i++)
+            {
+                _chests.push_back(min::read_le_vec3<float>(stream, next));
+            }
+
             // Flag that this is not a new game
             _new_game = false;
         }
+        else
+        {
+            // Default to normal mode
+            _game_mode = 0;
+        }
     }
-    inline void state_save_file(const inventory &inv, const stats &stat, const min::camera<float> &camera, const min::vec3<float> &p)
+    inline void state_save_file(const static_instance &si, const inventory &inv, const stats &stat, const min::camera<float> &camera, const min::vec3<float> &p)
     {
         // Create output stream for saving world
         std::vector<uint8_t> stream;
@@ -198,15 +243,18 @@ class load_state
         min::write_le<float>(stream, look.z());
 
         // Write inventory data into stream
-        const size_t start = inv.begin_key();
+        const size_t start = inv.begin_store();
         const size_t end = inv.end_cube();
         const uint32_t inv_length = end - start;
         min::write_le<uint32_t>(stream, inv_length);
         for (size_t i = start; i < end; i++)
         {
             const item &it = inv[i];
-            min::write_le<uint8_t>(stream, it.id());
+            min::write_le<uint8_t>(stream, static_cast<uint8_t>(it.id()));
             min::write_le<uint8_t>(stream, it.count());
+            min::write_le<uint8_t>(stream, it.prim());
+            min::write_le<uint8_t>(stream, it.sec());
+            min::write_le<uint8_t>(stream, it.level());
         }
 
         // Write stats into stream
@@ -232,12 +280,27 @@ class load_state
         // Save the player stats
         min::write_le<uint16_t>(stream, stat.get_stat_points());
 
+        // Save the game mode
+        min::write_le<uint8_t>(stream, _game_mode);
+
+        // Get the chests
+        const std::vector<min::mat4<float>> &chests = si.get_chest().get_in_matrix();
+
+        // Write chests into stream
+        const size_t chest_size = chests.size();
+        min::write_le<uint32_t>(stream, static_cast<uint32_t>(chest_size));
+        for (size_t i = 0; i < chest_size; i++)
+        {
+            // Save the chest locations
+            min::write_le_vec3<float>(stream, chests[i].get_translation());
+        }
+
         // Write data to file
         save_file("bin/state", stream);
     }
 
   public:
-    load_state(const size_t grid_size)
+    load_state(const size_t grid_size, const uint8_t game_mode)
         : _grid_size(static_cast<uint32_t>(grid_size)),
           _default_look(1.0, _grid_size * 0.75, 0.0),
           _default_spawn(0.0, _grid_size * 0.75, 0.0),
@@ -245,7 +308,7 @@ class load_state
           _top(0.0, _grid_size - 1.0, 0.0),
           _inv(inventory::size()),
           _stat{}, _energy(0.0), _exp(0.0), _health(0.0), _oxygen(0.0), _stat_points(0),
-          _new_game(true)
+          _new_game(true), _game_mode(game_mode)
     {
         // Check for integer overflow
         if (grid_size > std::numeric_limits<uint32_t>::max())
@@ -258,6 +321,10 @@ class load_state
 
         // Load state
         state_load_file();
+    }
+    inline const std::vector<min::vec3<float>> &get_chests() const
+    {
+        return _chests;
     }
     inline const min::vec3<float> &get_default_look() const
     {
@@ -279,14 +346,6 @@ class load_state
     {
         return _health;
     }
-    inline float get_oxygen() const
-    {
-        return _oxygen;
-    }
-    inline uint16_t get_stat_points() const
-    {
-        return _stat_points;
-    }
     inline const std::vector<item> &get_inventory() const
     {
         return _inv;
@@ -295,9 +354,17 @@ class load_state
     {
         return _look;
     }
+    inline float get_oxygen() const
+    {
+        return _oxygen;
+    }
     inline const min::vec3<float> &get_spawn() const
     {
         return _spawn;
+    }
+    inline uint16_t get_stat_points() const
+    {
+        return _stat_points;
     }
     inline const std::array<uint16_t, stats::stat_str_size()> &get_stats() const
     {
@@ -307,13 +374,17 @@ class load_state
     {
         return _top;
     }
+    inline bool is_hardcore() const
+    {
+        return _game_mode == 1;
+    }
     inline bool is_new_game() const
     {
         return _new_game;
     }
-    inline void save_state(const inventory &inv, const stats &stat, const min::camera<float> &cam, const min::vec3<float> &p)
+    inline void save_state(const static_instance &si, const inventory &inv, const stats &stat, const min::camera<float> &cam, const min::vec3<float> &p)
     {
-        state_save_file(inv, stat, cam, p);
+        state_save_file(si, inv, stat, cam, p);
     }
 };
 }

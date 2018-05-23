@@ -124,10 +124,11 @@ void show_game(bds &game, min::loop_sync &sync, const size_t frames)
 }
 
 void run(const size_t frames, const size_t chunk, const size_t grid,
-         const size_t view, const size_t width, const size_t height, const bool resize)
+         const size_t view, const size_t width, const size_t height,
+         const bool resize, const uint8_t game_mode)
 {
     // Load window shaders and program, enable shader program
-    bds game(chunk, grid, view, width, height);
+    bds game(chunk, grid, view, width, height, game_mode);
 
     // Setup controller to run at 60 frames per second
     min::loop_sync sync(frames, 0.25, 0.25, 0.25);
@@ -172,6 +173,7 @@ int main(int argc, char *argv[])
         size_t view = 5;
         size_t width = 1024;
         size_t height = 768;
+        size_t hardcore = 2;
         bool resize = true;
 
         // Try to parse commandline args
@@ -213,6 +215,11 @@ int main(int argc, char *argv[])
                 parse_uint(argv[i], height);
                 resize = false;
             }
+            else if (input.compare("-hardcore") == 0)
+            {
+                // Parse uint
+                parse_uint(argv[i], hardcore);
+            }
             else
             {
                 std::cout << "bds: unknown flag '"
@@ -236,9 +243,15 @@ int main(int argc, char *argv[])
             std::cout << "bds: '-view' must be atleast 3" << std::endl;
             return 0;
         }
+        else if (hardcore > 2)
+        {
+            std::cout << "bds: '-hardcore' must be 0 or 1" << std::endl;
+            return 0;
+        }
 
         // Run the game
-        run(frames, chunk, grid, view, width, height, resize);
+        const uint8_t game_mode = static_cast<uint8_t>(hardcore);
+        run(frames, chunk, grid, view, width, height, resize, game_mode);
     }
     catch (const std::exception &ex)
     {

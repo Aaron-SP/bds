@@ -39,13 +39,15 @@ class ui_overlay
     const std::string _health;
     const std::string _inside;
     const std::string _intro;
+    const std::string _item;
+    const std::string _item_fail;
     const std::string _level;
     const std::string _oxygen;
     const std::string _peace;
     const std::string _power;
     const std::string _res;
-    const std::string _swarm;
-    const std::string _swarm_kill;
+    const std::string _drone;
+    const std::string _drone_kill;
     const std::string _thrust;
     float _time;
     uint8_t _mult;
@@ -59,7 +61,7 @@ class ui_overlay
             _text.set_draw_alert(true);
 
             // Show resource message
-            _text.update_ui_alert(str);
+            _text.set_ui_alert(str);
 
             // Add some time on the clock
             _time = time;
@@ -79,13 +81,15 @@ class ui_overlay
           _health("Low Health!"),
           _inside("Can't place block inside player!"),
           _intro("You awaken in an unfamiliar, mysterious place."),
+          _item("You received a random item!"),
+          _item_fail("You need a key to open this chest!"),
           _level("Level up!"),
           _oxygen("Low Oxygen!"),
           _peace("Everything seems peaceful!"),
           _power("Low Power!"),
           _res("Not enough blocks/ether for that operation!"),
-          _swarm("Space pirates have invaded your planet!"),
-          _swarm_kill("Space pirates pillaged all your belongings!"),
+          _drone("Space pirates have invaded your planet!"),
+          _drone_kill("Space pirates pillaged all your belongings!"),
           _thrust("Thrusters are now online!"),
           _time(-1.0), _mult(1) {}
 
@@ -207,6 +211,10 @@ class ui_overlay
     {
         return _bg.is_extended();
     }
+    inline bool is_focused() const
+    {
+        return _bg.is_focused();
+    }
     inline bool overlap(const min::vec2<float> &p)
     {
         // Test for overlap on UI
@@ -220,7 +228,7 @@ class ui_overlay
             const std::string &info = _bg.get_hover_info();
 
             // Update the hover text
-            _text.update_hover(p, name, info);
+            _text.set_hover(p, name, info);
 
             // Enable drawing hover text
             _text.set_draw_hover(true);
@@ -242,95 +250,6 @@ class ui_overlay
     {
         _bg.respawn();
     }
-    inline void set_console_string(const std::string &str)
-    {
-        _text.update_console(str);
-    }
-    inline void set_cursor_aim()
-    {
-        _bg.set_cursor_aim();
-    }
-    inline void set_cursor_reload()
-    {
-        _bg.set_cursor_reload();
-    }
-    inline void set_cursor_target()
-    {
-        _bg.set_cursor_target();
-    }
-    inline void set_draw_title(const bool flag)
-    {
-        _bg.set_draw_title(flag);
-    }
-    inline void set_draw_text_ui(const bool flag)
-    {
-        _text.set_draw_ui(flag);
-    }
-    inline void set_energy(const float energy)
-    {
-        _bg.set_energy(energy);
-    }
-    inline void set_experience(const float exp)
-    {
-        _bg.set_exp(exp);
-    }
-    inline void set_focus(const bool flag)
-    {
-        _bg.set_draw_focus(flag);
-        _text.set_draw_focus(flag);
-    }
-    inline void set_focus_bar(const float bar)
-    {
-        _bg.set_focus_bar(bar);
-    }
-    inline void set_focus_string(const std::string &str)
-    {
-        _text.update_focus(str);
-    }
-    inline void set_health(const float health)
-    {
-        _bg.set_health(health);
-    }
-    inline void set_oxygen(const float oxygen)
-    {
-        _bg.set_oxygen(oxygen);
-    }
-    inline void set_key_down(const size_t index)
-    {
-        _bg.set_key_down(index);
-    }
-    inline void set_key_down_fail(const size_t index)
-    {
-        _bg.set_key_down_fail(index);
-    }
-    inline void set_key_up(const size_t index)
-    {
-        _bg.set_key_up(index);
-    }
-    inline void set_minimized(const bool flag)
-    {
-        _bg.set_minimized(flag);
-    }
-    inline void set_menu_dead()
-    {
-        _bg.set_menu_dead();
-    }
-    inline void set_menu_pause()
-    {
-        _bg.set_menu_pause();
-    }
-    inline void set_multiplier(const uint8_t mult)
-    {
-        _mult = mult;
-    }
-    inline void set_screen(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
-    {
-        // Set bg screen dimensions
-        _bg.set_screen(p, width, height);
-
-        // Set text screen dimensions
-        _text.set_screen(p, width, height);
-    }
     inline void set_alert_action_fail()
     {
         set_ui_alert(_action_fail, 2.0, 1);
@@ -346,6 +265,14 @@ class ui_overlay
     inline void set_alert_intro()
     {
         set_ui_alert(_intro, 10.0, 5);
+    }
+    inline void set_alert_item()
+    {
+        set_ui_alert(_item, 5.0, 3);
+    }
+    inline void set_alert_item_fail()
+    {
+        set_ui_alert(_item_fail, 5.0, 3);
     }
     inline void set_alert_level()
     {
@@ -363,17 +290,110 @@ class ui_overlay
     {
         set_ui_alert(_res, 2.0, 1);
     }
-    inline void set_alert_swarm()
+    inline void set_alert_drone()
     {
-        set_ui_alert(_swarm, 5.0, 4);
+        set_ui_alert(_drone, 5.0, 4);
     }
-    inline void set_alert_swarm_kill()
+    inline void set_alert_drone_kill()
     {
-        set_ui_alert(_swarm_kill, 5.0, 4);
+        set_ui_alert(_drone_kill, 5.0, 4);
     }
     inline void set_alert_thruster()
     {
         set_ui_alert(_thrust, 10.0, 6);
+    }
+    inline void set_console_string(const std::string &str)
+    {
+        _text.set_console(str);
+    }
+    inline void set_cursor_aim()
+    {
+        _bg.set_cursor_aim();
+    }
+    inline void set_cursor_reload()
+    {
+        _bg.set_cursor_reload();
+    }
+    inline void set_cursor_target()
+    {
+        _bg.set_cursor_target();
+    }
+    inline void set_draw_text_ui(const bool flag)
+    {
+        _text.set_draw_ui(flag);
+    }
+    inline void set_draw_timer(const bool flag)
+    {
+        _text.set_draw_timer(flag);
+    }
+    inline void set_draw_title(const bool flag)
+    {
+        _bg.set_draw_title(flag);
+    }
+    inline void set_energy(const float energy)
+    {
+        _bg.set_energy(energy);
+    }
+    inline void set_experience(const float exp)
+    {
+        _bg.set_exp(exp);
+    }
+    inline void set_draw_focus(const bool flag)
+    {
+        _bg.set_draw_focus(flag);
+        _text.set_draw_focus(flag);
+    }
+    inline void set_focus(const float bar)
+    {
+        _bg.set_focus(bar);
+    }
+    inline void set_focus_string(const std::string &str)
+    {
+        _text.set_focus(str);
+    }
+    inline void set_health(const float health)
+    {
+        _bg.set_health(health);
+    }
+    inline void set_key_down(const size_t index)
+    {
+        _bg.set_key_down(index);
+    }
+    inline void set_key_down_fail(const size_t index)
+    {
+        _bg.set_key_down_fail(index);
+    }
+    inline void set_key_up(const size_t index)
+    {
+        _bg.set_key_up(index);
+    }
+    inline void set_oxygen(const float oxygen)
+    {
+        _bg.set_oxygen(oxygen);
+    }
+    inline void set_menu_dead()
+    {
+        _bg.set_menu_dead();
+    }
+    inline void set_menu_pause()
+    {
+        _bg.set_menu_pause();
+    }
+    inline void set_minimized(const bool flag)
+    {
+        _bg.set_minimized(flag);
+    }
+    inline void set_multiplier(const uint8_t mult)
+    {
+        _mult = mult;
+    }
+    inline void set_screen(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
+    {
+        // Set bg screen dimensions
+        _bg.set_screen(p, width, height);
+
+        // Set text screen dimensions
+        _text.set_screen(p, width, height);
     }
     inline void stream_low_health()
     {
@@ -391,11 +411,6 @@ class ui_overlay
     {
         return _text;
     }
-    inline void toggle_console()
-    {
-        _text.toggle_draw_console();
-        _bg.toggle_draw_console();
-    }
     inline void toggle_debug_text()
     {
         _text.toggle_draw_debug();
@@ -411,7 +426,7 @@ class ui_overlay
     inline void update(const min::vec3<float> &p, const min::vec3<float> &dir,
                        const float health, const float energy, const double fps,
                        const double idle, const size_t chunks, const size_t insts,
-                       const std::string &target, const float dt)
+                       const std::string &target, const float time, const float dt)
     {
         // Update bg
         _bg.update();
@@ -430,8 +445,11 @@ class ui_overlay
             _text.set_debug_target(target);
         }
 
+        // Update the drone timer
+        _text.set_timer(time);
+
         // Update ui text
-        _text.update_ui(health, energy);
+        _text.set_ui(health, energy);
 
         // Update stream text
         _text.update_stream(dt);

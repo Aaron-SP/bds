@@ -20,6 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <cmath>
 #include <fstream>
+#include <game/id.h>
 #include <game/work_queue.h>
 #include <kernel/mandelbulb_asym.h>
 #include <kernel/mandelbulb_exp.h>
@@ -35,19 +36,19 @@ namespace game
 class cgrid_generator
 {
   private:
-    std::vector<int8_t> _back;
+    std::vector<block_id> _back;
 
-    inline void clear_grid(std::vector<int8_t> &grid)
+    inline void clear_grid(std::vector<block_id> &grid)
     {
         // Parallelize on copying buffers
         const auto work = [&grid](std::mt19937 &gen, const size_t i) {
-            grid[i] = -1;
+            grid[i] = block_id::EMPTY;
         };
 
         // Convert cells to mesh in parallel
         work_queue::worker.run(work, 0, grid.size());
     }
-    inline size_t count_grid(std::vector<int8_t> &grid)
+    inline size_t count_grid(std::vector<block_id> &grid)
     {
         // Out variable
         size_t count = 0;
@@ -56,7 +57,7 @@ class cgrid_generator
         const size_t size = grid.size();
         for (size_t i = 0; i < size; i++)
         {
-            if (grid[i] != -1)
+            if (grid[i] != block_id::EMPTY)
             {
                 count++;
             }
@@ -67,8 +68,8 @@ class cgrid_generator
     }
 
   public:
-    cgrid_generator(const std::vector<int8_t> &grid) : _back(grid.size(), -1) {}
-    inline void copy(std::vector<int8_t> &grid) const
+    cgrid_generator(const std::vector<block_id> &grid) : _back(grid.size(), block_id::EMPTY) {}
+    inline void copy(std::vector<block_id> &grid) const
     {
         // Parallelize on copying buffers
         const auto work = [this, &grid](std::mt19937 &gen, const size_t i) {
@@ -78,7 +79,7 @@ class cgrid_generator
         // Convert cells to mesh in parallel
         work_queue::worker.run(work, 0, grid.size());
     }
-    void generate_world(std::vector<int8_t> &grid, const size_t scale, const size_t chunk_size,
+    void generate_world(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size,
                         const std::function<size_t(const std::tuple<size_t, size_t, size_t> &)> &grid_key_unpack,
                         const std::function<min::vec3<float>(const size_t)> &grid_cell_center)
     {
@@ -102,7 +103,7 @@ class cgrid_generator
         // Put the threads back to sleep
         work_queue::worker.sleep();
     }
-    void generate_portal(std::vector<int8_t> &grid, const size_t scale, const size_t chunk_size,
+    void generate_portal(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size,
                          const std::function<size_t(const std::tuple<size_t, size_t, size_t> &)> &grid_key_unpack,
                          const std::function<min::vec3<float>(const size_t)> &grid_cell_center)
     {

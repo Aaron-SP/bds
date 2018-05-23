@@ -58,10 +58,11 @@ class ui_text
     static constexpr size_t _max_stream = 10;
     static constexpr size_t _console = 0;
     static constexpr size_t _focus = _console + 1;
-    static constexpr size_t _ui = _focus + 1;
+    static constexpr size_t _timer = _focus + 1;
+    static constexpr size_t _ui = _timer + 1;
     static constexpr size_t _alert = _ui + 2;
     static constexpr size_t _debug = _alert + 1;
-    static constexpr size_t _hover = _debug + 13;
+    static constexpr size_t _hover = _debug + 14;
     static constexpr size_t _stream = _hover + 2;
     static constexpr size_t _end = _stream + _max_stream;
 
@@ -98,8 +99,9 @@ class ui_text
     bool _draw_console;
     bool _draw_debug;
     bool _draw_focus;
-    bool _draw_ui;
     bool _draw_hover;
+    bool _draw_timer;
+    bool _draw_ui;
 
     inline void add_text(const std::string &s, const float x, const float y)
     {
@@ -141,6 +143,9 @@ class ui_text
 
         // Position the focus element
         _text.set_text_center(_focus, w2, height - _focus_text_dy);
+
+        // Position the timer element
+        _text.set_text_center(_timer, w2, height - _timer_text_dy);
 
         // Position the ui elements
         _text.set_text_location(_ui, w2 + _ui_health_dx, _y_ui_text);
@@ -200,7 +205,14 @@ class ui_text
         }
         if (_draw_focus)
         {
-            for (size_t i = _focus; i < _ui; i++)
+            for (size_t i = _focus; i < _timer; i++)
+            {
+                _indices.push_back(i);
+            }
+        }
+        if (_draw_timer)
+        {
+            for (size_t i = _timer; i < _ui; i++)
             {
                 _indices.push_back(i);
             }
@@ -280,7 +292,7 @@ class ui_text
           _text_bg("data/fonts/open_sans.ttf", _ui_font_size),
           _main_batch(0), _stream_batch(0), _tt1_batch(0), _tt2_batch(0), _st{}, _stream_old(0),
           _draw_alert(false), _draw_console(false), _draw_debug(false),
-          _draw_focus(false), _draw_ui(false), _draw_hover(false)
+          _draw_focus(false), _draw_hover(false), _draw_timer(false), _draw_ui(false)
     {
         // Set the stream precision
         _ss << std::fixed << std::setprecision(2);
@@ -302,11 +314,18 @@ class ui_text
             _text.set_line_wrap(i, _x_console_wrap, _y_console_wrap);
         }
 
-        // Add 1 focus entries
-        for (size_t i = _focus; i < _ui; i++)
+        // Add 1 focus entry
+        for (size_t i = _focus; i < _timer; i++)
         {
             add_text("", 0, 0);
             _text.set_line_wrap(i, _x_focus_wrap, _y_focus_wrap);
+        }
+
+        // Add 1 timer entry
+        for (size_t i = _timer; i < _ui; i++)
+        {
+            add_text("", 0, 0);
+            _text.set_line_wrap(i, _x_timer_wrap, _y_timer_wrap);
         }
 
         // Add 2 ui entries
@@ -372,7 +391,7 @@ class ui_text
         _text.set_text(text_index, str);
 
         // Get the screen dimensions
-        const std::pair<float, float> size = _text.get_screen_size();
+        const std::pair<uint16_t, uint16_t> size = _text.get_screen_size();
 
         // Get the center width
         const uint16_t w2 = size.first / 2;
@@ -445,6 +464,15 @@ class ui_text
     {
         return _draw_debug;
     }
+    inline void set_console(const std::string &str)
+    {
+        // Get the screen dimensions
+        const std::pair<uint16_t, uint16_t> size = _text.get_screen_size();
+
+        // Get the center width
+        const uint16_t w2 = size.first / 2;
+        _text.set_text_center(_console, str, w2, _console_dy);
+    }
     inline void set_draw_alert(const bool flag)
     {
         _draw_alert = flag;
@@ -464,6 +492,10 @@ class ui_text
     inline void set_draw_hover(const bool flag)
     {
         _draw_hover = flag;
+    }
+    inline void set_draw_timer(const bool flag)
+    {
+        _draw_timer = flag;
     }
     inline void set_draw_ui(const bool flag)
     {
@@ -592,37 +624,33 @@ class ui_text
     {
         _text.set_text(_debug + 12, str);
     }
-    inline void toggle_draw_console()
+    inline void set_debug_game_mode(const std::string &str)
     {
-        _draw_console = !_draw_console;
+        _text.set_text(_debug + 13, str);
     }
-    inline void toggle_draw_debug()
-    {
-        _draw_debug = !_draw_debug;
-    }
-    inline void toggle_draw_focus()
-    {
-        _draw_focus = !_draw_focus;
-    }
-    inline void update_console(const std::string &str)
+    inline void set_focus(const std::string &str)
     {
         // Get the screen dimensions
-        const std::pair<float, float> size = _text.get_screen_size();
-
-        // Get the center width
-        const uint16_t w2 = size.first / 2;
-        _text.set_text_center(_console, str, w2, _console_dy);
-    }
-    inline void update_focus(const std::string &str)
-    {
-        // Get the screen dimensions
-        const std::pair<float, float> size = _text.get_screen_size();
+        const std::pair<uint16_t, uint16_t> size = _text.get_screen_size();
 
         // Get the center width
         const uint16_t w2 = size.first / 2;
         _text.set_text_center(_focus, str, w2, size.second - _focus_text_dy);
     }
-    inline void update_ui(const float health, const float energy)
+    inline void set_timer(const float time)
+    {
+        // Get the screen dimensions
+        const std::pair<uint16_t, uint16_t> size = _text.get_screen_size();
+        const uint16_t w2 = size.first / 2;
+
+        // Clear and reset the stream
+        clear_stream();
+
+        // Update the energy text
+        _ss << "Next Invasion: " << time << " s";
+        _text.set_text_center(_timer, _ss.str(), w2, size.second - _timer_text_dy);
+    }
+    inline void set_ui(const float health, const float energy)
     {
         // Clear and reset the stream
         clear_stream();
@@ -638,19 +666,19 @@ class ui_text
         _ss << static_cast<int>(std::round(energy));
         _text.set_text(_ui + 1, _ss.str());
     }
-    inline void update_ui_alert(const std::string &alert)
+    inline void set_ui_alert(const std::string &alert)
     {
         // Get the screen dimensions
-        const std::pair<float, float> size = _text.get_screen_size();
+        const std::pair<uint16_t, uint16_t> size = _text.get_screen_size();
 
         // Get the center width
         const uint16_t w2 = size.first / 2;
         _text.set_text_center(_alert, alert, w2, size.second + _alert_dy);
     }
-    inline void update_hover(const min::vec2<float> &p, const std::string &name, const std::string &info)
+    inline void set_hover(const min::vec2<float> &p, const std::string &name, const std::string &info)
     {
         // Get the screen dimensions
-        const std::pair<float, float> size = _text.get_screen_size();
+        const std::pair<uint16_t, uint16_t> size = _text.get_screen_size();
         const uint16_t half_height = size.second / 2;
 
         // Calculate hover y offset to avoid off screen issues
@@ -668,10 +696,22 @@ class ui_text
         const float y_info = p.y() + hover_info_dy;
         _text.set_text(_hover + 1, info, x_info, y_info);
     }
+    inline void toggle_draw_console()
+    {
+        _draw_console = !_draw_console;
+    }
+    inline void toggle_draw_debug()
+    {
+        _draw_debug = !_draw_debug;
+    }
+    inline void toggle_draw_focus()
+    {
+        _draw_focus = !_draw_focus;
+    }
     inline void update_stream(const float dt)
     {
         // Get the screen dimensions
-        const std::pair<float, float> size = _text.get_screen_size();
+        const std::pair<uint16_t, uint16_t> size = _text.get_screen_size();
 
         // Get the center width
         const uint16_t w2 = size.first / 2;

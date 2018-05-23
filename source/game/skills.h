@@ -28,16 +28,16 @@ namespace game
 class skills
 {
   private:
-    static constexpr float _auto_cd = 100.0;
-    static constexpr float _beam_cd = 1000.0;
-    static constexpr float _charge_cd = 500.0;
+    static constexpr float _auto_cd = 400.0;
+    static constexpr float _beam_cd = 1500.0;
+    static constexpr float _charge_cd = 1250.0;
+    static constexpr float _gren_cd = 4000.0;
+    static constexpr float _miss_cd = 2000.0;
+    static constexpr float _scat_cd = 1250.0;
     static constexpr float _charge_start = 250.0;
     static constexpr float _charge_time = 500.0;
     static constexpr float _portal_start = 250.0;
     static constexpr float _portal_charge_time = 5000.0;
-    static constexpr float _gren_cd = 1000.0;
-    static constexpr float _miss_cd = 250.0;
-    static constexpr float _scat_cd = 750.0;
     enum skill_mode
     {
         auto_beam,

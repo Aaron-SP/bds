@@ -22,6 +22,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/file.h>
 #include <game/load_state.h>
 #include <game/player.h>
+#include <game/static_instance.h>
 
 namespace game
 {
@@ -105,8 +106,8 @@ class state
     }
 
   public:
-    state(const size_t grid_size)
-        : _state(grid_size), _tracking(false), _frame_count(0), _x{}, _y{},
+    state(const size_t grid_size, const uint8_t game_mode)
+        : _state(grid_size, game_mode), _tracking(false), _frame_count(0), _x{}, _y{},
           _recoil(0), _run_accum(0.0), _run_accum_sin(0.0),
           _dead(false), _pause(false), _respawn(false), _user_input(false)
     {
@@ -120,10 +121,6 @@ class state
     inline const min::camera<float> &get_camera() const
     {
         return _camera;
-    }
-    inline const min::vec3<float> &get_default_spawn() const
-    {
-        return _state.get_default_spawn();
     }
     inline const load_state &get_load_state() const
     {
@@ -168,9 +165,9 @@ class state
         _dead = false;
         _respawn = false;
     }
-    inline void save_state(const player &p)
+    inline void save_state(const static_instance &si, const player &p)
     {
-        _state.save_state(p.get_inventory(), p.get_stats(), _camera, p.position());
+        _state.save_state(si, p.get_inventory(), p.get_stats(), _camera, p.position());
     }
     inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
     {

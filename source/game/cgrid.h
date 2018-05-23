@@ -22,6 +22,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/callback.h>
 #include <game/cgrid_generator.h>
 #include <game/file.h>
+#include <game/id.h>
 #include <game/swatch.h>
 #include <min/aabbox.h>
 #include <min/camera.h>
@@ -69,15 +70,15 @@ class cgrid
 {
   private:
     constexpr static size_t _search_limit = 20;
-    size_t _grid_scale;
-    std::vector<int8_t> _grid;
+    const size_t _grid_scale;
+    std::vector<block_id> _grid;
     std::vector<int8_t> _visit;
     std::vector<std::pair<size_t, float>> _neighbors;
     std::vector<size_t> _path;
     std::vector<size_t> _stack;
-    size_t _chunk_cells;
-    size_t _chunk_size;
-    size_t _chunk_scale;
+    const size_t _chunk_cells;
+    const size_t _chunk_size;
+    const size_t _chunk_scale;
     std::vector<min::mesh<float, uint32_t>> _chunks;
     std::vector<bool> _chunk_update;
     std::vector<size_t> _chunk_update_keys;
@@ -85,10 +86,12 @@ class cgrid
     std::vector<view_chunk> _view_chunks;
     mutable std::vector<size_t> _overlap;
     size_t _recent_chunk;
-    size_t _view_chunk_size;
-    size_t _view_half_width;
-    min::aabbox<float, min::vec3> _world;
-    min::vec3<float> _cell_extent;
+    min::vec3<float> _recent_p;
+    const size_t _view_chunk_size;
+    const size_t _view_half_width;
+    const float _view_dist;
+    const min::aabbox<float, min::vec3> _world;
+    const min::vec3<float> _cell_extent;
 
     static inline bool in_x(const min::vec3<float> &p, const min::vec3<float> &min, const min::vec3<float> &max)
     {
@@ -102,7 +105,30 @@ class cgrid
     {
         return (p.z() >= min.z() + 1E-6) && (p.z() <= max.z() - 1E-6);
     }
+    inline float calculate_view_distance() const
+    {
+        // Calculate view half width chunk size
+        const float half_width = _chunk_size * _view_half_width;
 
+        // Calculate distance of largest distance vector
+        const min::vec3<float> v(half_width, half_width, half_width);
+
+        // Return view distance
+        return v.magnitude();
+    }
+    inline min::aabbox<float, min::vec3> calculate_world_size(const size_t grid_scale)
+    {
+        // Create world AABB with a little border for protection
+        const float max = static_cast<float>(grid_scale);
+        const float min = (max * -1.0);
+
+        // Get box edges
+        const min::vec3<float> minv(min, min, min);
+        const min::vec3<float> maxv(max, max, max);
+
+        // Return world size
+        return min::aabbox<float, min::vec3>(minv, maxv);
+    }
     inline void collision_cells(std::vector<min::aabbox<float, min::vec3>> &out,
                                 const min::aabbox<float, min::vec3> &box, const min::vec3<float> &center) const
     {
@@ -117,7 +143,7 @@ class cgrid
             const size_t key = _overlap[i];
 
             // Check if valid and if the cell is not empty
-            if (_grid[key] != -1)
+            if (_grid[key] != block_id::EMPTY)
             {
                 // Create box at this point
                 const min::aabbox<float, min::vec3> grid = grid_box(grid_cell_center(key));
@@ -127,7 +153,7 @@ class cgrid
             }
         }
     }
-    inline void collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out,
+    inline void collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> &out,
                                 const min::aabbox<float, min::vec3> &box, const min::vec3<float> &center) const
     {
         // Get all overlapping cells
@@ -141,7 +167,7 @@ class cgrid
             const size_t key = _overlap[i];
 
             // Check if valid and if the cell is not empty
-            if (_grid[key] != -1)
+            if (_grid[key] != block_id::EMPTY)
             {
                 // Create box at this point
                 const min::aabbox<float, min::vec3> grid = grid_box(grid_cell_center(key));
@@ -151,7 +177,7 @@ class cgrid
             }
         }
     }
-    inline void cubic(const min::vec3<float> &start, const min::vec3<int> &offset, const min::vec3<unsigned> &length,
+    inline void cubic(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
                       const std::function<void(const min::vec3<float> &)> &f) const
     {
         // Begin at start position
@@ -193,7 +219,7 @@ class cgrid
             }
         }
     }
-    inline void cubic_grid(const min::vec3<float> &start, const min::vec3<int> &offset, const min::vec3<unsigned> &length,
+    inline void cubic_grid(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
                            const std::function<void(const size_t, const size_t, const size_t, const size_t)> &f) const
     {
         // Get world extents
@@ -346,8 +372,8 @@ class cgrid
         // Create cubic function, for each cell in cubic space
         const auto f = [this, chunk_key](const size_t i, const size_t j, const size_t k, const size_t key) {
             // cell should always be in the chunk, if not empty
-            const int8_t atlas = _grid[key];
-            if (atlas != -1)
+            const block_id atlas = _grid[key];
+            if (atlas != block_id::EMPTY)
             {
                 // Find out if we are on a world edge
                 const auto t = grid_key_unpack(key);
@@ -371,12 +397,12 @@ class cgrid
                     const size_t z1 = grid_key_pack(std::make_tuple(tx, ty, tz - 1));
                     const size_t z2 = grid_key_pack(std::make_tuple(tx, ty, tz + 1));
 
-                    const bool bx1 = _grid[x1] != -1;
-                    const bool bx2 = _grid[x2] != -1;
-                    const bool by1 = _grid[y1] != -1;
-                    const bool by2 = _grid[y2] != -1;
-                    const bool bz1 = _grid[z1] != -1;
-                    const bool bz2 = _grid[z2] != -1;
+                    const bool bx1 = _grid[x1] != block_id::EMPTY;
+                    const bool bx2 = _grid[x2] != block_id::EMPTY;
+                    const bool by1 = _grid[y1] != block_id::EMPTY;
+                    const bool by2 = _grid[y2] != block_id::EMPTY;
+                    const bool bz1 = _grid[z1] != block_id::EMPTY;
+                    const bool bz2 = _grid[z2] != block_id::EMPTY;
 
                     // Only generate if not
                     const bool skip = bx1 && bx2 && by1 && by2 && bz1 && bz2;
@@ -394,16 +420,119 @@ class cgrid
 
         // Get cubic function properties
         const min::vec3<float> start = chunk_start(chunk_key);
-        const min::vec3<int> offset(1, 1, 1);
         const min::vec3<unsigned> length(_chunk_size, _chunk_size, _chunk_size);
+        const min::vec3<int> offset(1, 1, 1);
 
         // Run the function
-        cubic_grid(start, offset, length, f);
+        cubic_grid(start, length, offset, f);
     }
     inline void chunk_warm(const size_t key)
     {
         _chunks[key].vertex.reserve(_chunk_cells);
         _chunks[key].index.reserve(_chunk_cells);
+    }
+    inline unsigned geometry_add(const min::vec3<float> &start, const min::vec3<unsigned> &length,
+                                 const min::vec3<int> &offset, const block_id atlas_id)
+    {
+        unsigned out = 0;
+
+        // Create cubic function, for each cell in cubic space
+        const auto f = [this, &out, atlas_id](const size_t i, const size_t j, const size_t k, const size_t key) {
+            // Count changed blocks
+            if (_grid[key] != atlas_id)
+            {
+                // Increment the out counter
+                out++;
+
+                // Set the geometry cell with value
+                geometry_set_cell(key, atlas_id);
+            }
+        };
+
+        // Run the function
+        cubic_grid(start, length, offset, f);
+
+        // Return count
+        return out;
+    }
+    inline unsigned geometry_copy_swatch(const swatch &sw, const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset)
+    {
+        unsigned out = 0;
+
+        // Create cubic function, for each cell in cubic space
+        const auto f = [this, &out, &sw](const size_t i, const size_t j, const size_t k, const size_t key) {
+            // Count changed blocks
+            const block_id value = sw.get(i, j, k);
+            if (_grid[key] != value)
+            {
+                // Increment the out counter
+                out++;
+
+                // Set the geometry cell with value
+                geometry_set_cell(key, value);
+
+                // If we are removing blocks, add boundary cells for update
+                if (value == block_id::EMPTY)
+                {
+                    set_boundary_chunk(key);
+                }
+            }
+        };
+
+        // Run the function
+        cubic_grid(start, length, offset, f);
+
+        // Return count
+        return out;
+    }
+    inline unsigned geometry_remove(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
+                                    const block_id atlas_id, const set_call &callback)
+    {
+        unsigned out = 0;
+
+        // Create cubic function, for each cell in cubic space
+        const auto f = [this, &out, atlas_id, callback](const size_t i, const size_t j, const size_t k, const size_t key) {
+            // Get the old value
+            const block_id old_value = _grid[key];
+
+            // Count changed blocks
+            if (_grid[key] != atlas_id)
+            {
+                // Increment the out counter
+                out++;
+
+                // Set the geometry cell with value
+                const min::vec3<float> p = geometry_set_cell(key, atlas_id);
+
+                // If we are removing blocks, add boundary cells for update
+                set_boundary_chunk(key);
+
+                // Callback on cell
+                if (callback)
+                {
+                    callback(p, old_value);
+                }
+            }
+        };
+
+        // Run the function
+        cubic_grid(start, length, offset, f);
+
+        // Return count
+        return out;
+    }
+    inline min::vec3<float> geometry_set_cell(const size_t key, const block_id value)
+    {
+        // Get the chunk key for updating
+        const min::vec3<float> p = grid_cell_center(key);
+        const size_t ckey = chunk_key_unsafe(p);
+        _chunk_update_keys.push_back(ckey);
+
+        // Set the cell with value
+        _grid[key] = value;
+
+        // Return position
+        return p;
     }
     inline void generate_portal()
     {
@@ -456,7 +585,7 @@ class cgrid
 
         return in_x(p, min, max) && in_y(p, min, max) && in_z(p, min, max);
     }
-    inline bool ray_trace(const min::ray<float, min::vec3> &r, const size_t length, size_t &prev_key, size_t &key, int8_t &value) const
+    inline bool ray_trace(const min::ray<float, min::vec3> &r, const size_t length, size_t &prev_key, size_t &key, block_id &value) const
     {
         // Calculate the ray trajectory for tracing in grid
         auto grid_ray = min::vec3<float>::grid_ray(_cell_extent, r.get_origin(), r.get_direction(), r.get_inverse());
@@ -472,7 +601,7 @@ class cgrid
             // bad flag signals that we have hit the last valid cell
             bool bad_flag = false;
             unsigned count = 0;
-            while (_grid[key] == -1 && !bad_flag && count < length)
+            while (_grid[key] == block_id::EMPTY && !bad_flag && count < length)
             {
                 // Update the previous key
                 prev_key = key;
@@ -519,7 +648,7 @@ class cgrid
         _stack.clear();
 
         // If the start key is inside terrain
-        if (_grid[start_key] != -1)
+        if (_grid[start_key] != block_id::EMPTY)
         {
             return;
         }
@@ -646,7 +775,7 @@ class cgrid
             for (const auto &n : _neighbors)
             {
                 // If we haven't visited the neighbor cell, and it isn't a wall
-                if (_visit[n.first] == -1 && _grid[n.first] == -1)
+                if (_visit[n.first] == -1 && _grid[n.first] == block_id::EMPTY)
                 {
                     // Flag that we pushed this key to prevent duplicates on stack
                     _visit[n.first] = 1;
@@ -668,38 +797,6 @@ class cgrid
         // Keepp looking for a path
         return false;
     }
-    void set_geometry_chunks(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset)
-    {
-        // Sort chunk keys using a radix sort
-        min::uint_sort<size_t>(_chunk_update_keys, _sort_chunk, [](const size_t i) {
-            return i;
-        });
-
-        // Make keys unique
-        const auto last = std::unique(_chunk_update_keys.begin(), _chunk_update_keys.end());
-
-        // Erase empty spaces in vector
-        _chunk_update_keys.erase(last, _chunk_update_keys.end());
-
-        // Update all modified chunks
-        for (const auto k : _chunk_update_keys)
-        {
-            chunk_update(k);
-        }
-    }
-    inline min::vec3<float> set_geometry_cell(const size_t key, const int8_t value)
-    {
-        // Get the chunk key for updating
-        const min::vec3<float> p = grid_cell_center(key);
-        const size_t ckey = chunk_key_unsafe(p);
-        _chunk_update_keys.push_back(ckey);
-
-        // Set the cell with value
-        _grid[key] = value;
-
-        // Return position
-        return p;
-    }
     inline void world_load()
     {
         // Create output stream for loading world
@@ -713,7 +810,7 @@ class cgrid
         {
             // Load grid with file
             size_t next = 0;
-            const std::vector<int8_t> grid = min::read_le_vector<int8_t>(stream, next);
+            const std::vector<block_id> grid = min::read_le_vector<block_id>(stream, next);
 
             // Check that grid load correctly
             const size_t cubic_size = _grid_scale * _grid_scale * _grid_scale;
@@ -748,10 +845,10 @@ class cgrid
         std::vector<uint8_t> stream;
 
         // Reserve space for grid
-        stream.reserve(_grid.size() * sizeof(int8_t));
+        stream.reserve(_grid.size() * sizeof(block_id));
 
         // Write data into stream
-        min::write_le_vector<int8_t>(stream, _grid);
+        min::write_le_vector<block_id>(stream, _grid);
 
         // Write data to file
         save_file("bin/world.bmesh", stream);
@@ -763,7 +860,7 @@ class cgrid
     constexpr static float _player_dz = 0.45;
     cgrid(const size_t chunk_size, const size_t grid_scale, const size_t view_chunk_size)
         : _grid_scale(grid_scale * 2),
-          _grid(_grid_scale * _grid_scale * _grid_scale, -1),
+          _grid(_grid_scale * _grid_scale * _grid_scale, block_id::EMPTY),
           _visit(_grid.size(), -1),
           _chunk_cells(chunk_size * chunk_size * chunk_size),
           _chunk_size(chunk_size),
@@ -773,6 +870,8 @@ class cgrid
           _recent_chunk(0),
           _view_chunk_size(view_chunk_size),
           _view_half_width(_view_chunk_size / 2),
+          _view_dist(calculate_view_distance()),
+          _world(calculate_world_size(grid_scale)),
           _cell_extent(1.0, 1.0, 1.0)
     {
         // Check chunk size
@@ -792,13 +891,6 @@ class cgrid
             // View half width is larger than chunk grid dimension
             throw std::runtime_error("cgrid: view_chunk_size can't be greater than " + std::to_string(_chunk_scale * 2 + 1));
         }
-
-        // Create world AABB with a little border for protection
-        const float max = static_cast<float>(grid_scale);
-        const float min = (max * -1.0);
-        min::vec3<float> minv(min, min, min);
-        min::vec3<float> maxv(max, max, max);
-        _world = min::aabbox<float, min::vec3>(minv, maxv);
 
         // Add starting blocks to simulation
         world_load();
@@ -875,7 +967,7 @@ class cgrid
 
         return min::vec3<float>(std::floor(x) + 0.5, std::round(y), std::floor(z) + 0.5);
     }
-    inline void drone_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
+    inline void drone_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
@@ -907,7 +999,7 @@ class cgrid
             collision_cells(out, box, center);
         }
     }
-    inline void explosive_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
+    inline void explosive_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
@@ -923,7 +1015,7 @@ class cgrid
             collision_cells(out, box, center);
         }
     }
-    inline void missile_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
+    inline void missile_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
@@ -939,7 +1031,7 @@ class cgrid
             collision_cells(out, box, center);
         }
     }
-    inline void player_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> &out, const min::vec3<float> &center) const
+    inline void player_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();
@@ -954,6 +1046,28 @@ class cgrid
             // Calculate collision cells around this box
             collision_cells(out, box, center);
         }
+    }
+    inline void flush_chunk_updates()
+    {
+        // Sort chunk keys using a radix sort
+        min::uint_sort<size_t>(_chunk_update_keys, _sort_chunk, [](const size_t i) {
+            return i;
+        });
+
+        // Make keys unique
+        const auto last = std::unique(_chunk_update_keys.begin(), _chunk_update_keys.end());
+
+        // Erase empty spaces in vector
+        _chunk_update_keys.erase(last, _chunk_update_keys.end());
+
+        // Update all modified chunks
+        for (const auto k : _chunk_update_keys)
+        {
+            chunk_update(k);
+        }
+
+        // Clear out chunk update keys
+        _chunk_update_keys.clear();
     }
     inline min::mesh<float, uint32_t> &get_chunk(const size_t key)
     {
@@ -975,25 +1089,49 @@ class cgrid
     {
         return _world;
     }
-    inline void load_swatch(swatch &sw, const min::vec3<float> &start, const min::vec3<int> &offset, const min::vec3<unsigned> &length) const
+    inline bool is_viewable(const min::camera<float> &cam, const min::aabbox<float, min::vec3> &box) const
     {
+        // Is the box inside the frustum?
+        if (min::intersect<float>(cam.get_frustum(), box))
+        {
+            // Check box against view distance from current chunk
+            const float dist = (box.get_center() - _recent_p).magnitude();
+            if (dist < _view_dist)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+    inline unsigned load_swatch(swatch &sw, const min::vec3<float> &start, const min::vec3<int> &offset, const min::vec3<unsigned> &length) const
+    {
+        // Swatch cost
+        unsigned out = 0;
+
         // Load swatch offset and length
         sw.set_length(length);
         sw.set_offset(offset);
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &sw](const size_t i, const size_t j, const size_t k, const size_t key) {
-            // Get the value of this grid point
-            const int8_t value = this->_grid[key];
+        const auto f = [this, &sw, &out](const size_t i, const size_t j, const size_t k, const size_t key) {
+            // Get the atlas of this grid point
+            const block_id atlas = this->_grid[key];
 
-            // Load value into swatch
-            sw.set(i, j, k, value);
+            // Load atlas into swatch
+            sw.set(i, j, k, atlas);
+
+            // Count ether cost
+            out += ether_cost(atlas);
         };
 
         // Run the function
-        cubic_grid(start, offset, length, f);
+        cubic_grid(start, length, offset, f);
+
+        // Return the swatch cost
+        return out;
     }
-    inline void preview_atlas(min::mesh<float, uint32_t> &mesh, const min::vec3<int> &offset, const min::vec3<unsigned> &length, const int8_t atlas) const
+    inline void preview_atlas(min::mesh<float, uint32_t> &mesh, const min::vec3<int> &offset, const min::vec3<unsigned> &length, const block_id atlas) const
     {
         // Clear mesh contents
         mesh.vertex.clear();
@@ -1003,7 +1141,9 @@ class cgrid
         const auto f = [this, &mesh, &atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
             // Add data to mesh for each cell
             const min::vec3<float> p = grid_cell(key);
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), atlas));
+
+            const float float_atlas = static_cast<float>(atlas);
+            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas));
         };
 
         // Store start point => (0,0,0),
@@ -1012,7 +1152,7 @@ class cgrid
         min::vec3<float> start;
 
         // Run the function
-        cubic_grid(start, offset, length, f);
+        cubic_grid(start, length, offset, f);
     }
     inline void preview_swatch(min::mesh<float, uint32_t> &mesh, const swatch &sw) const
     {
@@ -1023,11 +1163,12 @@ class cgrid
         // Create cubic function, for each cell in cubic space
         const auto f = [this, &mesh, &sw](const size_t i, const size_t j, const size_t k, const size_t key) {
             // If the cell is not empty
-            const int8_t value = sw.get(i, j, k);
+            const block_id atlas = sw.get(i, j, k);
 
             // Add data to mesh for each cell
             const min::vec3<float> p = grid_cell(key);
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), value));
+            const float float_atlas = static_cast<float>(atlas);
+            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas));
         };
 
         // Store start point => (0,0,0),
@@ -1036,9 +1177,9 @@ class cgrid
         min::vec3<float> start;
 
         // Run the function
-        cubic_grid(start, sw.get_offset(), sw.get_length(), f);
+        cubic_grid(start, sw.get_length(), sw.get_offset(), f);
     }
-    inline bool ray_trace_last_key(const min::ray<float, min::vec3> &r, const size_t length, min::vec3<float> &point, size_t &key, int8_t &value) const
+    inline bool ray_trace_last_key(const min::ray<float, min::vec3> &r, const size_t length, min::vec3<float> &point, size_t &key, block_id &value) const
     {
         // Trace a ray and return the last key
         size_t prev_key;
@@ -1052,7 +1193,7 @@ class cgrid
         // Return if valid
         return is_valid;
     }
-    inline min::vec3<float> ray_trace_last(const min::ray<float, min::vec3> &r, const size_t length, int8_t &value) const
+    inline min::vec3<float> ray_trace_last(const min::ray<float, min::vec3> &r, const size_t length, block_id &value) const
     {
         // Trace a ray and return the last key
         size_t prev_key, key;
@@ -1070,7 +1211,7 @@ class cgrid
     {
         // Trace a ray and return the last key
         size_t prev_key, key;
-        int8_t value = -2;
+        block_id value = block_id::INVALID;
         const bool is_valid = ray_trace(r, length, prev_key, key, value);
         if (is_valid)
         {
@@ -1182,109 +1323,100 @@ class cgrid
         const min::vec3<int> &offset = sw.get_offset();
 
         // Record all modified chunks and store them for updating
-        _chunk_update_keys.clear();
         _chunk_update_keys.reserve(length.x() * length.y() * length.z());
 
         // If the start point is inside the grid
         const bool in = inside(start);
         if (in)
         {
-            // Create cubic function, for each cell in cubic space
-            const auto f = [this, &out, &sw](const size_t i, const size_t j, const size_t k, const size_t key) {
-                // Count changed blocks
-                const int8_t value = sw.get(i, j, k);
-                if (_grid[key] != value)
-                {
-                    // Increment the out counter
-                    out++;
-
-                    // Set the geometry cell with value
-                    set_geometry_cell(key, value);
-
-                    // If we are removing blocks, add boundary cells for update
-                    if (value == -1)
-                    {
-                        set_boundary_chunk(key);
-                    }
-                }
-            };
-
-            // Run the function
-            cubic_grid(start, offset, length, f);
+            out += geometry_copy_swatch(sw, start, length, offset);
         }
-
-        // Update the edited chunks
-        set_geometry_chunks(start, length, offset);
 
         // Return the number of modified blocks
         return out;
     }
     unsigned set_geometry(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
-                          const int8_t atlas_id, const set_call &callback)
+                          const block_id atlas_id, const set_call &callback)
     {
         // Modified geometry
         unsigned out = 0;
 
         // Record all modified chunks and store them for updating
-        _chunk_update_keys.clear();
         _chunk_update_keys.reserve(length.x() * length.y() * length.z());
 
         // If the start point is inside the grid
         const bool in = inside(start);
-        if (atlas_id == -1 && in)
+        if (atlas_id == block_id::EMPTY && in)
         {
-            // Create cubic function, for each cell in cubic space
-            const auto f = [this, &out, atlas_id, callback](const size_t i, const size_t j, const size_t k, const size_t key) {
-                // Get the old value
-                const int8_t old_value = _grid[key];
-
-                // Count changed blocks
-                if (_grid[key] != atlas_id)
-                {
-                    // Increment the out counter
-                    out++;
-
-                    // Set the geometry cell with value
-                    const min::vec3<float> p = set_geometry_cell(key, atlas_id);
-
-                    // If we are removing blocks, add boundary cells for update
-                    set_boundary_chunk(key);
-
-                    // Callback on cell
-                    if (callback)
-                    {
-                        callback(p, old_value);
-                    }
-                }
-            };
-
-            // Run the function
-            cubic_grid(start, offset, length, f);
+            // Remove geometry
+            out += geometry_remove(start, length, offset, atlas_id, callback);
         }
         else if (in)
         {
-            // Create cubic function, for each cell in cubic space
-            const auto f = [this, &out, atlas_id](const size_t i, const size_t j, const size_t k, const size_t key) {
-                // Count changed blocks
-                if (_grid[key] != atlas_id)
-                {
-                    // Increment the out counter
-                    out++;
-
-                    // Set the geometry cell with value
-                    set_geometry_cell(key, atlas_id);
-                }
-            };
-
-            // Run the function
-            cubic_grid(start, offset, length, f);
+            // Add geometry
+            out += geometry_add(start, length, offset, atlas_id);
         }
-
-        // Update the edited chunks
-        set_geometry_chunks(start, length, offset);
 
         // Return the number of modified blocks
         return out;
+    }
+    min::vec3<float> set_geometry_box_3x3(const min::vec3<float> &p)
+    {
+        // Record all modified chunks and store them for updating
+        _chunk_update_keys.reserve(18);
+
+        // Get random position
+        const min::vec3<float> snapped = snap(p);
+        const float nx = snapped.x() - 1.0;
+        const float ny = snapped.y() - 1.0;
+        const float nz = snapped.z() - 1.0;
+
+        // Create enclosed cube 3x3 of mossy stone
+        const block_id moss = block_id::STONE3;
+        min::vec3<float> start(nx, ny, nz);
+        min::vec3<unsigned> length(3, 3, 3);
+        const min::vec3<int> offset(1, 1, 1);
+
+        // Carve out inside of box
+        geometry_remove(start, length, offset, block_id::EMPTY, nullptr);
+
+        // Create -XZ floor
+        start.y(ny - 1.0);
+        length.y(1);
+        geometry_add(start, length, offset, moss);
+
+        // Create +XZ floor
+        start.y(snapped.y() + 2.0);
+        geometry_add(start, length, offset, moss);
+
+        // Reset
+        start.y(ny);
+        length.y(3);
+        length.z(1);
+
+        // Create the -XY wall
+        start.z(nz - 1.0);
+        geometry_add(start, length, offset, moss);
+
+        // Create the +XY wall
+        start.z(snapped.z() + 2.0);
+        geometry_add(start, length, offset, moss);
+
+        // Reset
+        start.z(nz);
+        length.x(1);
+        length.z(3);
+
+        // Create the -YZ wall
+        start.x(nx - 1.0);
+        geometry_add(start, length, offset, moss);
+
+        // Create the +YZ wall
+        start.x(snapped.x() + 2.0);
+        geometry_add(start, length, offset, moss);
+
+        // Return snapped point
+        return snapped;
     }
     inline bool is_update_chunk(const size_t chunk_key) const
     {
@@ -1303,6 +1435,7 @@ class cgrid
         if (is_valid)
         {
             _recent_chunk = key;
+            _recent_p = chunk_center(_recent_chunk);
         }
     }
     inline void update_view_chunk_index(const min::camera<float> &cam, std::vector<size_t> &out)
@@ -1318,8 +1451,8 @@ class cgrid
 
         // Get cubic chunk start point
         const min::vec3<float> start = center - min::vec3<float>(half_width, half_width, half_width);
-        const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
         const min::vec3<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
+        const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
 
         // Calculate a weighted center to favor chunks in front of viewer
         const min::vec3<float> weight_center = cam.project_point(_chunk_size / 2);
@@ -1348,7 +1481,7 @@ class cgrid
         };
 
         // Run the function
-        cubic(start, offset, length, f);
+        cubic(start, length, offset, f);
 
         // Sort the view indices based on distance from camera to reduce overdraw
         std::sort(_view_chunks.begin(), _view_chunks.end(), [](const view_chunk &a, const view_chunk &b) {

@@ -20,6 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/callback.h>
 #include <game/cgrid.h>
+#include <game/id.h>
 #include <game/inventory.h>
 #include <game/load_state.h>
 #include <game/skills.h>
@@ -53,9 +54,9 @@ class target
   private:
     union target_value {
         uint16_t body_id;
-        int8_t atlas;
+        block_id atlas;
         target_value(const uint16_t i) : body_id(i) {}
-        target_value(const int8_t a) : atlas(a) {}
+        target_value(const block_id a) : atlas(a) {}
     };
 
   private:
@@ -66,9 +67,9 @@ class target
 
   public:
     target()
-        : _id(target_id::INVALID), _key(0), _value(static_cast<int8_t>(-2)) {}
+        : _id(target_id::INVALID), _key(0), _value(static_cast<block_id>(-2)) {}
 
-    int8_t &atlas()
+    block_id &atlas()
     {
         return _value.atlas;
     }
@@ -80,7 +81,7 @@ class target
     {
         return _position;
     }
-    int8_t get_atlas() const
+    block_id get_atlas() const
     {
         return _value.atlas;
     }
@@ -120,12 +121,12 @@ class player
 
     min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
     size_t _body_id;
-    std::vector<std::pair<min::aabbox<float, min::vec3>, int8_t>> _col_cells;
+    std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     inventory _inv;
     unsigned _damage_cd;
     unsigned _explode_cd;
     bool _exploded;
-    int8_t _explode_id;
+    block_id _explode_id;
     bool _hooked;
     min::vec3<float> _hook;
     float _hook_length;
@@ -325,7 +326,7 @@ class player
     player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const load_state &state, const size_t body_id)
         : _sim(sim), _body_id(body_id),
           _damage_cd(0), _explode_cd(0),
-          _exploded(false), _explode_id(-1),
+          _exploded(false), _explode_id(block_id::EMPTY),
           _hooked(false), _hook_length(0.0),
           _target_update(false), _airborn(false), _falling(false),
           _land_count(0), _jump_count(0), _landed(false), _jet(false),
@@ -373,7 +374,7 @@ class player
         // Set the damage cooldown
         _damage_cd = _physics_frames;
     }
-    inline void explode(const min::vec3<float> &dir, const float ex_force, const float dmg_frac, const int8_t value)
+    inline void explode(const min::vec3<float> &dir, const float ex_force, const float dmg_frac, const block_id value)
     {
         // If we haven't been exploded take damage
         if (!_exploded)
@@ -397,7 +398,7 @@ class player
         // Apply force to the body per mass
         b.add_force(f * b.get_mass());
     }
-    inline int8_t get_explode_id() const
+    inline block_id get_explode_id() const
     {
         return _explode_id;
     }
@@ -437,7 +438,7 @@ class player
     {
         return _track_target;
     }
-    inline int8_t get_target_atlas() const
+    inline block_id get_target_atlas() const
     {
         return _target.get_atlas();
     }
@@ -578,16 +579,16 @@ class player
     inline void reset_explode()
     {
         _exploded = false;
-        _explode_id = -1;
+        _explode_id = block_id::EMPTY;
     }
     inline void reset_landed()
     {
         _landed = false;
     }
-    inline void respawn()
+    inline void respawn(const load_state &state)
     {
         // Reset inventory
-        _inv.respawn();
+        _inv.respawn(state.is_hardcore());
 
         // Reset explode settings
         reset_explode();
@@ -610,7 +611,7 @@ class player
     inline bool set_hook()
     {
         // Get the atlas of target block, if hit a block remove it
-        if (is_target_block() && _target.get_atlas() >= 0)
+        if (is_target_block() && not_empty(_target.get_atlas()))
         {
             // Enable hooking
             _hooked = true;
@@ -647,7 +648,7 @@ class player
         const bool target_valid = grid.ray_trace_last_key(r, max_dist, out.position(), out.key(), out.atlas());
 
         // If ray is invalid or doesn't hit any blocks
-        if (!target_valid || out.get_atlas() < 0)
+        if (!target_valid || !not_empty(out.get_atlas()))
         {
             out.set_id(target_id::INVALID);
         }
@@ -747,7 +748,7 @@ class player
                 }
 
                 // If we collided with a sodium cell and we haven't exploded yet
-                if (!is_exploded() && cell.second == id_value(block_id::SODIUM))
+                if (!is_exploded() && cell.second == block_id::SODIUM)
                 {
                     // Call explosion callback
                     ex(cell.first.get_center(), cell.second);
@@ -775,7 +776,7 @@ class player
                     landed = true;
 
                     // If we walk over a sodium cell and we haven't exploded yet
-                    if (!is_exploded() && t.get_atlas() == id_value(block_id::SODIUM))
+                    if (!is_exploded() && t.get_atlas() == block_id::SODIUM)
                     {
                         // Call explosion callback
                         ex(t.get_position(), t.get_atlas());

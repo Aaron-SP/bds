@@ -86,7 +86,7 @@ class controls
 
         // Enable the console and set default message
         _ui->enable_console();
-        _ui->set_console_string(inv.get_name(inv.get_key(0)));
+        _ui->set_console_string(inv.get_name(inv.get_key(0).id()));
 
         // Get access to the keyboard
         auto &keyboard = _window->get_keyboard();
@@ -114,6 +114,7 @@ class controls
         keyboard.add(min::window::key_code::KEYS);
         keyboard.add(min::window::key_code::KEYA);
         keyboard.add(min::window::key_code::KEYD);
+        keyboard.add(min::window::key_code::KEYR);
         keyboard.add(min::window::key_code::KEYE);
         keyboard.add(min::window::key_code::KEYZ);
         keyboard.add(min::window::key_code::KEYX);
@@ -159,7 +160,10 @@ class controls
         keyboard.register_keydown_per_frame(min::window::key_code::KEYD, controls::right, (void *)this);
 
         // Register callback function E
-        keyboard.register_keydown(min::window::key_code::KEYE, controls::reset, (void *)this);
+        keyboard.register_keydown(min::window::key_code::KEYE, controls::select, (void *)this);
+
+        // Register callback function R
+        keyboard.register_keydown(min::window::key_code::KEYR, controls::reset, (void *)this);
 
         // Register callback function Z
         keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
@@ -346,7 +350,7 @@ class controls
 
         // Get the item id and type
         const item_type type = it.type();
-        const uint8_t id = it.id();
+        const item_id id = it.id();
 
         // Is the gun locked?
         const bool locked = skill.is_locked();
@@ -356,7 +360,7 @@ class controls
         const bool is_block = (type == item_type::block);
         const bool is_item = (type == item_type::item);
         const bool is_skill = (type == item_type::skill);
-        const bool is_ether = (id == id_value(item_id::CONS_ETHER));
+        const bool is_ether = (id == item_id::CONS_ETHER);
 
         // Selecting multiple times?
         const bool multi_click = _ui->get_selected() == ui_id(index).to_key();
@@ -368,7 +372,7 @@ class controls
             _ui->set_key_down(index);
 
             // Set the console string from item
-            _ui->set_console_string(inv.get_name(it));
+            _ui->set_console_string(inv.get_name(it.id()));
 
             // Cancel edit mode
             if (!is_block && !is_ether)
@@ -398,7 +402,7 @@ class controls
                 _world->set_edit_mode(true, false, false);
 
                 // Set atlas id
-                _world->set_atlas_id(inv.id_to_atlas(id));
+                _world->set_atlas_id(id_to_atlas(id));
 
                 // Set place mode
                 play.set_mode(play_mode::place);
@@ -408,47 +412,47 @@ class controls
                 // Set skill mode
                 switch (id)
                 {
-                case id_value(skill_id::AUTO_BEAM):
+                case item_id::AUTO_BEAM:
                     play.set_mode(play_mode::gun);
                     skill.set_auto_mode();
                     break;
-                case id_value(skill_id::BEAM):
+                case item_id::BEAM:
                     play.set_mode(play_mode::gun);
                     skill.set_beam_mode();
                     break;
-                case id_value(skill_id::CHARGE):
+                case item_id::CHARGE:
                     play.set_mode(play_mode::gun);
                     skill.set_charge_mode();
                     break;
-                case id_value(skill_id::GRAPPLE):
+                case item_id::GRAPPLE:
                     play.set_mode(play_mode::gun);
                     skill.set_grapple_mode();
                     break;
-                case id_value(skill_id::GRENADE):
+                case item_id::GRENADE:
                     play.set_mode(play_mode::gun);
                     skill.set_grenade_mode();
                     break;
-                case id_value(skill_id::JET):
+                case item_id::JET:
                     play.set_mode(play_mode::skill);
                     skill.set_jetpack_mode();
                     break;
-                case id_value(skill_id::MISSILE):
+                case item_id::MISSILE:
                     play.set_mode(play_mode::gun);
                     skill.set_missile_mode();
                     break;
-                case id_value(skill_id::PORTAL):
+                case item_id::PORTAL:
                     play.set_mode(play_mode::gun);
                     skill.set_portal_mode();
                     break;
-                case id_value(skill_id::SCAN):
+                case item_id::SCAN:
                     play.set_mode(play_mode::skill);
                     skill.set_scan_mode();
                     break;
-                case id_value(skill_id::SCATTER):
+                case item_id::SCATTER:
                     play.set_mode(play_mode::gun);
                     skill.set_scatter_mode();
                     break;
-                case id_value(skill_id::SPEED):
+                case item_id::SPEED:
                     play.set_mode(play_mode::none);
                     skill.set_speed_mode();
                     break;
@@ -459,13 +463,16 @@ class controls
             }
             else if (is_ether)
             {
-                if (multi_click)
+                if (multi_click && _world->is_edit_mode())
                 {
                     // Swap copy / place mode
                     _world->toggle_swatch_copy_place();
                 }
                 else
                 {
+                    // Reset scale
+                    _world->reset_scale();
+
                     // Turn on swatches
                     _world->set_edit_mode(true, true, true);
                 }
@@ -639,6 +646,31 @@ class controls
 
         // Reset scale
         world->reset_scale();
+    }
+    static void select(void *ptr, double step)
+    {
+        // Get the world, ui, and player pointers
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        world *const world = control->get_world();
+        ui_overlay *const ui = control->get_ui();
+        player &play = world->get_player();
+
+        // Get current target
+        const target &t = play.get_target();
+
+        // Reset scale
+        const auto p = world->select_target(t);
+        if (p.second == static_id::CHEST)
+        {
+            if (p.first)
+            {
+                ui->set_alert_item();
+            }
+            else
+            {
+                ui->set_alert_item_fail();
+            }
+        }
     }
     static void ui_extend(void *ptr, double step)
     {
@@ -959,15 +991,28 @@ class controls
         const bool mode = world->get_edit_mode();
         if (mode)
         {
-            // Get the active atlas id or use ether if in swatch mode
-            const uint8_t consume_id = (world->get_swatch_mode()) ? id_value(item_id::CONS_ETHER) : inv.id_from_atlas(world->get_atlas_id());
-
             // Try to consume energy to create this resource
-            uint8_t count = world->get_scale_size();
-            const ui_id id = ui->get_selected();
             if (world->can_add_block())
             {
-                if (inv.consume(id.index(), consume_id, count))
+                // Get selected index
+                const size_t select_index = ui->get_selected().index();
+
+                // Consume the resource
+                bool consumed = false;
+                if (world->get_swatch_mode())
+                {
+                    const unsigned count = world->get_swatch_cost();
+                    consumed = inv.consume_multi(item_id::CONS_ETHER, count);
+                }
+                else
+                {
+                    const item_id id = id_from_atlas(world->get_atlas_id());
+                    uint8_t count = world->get_scale_size();
+                    consumed = inv.consume(select_index, id, count);
+                }
+
+                // If we consumed a resource
+                if (consumed)
                 {
                     // Calculate new point to add
                     const min::vec3<float> point = cam->project_point(_project_dist);
@@ -978,8 +1023,9 @@ class controls
                     // Add block to world
                     world->add_block(r);
 
-                    // If remaining count is zero disable edit mode
-                    if (count == 0)
+                    // If we need to reset edit mode
+                    const item &it = inv[select_index];
+                    if (it.id() == item_id::EMPTY)
                     {
                         // Reset scale
                         world->reset_scale();
@@ -1015,8 +1061,8 @@ class controls
                 {
                     // Fire a charged explosion ray
                     const min::vec3<unsigned> radius(3, 3, 3);
-                    const int8_t hit = world->explode_ray(radius, 100.0, true, play_ex);
-                    if (hit == -1)
+                    const block_id hit = world->explode_ray(radius, 100.0, true, play_ex);
+                    if (hit == block_id::EMPTY)
                     {
                         ui->add_stream_text("Miss!");
                     }
@@ -1079,7 +1125,7 @@ class controls
                 {
                     uint8_t count = 1;
                     const ui_id id = ui->get_selected();
-                    const bool consumed = inv.consume(id.index(), id_value(skill_id::GRENADE), count);
+                    const bool consumed = inv.consume(id.index(), item_id::GRENADE, count);
                     if (consumed)
                     {
                         // Ran out of ammo
@@ -1131,7 +1177,7 @@ class controls
                 {
                     uint8_t count = 1;
                     const ui_id id = ui->get_selected();
-                    const bool consumed = inv.consume(id.index(), id_value(skill_id::MISSILE), count);
+                    const bool consumed = inv.consume(id.index(), item_id::MISSILE, count);
                     if (consumed)
                     {
                         // Ran out of ammo
@@ -1189,11 +1235,11 @@ class controls
                 else if (skill.is_scan_mode() && play.is_target_block())
                 {
                     // Is player targetting a block?
-                    const int8_t atlas = play.get_target_atlas();
+                    const block_id atlas = play.get_target_atlas();
 
                     // Scan the block on this ray
-                    const item it(inv.id_from_atlas(atlas), 1);
-                    const std::string &text = inv.get_name(it);
+                    const item_id it_id = id_from_atlas(atlas);
+                    const std::string &text = inv.get_name(it_id);
 
                     // Set the console text
                     ui->set_console_string(text);
@@ -1301,7 +1347,7 @@ class controls
 
         // Stop camera tracking
         state->set_tracking(false);
-        ui->set_focus(false);
+        ui->set_draw_focus(false);
     }
     static void jump(void *ptr, double step)
     {
@@ -1349,7 +1395,7 @@ class controls
     {
         // Stop camera tracking
         _state->set_tracking(false);
-        _ui->set_focus(false);
+        _ui->set_draw_focus(false);
 
         // If extended close it
         if (_ui->is_extended())
@@ -1371,8 +1417,8 @@ class controls
 
         // Fire an explosion ray
         const min::vec3<unsigned> radius(1, 1, 1);
-        const int8_t hit = _world->explode_ray(radius, 20.0, false, nullptr);
-        if (hit == -1)
+        const block_id hit = _world->explode_ray(radius, 20.0, false, nullptr);
+        if (hit == block_id::EMPTY)
         {
             _ui->add_stream_text("Miss!");
         }
@@ -1515,11 +1561,11 @@ class controls
                 _state->set_target(t.get_position());
 
                 // Update the ui focus
-                _ui->set_focus(true);
+                _ui->set_draw_focus(true);
 
                 // Get the target info
                 const auto info = _world->get_target_info(t);
-                _ui->set_focus_bar(info.second);
+                _ui->set_focus(info.second);
 
                 // Update the focus text info
                 if (play.is_target_update())
@@ -1535,7 +1581,7 @@ class controls
             {
                 // Abort
                 _state->set_tracking(false);
-                _ui->set_focus(false);
+                _ui->set_draw_focus(false);
             }
         }
     }
@@ -1549,7 +1595,7 @@ class controls
             // Reloading
             _ui->set_cursor_reload();
         }
-        else if (player.is_target_block() && player.get_target_atlas() == id_value(block_id::SODIUM) && _world->in_range_explosion(player.get_target().get_position()))
+        else if (player.is_target_block() && player.get_target_atlas() == block_id::SODIUM && _world->in_range_explosion(player.get_target().get_position()))
         {
             _ui->set_cursor_target();
         }

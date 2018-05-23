@@ -52,7 +52,7 @@ class stats
     static constexpr float _charge_cost = 10.0;
     static constexpr float _grapple_cost = 0.1;
     static constexpr float _grenade_cost = 10.0;
-    static constexpr float _jet_cost = 0.25;
+    static constexpr float _jet_cost = 0.1;
     static constexpr float _missile_cost = 10.0;
     static constexpr float _portal_cost = 0.5;
     static constexpr float _scatter_cost = 20.0;
@@ -180,7 +180,8 @@ class stats
     }
     inline float get_jet_cost() const
     {
-        return get_max_energy() * _jet_cost;
+        // Cost per frame
+        return _jet_cost;
     }
     inline float get_missile_cost() const
     {

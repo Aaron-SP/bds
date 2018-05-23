@@ -65,9 +65,10 @@ static constexpr float _y_ui_text = _console_dy + 24.0;
 static constexpr float _energy_dx = (_tool_space * (_num_half_buttons + 0.5)) + 16.0;
 static constexpr float _health_dx = _tool_start - _tool_space - 16.0;
 
-// Health Bar Meter
-static constexpr float _bar_dy = _tool_dy - 20.0;
-static constexpr float _meter_dy = _bar_dy + 30.0;
+// Alert Text
+static constexpr float _x_alert_wrap = 600.0;
+static constexpr float _y_alert_wrap = _font_size;
+static constexpr float _alert_dy = -180.0;
 
 // Experience Bar
 static constexpr float _s_exp_x = _s_console_x;
@@ -75,21 +76,32 @@ static constexpr float _s_exp_y = 8.0;
 static constexpr float _exp_dx = (_s_exp_y - _s_exp_x) * 0.5;
 static constexpr float _exp_dy = _console_dy + 24.0;
 
+// Focus Text
+static constexpr float _focus_dx = 0.0;
+static constexpr float _focus_dy = 120.0;
+static constexpr float _focus_bar_dx = (_s_focus_bar_y - _s_focus_bar_x) * 0.5;
+static constexpr float _focus_bar_dy = _focus_dy + _font_size * 0.5;
+static constexpr float _focus_text_dy = _focus_dy - _font_size * 0.5;
+
+// Health Bar Meter
+static constexpr float _bar_dy = _tool_dy - 20.0;
+static constexpr float _meter_dy = _bar_dy + 30.0;
+
 // Oxygen Bar
 static constexpr float _s_oxy_x = _s_console_x;
 static constexpr float _s_oxy_y = 8.0;
 static constexpr float _oxy_dx = (_s_oxy_y - _s_oxy_x) * 0.5;
 static constexpr float _oxy_dy = _console_dy + 34.0;
 
-// Alert Text
-static constexpr float _x_alert_wrap = 600.0;
-static constexpr float _y_alert_wrap = _font_size;
-static constexpr float _alert_dy = -180.0;
-
 // Stream Text
 static constexpr float _stream_dy = _console_dy;
 static constexpr float _x_stream_wrap = _x_console_wrap;
 static constexpr float _y_stream_wrap = _y_console_wrap;
+
+// Timer Text
+static constexpr float _x_timer_wrap = 600.0;
+static constexpr float _y_timer_wrap = _font_size;
+static constexpr float _timer_text_dy = _focus_text_dy;
 
 // Extended UI
 static constexpr float _attr_text_dx = -304.0;
@@ -100,11 +112,6 @@ static constexpr float _button_space = 20.0;
 static constexpr float _cube_dx = -42.0;
 static constexpr float _cube_dy = 461;
 static constexpr float _cube_space = 42.0;
-static constexpr float _focus_dx = 0.0;
-static constexpr float _focus_dy = 120.0;
-static constexpr float _focus_bar_dx = (_s_focus_bar_y - _s_focus_bar_x) * 0.5;
-static constexpr float _focus_bar_dy = _focus_dy + _font_size * 0.5;
-static constexpr float _focus_text_dy = _focus_dy - _font_size * 0.5;
 static constexpr float _stat_dx = 0.0;
 static constexpr float _stat_dy = 458.0;
 static constexpr float _stat_text_dx = 110.0;

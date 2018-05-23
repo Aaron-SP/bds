@@ -110,7 +110,11 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.240");
+        _ui.text().set_debug_version("VERSION: 0.1.241");
+
+        // Set the game mode
+        const bool hardcore = _state.get_load_state().is_hardcore();
+        _ui.text().set_debug_game_mode((hardcore) ? "HARDCORE MODE" : "NORMAL MODE");
     }
     void update_alerts()
     {
@@ -150,7 +154,7 @@ class bds
             _ui.respawn();
 
             // Refresh the world exploded flag
-            _world.respawn(_state.get_default_spawn());
+            _world.respawn(_state.get_load_state());
 
             // Reset control class
             _controls.respawn();
@@ -213,8 +217,12 @@ class bds
         // Get the target info
         const auto info = _world.get_target_info(play.get_target());
 
+        // Get the drone time
+        const float time = _events.get_drone_time();
+        _ui.set_draw_timer((time > 0.0) && !_ui.is_focused());
+
         // Update the ui overlay, process timer and upload changes
-        _ui.update(p, f, health, energy, _fps, _idle, chunks, insts, *info.first, dt);
+        _ui.update(p, f, health, energy, _fps, _idle, chunks, insts, *info.first, time, dt);
     }
     void update_uniforms(min::camera<float> &camera, const bool update_bones)
     {
@@ -234,12 +242,12 @@ class bds
         _uniforms.update_ui(_ui.get_scale(), _ui.get_uv());
 
         // Update drone and missile matrices
-        const game::static_instance &instance = _world.get_instances();
-        _uniforms.update_chests(instance.get_chest().get_matrix());
-        _uniforms.update_drones(instance.get_drone().get_matrix());
-        _uniforms.update_drops(instance.get_drop().get_matrix());
-        _uniforms.update_explosives(instance.get_explosive().get_matrix());
-        _uniforms.update_missiles(instance.get_missile().get_matrix());
+        const game::static_instance &instance = _world.get_instance();
+        _uniforms.update_chests(instance.get_chest().get_out_matrix());
+        _uniforms.update_drones(instance.get_drone().get_out_matrix());
+        _uniforms.update_drops(instance.get_drop().get_out_matrix());
+        _uniforms.update_explosives(instance.get_explosive().get_out_matrix());
+        _uniforms.update_missiles(instance.get_missile().get_out_matrix());
 
         // Update md5 model bones
         if (update_bones)
@@ -253,12 +261,12 @@ class bds
 
   public:
     // Load window shaders and program
-    bds(const size_t chunk, const size_t grid, const size_t view, const size_t width, const size_t height)
+    bds(const size_t chunk, const size_t grid, const size_t view, const size_t width, const size_t height, const uint8_t game_mode)
         : _win("Beyond Dying Skies Official", width, height, _gl_major, _gl_minor),
           _uniforms(),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
-          _state(grid),
+          _state(grid, game_mode),
           _world(_state.get_load_state(), _particles, _sound, _uniforms, chunk, grid, view),
           _ui(_uniforms, _world.get_player().get_inventory(), _world.get_player().get_stats(), _win.get_width(), _win.get_height()),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
@@ -278,8 +286,11 @@ class bds
     }
     ~bds()
     {
+        // Get static instances
+        const game::static_instance &instance = _world.get_instance();
+
         // Save game data to file
-        _state.save_state(_world.get_player());
+        _state.save_state(instance, _world.get_player());
     }
     void blink_console_message()
     {

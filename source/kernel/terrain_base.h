@@ -64,13 +64,12 @@ class terrain_base
     terrain_base(const size_t scale, const size_t chunk_size, const size_t start, const size_t stop)
         : _scale(scale), _chunk_size(chunk_size), _start(start), _stop(stop) {}
 
-    inline void generate(game::thread_pool &pool, std::vector<int8_t> &write) const
+    inline void generate(game::thread_pool &pool, std::vector<game::block_id> &write) const
     {
         // Create working function
         const auto work = [this, &write](std::mt19937 &gen, const size_t i) {
-
             // Dope minerals in base
-            std::uniform_int_distribution<int8_t> dope(0, 110);
+            std::uniform_int_distribution<uint8_t> dope(0, 110);
 
             // Fill out this section
             for (size_t j = _start; j < _stop; j++)
@@ -83,7 +82,7 @@ class terrain_base
                     // If on edge, write as STONE2
                     if (on_edge(i) || on_edge(j) || on_edge(k))
                     {
-                        write[index] = game::id_value(game::block_id::STONE2);
+                        write[index] = game::block_id::STONE2;
                     }
                     else
                     {
@@ -93,88 +92,88 @@ class terrain_base
                         {
                             if (dope(gen) <= 2)
                             {
-                                write[index] = game::id_value(game::block_id::GOLD);
+                                write[index] = game::block_id::GOLD;
                             }
                             else
                             {
-                                write[index] = game::id_value(game::block_id::STONE1);
+                                write[index] = game::block_id::STONE1;
                             }
                         }
                         else if (value >= 0.10 && value < 0.15)
                         {
                             if (dope(gen) <= 4)
                             {
-                                write[index] = game::id_value(game::block_id::SILVER);
+                                write[index] = game::block_id::SILVER;
                             }
                             else
                             {
-                                write[index] = game::id_value(game::block_id::STONE2);
+                                write[index] = game::block_id::STONE2;
                             }
                         }
                         else if (value >= 0.15 && value < 0.20)
                         {
                             if (dope(gen) <= 6)
                             {
-                                write[index] = game::id_value(game::block_id::IRON);
+                                write[index] = game::block_id::IRON;
                             }
                             else
                             {
-                                write[index] = game::id_value(game::block_id::STONE3);
+                                write[index] = game::block_id::STONE3;
                             }
                         }
                         else if (value >= 0.20 && value < 0.25)
                         {
                             if (dope(gen) <= 6)
                             {
-                                write[index] = game::id_value(game::block_id::COPPER);
+                                write[index] = game::block_id::COPPER;
                             }
                             else
                             {
-                                write[index] = game::id_value(game::block_id::DIRT1);
+                                write[index] = game::block_id::DIRT1;
                             }
                         }
                         else if (value >= 0.35 && value < 0.40)
                         {
                             if (dope(gen) <= 8)
                             {
-                                write[index] = game::id_value(game::block_id::CALCIUM);
+                                write[index] = game::block_id::CALCIUM;
                             }
                             else
                             {
-                                write[index] = game::id_value(game::block_id::DIRT2);
+                                write[index] = game::block_id::DIRT2;
                             }
                         }
                         else if (value >= 0.40 && value < 0.45)
                         {
                             if (dope(gen) <= 10)
                             {
-                                write[index] = game::id_value(game::block_id::SODIUM);
+                                write[index] = game::block_id::SODIUM;
                             }
                             else
                             {
-                                write[index] = game::id_value(game::block_id::CLAY1);
+                                write[index] = game::block_id::CLAY1;
                             }
                         }
                         else if (value >= 0.45 && value < 0.50)
                         {
                             if (dope(gen) <= 8)
                             {
-                                write[index] = game::id_value(game::block_id::MAGNESIUM);
+                                write[index] = game::block_id::MAGNESIUM;
                             }
                             else
                             {
-                                write[index] = game::id_value(game::block_id::CLAY2);
+                                write[index] = game::block_id::CLAY2;
                             }
                         }
                         else if (value >= 0.51 && value < 0.515)
                         {
                             if (dope(gen) <= 10)
                             {
-                                write[index] = game::id_value(game::block_id::POTASSIUM);
+                                write[index] = game::block_id::POTASSIUM;
                             }
                             else
                             {
-                                write[index] = game::id_value(game::block_id::SODIUM);
+                                write[index] = game::block_id::SODIUM;
                             }
                         }
                     }

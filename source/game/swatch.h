@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __SWATCH__
 
 #include <array>
+#include <game/id.h>
 
 namespace game
 {
@@ -28,7 +29,7 @@ class swatch
   private:
     static constexpr size_t _scale = 6;
     static constexpr size_t _size = _scale * _scale * _scale;
-    std::vector<int8_t> _b;
+    std::vector<block_id> _b;
     min::vec3<unsigned> _length;
     min::vec3<int> _offset;
 
@@ -42,7 +43,7 @@ class swatch
     }
 
   public:
-    swatch() : _b(_size, -1) {}
+    swatch() : _b(_size, block_id::EMPTY) {}
     const min::vec3<unsigned> &get_length() const
     {
         return _length;
@@ -51,7 +52,7 @@ class swatch
     {
         return _offset;
     }
-    int8_t get(const size_t i, const size_t j, const size_t k) const
+    block_id get(const size_t i, const size_t j, const size_t k) const
     {
         return _b[grid_key_pack(std::make_tuple(i, j, k))];
     }
@@ -59,7 +60,7 @@ class swatch
     {
         for (size_t i = 0; i < _size; i++)
         {
-            _b[i] = -1;
+            _b[i] = block_id::EMPTY;
         }
     }
     void set_length(const min::vec3<unsigned> &length)
@@ -70,9 +71,9 @@ class swatch
     {
         _offset = offset;
     }
-    void set(const size_t i, const size_t j, const size_t k, const int8_t value)
+    void set(const size_t i, const size_t j, const size_t k, const block_id atlas)
     {
-        _b[grid_key_pack(std::make_tuple(i, j, k))] = value;
+        _b[grid_key_pack(std::make_tuple(i, j, k))] = atlas;
     }
 };
 }

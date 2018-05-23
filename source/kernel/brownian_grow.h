@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __BROWNIAN_GROW__
 #define __BROWNIAN_GROW__
 
+#include <game/id.h>
 #include <game/thread_pool.h>
 #include <min/vec3.h>
 #include <tuple>
@@ -58,8 +59,9 @@ class brownian_grow
 
         return false;
     }
-    inline static int8_t color_table(const int8_t value)
+    inline static game::block_id color_table(const game::block_id value)
     {
+        // This needs to be updated!
         switch (value)
         {
         // Group 1
@@ -100,7 +102,7 @@ class brownian_grow
             return 8;
         }
     }
-    inline bool random_walk(const std::vector<int8_t> &read, std::tuple<size_t, size_t, size_t> &walker, const uint8_t dir, int8_t &value) const
+    inline bool random_walk(const std::vector<game::block_id> &read, std::tuple<size_t, size_t, size_t> &walker, const uint8_t dir, game::block_id &value) const
     {
         // Copy walker position
         std::tuple<size_t, size_t, size_t> next = walker;
@@ -148,7 +150,7 @@ class brownian_grow
 
         // Is the move point a wall?
         value = read[key(next)];
-        if (value == -1)
+        if (value == game::block_id::EMPTY)
         {
             // Move the walker
             walker = next;
@@ -160,11 +162,10 @@ class brownian_grow
         // We hit a wall
         return true;
     }
-    inline void do_brownian(game::thread_pool &pool, const std::vector<int8_t> &read, std::vector<int8_t> &write, const size_t years) const
+    inline void do_brownian(game::thread_pool &pool, const std::vector<game::block_id> &read, std::vector<game::block_id> &write, const size_t years) const
     {
         // Create working function
         const auto work = [this, &read, &write, years](std::mt19937 &gen, const size_t i) {
-
             // Create random number generator for this thread
             std::uniform_int_distribution<int> gdist(-_radius, _radius);
             std::uniform_int_distribution<uint8_t> idist(0, 5);
@@ -185,7 +186,7 @@ class brownian_grow
                     const uint8_t dir = idist(gen);
 
                     // If walker hits something in write buffer
-                    int8_t value;
+                    game::block_id value;
                     if (random_walk(read, walker, dir, value))
                     {
                         // Calculate grid cell
@@ -216,7 +217,7 @@ class brownian_grow
     }
 
   public:
-    brownian_grow(std::mt19937 &gen, std::vector<int8_t> &write, const size_t scale, const size_t radius, const size_t seed)
+    brownian_grow(std::mt19937 &gen, std::vector<game::block_id> &write, const size_t scale, const size_t radius, const size_t seed)
         : _scale(scale), _seed(seed), _radius(radius)
     {
         // Check if radius is valid
@@ -243,7 +244,7 @@ class brownian_grow
         }
     }
 
-    inline void generate(game::thread_pool &pool, const std::vector<int8_t> &read, std::vector<int8_t> &write, const size_t years)
+    inline void generate(game::thread_pool &pool, const std::vector<game::block_id> &read, std::vector<game::block_id> &write, const size_t years)
     {
         // Generate brownian tree
         do_brownian(pool, read, write, years);

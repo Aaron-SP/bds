@@ -46,11 +46,10 @@ class terrain_height
 
         return false;
     }
-    inline void terrain(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map) const
+    inline void terrain(game::thread_pool &pool, std::vector<game::block_id> &write, const game::height_map<float, float> &map) const
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
-
             const int8_t grass_start = game::id_value(game::block_id::GRASS1);
             const int8_t grass_end = game::id_value(game::block_id::GRASS2);
             const int8_t dirt_start = game::id_value(game::block_id::DIRT1);
@@ -76,28 +75,27 @@ class terrain_height
                 // First section
                 for (size_t j = _start; j < mid; j++)
                 {
-                    write[key(std::make_tuple(i, j, k))] = sand(gen);
+                    write[key(std::make_tuple(i, j, k))] = static_cast<game::block_id>(sand(gen));
                 }
 
                 // Mid section
                 for (size_t j = mid; j < end; j++)
                 {
-                    write[key(std::make_tuple(i, j, k))] = soil(gen);
+                    write[key(std::make_tuple(i, j, k))] = static_cast<game::block_id>(soil(gen));
                 }
 
                 // Surface section
-                write[key(std::make_tuple(i, end, k))] = grass(gen);
+                write[key(std::make_tuple(i, end, k))] = static_cast<game::block_id>(grass(gen));
             }
         };
 
         // Run height map in parallel
         pool.run(work, 0, _scale);
     }
-    inline void plants(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map, const size_t size) const
+    inline void plants(game::thread_pool &pool, std::vector<game::block_id> &write, const game::height_map<float, float> &map, const size_t size) const
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
-
             std::uniform_int_distribution<size_t> p(3, _scale - 4);
 
             const int8_t plant_start = game::id_value(game::block_id::TOMATO);
@@ -114,20 +112,20 @@ class terrain_height
             const size_t y0 = _start + static_cast<size_t>(std::round(map.get(x0, z0)));
 
             // Create plants only in empty cells
-            if (write[key(std::make_tuple(x0, y0, z0))] == -1)
+            const size_t write_key = key(std::make_tuple(x0, y0, z0));
+            if (write[write_key] == game::block_id::EMPTY)
             {
-                write[key(std::make_tuple(x0, y0, z0))] = plants(gen);
+                write[write_key] = static_cast<game::block_id>(plants(gen));
             }
         };
 
         // Run height map in parallel
         pool.run(work, 0, size);
     }
-    inline void trees(game::thread_pool &pool, std::vector<int8_t> &write, const game::height_map<float, float> &map, const size_t size) const
+    inline void trees(game::thread_pool &pool, std::vector<game::block_id> &write, const game::height_map<float, float> &map, const size_t size) const
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
-
             std::uniform_int_distribution<size_t> p(3, _scale - 4);
 
             // Get random X/Z coord
@@ -150,15 +148,15 @@ class terrain_height
             const size_t top = (height > _stop) ? _stop : height;
 
             // Create tree wood
-            const size_t type = wood(gen);
+            const int8_t type = wood(gen);
             for (size_t y0 = base; y0 < top; y0++)
             {
-                write[key(std::make_tuple(x0, y0, z0))] = type;
+                write[key(std::make_tuple(x0, y0, z0))] = static_cast<game::block_id>(type);
             }
 
             // Calculate leaf type
             std::uniform_int_distribution<int8_t> leaves(10, 13);
-            const size_t leaf = leaves(gen);
+            const int8_t leaf = leaves(gen);
 
             // Leaf position
             const size_t x1 = x0 - 2;
@@ -178,7 +176,7 @@ class terrain_height
                     const size_t z_end = z1 + 5 - dz;
                     for (size_t z = z1 + dz; z < z_end; z++)
                     {
-                        write[key(std::make_tuple(x, y, z))] = leaf;
+                        write[key(std::make_tuple(x, y, z))] = static_cast<game::block_id>(leaf);
                     }
                 }
             }
@@ -192,7 +190,7 @@ class terrain_height
     terrain_height(const size_t scale, const size_t start, const size_t stop)
         : _scale(scale), _start(start), _stop(stop) {}
 
-    inline void generate(game::thread_pool &pool, std::mt19937 &gen, std::vector<int8_t> &write) const
+    inline void generate(game::thread_pool &pool, std::mt19937 &gen, std::vector<game::block_id> &write) const
     {
         // Generate height map
         const size_t level = std::ceil(std::log2(_scale));

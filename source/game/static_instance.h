@@ -20,10 +20,12 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/cgrid.h>
 #include <game/geometry.h>
+#include <game/id.h>
 #include <game/memory_map.h>
 #include <game/uniforms.h>
 #include <min/aabbox.h>
 #include <min/camera.h>
+#include <min/grid.h>
 #include <min/mat4.h>
 #include <min/physics_nt.h>
 #include <min/program.h>
@@ -104,7 +106,7 @@ class static_asset
         // Return chest id
         return _mat.size() - 1;
     }
-    inline size_t add(const min::vec3<float> &p, const int8_t atlas)
+    inline size_t add(const min::vec3<float> &p, const block_id atlas)
     {
         // Check for buffer overflow
         if (_mat.size() == _limit)
@@ -116,7 +118,8 @@ class static_asset
         _mat.push_back(p);
 
         // Pack the matrix with the atlas id
-        const float w = atlas + 2.1;
+        const float float_atlas = static_cast<float>(atlas);
+        const float w = float_atlas + 2.1;
         _mat.back().w(w);
 
         // Return chest id
@@ -154,7 +157,7 @@ class static_asset
             _mat_out.clear();
         }
     }
-    inline void cull_frustum(const min::camera<float> &cam)
+    inline void cull_frustum(const cgrid &grid, const min::camera<float> &cam)
     {
         // Cull chests
         const size_t size = _mat.size();
@@ -164,7 +167,7 @@ class static_asset
             const min::aabbox<float, min::vec3> box = get_box(i);
 
             // If the box is within the frustum
-            if (min::intersect<float>(cam.get_frustum(), box))
+            if (grid.is_viewable(cam, box))
             {
                 _index.push_back(i);
             }
@@ -189,7 +192,11 @@ class static_asset
     {
         return _iid;
     }
-    inline const std::vector<min::mat4<float>> &get_matrix() const
+    inline const std::vector<min::mat4<float>> &get_in_matrix() const
+    {
+        return _mat;
+    }
+    inline const std::vector<min::mat4<float>> &get_out_matrix() const
     {
         return _mat_out;
     }
@@ -234,9 +241,10 @@ class static_asset
     {
         _mat[index].set_rotation(r);
     }
-    inline void update_atlas(const size_t index, const int8_t atlas)
+    inline void update_atlas(const size_t index, const block_id atlas)
     {
-        const float w = atlas + 2.1;
+        const float float_atlas = static_cast<float>(atlas);
+        const float w = float_atlas + 2.1;
         _mat[index].w(w);
     }
 };
@@ -262,12 +270,12 @@ class static_instance
     std::vector<static_asset> _assets;
     std::vector<size_t> _sort_index;
 
-    inline void cull_frustum(const min::camera<float> &cam)
+    inline void cull_frustum(const cgrid &grid, const min::camera<float> &cam)
     {
         const size_t size = _assets.size();
         for (size_t i = 0; i < size; i++)
         {
-            _assets[i].cull_frustum(cam);
+            _assets[i].cull_frustum(grid, cam);
         }
     }
     inline void cull_physics(const physics &sim, const cgrid &grid)
@@ -621,7 +629,7 @@ class static_instance
         }
         else
         {
-            cull_frustum(cam);
+            cull_frustum(grid, cam);
         }
 
         // Sort all assets and copy matrix output buffers
