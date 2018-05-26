@@ -72,7 +72,7 @@ class cgrid
     constexpr static size_t _search_limit = 20;
     const size_t _grid_scale;
     std::vector<block_id> _grid;
-    std::vector<int8_t> _visit;
+    std::vector<int_fast8_t> _visit;
     std::vector<std::pair<size_t, float>> _neighbors;
     std::vector<size_t> _path;
     std::vector<size_t> _stack;
@@ -1360,7 +1360,7 @@ class cgrid
         // Return the number of modified blocks
         return out;
     }
-    min::vec3<float> set_geometry_box_3x3(const min::vec3<float> &p)
+    min::vec3<float> set_geometry_box_3x3(const min::vec3<float> &p, const block_id atlas)
     {
         // Record all modified chunks and store them for updating
         _chunk_update_keys.reserve(18);
@@ -1371,8 +1371,7 @@ class cgrid
         const float ny = snapped.y() - 1.0;
         const float nz = snapped.z() - 1.0;
 
-        // Create enclosed cube 3x3 of mossy stone
-        const block_id moss = block_id::STONE3;
+        // Create enclosed cube 3x3
         min::vec3<float> start(nx, ny, nz);
         min::vec3<unsigned> length(3, 3, 3);
         const min::vec3<int> offset(1, 1, 1);
@@ -1383,11 +1382,11 @@ class cgrid
         // Create -XZ floor
         start.y(ny - 1.0);
         length.y(1);
-        geometry_add(start, length, offset, moss);
+        geometry_add(start, length, offset, atlas);
 
         // Create +XZ floor
         start.y(snapped.y() + 2.0);
-        geometry_add(start, length, offset, moss);
+        geometry_add(start, length, offset, atlas);
 
         // Reset
         start.y(ny);
@@ -1396,11 +1395,11 @@ class cgrid
 
         // Create the -XY wall
         start.z(nz - 1.0);
-        geometry_add(start, length, offset, moss);
+        geometry_add(start, length, offset, atlas);
 
         // Create the +XY wall
         start.z(snapped.z() + 2.0);
-        geometry_add(start, length, offset, moss);
+        geometry_add(start, length, offset, atlas);
 
         // Reset
         start.z(nz);
@@ -1409,11 +1408,11 @@ class cgrid
 
         // Create the -YZ wall
         start.x(nx - 1.0);
-        geometry_add(start, length, offset, moss);
+        geometry_add(start, length, offset, atlas);
 
         // Create the +YZ wall
         start.x(snapped.x() + 2.0);
-        geometry_add(start, length, offset, moss);
+        geometry_add(start, length, offset, atlas);
 
         // Return snapped point
         return snapped;

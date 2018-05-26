@@ -59,29 +59,29 @@ class bds
     game::ui_overlay _ui;
     game::controls _controls;
     game::title _title;
-    std::pair<uint16_t, uint16_t> _cursor;
+    std::pair<uint_fast16_t, uint_fast16_t> _cursor;
     double _fps;
     double _idle;
 
     void set_cursor_center()
     {
         // Get the screen dimensions
-        const uint16_t w = _win.get_width();
-        const uint16_t h = _win.get_height();
+        const uint_fast16_t w = _win.get_width();
+        const uint_fast16_t h = _win.get_height();
 
         // Center cursor in middle of window
         _win.set_cursor(w / 2, h / 2);
     }
-    std::pair<uint16_t, uint16_t> cursor_center() const
+    std::pair<uint_fast16_t, uint_fast16_t> cursor_center() const
     {
         // Get the screen dimensions
-        const uint16_t w2 = _win.get_width() / 2;
-        const uint16_t h2 = _win.get_height() / 2;
+        const uint_fast16_t w2 = _win.get_width() / 2;
+        const uint_fast16_t h2 = _win.get_height() / 2;
 
         // Return screen center
         return std::make_pair(w2, h2);
     }
-    std::pair<uint16_t, uint16_t> get_cursor() const
+    std::pair<uint_fast16_t, uint_fast16_t> get_cursor() const
     {
         // If player is dead return screen center
         if (_world.get_player().is_dead())
@@ -110,7 +110,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.241");
+        _ui.text().set_debug_version("VERSION: 0.1.242");
 
         // Set the game mode
         const bool hardcore = _state.get_load_state().is_hardcore();
@@ -420,7 +420,7 @@ class bds
                 const auto c = _win.get_cursor();
 
                 // Flip the Y value to match screen coordinates
-                const uint16_t height = _win.get_height() - c.second;
+                const uint_fast16_t height = _win.get_height() - c.second;
                 _ui.overlap(min::vec2<float>(c.first, height));
 
                 // Calculate the center of the screen

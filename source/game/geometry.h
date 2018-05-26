@@ -83,7 +83,7 @@ inline void block_uv(std::vector<min::vec2<float>> &uv, size_t i)
     uv[i++] = min::vec2<float>(1.0, 1.0);
 }
 
-static inline void block_uv_scale(std::vector<min::vec2<float>> &uv, size_t index, const int8_t atlas_id)
+static inline void block_uv_scale(std::vector<min::vec2<float>> &uv, size_t index, const int_fast8_t atlas_id)
 {
     // Calculate grid index
     const size_t col = atlas_id % 8;

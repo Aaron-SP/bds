@@ -106,7 +106,7 @@ class state
     }
 
   public:
-    state(const size_t grid_size, const uint8_t game_mode)
+    state(const size_t grid_size, const uint_fast8_t game_mode)
         : _state(grid_size, game_mode), _tracking(false), _frame_count(0), _x{}, _y{},
           _recoil(0), _run_accum(0.0), _run_accum_sin(0.0),
           _dead(false), _pause(false), _respawn(false), _user_input(false)
@@ -218,7 +218,7 @@ class state
     {
         return _user_input = !_user_input;
     }
-    void update(const min::vec3<float> &p, const std::pair<uint16_t, uint16_t> &c, const uint16_t w, const uint16_t h, const float speed, const float dt)
+    void update(const min::vec3<float> &p, const std::pair<uint_fast16_t, uint_fast16_t> &c, const uint_fast16_t w, const uint_fast16_t h, const float speed, const float dt)
     {
         // Calculate position to move camera to
         const min::vec3<float> move = p + min::vec3<float>(0.0, 0.5, 0.0);

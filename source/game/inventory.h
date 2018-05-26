@@ -20,6 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <array>
 #include <game/id.h>
+#include <game/item.h>
 #include <limits>
 #include <random>
 #include <utility>
@@ -27,104 +28,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace game
 {
-
-enum class item_type
-{
-    empty,
-    skill,
-    block,
-    item
-};
-
-class item
-{
-  private:
-    uint8_t _id;
-    uint8_t _count;
-    uint8_t _prim;
-    uint8_t _sec;
-    uint8_t _level;
-
-  public:
-    item() : _id(0), _count(0), _prim(0), _sec(0), _level(0) {}
-    item(const item_id id, const uint8_t count,
-         const uint8_t prim, const uint8_t sec, const uint8_t level)
-        : _id(id_value(id)), _count(count),
-          _prim(prim), _sec(sec), _level(level) {}
-
-    bool operator<(const item &other) const
-    {
-        return _id < other._id;
-    }
-    inline uint8_t to_block_id() const
-    {
-        return _id - 17;
-    }
-    inline uint8_t to_item_id() const
-    {
-        return _id - 81;
-    }
-    inline void consume(const uint8_t count)
-    {
-        _count -= count;
-    }
-    inline uint8_t count() const
-    {
-        return _count;
-    }
-    inline item_id id() const
-    {
-        return static_cast<item_id>(_id);
-    }
-    inline uint8_t level() const
-    {
-        return _level;
-    }
-    inline uint8_t prim() const
-    {
-        return _prim;
-    }
-    inline uint8_t sec() const
-    {
-        return _sec;
-    }
-    inline void set_count(const uint8_t count)
-    {
-        _count = count;
-    }
-    inline void set_empty()
-    {
-        _id = 0;
-    }
-    inline void stack(uint8_t &count)
-    {
-        // Calculate sum of items
-        const uint16_t sum = _count + count;
-
-        // Calculate left over items
-        count = (sum / 255) * (sum % 255);
-
-        // Set the stack item count
-        _count = sum - count;
-    }
-    inline item_type type() const
-    {
-        if (_id == 0)
-        {
-            return item_type::empty;
-        }
-        else if (_id < 17)
-        {
-            return item_type::skill;
-        }
-        else if (_id < 81)
-        {
-            return item_type::block;
-        }
-
-        return item_type::item;
-    }
-};
 
 class inventory
 {
@@ -161,19 +64,19 @@ class inventory
     std::vector<std::string> _inv_desc;
     std::vector<ui_id> _update;
     std::array<craft_item, _cube_size> _craft;
-    std::uniform_int_distribution<size_t> _drop_dist;
-    std::uniform_int_distribution<uint8_t> _item_dist;
-    std::uniform_int_distribution<uint8_t> _prim_dist;
-    std::uniform_int_distribution<uint8_t> _sec_dist;
-    std::uniform_int_distribution<uint8_t> _level_dist;
     std::mt19937 _gen;
+    std::uniform_int_distribution<uint_fast8_t> _drop_item;
+    std::uniform_int_distribution<int_fast8_t> _item_mult;
+    std::uniform_int_distribution<int_fast8_t> _level_offset;
+    std::uniform_int_distribution<uint_fast8_t> _random_item;
+    unsigned _player_level;
 
-    inline std::pair<bool, item_id> decay(const uint8_t index, const item_id consume_id, uint8_t &count)
+    inline std::pair<bool, item_id> decay(const uint_fast8_t index, const item_id consume_id, uint_fast8_t &count)
     {
         // Only consume item do not convert
         return std::make_pair(consume(index, consume_id, count), consume_id);
     }
-    inline std::pair<bool, item_id> decay(const uint8_t index, const item_id consume_id, const item_id add_id, uint8_t &count, const uint8_t add_count)
+    inline std::pair<bool, item_id> decay(const uint_fast8_t index, const item_id consume_id, const item_id add_id, uint_fast8_t &count, const uint_fast8_t add_count)
     {
         // Did we decay anything?
         bool status = false;
@@ -200,7 +103,7 @@ class inventory
 
         return std::make_pair(status, consume_id);
     }
-    inline void consume_item(const size_t index, item &it, uint8_t &count)
+    inline void consume_item(const size_t index, item &it, uint_fast8_t &count)
     {
         // Consume the inventory count
         it.consume(count);
@@ -218,8 +121,8 @@ class inventory
         _update.emplace_back(index);
     }
     inline bool consume2(
-        const size_t index_1, const item_id id_1, uint8_t &count_1,
-        const size_t index_2, const item_id id_2, uint8_t &count_2)
+        const size_t index_1, const item_id id_1, uint_fast8_t &count_1,
+        const size_t index_2, const item_id id_2, uint_fast8_t &count_2)
     {
         // Get the current item
         item &it_1 = _inv[index_1];
@@ -242,9 +145,9 @@ class inventory
         return false;
     }
     inline bool consume3(
-        const size_t index_1, const item_id id_1, uint8_t &count_1,
-        const size_t index_2, const item_id id_2, uint8_t &count_2,
-        const size_t index_3, const item_id id_3, uint8_t &count_3)
+        const size_t index_1, const item_id id_1, uint_fast8_t &count_1,
+        const size_t index_2, const item_id id_2, uint_fast8_t &count_2,
+        const size_t index_3, const item_id id_3, uint_fast8_t &count_3)
     {
         // Get the current item
         item &it_1 = _inv[index_1];
@@ -273,106 +176,111 @@ class inventory
     {
         _inv_name[0] = "Empty";
         _inv_name[1] = "Automatic Beam";
-        _inv_desc[1] = "A general purpose_energy weapon firing_a multiple beams";
+        _inv_desc[1] = "A general purpose energy_weapon firing multiple beams";
         _inv_name[2] = "Beam";
-        _inv_desc[2] = "A general purpose_energy weapon firing_a singular beam";
+        _inv_desc[2] = "A general purpose energy_weapon firing a singular beam";
         _inv_name[3] = "Charge Beam";
-        _inv_desc[3] = "A general purpose_energy weapon firing_a charged beam";
+        _inv_desc[3] = "A general purpose energy_weapon firing a charged beam";
         _inv_name[4] = "Grappling Hook";
-        _inv_desc[4] = "An energy beam_used for swinging_in the air";
+        _inv_desc[4] = "An energy beam used for_swinging in the air";
         _inv_name[5] = "Grenade Launcher";
-        _inv_desc[5] = "A cheap offensive_projectile weapon";
+        _inv_desc[5] = "A cheap offensive projectile_weapon";
         _inv_name[6] = "Jet Pack";
-        _inv_desc[6] = "Transforms energy_into vertical thrust";
+        _inv_desc[6] = "Transforms energy into_vertical thrust";
         _inv_name[7] = "Missile Launcher";
-        _inv_desc[7] = "An expensive_offensive projectile_weapon";
+        _inv_desc[7] = "An expensive offensive_projectile weapon";
         _inv_name[8] = "Portal Beam";
         _inv_desc[8] = "It's portal time baby!";
         _inv_name[9] = "Pending Scan";
-        _inv_desc[9] = "Scan a block to_retrieve the block_type";
+        _inv_desc[9] = "Scan a block to retrieve_the block_type";
         _inv_name[10] = "Scatter Beam";
-        _inv_desc[10] = "An energy weapon_optimized for killing_drones";
+        _inv_desc[10] = "An energy weapon optimized_for killing drones";
         _inv_name[11] = "Speed Boots";
-        _inv_desc[11] = "Sometimes you just_need to run for it!";
+        _inv_desc[11] = "Sometimes you just need_to run for it!";
         _inv_name[12] = "Reserved";
         _inv_name[13] = "Reserved";
         _inv_name[14] = "Reserved";
         _inv_name[15] = "Reserved";
         _inv_name[16] = "Reserved";
-        _inv_name[17] = "Dense Grass";
-        _inv_desc[17] = "Right click to_transform into Ether";
-        _inv_name[18] = "Grass";
-        _inv_desc[18] = "Right click to_transform into Ether";
-        _inv_name[19] = "Fertile Soil";
-        _inv_desc[19] = "Right click to_transform into Ether";
-        _inv_name[20] = "Soil";
-        _inv_desc[20] = "Right click to_transform into Ether";
-        _inv_name[21] = "Yellow Sand";
-        _inv_desc[21] = "Right click to_transform into Ether";
-        _inv_name[22] = "White Sand";
-        _inv_desc[22] = "Right click to_transform into Ether";
-        _inv_name[23] = "Iron";
-        _inv_desc[23] = "Right click to ionize";
-        _inv_name[24] = "Silver";
-        _inv_name[25] = "Oak";
-        _inv_desc[25] = "Right click to_transform into Ether";
-        _inv_name[26] = "Pine";
-        _inv_desc[26] = "Right click to_transform into Ether";
-        _inv_name[27] = "Dark Foliage";
-        _inv_desc[27] = "Right click to_transform into Ether";
-        _inv_name[28] = "Light Vegetation";
-        _inv_desc[28] = "Right click to_transform into Ether";
-        _inv_name[29] = "Blooming Growth";
-        _inv_desc[29] = "Right click to_transform into Ether";
-        _inv_name[30] = "Flowery Growth";
-        _inv_desc[30] = "Right click to_transform into Ether";
-        _inv_name[31] = "Magnesium";
-        _inv_desc[31] = "Right click to ionize";
-        _inv_name[32] = "Gold";
-        _inv_name[33] = "Light Stone";
-        _inv_desc[33] = "Right click to_transform into Ether";
-        _inv_name[34] = "Dark Stone";
-        _inv_desc[34] = "Right click to_transform into Ether";
-        _inv_name[35] = "Light Clay";
-        _inv_desc[35] = "Right click to_transform into Ether";
-        _inv_name[36] = "Dark Clay";
-        _inv_desc[36] = "Right click to_transform into Ether";
-        _inv_name[37] = "Mossy Stone";
-        _inv_desc[37] = "Right click to_transform into Ether";
-        _inv_name[38] = "Copper";
-        _inv_desc[38] = "Right click to ionize";
-        _inv_name[39] = "Unstable Sodium";
-        _inv_desc[39] = "Right click to ionize";
-        _inv_name[40] = "Calcium";
-        _inv_desc[40] = "Right click to ionize";
-        _inv_name[41] = "Red Crystals";
-        _inv_desc[41] = "Right click to harvest";
-        _inv_name[42] = "Purple Crystals";
-        _inv_desc[42] = "Right click to harvest";
-        _inv_name[43] = "Blue Crystals";
-        _inv_desc[43] = "Right click to harvest";
-        _inv_name[44] = "Green Crystals";
-        _inv_desc[44] = "Right click to harvest";
-        _inv_name[45] = "???";
-        _inv_name[46] = "???";
-        _inv_name[47] = "Potassium";
-        _inv_desc[47] = "Right click to ionize";
+        _inv_name[17] = "White Sand";
+        _inv_desc[17] = "Right click to transform into Ether";
+        _inv_name[18] = "Yellow Sand";
+        _inv_desc[18] = "Right click to transform into_Ether";
+        _inv_name[19] = "Soil";
+        _inv_desc[19] = "Right click to transform into_Ether";
+        _inv_name[20] = "Fertile Soil";
+        _inv_desc[20] = "Right click to transform into_Ether";
+        _inv_name[21] = "Light Clay";
+        _inv_desc[21] = "Right click to transform into_Ether";
+        _inv_name[22] = "Dark Clay";
+        _inv_desc[22] = "Right click to transform into_Ether";
+        _inv_name[23] = "Light Stone";
+        _inv_desc[23] = "Right click to transform into_Ether";
+        _inv_name[24] = "Dark Stone";
+        _inv_desc[24] = "Right click to transform into_Ether";
+        _inv_name[25] = "Mossy Stone";
+        _inv_desc[25] = "Right click to transform into_Ether";
+        _inv_name[26] = "Grass";
+        _inv_desc[26] = "Right click to transform into_Ether";
+        _inv_name[27] = "Dense Grass";
+        _inv_desc[27] = "Right click to transform into_Ether";
+        _inv_name[28] = "Oak";
+        _inv_desc[28] = "Right click to transform into_Ether";
+        _inv_name[29] = "Pine";
+        _inv_desc[29] = "Right click to transform into_Ether";
+        _inv_name[30] = "Dark Foliage";
+        _inv_desc[30] = "Right click to transform into_Ether";
+        _inv_name[31] = "Light Vegetation";
+        _inv_desc[31] = "Right click to transform into_Ether";
+        _inv_name[32] = "Blooming Growth";
+        _inv_desc[32] = "Right click to transform into_Ether";
+        _inv_name[33] = "Flowery Growth";
+        _inv_desc[33] = "Right click to transform into_Ether";
+        _inv_name[34] = "Tomatoes";
+        _inv_desc[34] = "Right click to harvest";
+        _inv_name[35] = "Eggplant";
+        _inv_desc[35] = "Right click to harvest";
+        _inv_name[36] = "Red Peppers";
+        _inv_desc[36] = "Right click to harvest";
+        _inv_name[37] = "Green Peppers";
+        _inv_desc[37] = "Right click to harvest";
+        _inv_name[38] = "???";
+        _inv_name[39] = "???";
+        _inv_name[40] = "???";
+        _inv_name[41] = "Calcium";
+        _inv_desc[41] = "Right click to ionize";
+        _inv_name[42] = "Magnesium";
+        _inv_desc[42] = "Right click to ionize";
+        _inv_name[43] = "Copper";
+        _inv_desc[43] = "Right click to ionize";
+        _inv_name[44] = "Potassium";
+        _inv_desc[44] = "Right click to ionize";
+        _inv_name[45] = "Iron";
+        _inv_desc[45] = "Right click to ionize";
+        _inv_name[46] = "Unstable Sodium";
+        _inv_desc[46] = "Right click to ionize";
+        _inv_name[47] = "Iridium";
+        _inv_desc[47] = "Unbreakable!";
         _inv_name[48] = "???";
-        _inv_name[49] = "Tomatoes";
-        _inv_desc[49] = "Right click to harvest";
-        _inv_name[50] = "Eggplant";
-        _inv_desc[50] = "Right click to harvest";
-        _inv_name[51] = "Red Peppers";
+        _inv_name[49] = "Silver";
+        _inv_name[50] = "Gold";
+        _inv_name[51] = "Red Crystals";
         _inv_desc[51] = "Right click to harvest";
-        _inv_name[52] = "Green Peppers";
+        _inv_name[52] = "Purple Crystals";
         _inv_desc[52] = "Right click to harvest";
+        _inv_name[53] = "Blue Crystals";
+        _inv_desc[53] = "Right click to harvest";
+        _inv_name[54] = "Green Crystals";
+        _inv_desc[54] = "Right click to harvest";
+        _inv_name[55] = "???";
+        _inv_name[56] = "???";
         _inv_name[81] = "Red Crystal Shards";
-        _inv_desc[81] = "Transforms raw_compounds into_processed elements";
+        _inv_desc[81] = "Transforms raw compounds_into processed elements";
         _inv_name[82] = "Purple Crystal Shards";
         _inv_name[83] = "Blue Crystal Shards";
-        _inv_desc[83] = "Transforms ionic_compounds into_stable elements";
+        _inv_desc[83] = "Transforms ionic compounds_into stable elements";
         _inv_name[84] = "Green Crystal Shards";
-        _inv_desc[84] = "Upgrades block_resources to a higher_form";
+        _inv_desc[84] = "Upgrades block resources_to a higher form";
         _inv_name[85] = "Ammonium [NH4+]";
         _inv_desc[85] = "Decays into [NO3-]";
         _inv_name[86] = "Calcium [Ca+]";
@@ -418,34 +326,42 @@ class inventory
         _inv_name[123] = "Tomato";
         _inv_desc[123] = "Right click to eat._It's tender and juicy!";
         _inv_name[124] = "Battery";
-        _inv_desc[124] = "Right click to use._The power is_overwhelming!";
+        _inv_desc[124] = "Right click to use._The power is overwhelming!";
         _inv_name[125] = "Ether";
         _inv_desc[125] = "The building block of_all matter";
         _inv_name[126] = "Oxygen";
-        _inv_desc[126] = "Vital for sustaining_life!";
+        _inv_desc[126] = "Vital for sustaining life!";
         _inv_name[127] = "Rusty Key";
         _inv_desc[127] = "It's old and rusty._Perhaps this opens_something!";
     }
-    item make_item(const item_id id, const uint8_t count)
+    item make_item(const item_id id, const uint_fast8_t count)
     {
-        const uint8_t p_stat = _prim_dist(_gen);
-        const uint8_t s_stat = _sec_dist(_gen);
-        const uint8_t i_lvl = _level_dist(_gen);
+        const int_fast8_t offset = _level_offset(_gen);
+        const int_fast8_t base_level = _player_level + offset;
 
+        // Scale primary and secondary stat
+        const uint_fast8_t i_lvl = (base_level > 0) ? base_level : 1;
+        const uint_fast8_t p_stat = (i_lvl * (_item_mult(_gen) / _item_mult(_gen))) + 1;
+        const uint_fast8_t s_stat = (i_lvl * (_item_mult(_gen) / _item_mult(_gen))) + 1;
+
+        // Return item
+        return item(id, count, p_stat, s_stat, i_lvl);
+    }
+    item make_item(const item_id id, const uint_fast8_t count, const uint_fast8_t p_stat, const uint_fast8_t s_stat, const uint_fast8_t i_lvl)
+    {
         // Return item
         return item(id, count, p_stat, s_stat, i_lvl);
     }
     void set_store()
     {
-        _inv[begin_store()] = make_item(item_id::BEAM, 1);
-        _inv[begin_store() + 1] = make_item(item_id::SCAN, 1);
+        _inv[begin_store()] = make_item(item_id::BEAM, 1, 1, 1, 1);
     }
     inline bool stack(const size_t one, const size_t two)
     {
         // Try to stack items if same type
         if (_inv[one].id() == _inv[two].id())
         {
-            uint8_t count = _inv[one].count();
+            uint_fast8_t count = _inv[one].count();
             _inv[two].stack(count);
 
             // If items are left
@@ -474,12 +390,11 @@ class inventory
   public:
     inventory()
         : _inv{}, _inv_name(_max_strings), _inv_desc(_max_strings), _craft{},
-          _drop_dist(begin_key(), end_cube() - 1),
-          _item_dist(id_value(item_id::AUTO_BEAM), id_value(item_id::SPEED)),
-          _prim_dist(0, 255),
-          _sec_dist(0, 255),
-          _level_dist(0, 255),
-          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
+          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
+          _drop_item(begin_key(), end_cube() - 1), _item_mult(1, 4),
+          _level_offset(-10, 10),
+          _random_item(id_value(item_id::AUTO_BEAM), id_value(item_id::SPEED)),
+          _player_level(1)
     {
         // Load inv` strings
         load_strings();
@@ -510,7 +425,7 @@ class inventory
     {
         return _inv[index + begin_store()];
     }
-    inline bool add(const item_id id, uint8_t &count)
+    inline bool add(const item_id id, uint_fast8_t &count)
     {
         // Search for item of same id in slots
         const size_t size = end_cube();
@@ -604,7 +519,7 @@ class inventory
     {
         _update.clear();
     }
-    inline bool consume(const item_id id, uint8_t &count)
+    inline bool consume(const item_id id, uint_fast8_t &count)
     {
         // Search for item of same id in slots
         const size_t size = end_cube();
@@ -620,7 +535,7 @@ class inventory
         // Return that we failed to consume
         return false;
     }
-    inline bool consume(const size_t index, const item_id id, uint8_t &count)
+    inline bool consume(const size_t index, const item_id id, uint_fast8_t &count)
     {
         // Get the current item
         item &it = _inv[index];
@@ -667,11 +582,11 @@ class inventory
                 if (it.id() == id)
                 {
                     // Get the item count
-                    const uint8_t available = it.count();
+                    const uint_fast8_t available = it.count();
                     if (total > available)
                     {
                         // Consume resource
-                        uint8_t count = available;
+                        uint_fast8_t count = available;
                         consume_item(i, it, count);
 
                         // Decriment total consumed
@@ -680,7 +595,7 @@ class inventory
                     else
                     {
                         // Consume resource
-                        uint8_t count = static_cast<uint8_t>(total);
+                        uint_fast8_t count = static_cast<uint_fast8_t>(total);
                         consume_item(i, it, count);
 
                         // Return that we finished consuming
@@ -696,10 +611,10 @@ class inventory
     inline bool random_item()
     {
         // Get a random skill ID
-        const item_id id = static_cast<item_id>(_item_dist(_gen));
+        const item_id id = static_cast<item_id>(_random_item(_gen));
 
         // Set the item count
-        uint8_t count = 1;
+        uint_fast8_t count = 1;
 
         // Create item in store
         switch (id)
@@ -715,7 +630,7 @@ class inventory
         // Add skill to inventory
         return add(id, count);
     }
-    inline bool recipe_2(const uint8_t mult)
+    inline bool recipe_2(const uint_fast8_t mult)
     {
         // Sort the crafting array by ID
         std::sort(_craft.begin(), _craft.begin() + 2, std::less<craft_item>());
@@ -723,11 +638,11 @@ class inventory
         // Get indices in sorted order
         const size_t lower = _craft[0].index();
         const size_t higher = _craft[1].index();
-        uint8_t low_count = mult;
-        uint8_t high_count = mult;
+        uint_fast8_t low_count = mult;
+        uint_fast8_t high_count = mult;
 
         // How many items to craft
-        uint8_t add_count = mult;
+        uint_fast8_t add_count = mult;
 
         // Try to craft a recipe
         if (consume2(lower, item_id::BLK_FE, low_count, higher, item_id::CAT_H, high_count))
@@ -943,7 +858,7 @@ class inventory
         {
             return add(item_id::BAR_AU, add_count);
         }
-        else if (consume2(lower, item_id::BLK_SI, low_count, higher, item_id::SHARD_R, high_count))
+        else if (consume2(lower, item_id::BLK_AG, low_count, higher, item_id::SHARD_R, high_count))
         {
             return add(item_id::BAR_SI, add_count);
         }
@@ -951,7 +866,7 @@ class inventory
         // Missiles
         else if (consume2(lower, item_id::BAR_FE, low_count, higher, item_id::BAR_NA, high_count))
         {
-            uint8_t add_count = 4 * mult;
+            uint_fast8_t add_count = 4 * mult;
             return add(item_id::MISSILE, add_count);
         }
         // Keys
@@ -963,7 +878,7 @@ class inventory
         // Failed to craft item
         return false;
     }
-    inline bool recipe_3(const uint8_t mult)
+    inline bool recipe_3(const uint_fast8_t mult)
     {
         // Sort the crafting array by ID
         std::sort(_craft.begin(), _craft.begin() + 3, std::less<craft_item>());
@@ -972,13 +887,13 @@ class inventory
         const size_t lower = _craft[0].index();
         const size_t middle = _craft[1].index();
         const size_t higher = _craft[2].index();
-        uint8_t low_count = 4 * mult;
-        uint8_t mid_count = 4 * mult;
-        uint8_t high_count = 4 * mult;
-        uint8_t up_count = mult;
+        uint_fast8_t low_count = 4 * mult;
+        uint_fast8_t mid_count = 4 * mult;
+        uint_fast8_t high_count = 4 * mult;
+        uint_fast8_t up_count = mult;
 
         // How many items to craft
-        uint8_t add_count = mult;
+        uint_fast8_t add_count = mult;
 
         // Urea
         if (consume3(lower, item_id::SHARD_B, low_count,
@@ -1040,7 +955,7 @@ class inventory
         // Failed to craft item
         return false;
     }
-    inline std::pair<bool, item_id> craft(const size_t index, const uint8_t mult)
+    inline std::pair<bool, item_id> craft(const size_t index, const uint_fast8_t mult)
     {
         size_t craft_size = 0;
         const size_t begin = begin_cube();
@@ -1079,12 +994,12 @@ class inventory
         // Return that we failed to craft
         return std::make_pair(false, item_id::EMPTY);
     }
-    inline std::pair<bool, item_id> decay(const size_t index, const uint8_t mult)
+    inline std::pair<bool, item_id> decay(const size_t index, const uint_fast8_t mult)
     {
         // Get the item
         const item &it = _inv[index];
 
-        uint8_t count = mult;
+        uint_fast8_t count = mult;
         const item_id it_id = it.id();
         switch (it_id)
         {
@@ -1173,7 +1088,7 @@ class inventory
         // Store update index
         _update.emplace_back(index);
     }
-    inline void fill(const std::vector<item> &inv)
+    inline void fill(const std::vector<item> &inv, const unsigned player_level)
     {
         // Write inventory data into stream
         const size_t start = begin_store();
@@ -1182,6 +1097,9 @@ class inventory
         {
             _inv[i] = inv[i];
         }
+
+        // Cache player level
+        _player_level = player_level;
     }
     inline const std::string &get_name(const item_id id) const
     {
@@ -1215,7 +1133,7 @@ class inventory
             for (size_t i = 0; i < _drop_count; i++)
             {
                 // Calculate random index to drop
-                const size_t index = _drop_dist(_gen);
+                const size_t index = _drop_item(_gen);
                 if (_inv[index].type() != item_type::empty)
                 {
                     // Drop item
@@ -1226,6 +1144,10 @@ class inventory
                 }
             }
         }
+    }
+    inline void set_player_level(const unsigned level)
+    {
+        _player_level = level;
     }
     inline void swap(const size_t one, const size_t two)
     {

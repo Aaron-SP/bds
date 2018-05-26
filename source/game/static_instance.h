@@ -252,7 +252,7 @@ class static_asset
 class static_instance
 {
   private:
-    typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
+    typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     static constexpr size_t _CHEST_LIMIT = 10;
     static constexpr size_t _DRONE_LIMIT = 10;
     static constexpr size_t _DROP_LIMIT = 50;
@@ -284,13 +284,13 @@ class static_instance
         const std::vector<view_chunk> &view_chunks = grid.get_view_chunks();
 
         // Get the index map
-        const std::vector<uint16_t> &map = sim.get_index_map();
+        const std::vector<uint_fast16_t> &map = sim.get_index_map();
 
         // For each view chunk
         for (const view_chunk &vc : view_chunks)
         {
             // Perform overlapping of physics bodies
-            const std::vector<std::pair<uint16_t, uint16_t>> &over = sim.get_overlap(vc.get_box());
+            const std::vector<std::pair<uint_fast16_t, uint_fast16_t>> &over = sim.get_overlap(vc.get_box());
 
             // For each body in view chunk
             const size_t size = over.size();

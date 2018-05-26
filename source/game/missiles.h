@@ -68,7 +68,7 @@ class missile
 class missiles
 {
   private:
-    typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
+    typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *_sim;
     static_instance *_inst;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;

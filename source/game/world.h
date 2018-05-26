@@ -76,7 +76,7 @@ class world
 
     // Physics stuff
     min::vec3<float> _gravity;
-    min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
+    min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
     size_t _char_id;
 
     // Terrain control stuff
@@ -110,7 +110,7 @@ class world
     const std::string _invalid_str;
 
     // Random stuff
-    std::uniform_int_distribution<uint8_t> _drop_dist;
+    std::uniform_int_distribution<uint_fast8_t> _drop_dist;
     std::uniform_real_distribution<float> _drop_off_dist;
     std::uniform_real_distribution<float> _ex_mult;
     std::uniform_real_distribution<float> _grid_dist;
@@ -264,7 +264,7 @@ class world
         _drops.add(random_drop_offset(p), dir, atlas);
 
         // Randomly drop a powerup
-        const uint8_t ran_drop = random_drop();
+        const uint_fast8_t ran_drop = random_drop();
         if (ran_drop < 4)
         {
             const block_id drop_id = static_cast<block_id>(id_value(block_id::CRYSTAL_R) + ran_drop);
@@ -471,7 +471,7 @@ class world
         case target_id::BODY:
         {
             // Get the target body id
-            const uint16_t body_id = t.get_body_index();
+            const uint_fast16_t body_id = t.get_body_index();
 
             // Get the body being targeted
             min::body<float, min::vec3> &b = _simulation.get_body(body_id);
@@ -533,7 +533,7 @@ class world
     inline void item_extra(inventory &inv, const block_id atlas)
     {
         // Add extra pickup to inventory
-        uint8_t count = 1;
+        uint_fast8_t count = 1;
         switch (atlas)
         {
         case block_id::GRASS1:
@@ -575,7 +575,7 @@ class world
             break;
         }
     }
-    inline uint8_t random_drop()
+    inline uint_fast8_t random_drop()
     {
         return _drop_dist(_gen);
     }
@@ -642,7 +642,7 @@ class world
                 const item_id it_id = id_from_atlas(atlas);
 
                 // Add drop to inventory
-                uint8_t count = 1;
+                uint_fast8_t count = 1;
                 inv.add(it_id, count);
 
                 // If we picked it up
@@ -790,7 +790,7 @@ class world
 
         // Get player position and player level
         const min::vec3<float> &p = _player.position();
-        const uint16_t player_level = _player.get_stats().level();
+        const uint_fast16_t player_level = _player.get_stats().level();
 
         // Send drones after the player
         _drones.set_destination(p);
@@ -862,7 +862,7 @@ class world
           _explosives(_simulation, _instance),
           _missiles(_simulation, particles, _instance, s),
           _invalid_str("Invalid"),
-          _drop_dist(0, 40),
+          _drop_dist(0, 80),
           _drop_off_dist(-0.5, 0.5),
           _ex_mult(0.1, 3.0),
           _grid_dist((grid_size * -1.0) + _spawn_limit, grid_size - _spawn_limit),
@@ -994,7 +994,7 @@ class world
     {
         return min::mat4<float>(_preview);
     }
-    inline uint8_t get_scale_size() const
+    inline uint_fast8_t get_scale_size() const
     {
         return _scale.x() * _scale.y() * _scale.z();
     }
@@ -1217,7 +1217,7 @@ class world
             case id_value(static_id::CHEST):
             {
                 // If player has keys
-                uint8_t count = 1;
+                uint_fast8_t count = 1;
                 if (_player.get_inventory().consume(item_id::CONS_KEY, count))
                 {
                     // Get the index from the body
@@ -1334,7 +1334,7 @@ class world
     inline bool spawn_chest(const min::vec3<float> &position)
     {
         // This point is snapped to the grid
-        const min::vec3<float> p = _grid.set_geometry_box_3x3(position);
+        const min::vec3<float> p = _grid.set_geometry_box_3x3(position, block_id::STONE3);
 
         // Add the chest
         return _chests.add(min::vec3<float>(p.x(), p.y() - 1.0, p.z()));

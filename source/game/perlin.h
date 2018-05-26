@@ -29,11 +29,11 @@ namespace kernel
 class perlin_noise
 {
   private:
-    std::array<uint8_t, 512> _p;
+    std::array<uint_fast8_t, 512> _p;
 
     void calc_random_hash_table()
     {
-        std::uniform_int_distribution<uint8_t> idist(0, 255);
+        std::uniform_int_distribution<uint_fast8_t> idist(0, 255);
         std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
 
         const size_t size = _p.size();
@@ -50,7 +50,7 @@ class perlin_noise
     {
         return (b - a) * x + a;
     }
-    inline float g(const uint8_t index, const float x, const float y, const float z) const
+    inline float g(const uint_fast8_t index, const float x, const float y, const float z) const
     {
         // Get a random gradient dot product
         switch (index & 15)
@@ -101,29 +101,29 @@ class perlin_noise
     inline float perlin(const float x, const float y, const float z) const
     {
         // Calculate hash table indices
-        const uint8_t xim = static_cast<uint8_t>(x) & 255;
-        const uint8_t yim = static_cast<uint8_t>(y) & 255;
-        const uint8_t zim = static_cast<uint8_t>(z) & 255;
+        const uint_fast8_t xim = static_cast<uint_fast8_t>(x) & 255;
+        const uint_fast8_t yim = static_cast<uint_fast8_t>(y) & 255;
+        const uint_fast8_t zim = static_cast<uint_fast8_t>(z) & 255;
 
         // Unsigned overflow is well defined here!
-        const uint8_t xip = xim + 1;
-        const uint8_t yip = yim + 1;
-        const uint8_t zip = zim + 1;
+        const uint_fast8_t xip = xim + 1;
+        const uint_fast8_t yip = yim + 1;
+        const uint_fast8_t zip = zim + 1;
 
         // Hash 8 corners on local unit cube
-        const uint8_t mmm = _p[_p[_p[xim] + yim] + zim];
-        const uint8_t mpm = _p[_p[_p[xim] + yip] + zim];
-        const uint8_t mmp = _p[_p[_p[xim] + yim] + zip];
-        const uint8_t mpp = _p[_p[_p[xim] + yip] + zip];
-        const uint8_t pmm = _p[_p[_p[xip] + yim] + zim];
-        const uint8_t ppm = _p[_p[_p[xip] + yip] + zim];
-        const uint8_t pmp = _p[_p[_p[xip] + yim] + zip];
-        const uint8_t ppp = _p[_p[_p[xip] + yip] + zip];
+        const uint_fast8_t mmm = _p[_p[_p[xim] + yim] + zim];
+        const uint_fast8_t mpm = _p[_p[_p[xim] + yip] + zim];
+        const uint_fast8_t mmp = _p[_p[_p[xim] + yim] + zip];
+        const uint_fast8_t mpp = _p[_p[_p[xim] + yip] + zip];
+        const uint_fast8_t pmm = _p[_p[_p[xip] + yim] + zim];
+        const uint_fast8_t ppm = _p[_p[_p[xip] + yip] + zim];
+        const uint_fast8_t pmp = _p[_p[_p[xip] + yim] + zip];
+        const uint_fast8_t ppp = _p[_p[_p[xip] + yip] + zip];
 
         // Calculate distance vector within local unit cube
-        const float xp = x - static_cast<uint8_t>(x);
-        const float yp = y - static_cast<uint8_t>(y);
-        const float zp = z - static_cast<uint8_t>(z);
+        const float xp = x - static_cast<uint_fast8_t>(x);
+        const float yp = y - static_cast<uint_fast8_t>(y);
+        const float zp = z - static_cast<uint_fast8_t>(z);
 
         // Calculate the inverse distance vector
         const float xm = xp - 1.0;

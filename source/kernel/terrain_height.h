@@ -50,17 +50,15 @@ class terrain_height
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
-            const int8_t grass_start = game::id_value(game::block_id::GRASS1);
-            const int8_t grass_end = game::id_value(game::block_id::GRASS2);
-            const int8_t dirt_start = game::id_value(game::block_id::DIRT1);
-            const int8_t dirt_end = game::id_value(game::block_id::DIRT2);
-            const int8_t sand_start = game::id_value(game::block_id::SAND1);
-            const int8_t sand_end = game::id_value(game::block_id::SAND2);
-
-            // Random numbers between 0 and 5, including both
-            std::uniform_int_distribution<int8_t> grass(grass_start, grass_end);
-            std::uniform_int_distribution<int8_t> soil(dirt_start, dirt_end);
-            std::uniform_int_distribution<int8_t> sand(sand_start, sand_end);
+            const int_fast8_t grass_start = game::id_value(game::block_id::GRASS1);
+            const int_fast8_t grass_end = game::id_value(game::block_id::GRASS2);
+            const int_fast8_t dirt_start = game::id_value(game::block_id::DIRT1);
+            const int_fast8_t dirt_end = game::id_value(game::block_id::DIRT2);
+            const int_fast8_t sand_start = game::id_value(game::block_id::SAND1);
+            const int_fast8_t sand_end = game::id_value(game::block_id::SAND2);
+            std::uniform_int_distribution<int_fast8_t> grass(grass_start, grass_end);
+            std::uniform_int_distribution<int_fast8_t> soil(dirt_start, dirt_end);
+            std::uniform_int_distribution<int_fast8_t> sand(sand_start, sand_end);
 
             // Z axis
             for (size_t k = 0; k < _scale; k++)
@@ -68,24 +66,26 @@ class terrain_height
                 // Get the height
                 const size_t level = static_cast<size_t>(std::round(map.get(i, k)));
                 const size_t height = (level > _stop) ? _stop : level;
-                const size_t mid = _start + height / 2;
-                const size_t stop = _start + height;
-                const size_t end = stop - 1;
+                const size_t mid = _start + (height / 2);
+                const size_t end = _start + (height - 1);
 
-                // First section
+                // Sand section
                 for (size_t j = _start; j < mid; j++)
                 {
-                    write[key(std::make_tuple(i, j, k))] = static_cast<game::block_id>(sand(gen));
+                    const size_t write_key = key(std::make_tuple(i, j, k));
+                    write[write_key] = static_cast<game::block_id>(sand(gen));
                 }
 
-                // Mid section
+                // Soil section
                 for (size_t j = mid; j < end; j++)
                 {
-                    write[key(std::make_tuple(i, j, k))] = static_cast<game::block_id>(soil(gen));
+                    const size_t write_key = key(std::make_tuple(i, j, k));
+                    write[write_key] = static_cast<game::block_id>(soil(gen));
                 }
 
-                // Surface section
-                write[key(std::make_tuple(i, end, k))] = static_cast<game::block_id>(grass(gen));
+                // Grass surface
+                const size_t write_key = key(std::make_tuple(i, end, k));
+                write[write_key] = static_cast<game::block_id>(grass(gen));
             }
         };
 
@@ -96,26 +96,21 @@ class terrain_height
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
+            const int_fast8_t plant_start = game::id_value(game::block_id::TOMATO);
+            const int_fast8_t plant_end = game::id_value(game::block_id::GREEN_PEPPER);
+            std::uniform_int_distribution<int_fast8_t> plant(plant_start, plant_end);
+
+            // Get random X/Z coord, Y from height map
             std::uniform_int_distribution<size_t> p(3, _scale - 4);
+            const size_t x = p(gen);
+            const size_t z = p(gen);
+            const size_t y = _start + static_cast<size_t>(std::round(map.get(x, z)));
 
-            const int8_t plant_start = game::id_value(game::block_id::TOMATO);
-            const int8_t plant_end = game::id_value(game::block_id::GREEN_PEPPER);
-
-            // Random numbers between 0 and 5, including both
-            std::uniform_int_distribution<int8_t> plants(plant_start, plant_end);
-
-            // Get random X/Z coord
-            const size_t x0 = p(gen);
-            const size_t z0 = p(gen);
-
-            // Get y coord
-            const size_t y0 = _start + static_cast<size_t>(std::round(map.get(x0, z0)));
-
-            // Create plants only in empty cells
-            const size_t write_key = key(std::make_tuple(x0, y0, z0));
+            // Create plants in empty cells on top of height map
+            const size_t write_key = key(std::make_tuple(x, y, z));
             if (write[write_key] == game::block_id::EMPTY)
             {
-                write[write_key] = static_cast<game::block_id>(plants(gen));
+                write[write_key] = static_cast<game::block_id>(plant(gen));
             }
         };
 
@@ -126,57 +121,55 @@ class terrain_height
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
-            std::uniform_int_distribution<size_t> p(3, _scale - 4);
+            const int_fast8_t leaf_start = game::id_value(game::block_id::LEAF1);
+            const int_fast8_t leaf_end = game::id_value(game::block_id::LEAF4);
+            const int_fast8_t wood_start = game::id_value(game::block_id::WOOD1);
+            const int_fast8_t wood_end = game::id_value(game::block_id::WOOD2);
+
+            // Random numbers between 5 and 13, including both
+            std::uniform_int_distribution<uint_fast8_t> tree_size(4, 18);
+            std::uniform_int_distribution<int_fast8_t> wood(wood_start, wood_end);
+            std::uniform_int_distribution<int_fast8_t> leaf(leaf_start, leaf_end);
 
             // Get random X/Z coord
-            const size_t x0 = p(gen);
-            const size_t z0 = p(gen);
-
-            const int8_t leaf_start = game::id_value(game::block_id::LEAF1);
-            const int8_t leaf_end = game::id_value(game::block_id::LEAF4);
-
-            const int8_t wood_start = game::id_value(game::block_id::WOOD1);
-            const int8_t wood_end = game::id_value(game::block_id::WOOD2);
-
-            // Random numbers between 0 and 5, including both
-            std::uniform_int_distribution<uint8_t> size(leaf_start, leaf_end);
-            std::uniform_int_distribution<int8_t> wood(wood_start, wood_end);
+            std::uniform_int_distribution<size_t> p(3, _scale - 4);
+            const size_t x = p(gen);
+            const size_t z = p(gen);
 
             // Get the top of trees at X/Z coord
-            const size_t base = _start + static_cast<size_t>(std::round(map.get(x0, z0)));
-            const size_t height = base + size(gen);
-            const size_t top = (height > _stop) ? _stop : height;
+            const size_t tree_base = _start + static_cast<size_t>(std::round(map.get(x, z)));
+            const size_t tree_height = tree_base + tree_size(gen);
+            const size_t tree_top = (tree_height > _stop) ? _stop : tree_height;
 
             // Create tree wood
-            const int8_t type = wood(gen);
-            for (size_t y0 = base; y0 < top; y0++)
+            const int_fast8_t wood_type = wood(gen);
+            for (size_t y = tree_base; y < tree_top; y++)
             {
-                write[key(std::make_tuple(x0, y0, z0))] = static_cast<game::block_id>(type);
+                const size_t write_key = key(std::make_tuple(x, y, z));
+                write[write_key] = static_cast<game::block_id>(wood_type);
             }
 
-            // Calculate leaf type
-            std::uniform_int_distribution<int8_t> leaves(10, 13);
-            const int8_t leaf = leaves(gen);
-
-            // Leaf position
-            const size_t x1 = x0 - 2;
-            const size_t y1 = top - 2;
-            const size_t z1 = z0 - 2;
-            std::uniform_int_distribution<uint8_t> leaf_offset(0, 1);
+            // Leaf start position and leaf type
+            const size_t x_start = x - 2;
+            const size_t y_start = tree_top - 2;
+            const size_t z_start = z - 2;
+            const int_fast8_t leaf_type = leaf(gen);
 
             // Generate cubic leaves
+            std::uniform_int_distribution<uint_fast8_t> leaf_offset(0, 1);
             const size_t dx = leaf_offset(gen);
-            const size_t x_end = x1 + 5 - dx;
-            for (size_t x = x1 + dx; x < x_end; x++)
+            const size_t x_end = x_start + (5 - dx);
+            for (size_t x = x_start + dx; x < x_end; x++)
             {
-                const size_t y_end = y1 + 3;
-                for (size_t y = y1; y < y_end; y++)
+                const size_t y_end = y_start + 3;
+                for (size_t y = y_start; y < y_end; y++)
                 {
                     const size_t dz = leaf_offset(gen);
-                    const size_t z_end = z1 + 5 - dz;
-                    for (size_t z = z1 + dz; z < z_end; z++)
+                    const size_t z_end = z_start + (5 - dz);
+                    for (size_t z = z_start + dz; z < z_end; z++)
                     {
-                        write[key(std::make_tuple(x, y, z))] = static_cast<game::block_id>(leaf);
+                        const size_t write_key = key(std::make_tuple(x, y, z));
+                        write[write_key] = static_cast<game::block_id>(leaf_type);
                     }
                 }
             }

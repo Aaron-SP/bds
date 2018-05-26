@@ -42,15 +42,15 @@ class load_state
     min::vec3<float> _spawn;
     min::vec3<float> _top;
     std::vector<item> _inv;
-    std::array<uint16_t, stats::stat_str_size()> _stat;
+    std::array<uint_fast16_t, stats::stat_str_size()> _stat;
     float _energy;
     float _exp;
     float _health;
     float _oxygen;
-    uint16_t _stat_points;
+    uint_fast16_t _stat_points;
     std::vector<min::vec3<float>> _chests;
     bool _new_game;
-    uint8_t _game_mode;
+    int_fast8_t _game_mode;
 
     inline void check_inside()
     {
@@ -143,10 +143,10 @@ class load_state
             for (size_t i = start; i < end; i++)
             {
                 const item_id id = static_cast<item_id>(min::read_le<uint8_t>(stream, next));
-                const uint8_t count = min::read_le<uint8_t>(stream, next);
-                const uint8_t prim = min::read_le<uint8_t>(stream, next);
-                const uint8_t sec = min::read_le<uint8_t>(stream, next);
-                const uint8_t level = min::read_le<uint8_t>(stream, next);
+                const int_fast8_t count = min::read_le<uint8_t>(stream, next);
+                const int_fast8_t prim = min::read_le<uint8_t>(stream, next);
+                const int_fast8_t sec = min::read_le<uint8_t>(stream, next);
+                const int_fast8_t level = min::read_le<uint8_t>(stream, next);
                 _inv[i] = item(id, count, prim, sec, level);
             }
 
@@ -182,7 +182,7 @@ class load_state
             _stat_points = min::read_le<uint16_t>(stream, next);
 
             // Load the game mode
-            const uint8_t game_mode = min::read_le<uint8_t>(stream, next);
+            const int_fast8_t game_mode = min::read_le<uint8_t>(stream, next);
             if (_game_mode == 2)
             {
                 // Keep the loaded flag
@@ -252,8 +252,8 @@ class load_state
             const item &it = inv[i];
             min::write_le<uint8_t>(stream, static_cast<uint8_t>(it.id()));
             min::write_le<uint8_t>(stream, it.count());
-            min::write_le<uint8_t>(stream, it.prim());
-            min::write_le<uint8_t>(stream, it.sec());
+            min::write_le<uint8_t>(stream, it.primary());
+            min::write_le<uint8_t>(stream, it.secondary());
             min::write_le<uint8_t>(stream, it.level());
         }
 
@@ -300,7 +300,7 @@ class load_state
     }
 
   public:
-    load_state(const size_t grid_size, const uint8_t game_mode)
+    load_state(const size_t grid_size, const int_fast8_t game_mode)
         : _grid_size(static_cast<uint32_t>(grid_size)),
           _default_look(1.0, _grid_size * 0.75, 0.0),
           _default_spawn(0.0, _grid_size * 0.75, 0.0),
@@ -362,11 +362,11 @@ class load_state
     {
         return _spawn;
     }
-    inline uint16_t get_stat_points() const
+    inline uint_fast16_t get_stat_points() const
     {
         return _stat_points;
     }
-    inline const std::array<uint16_t, stats::stat_str_size()> &get_stats() const
+    inline const std::array<uint_fast16_t, stats::stat_str_size()> &get_stats() const
     {
         return _stat;
     }

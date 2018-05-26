@@ -102,7 +102,7 @@ class brownian_grow
             return 8;
         }
     }
-    inline bool random_walk(const std::vector<game::block_id> &read, std::tuple<size_t, size_t, size_t> &walker, const uint8_t dir, game::block_id &value) const
+    inline bool random_walk(const std::vector<game::block_id> &read, std::tuple<size_t, size_t, size_t> &walker, const uint_fast8_t dir, game::block_id &value) const
     {
         // Copy walker position
         std::tuple<size_t, size_t, size_t> next = walker;
@@ -168,7 +168,7 @@ class brownian_grow
         const auto work = [this, &read, &write, years](std::mt19937 &gen, const size_t i) {
             // Create random number generator for this thread
             std::uniform_int_distribution<int> gdist(-_radius, _radius);
-            std::uniform_int_distribution<uint8_t> idist(0, 5);
+            std::uniform_int_distribution<uint_fast8_t> idist(0, 5);
 
             // Spawn a walker at each seed location
             for (size_t j = 0; j < _seed; j++)
@@ -183,7 +183,7 @@ class brownian_grow
                 for (size_t k = 0; k < years; k++)
                 {
                     // Calculate random direction
-                    const uint8_t dir = idist(gen);
+                    const uint_fast8_t dir = idist(gen);
 
                     // If walker hits something in write buffer
                     game::block_id value;

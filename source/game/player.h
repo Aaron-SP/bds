@@ -53,9 +53,9 @@ class target
 {
   private:
     union target_value {
-        uint16_t body_id;
+        uint_fast16_t body_id;
         block_id atlas;
-        target_value(const uint16_t i) : body_id(i) {}
+        target_value(const uint_fast16_t i) : body_id(i) {}
         target_value(const block_id a) : atlas(a) {}
     };
 
@@ -85,7 +85,7 @@ class target
     {
         return _value.atlas;
     }
-    uint16_t get_body_index() const
+    uint_fast16_t get_body_index() const
     {
         return _value.body_id;
     }
@@ -97,7 +97,7 @@ class target
     {
         return _position;
     }
-    void set_body_index(const uint16_t id)
+    void set_body_index(const uint_fast16_t id)
     {
         _value.body_id = id;
     }
@@ -119,7 +119,7 @@ class player
     static constexpr float _grav_mag = 10.0;
     static constexpr float _project_dist = 1.59;
 
-    min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
+    min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
     size_t _body_id;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     inventory _inv;
@@ -323,7 +323,7 @@ class player
     }
 
   public:
-    player(min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const load_state &state, const size_t body_id)
+    player(min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const load_state &state, const size_t body_id)
         : _sim(sim), _body_id(body_id),
           _damage_cd(0), _explode_cd(0),
           _exploded(false), _explode_id(block_id::EMPTY),
@@ -338,13 +338,13 @@ class player
         // If resuming game
         if (!state.is_new_game())
         {
-            // Copy loaded inventory
-            _inv.fill(state.get_inventory());
-
             // Copy loaded stats
             _stats.fill(state.get_stats(), state.get_energy(),
                         state.get_exp(), state.get_health(),
                         state.get_oxygen(), state.get_stat_points());
+
+            // Copy loaded inventory
+            _inv.fill(state.get_inventory(), _stats.level());
         }
     }
     inline const min::body<float, min::vec3> &body() const
@@ -663,15 +663,15 @@ class player
         float min_dist = block_diff.dot(block_diff);
 
         // Check for collisions with a physics body before block
-        const std::vector<uint16_t> &map = _sim->get_index_map();
-        const std::vector<std::pair<uint16_t, min::vec3<float>>> &cols = _sim->get_collisions(r);
+        const std::vector<uint_fast16_t> &map = _sim->get_index_map();
+        const std::vector<std::pair<uint_fast16_t, min::vec3<float>>> &cols = _sim->get_collisions(r);
 
         // Iterate through all the hits
         const size_t hits = cols.size();
         for (size_t i = 0; i < hits; i++)
         {
             // Get the body and body id
-            const uint16_t body_index = map[cols[i].first];
+            const uint_fast16_t body_index = map[cols[i].first];
             const min::body<float, min::vec3> &b = _sim->get_body(body_index);
             if (!b.is_dead() && body_index != _body_id)
             {
@@ -829,7 +829,7 @@ class player
         else if (_track_target.get_id() == target_id::BODY)
         {
             // Get the target body
-            const uint16_t body_index = _track_target.get_body_index();
+            const uint_fast16_t body_index = _track_target.get_body_index();
             const min::body<float, min::vec3> &b = _sim->get_body(body_index);
 
             // If body is not dead yet

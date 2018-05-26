@@ -50,7 +50,7 @@ class ui_overlay
     const std::string _drone_kill;
     const std::string _thrust;
     float _time;
-    uint8_t _mult;
+    uint_fast8_t _mult;
 
     inline void set_ui_alert(const std::string &str, const float time, const int order)
     {
@@ -72,7 +72,7 @@ class ui_overlay
     }
 
   public:
-    ui_overlay(const uniforms &uniforms, inventory &inv, stats &stat, const uint16_t width, const uint16_t height)
+    ui_overlay(const uniforms &uniforms, inventory &inv, stats &stat, const uint_fast16_t width, const uint_fast16_t height)
         : _text(width, height),
           _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
           _order(-1),
@@ -224,19 +224,19 @@ class ui_overlay
         if (overlap.first && overlap.second.type() != ui_type::button)
         {
             // Get the hover text
-            const std::string &name = _bg.get_hover_name();
-            const std::string &info = _bg.get_hover_info();
-
-            // Update the hover text
-            _text.set_hover(p, name, info);
+            const ui_info info = _bg.get_ui_info();
 
             // Enable drawing hover text
-            _text.set_draw_hover(true);
+            const bool draw_stats = (info.type() == item_type::skill);
+            _text.set_draw_hover(true, draw_stats);
+
+            // Update the hover text
+            _text.set_hover(p, info);
         }
         else
         {
             // Disable drawing hover text
-            _text.set_draw_hover(false);
+            _text.set_draw_hover(false, false);
         }
 
         // Are we overlapping a UI element?
@@ -383,11 +383,11 @@ class ui_overlay
     {
         _bg.set_minimized(flag);
     }
-    inline void set_multiplier(const uint8_t mult)
+    inline void set_multiplier(const uint_fast8_t mult)
     {
         _mult = mult;
     }
-    inline void set_screen(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
+    inline void set_screen(const min::vec2<float> &p, const uint_fast16_t width, const uint_fast16_t height)
     {
         // Set bg screen dimensions
         _bg.set_screen(p, width, height);
@@ -421,7 +421,7 @@ class ui_overlay
         _bg.toggle_draw_ex();
 
         // Force reloading of hover flag
-        _text.set_draw_hover(false);
+        _text.set_draw_hover(false, false);
     }
     inline void update(const min::vec3<float> &p, const min::vec3<float> &dir,
                        const float health, const float energy, const double fps,

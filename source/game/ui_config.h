@@ -20,6 +20,12 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 namespace game
 {
+
+// Font sizes
+static constexpr size_t _text_font_size = 28;
+static constexpr size_t _inv_font_size = 14;
+static constexpr size_t _info_font_size = 20;
+
 // Everything scales on this value
 static constexpr float _s_sfg = 16.0;
 static constexpr float _s_fg = 32.0;
@@ -40,34 +46,32 @@ static constexpr float _tool_start = (0.5 - _num_half_buttons) * _tool_space;
 // Hover
 static constexpr float _s_hover_bg_x = 320.0;
 static constexpr float _s_hover_bg_y = 190.0;
-static constexpr float _s_hover_text_x = 260.0;
+static constexpr float _s_hover_text_x = 280.0;
 static constexpr float _s_hover_text_y = 190.0;
 
-static constexpr size_t _ui_font_size = 14;
-constexpr static float _item_count_dx = (_s_fg - _ui_font_size) * 0.5;
+constexpr static float _item_count_dx = (_s_fg - _inv_font_size) * 0.5;
 constexpr static float _item_count_dy = _s_fg * -0.5;
 
 // Console and UI Text
-static constexpr size_t _font_size = 28;
 static constexpr float _console_dy = (_tool_dy * 2.0) + 4.0;
 static constexpr float _s_console_x = 400.0;
 static constexpr float _s_console_y = 40.0;
 static constexpr float _x_console_wrap = _s_console_x;
-static constexpr float _y_console_wrap = _font_size;
+static constexpr float _y_console_wrap = _text_font_size;
 static constexpr float _s_focus_x = 320.0;
 static constexpr float _s_focus_y = 90.0;
 static constexpr float _x_focus_wrap = _s_focus_x;
-static constexpr float _y_focus_wrap = _font_size;
+static constexpr float _y_focus_wrap = _text_font_size;
 static constexpr float _s_focus_bar_x = _s_focus_x - 50.0;
 static constexpr float _s_focus_bar_y = 8.0;
-static constexpr float _y_hover_wrap = _font_size;
+static constexpr float _y_hover_wrap = _info_font_size;
 static constexpr float _y_ui_text = _console_dy + 24.0;
 static constexpr float _energy_dx = (_tool_space * (_num_half_buttons + 0.5)) + 16.0;
 static constexpr float _health_dx = _tool_start - _tool_space - 16.0;
 
 // Alert Text
 static constexpr float _x_alert_wrap = 600.0;
-static constexpr float _y_alert_wrap = _font_size;
+static constexpr float _y_alert_wrap = _text_font_size;
 static constexpr float _alert_dy = -180.0;
 
 // Experience Bar
@@ -80,8 +84,8 @@ static constexpr float _exp_dy = _console_dy + 24.0;
 static constexpr float _focus_dx = 0.0;
 static constexpr float _focus_dy = 120.0;
 static constexpr float _focus_bar_dx = (_s_focus_bar_y - _s_focus_bar_x) * 0.5;
-static constexpr float _focus_bar_dy = _focus_dy + _font_size * 0.5;
-static constexpr float _focus_text_dy = _focus_dy - _font_size * 0.5;
+static constexpr float _focus_bar_dy = _focus_dy + _text_font_size * 0.5;
+static constexpr float _focus_text_dy = _focus_dy - _text_font_size * 0.5;
 
 // Health Bar Meter
 static constexpr float _bar_dy = _tool_dy - 20.0;
@@ -100,7 +104,7 @@ static constexpr float _y_stream_wrap = _y_console_wrap;
 
 // Timer Text
 static constexpr float _x_timer_wrap = 600.0;
-static constexpr float _y_timer_wrap = _font_size;
+static constexpr float _y_timer_wrap = _text_font_size;
 static constexpr float _timer_text_dy = _focus_text_dy;
 
 // Extended UI

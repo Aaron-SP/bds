@@ -69,7 +69,7 @@ class terrain_base
         // Create working function
         const auto work = [this, &write](std::mt19937 &gen, const size_t i) {
             // Dope minerals in base
-            std::uniform_int_distribution<uint8_t> dope(0, 110);
+            std::uniform_int_distribution<uint_fast8_t> dope(0, 110);
 
             // Fill out this section
             for (size_t j = _start; j < _stop; j++)
@@ -118,7 +118,7 @@ class terrain_base
                             }
                             else
                             {
-                                write[index] = game::block_id::STONE3;
+                                write[index] = game::block_id::IRIDIUM;
                             }
                         }
                         else if (value >= 0.20 && value < 0.25)

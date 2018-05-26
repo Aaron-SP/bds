@@ -137,10 +137,10 @@ class drones
 {
   private:
     static constexpr size_t _drone_cooldown = _physics_frames * 10;
-    static constexpr uint16_t _missile_level = 5;
-    static constexpr uint16_t _splash_level = 10;
-    static constexpr uint16_t _tunnel_level = 15;
-    typedef min::physics<float, uint16_t, uint32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
+    static constexpr uint_fast16_t _missile_level = 5;
+    static constexpr uint_fast16_t _splash_level = 10;
+    static constexpr uint_fast16_t _tunnel_level = 15;
+    typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *_sim;
     static_instance *_inst;
     sound *_sound;
@@ -348,7 +348,7 @@ class drones
         // Warp character to new position
         body(index).set_position(p);
     }
-    inline void update_frame(cgrid &grid, const uint16_t player_level, const std::function<min::vec3<float>(void)> &respawn, const ex_scale_call &f)
+    inline void update_frame(cgrid &grid, const uint_fast16_t player_level, const std::function<min::vec3<float>(void)> &respawn, const ex_scale_call &f)
     {
         // Do drone collisions
         const size_t size = _drones.size();
@@ -449,7 +449,7 @@ class drones
             }
         }
     }
-    inline void update(cgrid &grid, const min::vec3<float> &player_pos, const uint16_t player_level, const miss_call &f)
+    inline void update(cgrid &grid, const min::vec3<float> &player_pos, const uint_fast16_t player_level, const miss_call &f)
     {
         // Update all drone positions
         const size_t size = _drones.size();

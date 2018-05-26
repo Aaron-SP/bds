@@ -692,8 +692,8 @@ class controls
             const bool input = state->toggle_user_input();
 
             // Center cursor when changing user state
-            const uint16_t w = win->get_width();
-            const uint16_t h = win->get_height();
+            const uint_fast16_t w = win->get_width();
+            const uint_fast16_t h = win->get_height();
 
             // Center cursor in middle of window
             win->set_cursor(w / 2, h / 2);
@@ -741,7 +741,7 @@ class controls
         // Drop item if hovering
         ui->drop();
     }
-    static void left_click_down(void *ptr, const uint16_t x, const uint16_t y)
+    static void left_click_down(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -945,7 +945,7 @@ class controls
             }
         }
     }
-    static void left_click_up(void *ptr, const uint16_t x, const uint16_t y)
+    static void left_click_up(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -1007,7 +1007,7 @@ class controls
                 else
                 {
                     const item_id id = id_from_atlas(world->get_atlas_id());
-                    uint8_t count = world->get_scale_size();
+                    uint_fast8_t count = world->get_scale_size();
                     consumed = inv.consume(select_index, id, count);
                 }
 
@@ -1123,7 +1123,7 @@ class controls
                 }
                 else if (skill.is_grenade_mode())
                 {
-                    uint8_t count = 1;
+                    uint_fast8_t count = 1;
                     const ui_id id = ui->get_selected();
                     const bool consumed = inv.consume(id.index(), item_id::GRENADE, count);
                     if (consumed)
@@ -1175,7 +1175,7 @@ class controls
                 }
                 else if (skill.is_missile_mode())
                 {
-                    uint8_t count = 1;
+                    uint_fast8_t count = 1;
                     const ui_id id = ui->get_selected();
                     const bool consumed = inv.consume(id.index(), item_id::MISSILE, count);
                     if (consumed)
@@ -1287,7 +1287,7 @@ class controls
             }
         }
     }
-    static void right_click_down(void *ptr, const uint16_t x, const uint16_t y)
+    static void right_click_down(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -1338,7 +1338,7 @@ class controls
         const target &t = play.get_target();
         state->set_target(t.get_position());
     }
-    static void right_click_up(void *ptr, const uint16_t x, const uint16_t y)
+    static void right_click_up(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Get the state and ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -1355,7 +1355,7 @@ class controls
         world *const world = reinterpret_cast<game::world *>(ptr);
         world->get_player().jump();
     }
-    static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
+    static void on_resize(void *ptr, const uint_fast16_t width, const uint_fast16_t height)
     {
         // Get the ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -1385,8 +1385,8 @@ class controls
         camera->make_dirty();
 
         // Get the screen dimensions
-        const uint16_t w = win->get_width();
-        const uint16_t h = win->get_height();
+        const uint_fast16_t w = win->get_width();
+        const uint_fast16_t h = win->get_height();
 
         // Update the screen size for ui and text
         ui->set_screen(min::vec2<float>(w, h), width, height);

@@ -146,10 +146,10 @@ class ui_bg_assets
     std::vector<min::mat3<float>> _uv;
 
     // Screen properties
-    uint16_t _width;
-    uint16_t _height;
-    uint16_t _center_w;
-    uint16_t _center_h;
+    uint_fast16_t _width;
+    uint_fast16_t _height;
+    uint_fast16_t _center_w;
+    uint_fast16_t _center_h;
     float _energy;
     float _exp;
     float _health;
@@ -158,7 +158,7 @@ class ui_bg_assets
     float _cursor_angle;
     bool _draw_console;
     bool _draw_ex;
-    uint8_t _draw_menu;
+    uint_fast8_t _draw_menu;
     bool _draw_title;
 
     inline void set_uv(const size_t index, const min::vec4<float> &coord, const float alpha)
@@ -231,7 +231,7 @@ class ui_bg_assets
     }
 
   public:
-    ui_bg_assets(const uint16_t width, const uint16_t height)
+    ui_bg_assets(const uint_fast16_t width, const uint_fast16_t height)
         : _v(_max_size), _uv(_max_size),
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
@@ -274,11 +274,11 @@ class ui_bg_assets
     {
         return _focus_bar > 0.0;
     }
-    inline uint16_t get_width() const
+    inline uint_fast16_t get_width() const
     {
         return _width;
     }
-    inline uint16_t get_height() const
+    inline uint_fast16_t get_height() const
     {
         return _height;
     }
@@ -584,7 +584,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, grey_coord);
     }
-    inline void load_block_icon(const ui_id id, const int8_t block_id, const min::vec2<float> &p)
+    inline void load_block_icon(const ui_id id, const int_fast8_t block_id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
 
@@ -598,7 +598,7 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, beam_coord);
     }
-    inline void load_item_icon(const ui_id id, const int8_t item_id, const min::vec2<float> &p)
+    inline void load_item_icon(const ui_id id, const int_fast8_t item_id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_fg, _s_fg);
 
@@ -802,7 +802,7 @@ class ui_bg_assets
         // Set the size of the oxygen bar
         load_oxy_meter();
     }
-    inline void set_screen(const uint16_t width, const uint16_t height)
+    inline void set_screen(const uint_fast16_t width, const uint_fast16_t height)
     {
         // Update the screen dimensions
         _width = width;

@@ -125,7 +125,7 @@ void show_game(bds &game, min::loop_sync &sync, const size_t frames)
 
 void run(const size_t frames, const size_t chunk, const size_t grid,
          const size_t view, const size_t width, const size_t height,
-         const bool resize, const uint8_t game_mode)
+         const bool resize, const uint_fast8_t game_mode)
 {
     // Load window shaders and program, enable shader program
     bds game(chunk, grid, view, width, height, game_mode);
@@ -250,7 +250,7 @@ int main(int argc, char *argv[])
         }
 
         // Run the game
-        const uint8_t game_mode = static_cast<uint8_t>(hardcore);
+        const uint_fast8_t game_mode = static_cast<uint_fast8_t>(hardcore);
         run(frames, chunk, grid, view, width, height, resize, game_mode);
     }
     catch (const std::exception &ex)

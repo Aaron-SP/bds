@@ -104,7 +104,7 @@ class mandelbulb_sym
         // If we converged return atlas
         if (converged)
         {
-            return static_cast<game::block_id>(iterations % 24);
+            return static_cast<game::block_id>(iterations % 21);
         }
 
         return game::block_id::EMPTY;

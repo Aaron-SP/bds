@@ -23,56 +23,67 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-enum class block_id : int8_t
+enum class block_id : int_fast8_t
 {
     INVALID = -2,
     EMPTY = -1,
-    GRASS1 = 0,
-    GRASS2 = 1,
+    SAND1 = 0,
+    SAND2 = 1,
     DIRT1 = 2,
     DIRT2 = 3,
-    SAND1 = 4,
-    SAND2 = 5,
-    IRON = 6,
-    SILVER = 7,
-    WOOD1 = 8,
-    WOOD2 = 9,
-    LEAF1 = 10,
-    LEAF2 = 11,
-    LEAF3 = 12,
-    LEAF4 = 13,
-    MAGNESIUM = 14,
-    GOLD = 15,
-    STONE1 = 16,
-    STONE2 = 17,
-    CLAY1 = 18,
-    CLAY2 = 19,
-    STONE3 = 20,
-    COPPER = 21,
-    SODIUM = 22,
-    CALCIUM = 23,
-    CRYSTAL_R = 24,
-    CRYSTAL_P = 25,
-    CRYSTAL_B = 26,
-    CRYSTAL_G = 27,
-    POTASSIUM = 30,
-    TOMATO = 32,
-    EGGPLANT = 33,
-    RED_PEPPER = 34,
-    GREEN_PEPPER = 35
+    CLAY1 = 4,
+    CLAY2 = 5,
+    STONE1 = 6,
+    STONE2 = 7,
+    STONE3 = 8,
+    GRASS1 = 9,
+    GRASS2 = 10,
+    WOOD1 = 11,
+    WOOD2 = 12,
+    LEAF1 = 13,
+    LEAF2 = 14,
+    LEAF3 = 15,
+    LEAF4 = 16,
+    TOMATO = 17,
+    EGGPLANT = 18,
+    RED_PEPPER = 19,
+    GREEN_PEPPER = 20,
+
+    CALCIUM = 24,
+    MAGNESIUM = 25,
+    COPPER = 26,
+    POTASSIUM = 27,
+    IRON = 28,
+    SODIUM = 29,
+    IRIDIUM = 30,
+
+    SILVER = 32,
+    GOLD = 33,
+    CRYSTAL_R = 34,
+    CRYSTAL_P = 35,
+    CRYSTAL_B = 36,
+    CRYSTAL_G = 37,
 };
 
 inline constexpr bool not_empty(const block_id id)
 {
-    return static_cast<int8_t>(id) >= 0;
+    return static_cast<int_fast8_t>(id) >= 0;
 }
 
 inline constexpr int ether_cost(const block_id id)
 {
-    return static_cast<int8_t>(id) + 1;
+    return static_cast<int_fast8_t>(id) + 1;
 }
 
-enum class item_id : uint8_t
+enum class item_type
+{
+    empty,
+    skill,
+    block,
+    item
+};
+
+enum class item_id : uint_fast8_t
 {
     EMPTY = 0,
     AUTO_BEAM = 1,
@@ -87,39 +98,42 @@ enum class item_id : uint8_t
     SCATTER = 10,
     SPEED = 11,
 
-    BLK_GRASS1 = 17,
-    BLK_GRASS2 = 18,
+    BLK_SAND1 = 17,
+    BLK_SAND2 = 18,
     BLK_DIRT1 = 19,
     BLK_DIRT2 = 20,
-    BLK_SAND1 = 21,
-    BLK_SAND2 = 22,
-    BLK_FE = 23,
-    BLK_SI = 24,
-    BLK_WOOD1 = 25,
-    BLK_WOOD2 = 26,
-    BLK_LEAF1 = 27,
-    BLK_LEAF2 = 28,
-    BLK_LEAF3 = 29,
-    BLK_LEAF4 = 30,
-    BLK_MG = 31,
-    BLK_AU = 32,
-    BLK_STONE1 = 33,
-    BLK_STONE2 = 34,
-    BLK_CLAY1 = 35,
-    BLK_CLAY2 = 36,
-    BLK_STONE3 = 37,
-    BLK_CU = 38,
-    BLK_NA = 39,
-    BLK_CA = 40,
-    BLK_CRYS_R = 41,
-    BLK_CRYS_P = 42,
-    BLK_CRYS_B = 43,
-    BLK_CRYS_G = 44,
-    BLK_K = 47,
-    BLK_TOM = 49,
-    BLK_EGGP = 50,
-    BLK_RED_PEP = 51,
-    BLK_GR_PEP = 52,
+    BLK_CLAY1 = 21,
+    BLK_CLAY2 = 22,
+    BLK_STONE1 = 23,
+    BLK_STONE2 = 24,
+    BLK_STONE3 = 25,
+    BLK_GRASS1 = 26,
+    BLK_GRASS2 = 27,
+    BLK_WOOD1 = 28,
+    BLK_WOOD2 = 29,
+    BLK_LEAF1 = 30,
+    BLK_LEAF2 = 31,
+    BLK_LEAF3 = 32,
+    BLK_LEAF4 = 33,
+    BLK_TOM = 34,
+    BLK_EGGP = 35,
+    BLK_RED_PEP = 36,
+    BLK_GR_PEP = 37,
+
+    BLK_CA = 41,
+    BLK_MG = 42,
+    BLK_CU = 43,
+    BLK_K = 44,
+    BLK_FE = 45,
+    BLK_NA = 46,
+    BLK_IR = 47,
+
+    BLK_AG = 49,
+    BLK_AU = 50,
+    BLK_CRYS_R = 51,
+    BLK_CRYS_P = 52,
+    BLK_CRYS_B = 53,
+    BLK_CRYS_G = 54,
 
     SHARD_R = 81,
     SHARD_P = 82,
@@ -170,13 +184,13 @@ enum class item_id : uint8_t
     CONS_KEY = 127
 };
 
-inline constexpr int8_t id_value(const block_id id)
+inline constexpr int_fast8_t id_value(const block_id id)
 {
-    return static_cast<int8_t>(id);
+    return static_cast<int_fast8_t>(id);
 }
-inline constexpr uint8_t id_value(const item_id id)
+inline constexpr uint_fast8_t id_value(const item_id id)
 {
-    return static_cast<uint8_t>(id);
+    return static_cast<uint_fast8_t>(id);
 }
 
 inline static constexpr block_id id_to_atlas(const item_id id)
@@ -202,11 +216,11 @@ enum class ui_type
 class ui_id
 {
   private:
-    uint8_t _id;
+    uint_fast8_t _id;
 
   public:
     ui_id() : _id(0) {}
-    ui_id(const uint8_t id) : _id(id) {}
+    ui_id(const uint_fast8_t id) : _id(id) {}
     inline bool operator==(const ui_id other) const
     {
         return _id == other.id();
@@ -231,7 +245,7 @@ class ui_id
     {
         return _id & 7;
     }
-    inline uint8_t id() const
+    inline uint_fast8_t id() const
     {
         return _id;
     }

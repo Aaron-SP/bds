@@ -62,7 +62,7 @@ class title
     {
         return _window;
     }
-    static void left_click_down(void *ptr, const uint16_t x, const uint16_t y)
+    static void left_click_down(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Cast to title pointer
         title *const t = reinterpret_cast<title *>(ptr);
@@ -78,7 +78,7 @@ class title
     {
         return _show;
     }
-    static void on_resize(void *ptr, const uint16_t width, const uint16_t height)
+    static void on_resize(void *ptr, const uint_fast16_t width, const uint_fast16_t height)
     {
         // Ignore minimizing window
         if (width == 0 && height == 0)
@@ -101,8 +101,8 @@ class title
         camera->make_dirty();
 
         // Get the screen dimensions
-        const uint16_t w = win->get_width();
-        const uint16_t h = win->get_height();
+        const uint_fast16_t w = win->get_width();
+        const uint_fast16_t h = win->get_height();
 
         // Update the screen size for ui and text
         ui->set_screen(min::vec2<float>(w, h), width, height);

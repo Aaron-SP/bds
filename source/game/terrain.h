@@ -341,7 +341,7 @@ class terrain
         const min::vec3<float> p = min::vec3<float>(unpack.x(), unpack.y(), unpack.z());
 
         // Scale uv's based off atlas id
-        const int8_t atlas = static_cast<int8_t>(unpack.w());
+        const int_fast8_t atlas = static_cast<int_fast8_t>(unpack.w());
 
         // Push back location and atlas in w
         _vec[cell] = min::vec4<float>(p.x(), p.y(), p.z(), atlas + 2.1);
@@ -662,7 +662,7 @@ class terrain
         block_uv(_parent.uv, vertex_start);
 
         // Scale uv's based off atlas id
-        const int8_t atlas_id = static_cast<int8_t>(unpack.w());
+        const int_fast8_t atlas_id = static_cast<int_fast8_t>(unpack.w());
         block_uv_scale(_parent.uv, vertex_start, atlas_id);
 
         // Calculate block normals

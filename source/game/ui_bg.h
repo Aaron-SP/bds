@@ -23,6 +23,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/memory_map.h>
 #include <game/stats.h>
 #include <game/ui_bg_assets.h>
+#include <game/ui_info.h>
 #include <game/ui_vertex.h>
 #include <game/uniforms.h>
 #include <min/aabbox.h>
@@ -44,7 +45,7 @@ class ui_bg
 {
   private:
     static constexpr size_t _border = 6;
-    static constexpr size_t _text_spacing = _ui_font_size + _border;
+    static constexpr size_t _text_spacing = _inv_font_size + _border;
     static constexpr size_t _button_size = stats::stat_str_size() - 1;
     inline static constexpr size_t begin_button()
     {
@@ -88,10 +89,10 @@ class ui_bg
 
     // Click detection
     std::vector<min::aabbox<float, min::vec2>> _shapes;
-    min::grid<float, uint8_t, uint8_t, min::vec2, min::aabbox, min::aabbox> _grid;
+    min::grid<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> _grid;
     std::ostringstream _stream;
 
-    inline bool action(const ui_id ui, const uint8_t mult)
+    inline bool action(const ui_id ui, const uint_fast8_t mult)
     {
         // Get the UI index
         const size_t index = ui.index();
@@ -355,7 +356,7 @@ class ui_bg
         // Select hovered key
         select_hover();
     }
-    inline void load_grid(const uint16_t width, const uint16_t height)
+    inline void load_grid(const uint_fast16_t width, const uint_fast16_t height)
     {
         // Clear the shapes buffer
         _shapes.clear();
@@ -493,7 +494,7 @@ class ui_bg
             _text->add_text(_stat->stat_str(i), p.x(), p.y());
 
             // Get stat value
-            const uint16_t value = _stat->stat_value(i);
+            const uint_fast16_t value = _stat->stat_value(i);
 
             // Create string from value
             clear_stream();
@@ -505,7 +506,7 @@ class ui_bg
         }
 
         // Calculate the grid scale
-        const uint16_t scale = width / 24;
+        const uint_fast16_t scale = width / 24;
 
         // Insert the shapes into the grid
         _grid.insert(_shapes, scale);
@@ -662,7 +663,7 @@ class ui_bg
         // Load hover background
         _assets.load_bg_hover(p);
     }
-    inline static min::aabbox<float, min::vec2> screen_box(const uint16_t width, const uint16_t height)
+    inline static min::aabbox<float, min::vec2> screen_box(const uint_fast16_t width, const uint_fast16_t height)
     {
         // Create a box from the screen
         const min::vec2<float> min(0, 0);
@@ -921,7 +922,7 @@ class ui_bg
 
         return _assets.load_stat_grey(ui.button_index(), pos_button(ui));
     }
-    inline static constexpr float stat_offset(const uint16_t value)
+    inline static constexpr float stat_offset(const uint_fast16_t value)
     {
         // If three, two, or one digit
         if (value > 99)
@@ -1023,7 +1024,7 @@ class ui_bg
     }
 
   public:
-    ui_bg(const uniforms &uniforms, inventory &inv, stats &stat, min::text_buffer &text, const uint16_t width, const uint16_t height)
+    ui_bg(const uniforms &uniforms, inventory &inv, stats &stat, min::text_buffer &text, const uint_fast16_t width, const uint_fast16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)), _mesh_id(0),
@@ -1048,7 +1049,7 @@ class ui_bg
         // Reposition all ui on the screen
         position_ui(min::vec2<float>());
     }
-    inline std::pair<bool, ui_id> action_hover(const uint8_t mult)
+    inline std::pair<bool, ui_id> action_hover(const uint_fast8_t mult)
     {
         if (_hover.type() != ui_type::button && _hovering && !_minimized)
         {
@@ -1059,7 +1060,7 @@ class ui_bg
         // No action
         return std::make_pair(false, _hover);
     }
-    inline std::pair<bool, ui_id> action_select(const uint8_t mult)
+    inline std::pair<bool, ui_id> action_select(const uint_fast8_t mult)
     {
         if (_select.type() != ui_type::button)
         {
@@ -1198,13 +1199,14 @@ class ui_bg
 
         return false;
     }
-    inline const std::string &get_hover_info() const
+    inline ui_info get_ui_info() const
     {
-        return (_hover.type() != ui_type::button) ? _inv->get_info((*_inv)[_hover.index()].id()) : _invalid_str;
-    }
-    inline const std::string &get_hover_name() const
-    {
-        return (_hover.type() != ui_type::button) ? _inv->get_name((*_inv)[_hover.index()].id()) : _invalid_str;
+        const item &it = (*_inv)[_hover.index()];
+        const std::string &name = (_hover.type() != ui_type::button) ? _inv->get_name(it.id()) : _invalid_str;
+        const std::string &info = (_hover.type() != ui_type::button) ? _inv->get_info(it.id()) : _invalid_str;
+
+        // Return ui info
+        return ui_info(name, info, it);
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
@@ -1242,8 +1244,8 @@ class ui_bg
             }
 
             // Search for overlapping cells
-            const std::vector<uint8_t> &map = _grid.get_index_map();
-            const std::vector<uint8_t> &hits = _grid.point_inside(p);
+            const std::vector<uint_fast8_t> &map = _grid.get_index_map();
+            const std::vector<uint_fast8_t> &hits = _grid.point_inside(p);
 
             ui_id id(0);
 
@@ -1442,7 +1444,7 @@ class ui_bg
     {
         _minimized = flag;
     }
-    inline void set_screen(const min::vec2<float> &p, const uint16_t width, const uint16_t height)
+    inline void set_screen(const min::vec2<float> &p, const uint_fast16_t width, const uint_fast16_t height)
     {
         // Set asset screen size
         _assets.set_screen(width, height);
@@ -1543,7 +1545,7 @@ class ui_bg
                 _text->set_text(index, _stat->stat_str(i), p.x(), p.y());
 
                 // Get stat value
-                const uint16_t value = _stat->stat_value(i);
+                const uint_fast16_t value = _stat->stat_value(i);
 
                 // Create string from value
                 clear_stream();
@@ -1566,6 +1568,9 @@ class ui_bg
                     stat_unselect(ui_id(i));
                 }
             }
+
+            // Update cached player level
+            _inv->set_player_level(_stat->level());
         }
 
         // Upload text if updated

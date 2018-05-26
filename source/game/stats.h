@@ -45,6 +45,7 @@ class stats
     static constexpr size_t _max_attr = 10;
     static constexpr size_t _max_attr_str = _max_attr - 2;
     static constexpr size_t _max_stats = 7;
+    static constexpr size_t _max_level = 50;
     static constexpr float _per_second = 1.0 / _physics_frames;
 
     // Costs
@@ -71,8 +72,8 @@ class stats
     bool _dirty;
     stat_alert _alert;
     std::array<float, _max_attr> _attr;
-    std::array<uint16_t, _max_stats> _stat;
-    uint16_t _stat_points;
+    std::array<uint_fast16_t, _max_stats> _stat;
+    uint_fast16_t _stat_points;
     float _sqrt_level;
 
     inline float calc_damage_mult() const
@@ -532,11 +533,11 @@ class stats
     {
         return _oxygen / _max_oxygen;
     }
-    inline uint16_t get_stat_points() const
+    inline uint_fast16_t get_stat_points() const
     {
         return _stat_points;
     }
-    inline void fill(const std::array<uint16_t, _max_stats> &stat, const float energy, const float exp, const float health, const float oxygen, const uint16_t stats)
+    inline void fill(const std::array<uint_fast16_t, _max_stats> &stat, const float energy, const float exp, const float health, const float oxygen, const uint_fast16_t stats)
     {
         // Copy stats into stat array
         for (size_t i = 0; i < _max_stats; i++)
@@ -719,54 +720,62 @@ class stats
     {
         return _stat_str[index];
     }
-    inline uint16_t stat_value(const size_t index) const
+    inline uint_fast16_t stat_value(const size_t index) const
     {
         return _stat[index];
     }
-    inline uint16_t power() const
+    inline uint_fast16_t power() const
     {
         return _stat[0];
     }
-    inline uint16_t speed() const
+    inline uint_fast16_t speed() const
     {
         return _stat[1];
     }
-    inline uint16_t vital() const
+    inline uint_fast16_t vital() const
     {
         return _stat[2];
     }
-    inline uint16_t cooldown() const
+    inline uint_fast16_t cooldown() const
     {
         return _stat[3];
     }
-    inline uint16_t range() const
+    inline uint_fast16_t range() const
     {
         return _stat[4];
     }
-    inline uint16_t regen() const
+    inline uint_fast16_t regen() const
     {
         return _stat[5];
     }
-    inline uint16_t level() const
+    inline uint_fast16_t level() const
     {
         return _stat[6];
     }
     inline void level_up()
     {
-        // Update stats
-        _stat[6]++;
+        // Don't level past the cap
+        if (level() < _max_level)
+        {
+            // Update stats
+            _stat[6]++;
 
-        // Add stat points
-        _stat_points += 5;
+            // Add stat points
+            _stat_points += 5;
 
-        // Update the stat cache
-        update_cache();
+            // Update the stat cache
+            update_cache();
 
-        // Set level alert
-        _alert = stat_alert::level;
+            // Set level alert
+            _alert = stat_alert::level;
 
-        // Set dirty flag
-        _dirty = true;
+            // Set max health and energy
+            _health = get_max_health();
+            _energy = get_max_energy();
+
+            // Set dirty flag
+            _dirty = true;
+        }
     }
 };
 
