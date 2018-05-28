@@ -111,12 +111,11 @@ class mandelbulb_sym
     }
 
   public:
+    mandelbulb_sym(const int a, const int b, const int c, const int d)
+        : _a(a), _b(b), _c(c), _d(d) {}
+
     mandelbulb_sym(std::mt19937 &rng)
     {
-        // Seed the random number generator
-        const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        rng.seed(seed);
-
         // Generate bucket tiers
         std::uniform_int_distribution<int> bucket(0, 5);
 
@@ -133,7 +132,6 @@ class mandelbulb_sym
         _d = coeff(rng);
 
         std::cout << "sym mandelbulb fractal: " << std::endl;
-        std::cout << "seed: " << seed << std::endl;
         std::cout << "A: " << _a << std::endl;
         std::cout << "B: " << _b << std::endl;
         std::cout << "C: " << _c << std::endl;

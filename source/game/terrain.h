@@ -341,10 +341,10 @@ class terrain
         const min::vec3<float> p = min::vec3<float>(unpack.x(), unpack.y(), unpack.z());
 
         // Scale uv's based off atlas id
-        const int_fast8_t atlas = static_cast<int_fast8_t>(unpack.w());
+        const float atlas = unpack.w() + 2.1;
 
         // Push back location and atlas in w
-        _vec[cell] = min::vec4<float>(p.x(), p.y(), p.z(), atlas + 2.1);
+        _vec[cell] = min::vec4<float>(p.x(), p.y(), p.z(), atlas);
     }
     inline min::mem_file &set_uniform_size(min::mem_file &file, const size_t chunk_size)
     {

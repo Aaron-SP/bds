@@ -336,16 +336,25 @@ class inventory
     }
     item make_item(const item_id id, const uint_fast8_t count)
     {
-        const int_fast8_t offset = _level_offset(_gen);
-        const int_fast8_t base_level = _player_level + offset;
+        // Make a standard item
+        item it(id, count);
 
-        // Scale primary and secondary stat
-        const uint_fast8_t i_lvl = (base_level > 0) ? base_level : 1;
-        const uint_fast8_t p_stat = (i_lvl * (_item_mult(_gen) / _item_mult(_gen))) + 1;
-        const uint_fast8_t s_stat = (i_lvl * (_item_mult(_gen) / _item_mult(_gen))) + 1;
+        if (it.type() == item_type::skill)
+        {
+            const int_fast8_t offset = _level_offset(_gen);
+            const int_fast8_t base_level = _player_level + offset;
 
-        // Return item
-        return item(id, count, p_stat, s_stat, i_lvl);
+            // Scale primary and secondary stat
+            const uint_fast8_t i_lvl = (base_level > 0) ? base_level : 1;
+            const uint_fast8_t p_stat = (i_lvl * (_item_mult(_gen) / _item_mult(_gen))) + 1;
+            const uint_fast8_t s_stat = (i_lvl * (_item_mult(_gen) / _item_mult(_gen))) + 1;
+
+            // Return item
+            return item(id, count, p_stat, s_stat, i_lvl);
+        }
+
+        // Return standard item
+        return it;
     }
     item make_item(const item_id id, const uint_fast8_t count, const uint_fast8_t p_stat, const uint_fast8_t s_stat, const uint_fast8_t i_lvl)
     {
@@ -354,7 +363,7 @@ class inventory
     }
     void set_store()
     {
-        _inv[begin_store()] = make_item(item_id::BEAM, 1, 1, 1, 1);
+        _inv[begin_store()] = make_item(item_id::BEAM, 1, 10, 10, 10);
     }
     inline bool stack(const size_t one, const size_t two)
     {

@@ -92,6 +92,7 @@ class cgrid
     const float _view_dist;
     const min::aabbox<float, min::vec3> _world;
     const min::vec3<float> _cell_extent;
+    cgrid_generator _generator;
 
     static inline bool in_x(const min::vec3<float> &p, const min::vec3<float> &min, const min::vec3<float> &max)
     {
@@ -128,30 +129,6 @@ class cgrid
 
         // Return world size
         return min::aabbox<float, min::vec3>(minv, maxv);
-    }
-    inline void collision_cells(std::vector<min::aabbox<float, min::vec3>> &out,
-                                const min::aabbox<float, min::vec3> &box, const min::vec3<float> &center) const
-    {
-        // Get all overlapping cells
-        min::vec3<float>::grid_overlap(_overlap, _world.get_min(), _cell_extent, _grid_scale, box.get_min(), box.get_max());
-
-        // Create boxes of all overlapping cells
-        const size_t size = _overlap.size();
-        for (size_t i = 0; i < size; i++)
-        {
-            // Get the cell key
-            const size_t key = _overlap[i];
-
-            // Check if valid and if the cell is not empty
-            if (_grid[key] != block_id::EMPTY)
-            {
-                // Create box at this point
-                const min::aabbox<float, min::vec3> grid = grid_box(grid_cell_center(key));
-
-                // Add box and grid value to
-                out.emplace_back(grid);
-            }
-        }
     }
     inline void collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> &out,
                                 const min::aabbox<float, min::vec3> &box, const min::vec3<float> &center) const
@@ -536,9 +513,6 @@ class cgrid
     }
     inline void generate_portal()
     {
-        // Create a cgrid generator
-        cgrid_generator generator(_grid);
-
         // Function for finding grid key index
         const auto f = [this](const std::tuple<size_t, size_t, size_t> &t) -> size_t {
             return grid_key_pack(t);
@@ -550,13 +524,10 @@ class cgrid
         };
 
         // Generate the cgrid data
-        generator.generate_portal(_grid, _grid_scale, _chunk_size, f, g);
+        _generator.generate_portal(_grid, _grid_scale, _chunk_size, f, g);
     }
     inline void generate_world()
     {
-        // Create a cgrid generator
-        cgrid_generator generator(_grid);
-
         // Function for finding grid key index
         const auto f = [this](const std::tuple<size_t, size_t, size_t> &t) -> size_t {
             return grid_key_pack(t);
@@ -568,7 +539,7 @@ class cgrid
         };
 
         // Generate the cgrid data
-        generator.generate_world(_grid, _grid_scale, _chunk_size, f, g);
+        _generator.generate_world(_grid, _grid_scale, _chunk_size, f, g);
     }
     inline float grid_center_square_dist(const size_t key, const min::vec3<float> &point) const
     {
@@ -872,7 +843,8 @@ class cgrid
           _view_half_width(_view_chunk_size / 2),
           _view_dist(calculate_view_distance()),
           _world(calculate_world_size(grid_scale)),
-          _cell_extent(1.0, 1.0, 1.0)
+          _cell_extent(1.0, 1.0, 1.0),
+          _generator(_grid)
     {
         // Check chunk size
         if (grid_scale % chunk_size != 0)
@@ -983,7 +955,7 @@ class cgrid
             collision_cells(out, box, center);
         }
     }
-    inline void drop_collision_cells(std::vector<min::aabbox<float, min::vec3>> &out, const min::vec3<float> &center) const
+    inline void drop_collision_cells(std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> &out, const min::vec3<float> &center) const
     {
         // Surrounding cells
         out.clear();

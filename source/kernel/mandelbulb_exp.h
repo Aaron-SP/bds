@@ -111,12 +111,11 @@ class mandelbulb_exp
     }
 
   public:
+    mandelbulb_exp(const int a, const int b, const int c, const int d)
+        : _a(a), _b(b), _c(c), _d(d) {}
+
     mandelbulb_exp(std::mt19937 &rng)
     {
-        // Seed the random number generator
-        const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        rng.seed(seed);
-
         // Generate random range
         std::uniform_int_distribution<int> range(1, 15);
 
@@ -130,7 +129,6 @@ class mandelbulb_exp
         _d = coeff(rng);
 
         std::cout << "exp mandelbulb fractal: " << std::endl;
-        std::cout << "seed: " << seed << std::endl;
         std::cout << "A: " << _a << std::endl;
         std::cout << "B: " << _b << std::endl;
         std::cout << "C: " << _c << std::endl;

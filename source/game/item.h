@@ -35,7 +35,10 @@ class item
     uint_fast8_t _level;
 
   public:
-    item() : _id(0), _count(0), _prim(0), _sec(0), _level(0) {}
+    item()
+        : _id(0), _count(0), _prim(1), _sec(1), _level(1) {}
+    item(const item_id id, const uint_fast8_t count)
+        : _id(id_value(id)), _count(count), _prim(1), _sec(1), _level(1) {}
     item(const item_id id, const uint_fast8_t count,
          const uint_fast8_t prim, const uint_fast8_t sec, const uint_fast8_t level)
         : _id(id_value(id)), _count(count),
@@ -84,6 +87,10 @@ class item
     inline void set_empty()
     {
         _id = 0;
+        _count = 0;
+        _prim = 1;
+        _sec = 1;
+        _level = 1;
     }
     inline void stack(uint_fast8_t &count)
     {

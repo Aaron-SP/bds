@@ -22,6 +22,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <cmath>
 #include <cstdint>
 #include <game/callback.h>
+#include <game/item.h>
 #include <string>
 
 namespace game
@@ -74,11 +75,13 @@ class stats
     std::array<float, _max_attr> _attr;
     std::array<uint_fast16_t, _max_stats> _stat;
     uint_fast16_t _stat_points;
+    item _equipped;
     float _sqrt_level;
 
     inline float calc_damage_mult() const
     {
-        return 1.0 + (std::log10(power() * 4.0) * (_sqrt_level - 1) * 0.75);
+        const uint_fast8_t p = _equipped.primary();
+        return (1.0 + std::log10(power() * 4.0) * _sqrt_level * 0.1875) * std::log10(1 + p / 255.0) * _sqrt_level * 50.0;
     }
     inline float calc_thrust_consume() const
     {
@@ -86,19 +89,23 @@ class stats
     }
     inline float calc_damage_reduc() const
     {
-        return std::log10(vital()) * (_sqrt_level * 0.05);
+        const uint_fast8_t p = _equipped.primary();
+        return std::log10(vital()) * _sqrt_level * std::log10(1 + p / 20.0) * 0.2;
     }
     inline float calc_cooldown_reduc() const
     {
-        return std::log10(cooldown()) * (_sqrt_level * 0.075);
+        const uint_fast8_t s = _equipped.secondary();
+        return std::log10(cooldown()) * _sqrt_level * std::log10(1.1 + s / 50.0) * 0.3;
     }
     inline float calc_health_regen() const
     {
-        return (_health_regen + std::log10(regen() * 2.0)) * (_sqrt_level * _per_second);
+        const uint_fast8_t s = _equipped.secondary();
+        return (_health_regen + std::log10(regen() * 2.0)) * (_sqrt_level * _per_second) * std::log10(1.1 + s / 50.0) * 8.0;
     }
     inline float calc_energy_regen() const
     {
-        return (_energy_regen + std::log10(regen() * 3.0)) * (_sqrt_level * _per_second);
+        const uint_fast8_t s = _equipped.secondary();
+        return (_energy_regen + std::log10(regen() * 3.0)) * (_sqrt_level * _per_second) * std::log10(1.1 + s / 50.0) * 8.0;
     }
     inline float calc_health_consume() const
     {
@@ -469,6 +476,49 @@ class stats
     {
         return get_damage_mult() * in;
     }
+    inline void equip_item(const item it)
+    {
+        if (it.type() == item_type::skill)
+        {
+            _equipped = it;
+        }
+        else
+        {
+            _equipped = item();
+        }
+
+        // Update the stat cache
+        update_cache();
+
+        // Set dirty flag
+        _dirty = true;
+    }
+    inline void fill(const std::array<uint_fast16_t, _max_stats> &stat, const float energy, const float exp, const float health, const float oxygen, const uint_fast16_t stats)
+    {
+        // Copy stats into stat array
+        for (size_t i = 0; i < _max_stats; i++)
+        {
+            _stat[i] = stat[i];
+        }
+
+        // Update the stat cache
+        update_cache();
+
+        // Set the energy
+        set_energy(energy);
+
+        // Set the exp
+        add_exp(exp);
+
+        // Set the health
+        set_health(health);
+
+        // Set the oxygen
+        set_oxygen(oxygen);
+
+        // Set the stat points
+        _stat_points = stats;
+    }
     inline stat_alert get_alert() const
     {
         return _alert;
@@ -536,32 +586,6 @@ class stats
     inline uint_fast16_t get_stat_points() const
     {
         return _stat_points;
-    }
-    inline void fill(const std::array<uint_fast16_t, _max_stats> &stat, const float energy, const float exp, const float health, const float oxygen, const uint_fast16_t stats)
-    {
-        // Copy stats into stat array
-        for (size_t i = 0; i < _max_stats; i++)
-        {
-            _stat[i] = stat[i];
-        }
-
-        // Update the stat cache
-        update_cache();
-
-        // Set the energy
-        set_energy(energy);
-
-        // Set the exp
-        add_exp(exp);
-
-        // Set the health
-        set_health(health);
-
-        // Set the oxygen
-        set_oxygen(oxygen);
-
-        // Set the stat points
-        _stat_points = stats;
     }
     inline bool has_stat_points() const
     {

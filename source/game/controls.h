@@ -343,10 +343,14 @@ class controls
         // Get the skills pointer
         player &play = _world->get_player();
         skills &skill = play.get_skills();
+        stats &stat = play.get_stats();
 
         // Lookup key in inventory
         const inventory &inv = play.get_inventory();
         const item &it = inv.get_key(index);
+
+        // Equip item
+        stat.equip_item(it);
 
         // Get the item id and type
         const item_type type = it.type();

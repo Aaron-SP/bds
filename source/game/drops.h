@@ -64,7 +64,7 @@ class drops
     typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *_sim;
     static_instance *_inst;
-    std::vector<min::aabbox<float, min::vec3>> _col_cells;
+    std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     std::vector<drop> _drops;
     float _angle;
     size_t _oldest;
@@ -192,7 +192,7 @@ class drops
             body(i).set_data(min::body_data(i));
         }
     }
-    inline void update_frame(const cgrid &grid, const float friction)
+    inline void update_frame(const cgrid &grid, const float friction, const ex_call &ex)
     {
         // Do drop collisions
         const size_t size = _drops.size();
@@ -205,14 +205,23 @@ class drops
             bool hit = false;
 
             // Solve static collisions
-            const size_t body = _drops[i].body_id();
+            const size_t body_id = _drops[i].body_id();
             for (const auto &cell : _col_cells)
             {
                 // Collide with the cell
-                const bool status = _sim->collide(body, cell);
+                const bool collide = _sim->collide(body_id, cell.first);
+                if (collide)
+                {
+                    // If drop collides with sodium cell, blow it up
+                    if (cell.second == block_id::SODIUM)
+                    {
+                        // Call explosion callback
+                        ex(cell.first.get_center(), cell.second);
+                    }
+                }
 
                 // Register hit flag, BUG FIX, DONT COLLAPSE THIS LINE!
-                hit = hit || status;
+                hit = hit || collide;
             }
 
             // Add friction force

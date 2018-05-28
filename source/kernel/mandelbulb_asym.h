@@ -119,12 +119,15 @@ class mandelbulb_asym
     }
 
   public:
+    mandelbulb_asym(const int a, const int b, const int c, const int d,
+                    const int e, const int f, const int g, const int h,
+                    const int i, const int j, const int k, const int l)
+        : _a(a), _b(b), _c(c), _d(d),
+          _e(e), _f(f), _g(g), _h(h),
+          _i(i), _j(j), _k(k), _l(l) {}
+
     mandelbulb_asym(std::mt19937 &rng)
     {
-        // Seed the random number generator
-        const int seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        rng.seed(seed);
-
         // Generate bucket tiers
         std::uniform_int_distribution<int> bucket(0, 5);
 
@@ -149,7 +152,6 @@ class mandelbulb_asym
         _l = coeff(rng);
 
         std::cout << "asym mandelbulb fractal: " << std::endl;
-        std::cout << "seed: " << seed << std::endl;
         std::cout << "A: " << _a << std::endl;
         std::cout << "B: " << _b << std::endl;
         std::cout << "C: " << _c << std::endl;

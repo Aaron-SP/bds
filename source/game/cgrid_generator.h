@@ -21,14 +21,18 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <cmath>
 #include <fstream>
 #include <game/id.h>
+#include <game/memory_map.h>
 #include <game/work_queue.h>
 #include <kernel/mandelbulb_asym.h>
 #include <kernel/mandelbulb_exp.h>
 #include <kernel/mandelbulb_sym.h>
 #include <kernel/terrain_base.h>
 #include <kernel/terrain_height.h>
+#include <min/serial.h>
+#include <min/strtoken.h>
 #include <min/vec3.h>
 #include <random>
+#include <sstream>
 
 namespace game
 {
@@ -36,7 +40,16 @@ namespace game
 class cgrid_generator
 {
   private:
+    std::string _asym;
+    std::vector<std::pair<size_t, size_t>> _asym_lines;
+    std::string _exp;
+    std::vector<std::pair<size_t, size_t>> _exp_lines;
+    std::string _sym;
+    std::vector<std::pair<size_t, size_t>> _sym_lines;
     std::vector<block_id> _back;
+    std::istringstream _ss;
+    std::string _line;
+    std::mt19937 _gen;
 
     inline void clear_grid(std::vector<block_id> &grid)
     {
@@ -47,6 +60,11 @@ class cgrid_generator
 
         // Convert cells to mesh in parallel
         work_queue::worker.run(work, 0, grid.size());
+    }
+    inline void clear_stream(const std::string &str)
+    {
+        _ss.clear();
+        _ss.str(str);
     }
     inline size_t count_grid(std::vector<block_id> &grid)
     {
@@ -66,9 +84,103 @@ class cgrid_generator
         // Return count;
         return count;
     }
+    inline kernel::mandelbulb_asym load_mandelbulb_asym(std::mt19937 &gen)
+    {
+        // Load uniform distribution for sym
+        std::uniform_int_distribution<unsigned> dist(0, _asym_lines.size() - 1);
+        const unsigned index = dist(gen);
+
+        // Get the line index and get the line string
+        const auto &p = _asym_lines[index];
+        _line = _asym.substr(p.first, p.second);
+
+        // Clear and reset the stream with line data
+        clear_stream(_line);
+
+        // Parse the string into four ints
+        int a, b, c, d, e, f, g, h, i, j, k, l;
+        _ss >> a >> b >> c >> d >> e >> f >> g >> h >> i >> j >> k >> l;
+
+        // Check for errors
+        if (_ss.fail())
+        {
+            throw std::runtime_error("cgrid_generator: Invalid man_asym line '" + _line + "'");
+        }
+
+        // Load the asymmetrical mandelbulb
+        return kernel::mandelbulb_asym(a, b, c, d, e, f, g, h, i, j, k, l);
+    }
+    inline kernel::mandelbulb_exp load_mandelbulb_exp(std::mt19937 &gen)
+    {
+        // Load uniform distribution for exp
+        std::uniform_int_distribution<unsigned> dist(0, _exp_lines.size() - 1);
+        const unsigned index = dist(gen);
+
+        // Get the line index and get the line string
+        const auto &p = _exp_lines[index];
+        _line = _exp.substr(p.first, p.second);
+
+        // Clear and reset the stream with line data
+        clear_stream(_line);
+
+        // Parse the string into four ints
+        int a, b, c, d;
+        _ss >> a >> b >> c >> d;
+
+        // Check for errors
+        if (_ss.fail())
+        {
+            throw std::runtime_error("cgrid_generator: Invalid man_exp line '" + _line + "'");
+        }
+
+        // Load the exponential mandelbulb
+        return kernel::mandelbulb_exp(a, b, c, d);
+    }
+    inline kernel::mandelbulb_sym load_mandelbulb_sym(std::mt19937 &gen)
+    {
+        // Load uniform distribution for sym
+        std::uniform_int_distribution<unsigned> dist(0, _sym_lines.size() - 1);
+        const unsigned index = dist(gen);
+
+        // Get the line index and get the line string
+        const auto &p = _sym_lines[index];
+        _line = _sym.substr(p.first, p.second);
+
+        // Clear and reset the stream with line data
+        clear_stream(_line);
+
+        // Parse the string into four ints
+        int a, b, c, d;
+        _ss >> a >> b >> c >> d;
+
+        // Check for errors
+        if (_ss.fail())
+        {
+            throw std::runtime_error("cgrid_generator: Invalid man_sym line '" + _line + "'");
+        }
+
+        // Load the symmetrical mandelbulb
+        return kernel::mandelbulb_sym(a, b, c, d);
+    }
+    inline void load_portal_strings()
+    {
+        // Load the portal files
+        _asym = memory_map::memory.get_file("data/portals/man_asym.portal").to_string();
+        _asym_lines = tools::read_lines(_asym, 1001);
+        _exp = memory_map::memory.get_file("data/portals/man_exp.portal").to_string();
+        _exp_lines = tools::read_lines(_exp, 738);
+        _sym = memory_map::memory.get_file("data/portals/man_sym.portal").to_string();
+        _sym_lines = tools::read_lines(_sym, 1001);
+    }
 
   public:
-    cgrid_generator(const std::vector<block_id> &grid) : _back(grid.size(), block_id::EMPTY) {}
+    cgrid_generator(const std::vector<block_id> &grid)
+        : _back(grid.size(), block_id::EMPTY),
+          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count())
+    {
+        // Load the portal strings
+        load_portal_strings();
+    }
     inline void copy(std::vector<block_id> &grid) const
     {
         // Parallelize on copying buffers
@@ -86,16 +198,13 @@ class cgrid_generator
         // Wake up the threads for processing
         work_queue::worker.wake();
 
-        // Create random number generator
-        std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-
         // Calculates perlin noise
         kernel::terrain_base base(scale, chunk_size, 0, scale / 2);
         base.generate(work_queue::worker, _back);
 
         // Calculates a height map
         kernel::terrain_height height(scale, scale / 2, scale - 1);
-        height.generate(work_queue::worker, gen, _back);
+        height.generate(work_queue::worker, _gen, _back);
 
         // Copy data from back to front buffer
         copy(grid);
@@ -110,66 +219,38 @@ class cgrid_generator
         // Wake up the threads for processing
         work_queue::worker.wake();
 
-        // Count active cells in grid
-        size_t count = 0;
-
-        // Calculate total grid volume
-        const float inv_scale3 = 1.0 / (scale * scale * scale);
-
         // Choose between terrain generators
-        std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());
         std::uniform_int_distribution<int> choose(1, 3);
-        const int type = choose(gen);
+        const int type = choose(_gen);
         if (type == 1)
         {
-            // Filter all dead worlds less than 20% filled
-            while (count * inv_scale3 < 0.20)
-            {
-                // Clear out the old grid
-                clear_grid(grid);
+            // Clear out the old grid
+            clear_grid(grid);
 
-                // generate mandelbulb world using mandelbulb generator
-                kernel::mandelbulb_sym(gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
-                    return grid_cell_center(i);
-                });
-
-                // Update count
-                count = count_grid(grid);
-            }
+            // Generate mandelbulb world using mandelbulb generator
+            load_mandelbulb_sym(_gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
+                return grid_cell_center(i);
+            });
         }
         if (type == 2)
         {
-            // Filter all dead worlds less than 20% filled
-            while (count * inv_scale3 < 0.20)
-            {
-                // Clear out the old grid
-                clear_grid(grid);
+            // Clear out the old grid
+            clear_grid(grid);
 
-                // generate mandelbulb world using mandelbulb generator
-                kernel::mandelbulb_asym(gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
-                    return grid_cell_center(i);
-                });
-
-                // Update count
-                count = count_grid(grid);
-            }
+            // Generate mandelbulb world using mandelbulb generator
+            load_mandelbulb_asym(_gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
+                return grid_cell_center(i);
+            });
         }
         else
         {
-            // Filter all dead worlds less than 10% filled
-            while (count * inv_scale3 < 0.10)
-            {
-                // Clear out the old grid
-                clear_grid(grid);
+            // Clear out the old grid
+            clear_grid(grid);
 
-                // generate mandelbulb world using mandelbulb generator
-                kernel::mandelbulb_exp(gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
-                    return grid_cell_center(i);
-                });
-
-                // Update count
-                count = count_grid(grid);
-            }
+            // Generate mandelbulb world using mandelbulb generator
+            load_mandelbulb_exp(_gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
+                return grid_cell_center(i);
+            });
         }
 
         // Put the threads back to sleep
