@@ -121,7 +121,7 @@ class sound
     static constexpr size_t _drone_limit = 10;
     static constexpr size_t _ex_limit = 30;
     static constexpr size_t _miss_launch_limit = 10;
-    static constexpr size_t _sounds = 13 + _drone_limit + _ex_limit + _miss_launch_limit;
+    static constexpr size_t _sounds = 14 + _drone_limit + _ex_limit + _miss_launch_limit;
     static constexpr size_t _voice_sounds = 9;
     static constexpr float _fade_tol = 0.001;
     static constexpr float _fade_in = _fade_tol * 2.0;
@@ -147,6 +147,7 @@ class sound
     static constexpr float _click_gain = 0.2;
     static constexpr float _drone_gain = 0.125;
     static constexpr float _ex_gain = 0.75;
+    static constexpr float _focus_gain = 0.1;
     static constexpr float _grap_gain = 0.6;
     static constexpr float _land_gain = 0.1;
     static constexpr float _jet_gain = 0.5;
@@ -221,50 +222,54 @@ class sound
     {
         return _si[4];
     }
-    inline sound_info &grapple_info()
+    inline sound_info &focus_info()
     {
         return _si[5];
     }
-    inline sound_info &jet_info()
+    inline sound_info &grapple_info()
     {
         return _si[6];
     }
-    inline sound_info &land_info()
+    inline sound_info &jet_info()
     {
         return _si[7];
     }
-    inline sound_info &oxygen_info()
+    inline sound_info &land_info()
     {
         return _si[8];
     }
-    inline sound_info &pickup_info()
+    inline sound_info &oxygen_info()
     {
         return _si[9];
     }
-    inline sound_info &shot_info()
+    inline sound_info &pickup_info()
     {
         return _si[10];
     }
-    inline sound_info &voice_info()
+    inline sound_info &shot_info()
     {
         return _si[11];
     }
-    inline sound_info &zap_info()
+    inline sound_info &voice_info()
     {
         return _si[12];
     }
+    inline sound_info &zap_info()
+    {
+        return _si[13];
+    }
     inline sound_info &drone_info(const size_t index)
     {
-        return _si[13 + index];
+        return _si[14 + index];
     }
     inline sound_info &ex_info(const size_t index)
     {
-        constexpr size_t offset = 13 + _drone_limit;
+        constexpr size_t offset = 14 + _drone_limit;
         return _si[offset + index];
     }
     inline sound_info &miss_launch_info(const size_t index)
     {
-        constexpr size_t offset = 13 + _drone_limit + _ex_limit;
+        constexpr size_t offset = 14 + _drone_limit + _ex_limit;
         return _si[offset + index];
     }
     inline static size_t v_comply()
@@ -443,6 +448,13 @@ class sound
 
         // Load explosion settings
         load_explosion_settings(blast_s_info().source());
+    }
+    inline void load_focus_sound()
+    {
+        // Load a WAVE file
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/focus_s.ogg");
+        const min::ogg sound(ogg);
+        load_ogg_sound(sound, _focus_gain);
     }
     inline void load_grapple_sound()
     {
@@ -649,6 +661,9 @@ class sound
         // Load click sound into buffer
         load_click_sound();
 
+        // Load focus sound into buffer
+        load_focus_sound();
+
         // Load grapple sound into buffer
         load_grapple_sound();
 
@@ -845,6 +860,10 @@ class sound
 
         // Play the sound
         _buffer.play_async(s);
+    }
+    inline void play_focus()
+    {
+        _buffer.play_async(focus_info().source());
     }
     inline void play_grapple()
     {

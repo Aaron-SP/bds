@@ -1579,6 +1579,9 @@ class controls
 
                     // Clear target update debouncer
                     play.clear_target_update();
+
+                    // Play the focus sound
+                    _sound->play_focus();
                 }
             }
             else

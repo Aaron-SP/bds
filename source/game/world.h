@@ -110,6 +110,7 @@ class world
     const std::string _invalid_str;
 
     // Random stuff
+    std::uniform_real_distribution<float> _crit_dist;
     std::uniform_int_distribution<uint_fast8_t> _drop_dist;
     std::uniform_real_distribution<float> _drop_off_dist;
     std::uniform_real_distribution<float> _ex_mult;
@@ -374,7 +375,7 @@ class world
                 const size_t index = b.get_data().index;
 
                 // Choose damage type and add the damage multiplier to it
-                const float damage = _player.get_stats().do_damage((is_charge) ? _damage_charge : _damage_beam);
+                const float damage = _player.get_stats().do_damage((is_charge) ? _damage_charge : _damage_beam, _crit_dist(_gen));
 
                 // Do damage to the drone
                 drone_damage(index, scale, dir, size, damage);
@@ -734,7 +735,7 @@ class world
                 const min::vec3<float> dir = this->direction(b2.get_position(), b1.get_position());
 
                 // Add the damage multiplier to damage
-                const float damage = this->_player.get_stats().do_damage(this->_damage_ex);
+                const float damage = this->_player.get_stats().do_damage(this->_damage_ex, _crit_dist(_gen));
 
                 // Do damage to the drone
                 this->drone_damage(drone_index, this->_ex_radius, dir, this->_explode_size, damage);
@@ -772,7 +773,7 @@ class world
                 const min::vec3<float> dir = this->direction(b2.get_position(), b1.get_position());
 
                 // Add the damage multiplier to damage
-                const float damage = this->_player.get_stats().do_damage(this->_damage_miss);
+                const float damage = this->_player.get_stats().do_damage(this->_damage_miss, _crit_dist(_gen));
 
                 // Do damage to the drone
                 this->drone_damage(drone_index, this->_ex_radius, dir, this->_explode_size, damage);
@@ -895,6 +896,7 @@ class world
           _explosives(_simulation, _instance),
           _missiles(_simulation, particles, _instance, s),
           _invalid_str("Invalid"),
+          _crit_dist(0.5, 2.0),
           _drop_dist(0, 80),
           _drop_off_dist(-0.5, 0.5),
           _ex_mult(0.1, 3.0),

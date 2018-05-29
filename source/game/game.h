@@ -110,7 +110,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.243");
+        _ui.text().set_debug_version("VERSION: 0.1.244");
 
         // Set the game mode
         const bool hardcore = _state.get_load_state().is_hardcore();
@@ -204,14 +204,32 @@ class bds
         const size_t chunks = _world.get_chunks_in_view();
         const size_t insts = _world.get_inst_in_view();
 
-        // Check if player got hit
-        if (stat.is_hit())
+        // Check if player gave damage
+        if (stat.is_crit())
         {
             // Add stream text
-            _ui.add_stream_float("Damage: ", stat.get_hit());
+            _ui.add_stream_float("Crit!: ", stat.get_gave_dmg());
+
+            // Clear the crit and dmg flags
+            stat.clear_crit();
+        }
+        else if (stat.is_gave_dmg())
+        {
+            // Add stream text
+            _ui.add_stream_float("Hit: ", stat.get_gave_dmg());
+
+            // Clear the dmg flag
+            stat.clear_gave_dmg();
+        }
+
+        // Check if player took damage
+        if (stat.is_took_dmg())
+        {
+            // Add stream text
+            _ui.add_stream_float("Damage: ", stat.get_took_dmg());
 
             // Clear the hit flag
-            stat.clear_hit();
+            stat.clear_took_dmg();
         }
 
         // Get the target info

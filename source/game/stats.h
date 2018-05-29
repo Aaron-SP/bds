@@ -68,7 +68,9 @@ class stats
     float _max_oxygen;
     float _oxygen;
     bool _low_oxygen;
-    float _hit;
+    float _crit;
+    float _gave_dmg;
+    float _took_dmg;
     bool _dead;
     bool _dirty;
     stat_alert _alert;
@@ -286,7 +288,7 @@ class stats
           _max_exp(100.0), _exp(0.0),
           _health(70.0), _low_health(false),
           _max_oxygen(100.0), _oxygen(_max_oxygen), _low_oxygen(false),
-          _hit(0.0), _dead(false), _dirty(false), _alert(stat_alert::none),
+          _crit(0.0), _gave_dmg(0.0), _took_dmg(0.0), _dead(false), _dirty(false), _alert(stat_alert::none),
           _attr{}, _stat{4, 3, 5, 2, 0, 3, 1}, _stat_points(0), _sqrt_level(1.0)
     {
         // Update the stat cache
@@ -361,9 +363,17 @@ class stats
     {
         _alert = stat_alert::none;
     }
-    inline void clear_hit()
+    inline void clear_crit()
     {
-        _hit = 0.0;
+        _crit = _gave_dmg = 0.0;
+    }
+    inline void clear_gave_dmg()
+    {
+        _gave_dmg = 0.0;
+    }
+    inline void clear_took_dmg()
+    {
+        _took_dmg = 0.0;
     }
     inline void clear_low_energy_flag()
     {
@@ -453,12 +463,12 @@ class stats
     {
         set_energy(_energy - energy);
     }
-    inline void consume_health(const float hit)
+    inline void consume_health(const float dmg)
     {
         // Calculate damage
-        _hit += hit;
+        _took_dmg += dmg;
 
-        set_health(_health - hit);
+        set_health(_health - dmg);
     }
     inline void consume_oxygen()
     {
@@ -472,9 +482,14 @@ class stats
         // Apply damage reduction
         consume_health((1.0 - reduc) * in);
     }
-    inline float do_damage(const float in) const
+    inline float do_damage(const float dmg, const float crit_mult)
     {
-        return get_damage_mult() * in;
+        // Set crit and damage properties
+        _crit = crit_mult;
+        _gave_dmg = get_damage_mult() * dmg * crit_mult;
+
+        // Return damage dealt
+        return _gave_dmg;
     }
     inline void equip_item(const item it)
     {
@@ -527,9 +542,17 @@ class stats
     {
         return 1.0 - get_cooldown_reduc();
     }
+    inline float get_gave_dmg() const
+    {
+        return _gave_dmg;
+    }
     inline float get_drone_health() const
     {
         return 100.0 * _sqrt_level;
+    }
+    inline float get_drop_exp() const
+    {
+        return 25.0;
     }
     inline float get_energy() const
     {
@@ -543,14 +566,6 @@ class stats
     {
         return _exp;
     }
-    inline float get_drop_exp() const
-    {
-        return 25.0;
-    }
-    inline float get_mob_exp() const
-    {
-        return _max_exp / level();
-    }
     inline float get_experience_fraction() const
     {
         return _exp / _max_exp;
@@ -558,6 +573,14 @@ class stats
     inline float get_health() const
     {
         return _health;
+    }
+    inline float get_health_fraction() const
+    {
+        return _health / get_max_health();
+    }
+    inline float get_took_dmg() const
+    {
+        return _took_dmg;
     }
     inline float get_max_energy() const
     {
@@ -567,13 +590,9 @@ class stats
     {
         return _attr[6];
     }
-    inline float get_health_fraction() const
+    inline float get_mob_exp() const
     {
-        return _health / get_max_health();
-    }
-    inline float get_hit() const
-    {
-        return _hit;
+        return _max_exp / level();
     }
     inline float get_oxygen() const
     {
@@ -591,6 +610,10 @@ class stats
     {
         return _stat_points > 0;
     }
+    inline bool is_crit() const
+    {
+        return _crit > 1.5;
+    }
     inline bool is_dead() const
     {
         return _dead;
@@ -599,9 +622,13 @@ class stats
     {
         return _dirty;
     }
-    inline bool is_hit() const
+    inline bool is_gave_dmg() const
     {
-        return (_hit > 0.0);
+        return (_gave_dmg > 0.0);
+    }
+    inline bool is_took_dmg() const
+    {
+        return (_took_dmg > 0.0);
     }
     inline bool is_level_up() const
     {
@@ -707,7 +734,9 @@ class stats
         // Reset health
         _oxygen = _max_oxygen;
         _low_oxygen = false;
-        _hit = 0.0;
+        _crit = 0.0;
+        _gave_dmg = 0.0;
+        _took_dmg = 0.0;
         _dead = false;
     }
     inline void set_point(const size_t index)

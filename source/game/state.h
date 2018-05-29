@@ -279,11 +279,11 @@ class state
 
                 // Check if we have looked too far on the global y axis
                 const float dy = forward.dot(min::vec3<float>::up());
-                if (dy > 0.99 && y < 0.0)
+                if (dy > 0.999 && y < 0.0)
                 {
                     y = 0.0;
                 }
-                else if (dy < -0.99 && y > 0.0)
+                else if (dy < -0.999 && y > 0.0)
                 {
                     y = 0.0;
                 }

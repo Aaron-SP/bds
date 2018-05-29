@@ -548,7 +548,9 @@ class player
         if (!_hooked && !_jet)
         {
             // Get the current position and set y movement to zero
-            const min::vec3<float> dxz = min::vec3<float>(vel.x(), 0.0, vel.z()).normalize();
+            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
+            const min::vec3<float> zero; 
+            const min::vec3<float> dxz = min::vec3<float>(xz).normalize_safe(zero);
 
             // Add force to player body
             force(dxz * 30.0);
