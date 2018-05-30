@@ -363,7 +363,7 @@ class inventory
     }
     void set_store()
     {
-        _inv[begin_store()] = make_item(item_id::BEAM, 1, 10, 10, 10);
+        _inv[begin_store()] = make_item(item_id::BEAM, 1, 5, 5, 5);
     }
     inline bool stack(const size_t one, const size_t two)
     {

@@ -240,13 +240,17 @@ class state
             // Set camera start position and look position
             _camera.set_position(move);
 
-            // Get the offset from screen center
-            const float sensitivity = 0.25;
-
             // Increment frame count for updating and hash to current frame index
             const unsigned frame_index = (_frame_count %= _frame_average)++;
-            _x[frame_index] = sensitivity * (c.first - (w / 2));
-            _y[frame_index] = sensitivity * (c.second - (h / 2));
+
+            // Get the offset from screen center
+            const uint_fast16_t w2 = w / 2;
+            const uint_fast16_t h2 = h / 2;
+            const int_fast16_t dx = c.first - w2;
+            const int_fast16_t dy = c.second - h2;
+            constexpr float sensitivity = 0.25;
+            _x[frame_index] = dx * sensitivity;
+            _y[frame_index] = dy * sensitivity;
 
             // Calculate average value of x and y
             float x = 0.0;
