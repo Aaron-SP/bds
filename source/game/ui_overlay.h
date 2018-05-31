@@ -36,6 +36,10 @@ class ui_overlay
     int _order;
     const std::string _action_fail;
     const std::string _ast;
+    const std::string _drone;
+    const std::string _drone_kill;
+    const std::string _dynamics;
+    const std::string _dynamics_unlock;
     const std::string _health;
     const std::string _inside;
     const std::string _intro;
@@ -46,9 +50,6 @@ class ui_overlay
     const std::string _peace;
     const std::string _power;
     const std::string _res;
-    const std::string _drone;
-    const std::string _drone_kill;
-    const std::string _thrust;
     float _time;
     uint_fast8_t _mult;
 
@@ -78,6 +79,10 @@ class ui_overlay
           _order(-1),
           _action_fail("Can't use or craft that item!"),
           _ast("Incoming asteroids, take cover!"),
+          _drone("Space pirates have invaded your planet!"),
+          _drone_kill("Space pirates pillaged all your belongings!"),
+          _dynamics("Thrusters are now online!"),
+          _dynamics_unlock("You must need more Dynamism to use this!"),
           _health("Low Health!"),
           _inside("Can't place block inside player!"),
           _intro("You awaken in an unfamiliar, mysterious place."),
@@ -88,9 +93,6 @@ class ui_overlay
           _peace("Everything seems peaceful!"),
           _power("Low Power!"),
           _res("Not enough blocks/ether for that operation!"),
-          _drone("Space pirates have invaded your planet!"),
-          _drone_kill("Space pirates pillaged all your belongings!"),
-          _thrust("Thrusters are now online!"),
           _time(-1.0), _mult(1) {}
 
     void add_stream_float(const std::string &str, const float value)
@@ -146,6 +148,11 @@ class ui_overlay
     {
         return _bg.click_up();
     }
+    inline void disable_console()
+    {
+        _bg.set_draw_console(false);
+        _text.set_draw_console(false);
+    }
     inline void draw_opaque() const
     {
         // Draw background ui
@@ -173,11 +180,6 @@ class ui_overlay
         // Draw the text
         const size_t bg_size = _bg.bg_text_size();
         _text.draw(bg_size);
-    }
-    inline void disable_console()
-    {
-        _bg.set_draw_console(false);
-        _text.set_draw_console(false);
     }
     inline bool drop()
     {
@@ -262,6 +264,22 @@ class ui_overlay
     {
         set_ui_alert(_inside, 2.0, 1);
     }
+    inline void set_alert_drone()
+    {
+        set_ui_alert(_drone, 5.0, 4);
+    }
+    inline void set_alert_drone_kill()
+    {
+        set_ui_alert(_drone_kill, 5.0, 4);
+    }
+    inline void set_alert_dynamics()
+    {
+        set_ui_alert(_dynamics, 10.0, 6);
+    }
+    inline void set_alert_dynamics_unlock()
+    {
+        set_ui_alert(_dynamics_unlock, 5.0, 2);
+    }
     inline void set_alert_intro()
     {
         set_ui_alert(_intro, 10.0, 5);
@@ -289,18 +307,6 @@ class ui_overlay
     inline void set_alert_low_resource()
     {
         set_ui_alert(_res, 2.0, 1);
-    }
-    inline void set_alert_drone()
-    {
-        set_ui_alert(_drone, 5.0, 4);
-    }
-    inline void set_alert_drone_kill()
-    {
-        set_ui_alert(_drone_kill, 5.0, 4);
-    }
-    inline void set_alert_thruster()
-    {
-        set_ui_alert(_thrust, 10.0, 6);
     }
     inline void set_console_string(const std::string &str)
     {

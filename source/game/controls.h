@@ -841,42 +841,63 @@ class controls
             }
             else if (skill.is_grapple_mode())
             {
-                // Try to consume energy to power this resource
-                if (stat.can_consume_grapple())
+                if (stat.is_dynamics_online())
                 {
-                    // Fire grappling hook
-                    const bool hit = world->hook_set();
-                    if (hit)
+                    if (stat.can_consume_grapple())
                     {
-                        // Consume energy
-                        stat.consume_grapple();
+                        // Fire grappling hook
+                        const bool hit = world->hook_set();
+                        if (hit)
+                        {
+                            // Consume energy
+                            stat.consume_grapple();
 
-                        // Activate grapple animation
-                        character->set_animation_grapple(play.get_hook_point());
+                            // Activate grapple animation
+                            character->set_animation_grapple(play.get_hook_point());
 
-                        // Play the grapple sound
-                        sound->play_grapple();
+                            // Play the grapple sound
+                            sound->play_grapple();
 
-                        // Lock the gun in grapple mode
-                        skill.lock();
+                            // Lock the gun in grapple mode
+                            skill.lock();
+                        }
+                    }
+                    else
+                    {
+                        sound->play_voice_low_power();
+                        ui->set_alert_low_power();
                     }
                 }
                 else
                 {
-                    sound->play_voice_low_power();
-                    ui->set_alert_low_power();
+                    ui->set_alert_dynamics_unlock();
                 }
             }
             else if (skill.is_jetpack_mode())
             {
-                // Turn on the jets
-                play.set_jet(true);
+                if (stat.is_dynamics_online())
+                {
+                    if (stat.can_consume_jet())
+                    {
+                        // Turn on the jets
+                        play.set_jet(true);
 
-                // Play the jet sound
-                sound->play_jet();
+                        // Play the jet sound
+                        sound->play_jet();
 
-                // Lock the gun in jetpack mode
-                skill.lock();
+                        // Lock the gun in jetpack mode
+                        skill.lock();
+                    }
+                    else
+                    {
+                        sound->play_voice_low_power();
+                        ui->set_alert_low_power();
+                    }
+                }
+                else
+                {
+                    ui->set_alert_dynamics_unlock();
+                }
             }
             else if (skill.is_missile_mode() && skill.is_off_cooldown())
             {

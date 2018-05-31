@@ -32,7 +32,7 @@ enum class stat_alert
 {
     none,
     level,
-    thruster
+    dynamics
 };
 
 class stats
@@ -52,9 +52,8 @@ class stats
     // Costs
     static constexpr float _beam_cost = 5.0;
     static constexpr float _charge_cost = 10.0;
-    static constexpr float _grapple_cost = 0.1;
     static constexpr float _grenade_cost = 10.0;
-    static constexpr float _jet_cost = 0.1;
+    static constexpr float _jet_cost = 0.05;
     static constexpr float _missile_cost = 10.0;
     static constexpr float _portal_cost = 0.5;
     static constexpr float _scatter_cost = 20.0;
@@ -85,9 +84,10 @@ class stats
         const uint_fast8_t p = _equipped.primary();
         return (1.0 + std::log10(power() * 4.0) * _sqrt_level * 0.1875) * std::log10(1 + p / 255.0) * _sqrt_level * 50.0;
     }
-    inline float calc_thrust_consume() const
+    inline float calc_dynamics_consume() const
     {
-        return 1.08 / std::log10(speed() * _sqrt_level + 1.0);
+        const uint_fast8_t s = _equipped.secondary();
+        return (1.08 / std::log10(speed() * _sqrt_level + 1.0)) * (0.125 / std::log10(1.1 + s / 50.0));
     }
     inline float calc_damage_reduc() const
     {
@@ -144,7 +144,7 @@ class stats
     {
         return _attr[0];
     }
-    inline float get_thrust_cost_frac() const
+    inline float get_dynamics_cost_frac() const
     {
         return _attr[1];
     }
@@ -182,7 +182,7 @@ class stats
     }
     inline float get_grapple_cost() const
     {
-        return get_max_energy() * _grapple_cost;
+        return get_max_energy() * get_dynamics_cost_frac();
     }
     inline float get_grenade_cost() const
     {
@@ -191,7 +191,14 @@ class stats
     inline float get_jet_cost() const
     {
         // Cost per frame
-        return _jet_cost;
+        const float dynamics = get_dynamics_cost_frac();
+        if (dynamics < 1.0)
+        {
+            return _jet_cost * dynamics;
+        }
+
+        // Needs to unlock dynamics before using
+        return get_max_energy() * dynamics;
     }
     inline float get_missile_cost() const
     {
@@ -205,9 +212,9 @@ class stats
     {
         return get_damage_mult() * _scatter_cost;
     }
-    inline float get_thrust_cost() const
+    inline float get_dynamics_cost() const
     {
-        return get_max_energy() * get_thrust_cost_frac();
+        return get_max_energy() * get_dynamics_cost_frac();
     }
     inline void set_energy(const float energy)
     {
@@ -266,7 +273,7 @@ class stats
 
         // Update attributes
         _attr[0] = calc_damage_mult();
-        _attr[1] = calc_thrust_consume();
+        _attr[1] = calc_dynamics_consume();
         _attr[2] = calc_damage_reduc();
         _attr[3] = calc_cooldown_reduc();
         _attr[4] = calc_health_regen();
@@ -419,9 +426,9 @@ class stats
     {
         return can_consume_energy(get_scatter_cost());
     }
-    inline bool can_consume_thrust() const
+    inline bool can_consume_dynamics() const
     {
-        return can_consume_energy(get_thrust_cost());
+        return can_consume_energy(get_dynamics_cost());
     }
     inline void consume_beam()
     {
@@ -455,9 +462,9 @@ class stats
     {
         consume_energy(get_scatter_cost());
     }
-    inline void consume_thrust()
+    inline void consume_dynamics()
     {
-        consume_energy(get_thrust_cost());
+        consume_energy(get_dynamics_cost());
     }
     inline void consume_energy(const float energy)
     {
@@ -630,6 +637,10 @@ class stats
     {
         return (_took_dmg > 0.0);
     }
+    inline bool is_dynamics_online() const
+    {
+        return get_dynamics_cost_frac() < 1.0;
+    }
     inline bool is_level_up() const
     {
         return _dirty;
@@ -743,8 +754,8 @@ class stats
     {
         if (_stat_points > 0)
         {
-            // Are thrusters offline?
-            const bool thrust_above = get_thrust_cost_frac() > 1.0;
+            // Are dynamics offline?
+            const bool dynamics_above = get_dynamics_cost_frac() > 1.0;
 
             // Subtract stat point
             _stat_points--;
@@ -755,10 +766,10 @@ class stats
             // Update the stat cache
             update_cache();
 
-            // Set thrust alert if enabled
-            if (thrust_above && get_thrust_cost_frac() <= 1.0)
+            // Set dynamics alert if enabled
+            if (dynamics_above && get_dynamics_cost_frac() <= 1.0)
             {
-                _alert = stat_alert::thruster;
+                _alert = stat_alert::dynamics;
             }
 
             // Set dirty flag
@@ -833,7 +844,7 @@ class stats
 };
 
 // Initialize public static string stats
-std::array<std::string, stats::attr_str_size()> stats::_attr_str = {"Damage Multiplier", "Thrust Cost (%)", "Damage Reduction (%)", "Cooldown Reduction (%)", "Health Regen (/s)", "Energy Regen (/s)", "Max Health", "Max Energy"};
+std::array<std::string, stats::attr_str_size()> stats::_attr_str = {"Damage Multiplier", "Dynamics Cost (%)", "Damage Reduction (%)", "Cooldown Reduction (%)", "Health Regen (/s)", "Energy Regen (/s)", "Max Health", "Max Energy"};
 std::array<std::string, stats::stat_str_size()> stats::_stat_str = {"Power", "Dynamism", "Tenacity", "Tranquility", "Vision", "Zeal", "Level"};
 }
 

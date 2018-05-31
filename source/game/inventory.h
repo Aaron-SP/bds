@@ -182,11 +182,11 @@ class inventory
         _inv_name[3] = "Charge Beam";
         _inv_desc[3] = "A general purpose energy_weapon firing a charged beam";
         _inv_name[4] = "Grappling Hook";
-        _inv_desc[4] = "An energy beam used for_swinging in the air";
+        _inv_desc[4] = "Ionized grappling device._Requires dynamics unlocked.";
         _inv_name[5] = "Grenade Launcher";
         _inv_desc[5] = "A cheap offensive projectile_weapon";
         _inv_name[6] = "Jet Pack";
-        _inv_desc[6] = "Transforms energy into_vertical thrust";
+        _inv_desc[6] = "Thermal vaporization device._Requires dynamics unlocked.";
         _inv_name[7] = "Missile Launcher";
         _inv_desc[7] = "An expensive offensive_projectile weapon";
         _inv_name[8] = "Portal Beam";

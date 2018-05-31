@@ -490,13 +490,13 @@ class player
     inline void dash()
     {
         // If not hooked
-        if (!_hooked && _stats.can_consume_thrust())
+        if (!_hooked && _stats.can_consume_dynamics())
         {
             // Consume energy
-            _stats.consume_thrust();
+            _stats.consume_dynamics();
 
             // Add force to the player body
-            force(_forward * 1500.0);
+            force(_forward * 3000.0);
         }
     }
     inline void jump()
@@ -513,13 +513,13 @@ class player
                 // Add force to the player body
                 force(min::vec3<float>(0.0, 900.0, 0.0));
             }
-            else if (_jump_count == 1 && _stats.can_consume_thrust())
+            else if (_jump_count == 1 && _stats.can_consume_dynamics())
             {
                 // Increment jump count
                 _jump_count++;
 
                 // Consume energy
-                _stats.consume_thrust();
+                _stats.consume_dynamics();
 
                 // Add force to the player body
                 force(min::vec3<float>(0.0, 900.0, 0.0));
@@ -549,7 +549,7 @@ class player
         {
             // Get the current position and set y movement to zero
             const min::vec3<float> xz(vel.x(), 0.0, vel.z());
-            const min::vec3<float> zero; 
+            const min::vec3<float> zero;
             const min::vec3<float> dxz = min::vec3<float>(xz).normalize_safe(zero);
 
             // Add force to player body
