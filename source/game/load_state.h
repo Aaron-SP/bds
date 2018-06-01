@@ -292,7 +292,10 @@ class load_state
         for (size_t i = 0; i < chest_size; i++)
         {
             // Save the chest locations
-            min::write_le_vec3<float>(stream, chests[i].get_translation());
+            const min::vec3<float> p = chests[i].get_translation();
+
+            // !!! - Undo chest adjustment, in world.h - !!!!
+            min::write_le_vec3<float>(stream, min::vec3<float>(p.x(), p.y() + 1.0, p.z()));
         }
 
         // Write data to file

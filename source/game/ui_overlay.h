@@ -53,6 +53,11 @@ class ui_overlay
     float _time;
     uint_fast8_t _mult;
 
+    inline bool is_extendable() const
+    {
+        const ui_mode mode = _bg.get_ui_state().get_mode();
+        return mode == ui_mode::BASE || mode == ui_mode::EXTEND;
+    }
     inline void set_ui_alert(const std::string &str, const float time, const int order)
     {
         // If alert is higher precedence
@@ -107,9 +112,14 @@ class ui_overlay
     {
         // Check if we failed action
         const std::pair<bool, ui_id> action = _bg.action_hover(_mult);
-        if (!action.first && action.second.type() != ui_type::button)
+
+        // Choose hover post action
+        if (is_extendable())
         {
-            set_alert_action_fail();
+            if (!action.first && action.second.type() != ui_type::button)
+            {
+                set_alert_action_fail();
+            }
         }
 
         // Return action status
@@ -119,9 +129,14 @@ class ui_overlay
     {
         // Check if we failed action
         const std::pair<bool, ui_id> action = _bg.action_select(_mult);
-        if (!action.first && action.second.type() != ui_type::button)
+
+        // Choose select post action
+        if (is_extendable())
         {
-            set_alert_action_fail();
+            if (!action.first && action.second.type() != ui_type::button)
+            {
+                set_alert_action_fail();
+            }
         }
 
         // Return action status
@@ -137,12 +152,7 @@ class ui_overlay
     }
     inline bool click_down()
     {
-        if (_bg.is_extended())
-        {
-            return _bg.click_down();
-        }
-
-        return false;
+        return _bg.click_down();
     }
     inline void click_up()
     {
@@ -160,17 +170,20 @@ class ui_overlay
     }
     inline void draw_tooltips() const
     {
-        // Disable the depth test
-        glDisable(GL_DEPTH_TEST);
+        if (_bg.is_draw_tooltips())
+        {
+            // Disable the depth test
+            glDisable(GL_DEPTH_TEST);
 
-        // Draw the tooltip bg
-        _bg.draw_tooltips();
+            // Draw the tooltip bg
+            _bg.draw_tooltips();
 
-        // Draw the tooltip text
-        _text.draw_tooltips();
+            // Draw the tooltip text
+            _text.draw_tooltips();
 
-        // Enable the depth test
-        glEnable(GL_DEPTH_TEST);
+            // Enable the depth test
+            glEnable(GL_DEPTH_TEST);
+        }
     }
     inline void draw_transparent() const
     {
@@ -183,14 +196,7 @@ class ui_overlay
     }
     inline bool drop()
     {
-        // If UI is extended
-        if (is_extended())
-        {
-            return _bg.drop();
-        }
-
-        // Didn't drop anything
-        return false;
+        return _bg.drop();
     }
     inline void enable_console()
     {
@@ -211,7 +217,8 @@ class ui_overlay
     }
     inline bool is_extended() const
     {
-        return _bg.is_extended();
+        const ui_mode mode = _bg.get_ui_state().get_mode();
+        return mode == ui_mode::EXTEND;
     }
     inline bool is_focused() const
     {
@@ -222,31 +229,31 @@ class ui_overlay
         // Test for overlap on UI
         const std::pair<bool, ui_id> overlap = _bg.overlap(p);
 
-        // Show tooltips here!
-        if (overlap.first && overlap.second.type() != ui_type::button)
+        // Choose overlap post action
+        if (is_extendable())
         {
-            // Get the hover text
-            const ui_info info = _bg.get_ui_info();
+            // Show tooltips here!
+            if (overlap.first && overlap.second.type() != ui_type::button)
+            {
+                // Get the hover text
+                const ui_info info = _bg.get_ui_info();
 
-            // Enable drawing hover text
-            const bool draw_stats = (info.type() == item_type::skill);
-            _text.set_draw_hover(true, draw_stats);
+                // Enable drawing hover text
+                const bool draw_stats = (info.type() == item_type::skill);
+                _text.set_draw_hover(true, draw_stats);
 
-            // Update the hover text
-            _text.set_hover(p, info);
-        }
-        else
-        {
-            // Disable drawing hover text
-            _text.set_draw_hover(false, false);
+                // Update the hover text
+                _text.set_hover(p, info);
+            }
+            else
+            {
+                // Disable drawing hover text
+                _text.set_draw_hover(false, false);
+            }
         }
 
         // Are we overlapping a UI element?
         return overlap.first;
-    }
-    inline void reset_menu()
-    {
-        _bg.reset_menu();
     }
     inline void respawn()
     {
@@ -332,10 +339,6 @@ class ui_overlay
     {
         _text.set_draw_timer(flag);
     }
-    inline void set_draw_title(const bool flag)
-    {
-        _bg.set_draw_title(flag);
-    }
     inline void set_energy(const float energy)
     {
         _bg.set_energy(energy);
@@ -377,13 +380,9 @@ class ui_overlay
     {
         _bg.set_oxygen(oxygen);
     }
-    inline void set_menu_dead()
+    inline void set_splash_dead()
     {
-        _bg.set_menu_dead();
-    }
-    inline void set_menu_pause()
-    {
-        _bg.set_menu_pause();
+        _bg.set_splash_dead();
     }
     inline void set_minimized(const bool flag)
     {
@@ -409,6 +408,26 @@ class ui_overlay
     {
         add_stream_text(_oxygen);
     }
+    inline void switch_mode_base()
+    {
+        _bg.switch_mode(ui_mode::BASE);
+    }
+    inline void switch_mode_menu()
+    {
+        // Enable pause menu
+        _bg.set_splash_pause();
+
+        // Switch to menu mode
+        _bg.switch_mode(ui_mode::MENU);
+    }
+    inline void switch_mode_no_menu()
+    {
+        // Reset the cursor
+        _bg.reset_cursor();
+
+        // Switch to base mode
+        _bg.switch_mode(ui_mode::BASE);
+    }
     inline ui_text &text()
     {
         return _text;
@@ -421,13 +440,23 @@ class ui_overlay
     {
         _text.toggle_draw_debug();
     }
-    inline void toggle_extend()
+    inline bool toggle_extend()
     {
-        // Toggle bg and text extended flags
-        _bg.toggle_draw_ex();
+        // If in base or extended mode
+        if (is_extendable())
+        {
+            // Transition bg state
+            _bg.transition_state();
 
-        // Force reloading of hover flag
-        _text.set_draw_hover(false, false);
+            // Turn off text hover
+            _text.set_draw_hover(false, false);
+
+            // Return action
+            return true;
+        }
+
+        // Return no action
+        return false;
     }
     inline void update(const min::vec3<float> &p, const min::vec3<float> &dir,
                        const float health, const float energy, const double fps,

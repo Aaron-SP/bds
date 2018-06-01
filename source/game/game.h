@@ -178,7 +178,7 @@ class bds
                 _controls.die();
 
                 // Set menu for dead
-                _ui.set_menu_dead();
+                _ui.set_splash_dead();
 
                 // Disable the keyboard
                 auto &keyboard = _win.get_keyboard();
@@ -335,7 +335,7 @@ class bds
         _controls.register_control_callbacks();
 
         // Stop drawing title in UI
-        _ui.set_draw_title(false);
+        _ui.switch_mode_base();
         _ui.set_draw_text_ui(true);
 
         // Turn off cursor

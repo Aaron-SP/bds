@@ -328,7 +328,7 @@ class inventory
         _inv_name[124] = "Battery";
         _inv_desc[124] = "Right click to use._The power is overwhelming!";
         _inv_name[125] = "Ether";
-        _inv_desc[125] = "The building block of_all matter";
+        _inv_desc[125] = "The building block of all matter";
         _inv_name[126] = "Oxygen";
         _inv_desc[126] = "Vital for sustaining life!";
         _inv_name[127] = "Rusty Key";

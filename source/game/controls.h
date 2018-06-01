@@ -166,13 +166,13 @@ class controls
         keyboard.register_keydown(min::window::key_code::KEYR, controls::reset, (void *)this);
 
         // Register callback function Z
-        keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)_world);
+        keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)this);
 
         // Register callback function X
-        keyboard.register_keydown(min::window::key_code::KEYX, controls::add_y, (void *)_world);
+        keyboard.register_keydown(min::window::key_code::KEYX, controls::add_y, (void *)this);
 
         // Register callback function C
-        keyboard.register_keydown(min::window::key_code::KEYC, controls::add_z, (void *)_world);
+        keyboard.register_keydown(min::window::key_code::KEYC, controls::add_z, (void *)this);
 
         // Register callback function KEY1 for switching texture
         keyboard.register_keydown(min::window::key_code::KEY1, controls::key1_down, (void *)this);
@@ -207,7 +207,7 @@ class controls
         keyboard.register_keyup(min::window::key_code::KEY8, controls::key8_up, (void *)this);
 
         // Register callback function SPACE
-        keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)_world);
+        keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)this);
 
         // Register callback function TAB
         keyboard.register_keydown(min::window::key_code::TAB, controls::ui_extend, (void *)this);
@@ -270,25 +270,20 @@ class controls
             state->toggle_user_input();
         }
 
-        // Toggle the game pause
-        const bool mode = state->toggle_pause();
+        // Toggle pause and adjust cursor
+        const bool paused = state->toggle_pause();
+        win->display_cursor(paused);
 
-        // set the game mode caption
-        if (mode)
+        // Set the game mode caption from toggle state
+        if (paused)
         {
-            // Turn on cursor
-            win->display_cursor(true);
-
-            // Turn on the menu
-            ui->set_menu_pause();
+            // Switch to menu mode
+            ui->switch_mode_menu();
         }
         else
         {
-            // Turn off cursor
-            win->display_cursor(false);
-
-            // Turn off the menu
-            ui->reset_menu();
+            // Switch to anti menu mode
+            ui->switch_mode_no_menu();
         }
 
         // Center cursor in middle of window
@@ -296,8 +291,16 @@ class controls
     }
     static void forward(void *ptr, double step)
     {
-        // Get the camera and world pointers
+        // Get the state, camera, world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
         min::camera<float> *const camera = control->get_camera();
         world *const world = control->get_world();
 
@@ -309,6 +312,14 @@ class controls
     {
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
         min::camera<float> *const camera = control->get_camera();
         world *const world = control->get_world();
 
@@ -320,6 +331,14 @@ class controls
     {
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
         min::camera<float> *const camera = control->get_camera();
         world *const world = control->get_world();
 
@@ -331,6 +350,14 @@ class controls
     {
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
         min::camera<float> *const camera = control->get_camera();
         world *const world = control->get_world();
 
@@ -340,6 +367,12 @@ class controls
     }
     void key_down(const size_t index)
     {
+        // Early exit if pause
+        if (_state->get_pause())
+        {
+            return;
+        }
+
         // Get the skills pointer
         player &play = _world->get_player();
         skills &skill = play.get_skills();
@@ -618,32 +651,69 @@ class controls
     }
     static void add_x(void *ptr, double step)
     {
-        // Cast to world pointer type
-        world *const world = reinterpret_cast<game::world *>(ptr);
+        // Get the state pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
+        // Get the world pointer
+        world *const world = control->get_world();
 
         // Increase x scale
         world->set_scale_x(1);
     }
     static void add_y(void *ptr, double step)
     {
-        // Cast to world pointer type
-        world *const world = reinterpret_cast<game::world *>(ptr);
+        // Get the state pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
+        // Get the world pointer
+        world *const world = control->get_world();
 
         // Increase x scale
         world->set_scale_y(1);
     }
     static void add_z(void *ptr, double step)
     {
-        // Cast to world pointer type
-        world *const world = reinterpret_cast<game::world *>(ptr);
+        // Get the state pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
+        // Get the world pointer
+        world *const world = control->get_world();
 
         // Increase x scale
         world->set_scale_z(1);
     }
     static void reset(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
 
         // Get the world pointer
         world *const world = control->get_world();
@@ -653,8 +723,17 @@ class controls
     }
     static void select(void *ptr, double step)
     {
-        // Get the world, ui, and player pointers
+        // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
+        // Get the world, ui, and player pointers
         world *const world = control->get_world();
         ui_overlay *const ui = control->get_ui();
         player &play = world->get_player();
@@ -681,19 +760,13 @@ class controls
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         state *const state = control->get_state();
+        ui_overlay *const ui = control->get_ui();
 
         // Do not toggle UI if paused
-        if (!state->get_pause())
+        if (!state->get_pause() && ui->toggle_extend())
         {
             // Get the ui and window pointer
-            ui_overlay *const ui = control->get_ui();
             min::window *const win = control->get_window();
-
-            // Toggle draw inventory
-            ui->toggle_extend();
-
-            // Toggle user input
-            const bool input = state->toggle_user_input();
 
             // Center cursor when changing user state
             const uint_fast16_t w = win->get_width();
@@ -703,18 +776,27 @@ class controls
             win->set_cursor(w / 2, h / 2);
 
             // Hide or show the cursor
+            const bool input = state->toggle_user_input();
             win->display_cursor(input);
         }
     }
     static void shift_down(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        ui_overlay *const ui = control->get_ui();
+        state *const state = control->get_state();
 
-        // Set the multiplier to 4
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
+        // Get the UI pointer
+        ui_overlay *const ui = control->get_ui();
         if (ui->is_extended())
         {
+            // Set the multiplier to 4
             ui->set_multiplier(4);
         }
         else
@@ -726,8 +808,17 @@ class controls
     }
     static void shift_up(void *ptr, double step)
     {
-        // Cast to control pointer and get ui pointer
+        // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
+        // Get the UI pointer
         ui_overlay *const ui = control->get_ui();
 
         // Set the multiplier to 4
@@ -738,8 +829,17 @@ class controls
     }
     static void drop_item(void *ptr, double step)
     {
-        // Cast to control pointer
+        // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
+        // Get the UI pointer
         ui_overlay *const ui = control->get_ui();
 
         // Drop item if hovering
@@ -1376,8 +1476,20 @@ class controls
     }
     static void jump(void *ptr, double step)
     {
+        // Get the state pointer
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Early exit if paused
+        if (state->get_pause())
+        {
+            return;
+        }
+
         // Get the world pointer
-        world *const world = reinterpret_cast<game::world *>(ptr);
+        world *const world = control->get_world();
+
+        // Make player jump
         world->get_player().jump();
     }
     static void on_resize(void *ptr, const uint_fast16_t width, const uint_fast16_t height)

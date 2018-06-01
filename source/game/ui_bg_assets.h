@@ -19,11 +19,13 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define _UI_BACKGROUND_ASSETS__
 
 #include <algorithm>
+#include <game/id.h>
 #include <game/inventory.h>
 #include <game/ui_config.h>
 #include <min/aabbox.h>
 #include <min/vec2.h>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -42,18 +44,28 @@ class ui_bg_assets
     static constexpr float _y_tar_cursor_uv = 4.0 / _image_size;
     static constexpr float _x_black_uv = 76.0 / _image_size;
     static constexpr float _y_black_uv = 4.0 / _image_size;
+    static constexpr float _x_black_trim_uv = 78.0 / _image_size;
+    static constexpr float _y_black_trim_uv = 6.0 / _image_size;
     static constexpr float _x_yellow_uv = 112.0 / _image_size;
     static constexpr float _y_yellow_uv = 4.0 / _image_size;
+    static constexpr float _x_yellow_trim_uv = 114.0 / _image_size;
+    static constexpr float _y_yellow_trim_uv = 6.0 / _image_size;
     static constexpr float _x_red_uv = 148.0 / _image_size;
     static constexpr float _y_red_uv = 4.0 / _image_size;
+    static constexpr float _x_red_trim_uv = 150.0 / _image_size;
+    static constexpr float _y_red_trim_uv = 6.0 / _image_size;
     static constexpr float _x_blue_uv = 184.0 / _image_size;
     static constexpr float _y_blue_uv = 4.0 / _image_size;
     static constexpr float _x_white_uv = 220.0 / _image_size;
     static constexpr float _y_white_uv = 4.0 / _image_size;
     static constexpr float _x_light_blue_uv = 256.0 / _image_size;
     static constexpr float _y_light_blue_uv = 4.0 / _image_size;
+    static constexpr float _x_light_blue_trim_uv = 258.0 / _image_size;
+    static constexpr float _y_light_blue_trim_uv = 6.0 / _image_size;
     static constexpr float _x_grey_uv = 292.0 / _image_size;
     static constexpr float _y_grey_uv = 4.0 / _image_size;
+    static constexpr float _x_grey_trim_uv = 294.0 / _image_size;
+    static constexpr float _y_grey_trim_uv = 6.0 / _image_size;
     static constexpr float _x_hover_stat_uv = 328.0 / _image_size;
     static constexpr float _y_hover_stat_uv = 4.0 / _image_size;
     static constexpr float _x_click_stat_uv = 344.0 / _image_size;
@@ -112,6 +124,7 @@ class ui_bg_assets
     // Scale sizes
     static constexpr float _s_suv = 16.0 / _image_size;
     static constexpr float _s_uv = 32.0 / _image_size;
+    static constexpr float _s_uv_trim = 28.0 / _image_size;
     static constexpr float _s_health_x = 48.0;
     static constexpr float _s_health_y = 96.0;
     static constexpr float _s_energy_x = 48.0;
@@ -130,16 +143,10 @@ class ui_bg_assets
     static constexpr float _s_ui_bar_uv_y = 110.0 / _image_size;
 
     // Menu sizes
-    static constexpr float _s_menu_x = 504.0;
-    static constexpr float _s_menu_y = 124.0;
-    static constexpr float _s_menu_uv_x = 504.0 / _image_size;
-    static constexpr float _s_menu_uv_y = 124.0 / _image_size;
-
-    // Number of ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 6 + 2 + 1
-    static constexpr size_t _base = 41;
-    static constexpr size_t _focus = 114;
-    static constexpr size_t _ext_hover = _focus + 2;
-    static constexpr size_t _max_size = _ext_hover + 1;
+    static constexpr float _s_splash_x = 504.0;
+    static constexpr float _s_splash_y = 124.0;
+    static constexpr float _s_splash_uv_x = 504.0 / _image_size;
+    static constexpr float _s_splash_uv_y = 124.0 / _image_size;
 
     // Rect Instance stuff
     std::vector<min::mat3<float>> _v;
@@ -157,9 +164,7 @@ class ui_bg_assets
     float _focus_bar;
     float _cursor_angle;
     bool _draw_console;
-    bool _draw_ex;
-    uint_fast8_t _draw_menu;
-    bool _draw_title;
+    uint_fast8_t _draw_splash;
 
     inline void set_uv(const size_t index, const min::vec4<float> &coord, const float alpha)
     {
@@ -231,12 +236,142 @@ class ui_bg_assets
     }
 
   public:
+    inline static constexpr size_t max_transparent_size()
+    {
+        return 5;
+    }
+    inline static constexpr size_t max_ui_size()
+    {
+        return 4;
+    }
+    inline static constexpr size_t max_store_size()
+    {
+        return 8;
+    }
+    inline static constexpr size_t max_key_size()
+    {
+        return 8;
+    }
+    inline static constexpr size_t max_ext_size()
+    {
+        return 24;
+    }
+    inline static constexpr size_t max_menu_size()
+    {
+        return 5;
+    }
+    inline static constexpr size_t max_cube_size()
+    {
+        return 9;
+    }
+    inline static constexpr size_t max_stat_size()
+    {
+        return 6;
+    }
+    inline static constexpr size_t max_focus_size()
+    {
+        return 2;
+    }
+    inline static constexpr size_t max_tooltip_size()
+    {
+        return 1;
+    }
+    inline static constexpr size_t base_size()
+    {
+        // 5 + 4 + 16 + 16
+        return max_transparent_size() + max_ui_size() + (max_store_size() * 2) + (max_key_size() * 2);
+    }
+    inline static constexpr size_t ext_size()
+    {
+        // 24 + 24 + 1
+        return max_ext_size() * 2 + 1;
+    }
+    inline static constexpr size_t cube_size()
+    {
+        // 9 + 9
+        return max_cube_size() * 2;
+    }
+    inline static constexpr size_t transparent_start()
+    {
+        return 0;
+    }
+    inline static constexpr size_t opaque_start()
+    {
+        // 5
+        return max_transparent_size();
+    }
+    inline static constexpr size_t menu_start()
+    {
+        // 5
+        return opaque_start();
+    }
+    inline static constexpr size_t focus_start()
+    {
+        // 41 + 49 + 18 + 6 + 2 == 114
+        return base_size() + ext_size() + cube_size() + max_stat_size();
+    }
+    inline static constexpr size_t tooltip_start()
+    {
+        // 114 + 2 == 116
+        return focus_start() + max_focus_size();
+    }
+    inline static constexpr size_t transparent_size()
+    {
+        return max_transparent_size();
+    }
+    inline static constexpr size_t opaque_base_size()
+    {
+        return base_size() - opaque_start();
+    }
+    inline static constexpr size_t opaque_ext_size()
+    {
+        return focus_start() - opaque_start();
+    }
+    inline static constexpr size_t menu_size()
+    {
+        return opaque_base_size() + max_menu_size() * 2;
+    }
+    inline static constexpr size_t focus_size()
+    {
+        return max_focus_size() - 1;
+    }
+    inline static constexpr size_t focus_bar_size()
+    {
+        return max_focus_size();
+    }
+    inline static constexpr size_t tooltip_size()
+    {
+        return 1;
+    }
+    inline static constexpr size_t max_size()
+    {
+        // 41 + 49 + 18 + 6 + 2 + 1 == 117
+        return base_size() + ext_size() + cube_size() + max_stat_size() + focus_bar_size() + tooltip_size();
+    }
     ui_bg_assets(const uint_fast16_t width, const uint_fast16_t height)
-        : _v(_max_size), _uv(_max_size),
+        : _v(max_size()), _uv(max_size()),
           _width(width), _height(height),
           _center_w(width / 2), _center_h(height / 2),
           _energy(0.0), _exp(0.0), _health(1.0), _oxy(1.0), _focus_bar(1.0), _cursor_angle(0.0),
-          _draw_console(false), _draw_ex(false), _draw_menu(0), _draw_title(true) {}
+          _draw_console(false), _draw_splash(0)
+
+    {
+        // Base ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 6 + 2 + 1
+        // Menu ui elements, 5 + 4 + 16 + 16 + 5 + 5 + [  empty  ] + 6 + 2 + 1
+        static_assert(transparent_start() == 0);
+        static_assert(transparent_size() == 5);
+        static_assert(opaque_start() == 5);
+        static_assert(opaque_base_size() == 36);
+        static_assert(menu_start() == 5);
+        static_assert(menu_size() == 46);
+        static_assert(opaque_ext_size() == 109);
+        static_assert(focus_start() == 5 + 109);
+        static_assert(focus_size() == 1);
+        static_assert(focus_bar_size() == 2);
+        static_assert(tooltip_start() == 5 + 109 + 2);
+        static_assert(tooltip_size() == 1);
+        static_assert(max_size() == 117);
+    }
 
     inline bool get_draw_console() const
     {
@@ -244,31 +379,23 @@ class ui_bg_assets
     }
     inline bool get_draw_dead() const
     {
-        return _draw_menu == 3;
+        return _draw_splash == 3;
     }
-    inline bool get_draw_ex() const
+    inline bool get_draw_splash() const
     {
-        return _draw_ex;
-    }
-    inline bool get_draw_menu() const
-    {
-        return _draw_menu >= 3;
+        return _draw_splash >= 3;
     }
     inline bool get_draw_pause() const
     {
-        return _draw_menu == 4;
+        return _draw_splash == 4;
     }
     inline bool get_draw_reload() const
     {
-        return _draw_menu == 1;
+        return _draw_splash == 1;
     }
     inline bool get_draw_target() const
     {
-        return _draw_menu == 2;
-    }
-    inline bool get_draw_title() const
-    {
-        return _draw_title;
+        return _draw_splash == 2;
     }
     inline bool get_focus_bar() const
     {
@@ -335,20 +462,20 @@ class ui_bg_assets
         const float alpha = (_draw_console) ? 0.5 : 0.0;
         set_rect(1, p, scale, black_coord, alpha);
     }
-    inline void load_menu_dead()
+    inline void load_splash_dead()
     {
-        const min::vec2<float> p(_center_w, _center_h);
-        const min::vec2<float> scale(_s_menu_x, _s_menu_y);
-        const min::vec4<float> pause_coord(_x_dead_uv, _y_dead_uv, _s_menu_uv_x, _s_menu_uv_y);
+        const min::vec2<float> p(_center_w, _splash_dy);
+        const min::vec2<float> scale(_s_splash_x, _s_splash_y);
+        const min::vec4<float> pause_coord(_x_dead_uv, _y_dead_uv, _s_splash_uv_x, _s_splash_uv_y);
 
         // Load rect at position
         set_rect_reset(2, p, scale, pause_coord);
     }
-    inline void load_menu_pause()
+    inline void load_splash_pause()
     {
-        const min::vec2<float> p(_center_w, _center_h);
-        const min::vec2<float> scale(_s_menu_x, _s_menu_y);
-        const min::vec4<float> pause_coord(_x_pause_uv, _y_pause_uv, _s_menu_uv_x, _s_menu_uv_y);
+        const min::vec2<float> p(_center_w, _splash_dy);
+        const min::vec2<float> scale(_s_splash_x, _s_splash_y);
+        const min::vec4<float> pause_coord(_x_pause_uv, _y_pause_uv, _s_splash_uv_x, _s_splash_uv_y);
 
         // Load rect at position
         set_rect_reset(2, p, scale, pause_coord);
@@ -450,10 +577,7 @@ class ui_bg_assets
         const min::vec2<float> scale(x_width, _s_exp_y);
 
         // Offset texture to prevent blurring edges
-        const float uv_off = 2.0 / _image_size;
-        const float suv_off = 4.0 / _image_size;
-        const float adj_uv = _s_uv - suv_off;
-        const min::vec4<float> exp_coord(_x_yellow_uv + uv_off, _y_yellow_uv + uv_off, adj_uv, adj_uv);
+        const min::vec4<float> exp_coord(_x_yellow_trim_uv, _y_yellow_trim_uv, _s_uv_trim, _s_uv_trim);
 
         // Load rect at position
         set_rect(7, p, scale, exp_coord);
@@ -465,20 +589,15 @@ class ui_bg_assets
         const min::vec2<float> p(x_offset, _oxy_dy);
         const min::vec2<float> scale(x_width, _s_oxy_y);
 
-        // Offset texture to prevent blurring edges
-        const float uv_off = 2.0 / _image_size;
-        const float suv_off = 4.0 / _image_size;
-        const float adj_uv = _s_uv - suv_off;
-
         // Load rect at position depending on energy
         if (_oxy > 0.25)
         {
-            const min::vec4<float> oxy_coord(_x_light_blue_uv + uv_off, _y_light_blue_uv + uv_off, adj_uv, adj_uv);
+            const min::vec4<float> oxy_coord(_x_light_blue_trim_uv, _y_light_blue_trim_uv, _s_uv_trim, _s_uv_trim);
             set_rect(8, p, scale, oxy_coord);
         }
         else
         {
-            const min::vec4<float> oxy_coord(_x_red_uv + uv_off, _y_red_uv + uv_off, adj_uv, adj_uv);
+            const min::vec4<float> oxy_coord(_x_red_trim_uv, _y_red_trim_uv, _s_uv_trim, _s_uv_trim);
             set_rect(8, p, scale, oxy_coord);
         }
     }
@@ -505,20 +624,15 @@ class ui_bg_assets
         const min::vec2<float> p(x_offset, _height - _focus_bar_dy);
         const min::vec2<float> scale(x_width, _s_focus_bar_y);
 
-        // Offset texture to prevent blurring edges
-        const float uv_off = 2.0 / _image_size;
-        const float suv_off = 4.0 / _image_size;
-        const float adj_uv = _s_uv - suv_off;
-
         // Load rect at position depending on focus
         if (_focus_bar > 0.5)
         {
-            const min::vec4<float> meter_coord(_x_yellow_uv + uv_off, _y_yellow_uv + uv_off, adj_uv, adj_uv);
+            const min::vec4<float> meter_coord(_x_yellow_trim_uv, _y_yellow_trim_uv, _s_uv_trim, _s_uv_trim);
             set_rect(115, p, scale, meter_coord);
         }
         else
         {
-            const min::vec4<float> meter_coord(_x_red_uv + uv_off, _y_red_uv + uv_off, adj_uv, adj_uv);
+            const min::vec4<float> meter_coord(_x_red_trim_uv, _y_red_trim_uv, _s_uv_trim, _s_uv_trim);
             set_rect(115, p, scale, meter_coord);
         }
     }
@@ -575,6 +689,46 @@ class ui_bg_assets
 
         // Load rect at position
         set_rect(id.id(), p, scale, white_coord);
+    }
+    inline void load_bg_menu_black(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_bg_menu_x, _s_bg_menu_y);
+
+        // Offset texture to prevent blurring edges
+        const min::vec4<float> black_coord(_x_black_trim_uv, _y_black_trim_uv, _s_uv_trim, _s_uv_trim);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, black_coord);
+    }
+    inline void load_bg_menu_grey(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_bg_menu_x, _s_bg_menu_y);
+
+        // Offset texture to prevent blurring edges
+        const min::vec4<float> grey_coord(_x_grey_trim_uv, _y_grey_trim_uv, _s_uv_trim, _s_uv_trim);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, grey_coord);
+    }
+    inline void load_fg_menu_black(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg_menu_x, _s_fg_menu_y);
+
+        // Offset texture to prevent blurring edges
+        const min::vec4<float> black_coord(_x_black_trim_uv, _y_black_trim_uv, _s_uv_trim, _s_uv_trim);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, black_coord);
+    }
+    inline void load_fg_menu_grey(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_fg_menu_x, _s_fg_menu_y);
+
+        // Offset texture to prevent blurring edges
+        const min::vec4<float> grey_coord(_x_grey_trim_uv, _y_grey_trim_uv, _s_uv_trim, _s_uv_trim);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, grey_coord);
     }
     inline void load_empty_icon(const ui_id id, const min::vec2<float> &p)
     {
@@ -738,27 +892,23 @@ class ui_bg_assets
     }
     inline void set_draw_dead()
     {
-        _draw_menu = 3;
+        _draw_splash = 3;
     }
     inline void set_draw_aim()
     {
-        _draw_menu = 0;
+        _draw_splash = 0;
     }
     inline void set_draw_pause()
     {
-        _draw_menu = 4;
+        _draw_splash = 4;
     }
     inline void set_draw_reload()
     {
-        _draw_menu = 1;
+        _draw_splash = 1;
     }
     inline void set_draw_target()
     {
-        _draw_menu = 2;
-    }
-    inline void set_draw_title(const bool flag)
-    {
-        _draw_title = flag;
+        _draw_splash = 2;
     }
     inline void set_energy(const float energy)
     {
@@ -816,10 +966,6 @@ class ui_bg_assets
     {
         _draw_console = !_draw_console;
     }
-    inline void toggle_draw_ex()
-    {
-        _draw_ex = !_draw_ex;
-    }
     inline min::vec2<float> attr_position(const unsigned row, const unsigned size) const
     {
         // Calculate offset from center for this stat text element
@@ -843,6 +989,15 @@ class ui_bg_assets
         // Calculate offset from center for this toolbar element
         const float x = (_center_w + _cube_dx) + (col * _cube_space);
         const float y = _cube_dy + (row * _cube_space);
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
+    }
+    inline min::vec2<float> menu_position(const unsigned row, const unsigned col) const
+    {
+        // Calculate offset from center for this toolbar element
+        const float x = (_center_w + _menu_dx) + (col * _menu_space);
+        const float y = _menu_dy - (row * _menu_space);
 
         // Return toolbar position
         return min::vec2<float>(x, y);
@@ -873,51 +1028,6 @@ class ui_bg_assets
 
         // Return toolbar position
         return min::vec2<float>(x, y);
-    }
-    inline static constexpr size_t focus_start()
-    {
-        return _focus;
-    }
-    inline static constexpr size_t focus_size()
-    {
-        return 1;
-    }
-    inline static constexpr size_t focus_bar_size()
-    {
-        return 2;
-    }
-    inline static constexpr size_t opaque_ext_size()
-    {
-        return _focus - opaque_start();
-    }
-    inline static constexpr size_t opaque_base_size()
-    {
-        return _base - opaque_start();
-    }
-    inline static constexpr size_t opaque_start()
-    {
-        return 5;
-    }
-    inline static constexpr size_t tooltip_start()
-    {
-        return _ext_hover;
-    }
-    inline static constexpr size_t tooltip_size()
-    {
-        return 1;
-    }
-    inline static constexpr size_t transparent_start()
-    {
-        return 0;
-    }
-    inline static constexpr size_t transparent_size()
-    {
-        return 5;
-    }
-    inline static constexpr size_t ui_size()
-    {
-        // 5 + 4 + 16 + 16
-        return _base;
     }
 };
 }

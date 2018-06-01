@@ -257,7 +257,7 @@ class ui_id
     {
         return ui_id(_id + 9);
     }
-    inline ui_id store_index() const
+    inline ui_id fg_store_index() const
     {
         return ui_id(_id + 17);
     }
@@ -265,7 +265,7 @@ class ui_id
     {
         return ui_id(_id + 17);
     }
-    inline ui_id key_index() const
+    inline ui_id fg_key_index() const
     {
         return ui_id(_id + 25);
     }
@@ -273,15 +273,23 @@ class ui_id
     {
         return ui_id(_id + 25);
     }
-    inline ui_id ext_index() const
+    inline ui_id fg_ext_index() const
     {
         return ui_id(_id + 49);
+    }
+    inline ui_id bg_menu_index() const
+    {
+        return ui_id(_id + 41);
+    }
+    inline ui_id fg_menu_index() const
+    {
+        return ui_id(_id + 46);
     }
     inline ui_id bg_cube_index() const
     {
         return ui_id(_id + 50);
     }
-    inline ui_id cube_index() const
+    inline ui_id fg_cube_index() const
     {
         return ui_id(_id + 59);
     }
