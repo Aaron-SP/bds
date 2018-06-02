@@ -1,7 +1,7 @@
 # Beyond Dying Skies Makefile - CYGWIN | LINUX
 
 # Query the freetype2 package config for the include directory
-FREETYPE2_INCLUDE = $(shell freetype-config --cflags)
+FREETYPE2_INCLUDE = $(shell pkg-config freetype2 --cflags)
 
 # Linker parameters
 ifeq ($(OS),Windows_NT)
