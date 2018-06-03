@@ -20,8 +20,10 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <array>
 #include <game/memory_map.h>
+#include <game/ui_bg_assets.h>
 #include <game/ui_config.h>
 #include <game/ui_info.h>
+#include <game/ui_menu.h>
 #include <iomanip>
 #include <min/program.h>
 #include <min/shader.h>
@@ -64,7 +66,8 @@ class ui_text
     static constexpr size_t _alert = _ui + 2;
     static constexpr size_t _debug = _alert + 1;
     static constexpr size_t _stream = _debug + 14;
-    static constexpr size_t _text_end = _stream + _max_stream;
+    static constexpr size_t _menu = _stream + _max_stream;
+    static constexpr size_t _text_end = _menu + ui_menu::size();
 
     static constexpr size_t _hover = 0;
     static constexpr size_t _info_end = _hover + 4;
@@ -85,7 +88,7 @@ class ui_text
     min::shader _vertex;
     min::shader _fragment;
     min::program _prog;
-    GLint _index_location;
+    const GLint _index_location;
 
     // Buffer for holding text
     min::text_buffer _text;
@@ -102,6 +105,7 @@ class ui_text
     bool _draw_debug;
     bool _draw_focus;
     bool _draw_hover;
+    bool _draw_menu;
     bool _draw_stats;
     bool _draw_timer;
     bool _draw_ui;
@@ -111,20 +115,20 @@ class ui_text
         _ss.clear();
         _ss.str(std::string());
     }
-    inline void load_program_index()
+    inline GLint load_program_index() const
     {
         // Bind the text program
         _prog.use();
 
         // Get the start_index uniform location
-        _index_location = glGetUniformLocation(_prog.id(), "ref_color");
-        if (_index_location == -1)
+        const GLint index_location = glGetUniformLocation(_prog.id(), "ref_color");
+        if (index_location == -1)
         {
             throw std::runtime_error("ui_text: could not find uniform 'ref_color'");
         }
 
-        // Set reference to white
-        set_reference(1.0, 1.0, 1.0);
+        // Return the index
+        return index_location;
     }
     inline void reposition_text(const min::vec2<float> &p, const uint_fast16_t width, const uint_fast16_t height)
     {
@@ -155,7 +159,7 @@ class ui_text
         }
 
         // Update stream text
-        for (size_t i = _stream; i < _text_end; i++)
+        for (size_t i = _stream; i < _menu; i++)
         {
             // If this stream text is being used
             const float time = _st[i - _stream].get_time();
@@ -165,6 +169,15 @@ class ui_text
                 const float y = _stream_dy + (_max_stream_time - time);
                 _text.set_text_center(i, w2, y);
             }
+        }
+
+        // Update menu text
+        for (size_t i = _menu; i < _text_end; i++)
+        {
+            // Update stream text location
+            const size_t index = i - _menu;
+            const min::vec2<float> p = ui_bg_assets::menu_text_position(w2, index);
+            _text.set_text_center(i, p.x(), p.y());
         }
 
         // Position the hover elements
@@ -190,44 +203,54 @@ class ui_text
 
         // Minimize draw calls by lumping togetherness
         // For all other permutations
-        if (_draw_console)
+        if (!_draw_menu)
         {
-            for (size_t i = _console; i < _focus; i++)
+            if (_draw_console)
             {
-                _indices.push_back(i);
+                for (size_t i = _console; i < _focus; i++)
+                {
+                    _indices.push_back(i);
+                }
+            }
+            if (_draw_focus)
+            {
+                for (size_t i = _focus; i < _timer; i++)
+                {
+                    _indices.push_back(i);
+                }
+            }
+            if (_draw_timer)
+            {
+                for (size_t i = _timer; i < _ui; i++)
+                {
+                    _indices.push_back(i);
+                }
+            }
+            if (_draw_ui)
+            {
+                for (size_t i = _ui; i < _alert; i++)
+                {
+                    _indices.push_back(i);
+                }
+            }
+            if (_draw_alert)
+            {
+                for (size_t i = _alert; i < _debug; i++)
+                {
+                    _indices.push_back(i);
+                }
+            }
+            if (_draw_debug)
+            {
+                for (size_t i = _debug; i < _stream; i++)
+                {
+                    _indices.push_back(i);
+                }
             }
         }
-        if (_draw_focus)
+        else
         {
-            for (size_t i = _focus; i < _timer; i++)
-            {
-                _indices.push_back(i);
-            }
-        }
-        if (_draw_timer)
-        {
-            for (size_t i = _timer; i < _ui; i++)
-            {
-                _indices.push_back(i);
-            }
-        }
-        if (_draw_ui)
-        {
-            for (size_t i = _ui; i < _alert; i++)
-            {
-                _indices.push_back(i);
-            }
-        }
-        if (_draw_alert)
-        {
-            for (size_t i = _alert; i < _debug; i++)
-            {
-                _indices.push_back(i);
-            }
-        }
-        if (_draw_debug)
-        {
-            for (size_t i = _debug; i < _stream; i++)
+            for (size_t i = _menu; i < _text_end; i++)
             {
                 _indices.push_back(i);
             }
@@ -242,7 +265,7 @@ class ui_text
         _indices.clear();
 
         // Draw stream text
-        for (size_t i = _stream; i < _text_end; i++)
+        for (size_t i = _stream; i < _menu; i++)
         {
             // If we have time
             const float time = _st[i - _stream].get_time();
@@ -260,13 +283,14 @@ class ui_text
     ui_text(const uint_fast16_t width, const uint_fast16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/text.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
-          _prog(_vertex, _fragment),
+          _prog(_vertex, _fragment), _index_location(load_program_index()),
           _text("data/fonts/open_sans.ttf", _text_font_size, 2),
           _text_bg("data/fonts/open_sans.ttf", _inv_font_size),
           _text_info("data/fonts/open_sans.ttf", _info_font_size),
           _main_batch(0), _stream_batch(0), _st{}, _stream_old(0),
           _draw_alert(false), _draw_console(false), _draw_debug(false),
-          _draw_focus(false), _draw_hover(false), _draw_stats(false), _draw_timer(false), _draw_ui(false)
+          _draw_focus(false), _draw_hover(false), _draw_menu(false),
+          _draw_stats(false), _draw_timer(false), _draw_ui(false)
     {
         // Set the stream precision
         _ss << std::fixed << std::setprecision(2);
@@ -278,9 +302,6 @@ class ui_text
 
         // Reserve text buffer memory
         reserve_memory();
-
-        // Load the reference color program index
-        load_program_index();
 
         // Add 1 console entries
         for (size_t i = _console; i < _focus; i++)
@@ -323,10 +344,17 @@ class ui_text
         }
 
         // Add 10 stream entries
-        for (size_t i = _stream; i < _text_end; i++)
+        for (size_t i = _stream; i < _menu; i++)
         {
             _text.add_text("", 0, 0);
             _text.set_line_wrap(i, _x_stream_wrap, _y_stream_wrap);
+        }
+
+        // Add 5 menu entries
+        for (size_t i = _menu; i < _text_end; i++)
+        {
+            _text.add_text("", 0, 0);
+            _text.set_line_wrap(i, _x_menu_wrap, _y_menu_wrap);
         }
 
         // Add 2 hover entries
@@ -343,6 +371,27 @@ class ui_text
 
         // Reposition all of the text
         reposition_text(min::vec2<float>(), width, height);
+    }
+    inline void reset()
+    {
+        // Reset
+        _main_batch = 0;
+        _stream_batch = 0;
+        _stream_old = 0;
+
+        // Clear stream
+        clear_stream();
+
+        // Disable all drawing
+        _draw_alert = false;
+        _draw_console = false;
+        _draw_debug = false;
+        _draw_focus = false;
+        _draw_hover = false;
+        _draw_menu = false;
+        _draw_stats = false;
+        _draw_timer = false;
+        _draw_ui = false;
     }
     void add_stream_float(const std::string &str, const float value)
     {
@@ -479,6 +528,10 @@ class ui_text
     {
         _draw_hover = draw_hover;
         _draw_stats = draw_stats;
+    }
+    inline void set_draw_menu(const bool draw_menu)
+    {
+        _draw_menu = draw_menu;
     }
     inline void set_draw_timer(const bool flag)
     {
@@ -625,44 +678,6 @@ class ui_text
         const uint_fast16_t w2 = size.first / 2;
         _text.set_text_center(_focus, str, w2, size.second - _focus_text_dy);
     }
-    inline void set_timer(const float time)
-    {
-        // Get the screen dimensions
-        const std::pair<uint_fast16_t, uint_fast16_t> size = _text.get_screen_size();
-        const uint_fast16_t w2 = size.first / 2;
-
-        // Clear and reset the stream
-        clear_stream();
-
-        // Update the energy text
-        _ss << "Next Invasion: " << time << " s";
-        _text.set_text_center(_timer, _ss.str(), w2, size.second - _timer_text_dy);
-    }
-    inline void set_ui(const float health, const float energy)
-    {
-        // Clear and reset the stream
-        clear_stream();
-
-        // Update the energy text
-        _ss << static_cast<int>(std::round(health));
-        _text.set_text(_ui, _ss.str());
-
-        // Clear and reset the _stream
-        clear_stream();
-
-        // Update the energy text
-        _ss << static_cast<int>(std::round(energy));
-        _text.set_text(_ui + 1, _ss.str());
-    }
-    inline void set_ui_alert(const std::string &alert)
-    {
-        // Get the screen dimensions
-        const std::pair<uint_fast16_t, uint_fast16_t> size = _text.get_screen_size();
-
-        // Get the center width
-        const uint_fast16_t w2 = size.first / 2;
-        _text.set_text_center(_alert, alert, w2, size.second + _alert_dy);
-    }
     inline void set_hover(const min::vec2<float> &p, const ui_info info)
     {
         // Get the screen dimensions
@@ -712,6 +727,62 @@ class ui_text
         // Upload changes
         _text_info.upload();
     }
+    inline void set_menu(const ui_menu &menu)
+    {
+        // Get the menu strings
+        const auto &str_arr = menu.get_strings();
+
+        // Get the screen dimensions
+        const std::pair<uint_fast16_t, uint_fast16_t> size = _text.get_screen_size();
+        const uint_fast16_t w2 = size.first / 2;
+
+        // Set all of the menu strings
+        for (size_t i = _menu; i < _text_end; i++)
+        {
+            // Get the center width
+            const size_t index = i - _menu;
+            const min::vec2<float> p = menu.position(w2, index);
+            _text.set_text_center(i, *str_arr[index], p.x(), p.y());
+        }
+    }
+    inline void set_timer(const float time)
+    {
+        // Get the screen dimensions
+        const std::pair<uint_fast16_t, uint_fast16_t> size = _text.get_screen_size();
+        const uint_fast16_t w2 = size.first / 2;
+
+        // Clear and reset the stream
+        clear_stream();
+
+        // Update the energy text
+        _ss << "Next Invasion: " << time << " s";
+        _text.set_text_center(_timer, _ss.str(), w2, size.second - _timer_text_dy);
+    }
+    inline void set_ui(const float health, const float energy)
+    {
+        // Clear and reset the stream
+        clear_stream();
+
+        // Update the energy text
+        _ss << static_cast<int>(std::round(health));
+        _text.set_text(_ui, _ss.str());
+
+        // Clear and reset the _stream
+        clear_stream();
+
+        // Update the energy text
+        _ss << static_cast<int>(std::round(energy));
+        _text.set_text(_ui + 1, _ss.str());
+    }
+    inline void set_ui_alert(const std::string &alert)
+    {
+        // Get the screen dimensions
+        const std::pair<uint_fast16_t, uint_fast16_t> size = _text.get_screen_size();
+
+        // Get the center width
+        const uint_fast16_t w2 = size.first / 2;
+        _text.set_text_center(_alert, alert, w2, size.second + _alert_dy);
+    }
     inline void toggle_draw_console()
     {
         _draw_console = !_draw_console;
@@ -733,7 +804,7 @@ class ui_text
         const uint_fast16_t w2 = size.first / 2;
 
         // Update all stream elements
-        for (size_t i = _stream; i < _text_end; i++)
+        for (size_t i = _stream; i < _menu; i++)
         {
             // Get stream text
             stream_text &st = _st[i - _stream];

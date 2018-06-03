@@ -36,24 +36,27 @@ class sky
 
     // Texture stuff
     min::texture_buffer _tbuffer;
-    GLuint _dds_id;
+    const GLuint _dds_id;
 
-  public:
-    sky(const game::uniforms &uniforms)
-        : _sv(memory_map::memory.get_file("data/shader/sky.vertex"), GL_VERTEX_SHADER),
-          _sf(memory_map::memory.get_file("data/shader/sky.fragment"), GL_FRAGMENT_SHADER),
-          _prog(_sv, _sf)
+    inline GLuint load_sky_texture()
     {
-        // Let this program use this uniform buffer
-        uniforms.set_program_lights(_prog);
-        uniforms.set_program_matrix(_prog);
-
         // Load texture
         const min::mem_file &sky = memory_map::memory.get_file("data/texture/sky.dds");
         min::dds tex(sky);
 
         // Load texture buffer
-        _dds_id = _tbuffer.add_dds_texture(tex);
+        return _tbuffer.add_dds_texture(tex);
+    }
+
+  public:
+    sky(const game::uniforms &uniforms)
+        : _sv(memory_map::memory.get_file("data/shader/sky.vertex"), GL_VERTEX_SHADER),
+          _sf(memory_map::memory.get_file("data/shader/sky.fragment"), GL_FRAGMENT_SHADER),
+          _prog(_sv, _sf), _dds_id(load_sky_texture())
+    {
+        // Let this program use this uniform buffer
+        uniforms.set_program_lights(_prog);
+        uniforms.set_program_matrix(_prog);
     }
     void draw() const
     {

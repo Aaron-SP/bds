@@ -62,8 +62,8 @@ class drops
   private:
     static constexpr float _rotation_rate = 120.0;
     typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
-    physics *_sim;
-    static_instance *_inst;
+    physics *const _sim;
+    static_instance *const _inst;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     std::vector<drop> _drops;
     float _angle;
@@ -108,6 +108,29 @@ class drops
         : _sim(&sim), _inst(&inst), _angle(0.0), _oldest(0), _str("Drop")
     {
         reserve_memory();
+    }
+    inline void reset()
+    {
+        // Remove all the drops backwards to preserve drop-instance id mapping
+        const size_t size = _drops.size();
+        for (size_t i = size; i-- != 0;)
+        {
+            // Get the drop
+            const drop &d = _drops[i];
+
+            // Clear instance and body
+            _inst->get_drop().clear(d.inst_id());
+            _sim->clear_body(d.body_id());
+        }
+
+        // Clear all the drops
+        _drops.clear();
+
+        // Reset the angle
+        _angle = 0.0;
+
+        // Set oldest to be zero
+        _oldest = 0;
     }
     inline void add(const min::vec3<float> &p, const min::vec3<float> &dir, const block_id atlas)
     {

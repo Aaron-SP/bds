@@ -69,11 +69,11 @@ class missiles
 {
   private:
     typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
-    physics *_sim;
-    static_instance *_inst;
+    physics *const _sim;
+    static_instance *const _inst;
+    particle *const _part;
+    sound *const _sound;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
-    particle *_part;
-    sound *_sound;
     std::vector<missile> _miss;
     const min::vec3<unsigned> _scale;
     coll_call _f;
@@ -135,6 +135,23 @@ class missiles
           _scale(3, 7, 3), _f(nullptr), _str("Missile")
     {
         reserve_memory();
+    }
+    inline void reset()
+    {
+        // Remove all the missiles backwards to preserve ex-instance id mapping
+        const size_t size = _miss.size();
+        for (size_t i = size; i-- != 0;)
+        {
+            // Get the missile
+            const missile &m = _miss[i];
+
+            // Clear instance and body
+            _inst->get_explosive().clear(m.inst_id());
+            _sim->clear_body(m.body_id());
+        }
+
+        // Clear all the drops
+        _miss.clear();
     }
     inline void explode(const size_t index)
     {

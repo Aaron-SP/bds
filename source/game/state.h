@@ -21,6 +21,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/character.h>
 #include <game/file.h>
 #include <game/load_state.h>
+#include <game/options.h>
 #include <game/player.h>
 #include <game/static_instance.h>
 
@@ -51,12 +52,13 @@ class state
     bool _respawn;
     bool _user_input;
 
-    inline void load_camera()
+    inline void load_camera(const options &opt)
     {
         // Set camera near and far plane, and set perspective
         auto &f = _camera.get_frustum();
-        f.set_far(5000.0);
+        f.set_aspect_ratio(opt.width(), opt.height());
         f.set_fov(90.0);
+        f.set_far(5000.0);
         _camera.set_perspective();
 
         // Load camera settings
@@ -106,13 +108,13 @@ class state
     }
 
   public:
-    state(const size_t grid_size, const uint_fast8_t game_mode)
-        : _state(grid_size, game_mode), _tracking(false), _frame_count(0), _x{}, _y{},
+    state(const options &opt)
+        : _state(opt.grid(), opt.mode()), _tracking(false), _frame_count(0), _x{}, _y{},
           _recoil(0), _run_accum(0.0), _run_accum_sin(0.0),
           _dead(false), _pause(false), _respawn(false), _user_input(false)
     {
         // Load camera
-        load_camera();
+        load_camera(opt);
     }
     inline min::camera<float> &get_camera()
     {

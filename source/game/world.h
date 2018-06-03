@@ -70,12 +70,14 @@ class world
     // Terrain stuff
     cgrid _grid;
     terrain _terrain;
-    particle *_particles;
-    sound *_sound;
+    particle *const _particles;
+    sound *const _sound;
     std::vector<size_t> _view_chunk_index;
 
     // Physics stuff
-    min::vec3<float> _gravity;
+    const min::vec3<unsigned> _ex_radius;
+    const float _top;
+    const min::vec3<float> _gravity;
     min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
     size_t _char_id;
 
@@ -94,8 +96,6 @@ class world
 
     // Player
     player _player;
-    const min::vec3<unsigned> _ex_radius;
-    const float _top;
 
     // Skybox
     sky _sky;
@@ -138,11 +138,14 @@ class world
     }
     inline size_t character_load(const load_state &state)
     {
+        // Is this a new game?
+        const bool new_game = state.is_new_game();
+
         // Get spawn point
         const min::vec3<float> &p = state.get_spawn();
 
         // Spawn character position
-        const min::vec3<float> spawn = ray_spawn(p);
+        const min::vec3<float> spawn = (new_game) ? ray_spawn(p) : p;
 
         // Create the physics body
         _char_id = _simulation.add_body(cgrid::player_box(spawn), 10.0);
@@ -150,8 +153,11 @@ class world
         // Update recent chunk
         _grid.update_current_chunk(spawn);
 
-        // Remove 3x3 blocks
-        block_remove(spawn, _ex_radius);
+        // Remove 3x3 blocks if new game
+        if (new_game)
+        {
+            block_remove(spawn, _ex_radius);
+        }
 
         // Return the character body id
         return _char_id;
@@ -561,6 +567,27 @@ class world
             return this->_missiles.launch_missile(proj, dir, min::vec3<float>());
         };
     }
+    inline void load_chests(const load_state &state)
+    {
+        if (state.is_new_game())
+        {
+            while (spawn_chest(spawn_random()))
+            {
+            }
+        }
+        else
+        {
+            // Get the chests to load
+            const std::vector<min::vec3<float>> &chests = state.get_chests();
+
+            // Load the persisted chests
+            const size_t size = chests.size();
+            for (size_t i = 0; i < size; i++)
+            {
+                spawn_chest(chests[i]);
+            }
+        }
+    }
     inline void play_sodium_blast(const min::vec3<float> &p, const bool in_range, const block_id atlas)
     {
         // Prefer stereo if close to the explosion
@@ -877,6 +904,8 @@ class world
           _terrain(uniforms, _grid.get_chunks(), chunk_size),
           _particles(&particles),
           _sound(&s),
+          _ex_radius(3, 3, 3),
+          _top(state.get_top().y()),
           _gravity(0.0, -_grav_mag, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _terr_mesh("atlas"),
@@ -884,10 +913,9 @@ class world
           _preview_offset(1, 1, 1),
           _scale(1, 1, 1),
           _edit_mode(false),
-          _swatch_cost(0), _swatch_mode(false),
+          _atlas_id(block_id::EMPTY),
+          _swatch_cost(0), _swatch_mode(false), _swatch_copy_place(false),
           _player(&_simulation, state, character_load(state)),
-          _ex_radius(3, 3, 3),
-          _top(state.get_top().y()),
           _sky(uniforms),
           _instance(uniforms),
           _chests(_simulation, _instance),
@@ -918,25 +946,45 @@ class world
         // Update chunks
         update_all_chunks();
 
-        // Load chests if this is a new game
-        if (state.is_new_game())
-        {
-            while (spawn_chest(spawn_random()))
-            {
-            }
-        }
-        else
-        {
-            // Get the chests to load
-            const std::vector<min::vec3<float>> &chests = state.get_chests();
+        // Load chests
+        load_chests(state);
+    }
+    inline void reset(const load_state &state, const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
+    {
+        // Reload grid
+        _grid.reset();
 
-            // Load the persisted chests
-            const size_t size = chests.size();
-            for (size_t i = 0; i < size; i++)
-            {
-                spawn_chest(chests[i]);
-            }
-        }
+        // Reset to default
+        _cached_offset = min::vec3<int>(1, 1, 1);
+        _preview_offset = min::vec3<int>(1, 1, 1);
+        _scale = min::vec3<unsigned>(1, 1, 1);
+        _edit_mode = false;
+        _atlas_id = block_id::EMPTY;
+        _swatch_cost = 0;
+        _swatch_mode = false;
+        _swatch_copy_place = false;
+
+        // Reset instances
+        _chests.reset();
+        _drones.reset();
+        _drops.reset();
+        _explosives.reset();
+        _missiles.reset();
+
+        // Prune physics bodies from simulation
+        _simulation.clear();
+
+        // Reset player
+        _player = player(&_simulation, state, character_load(state));
+
+        // Set collision callbacks
+        set_collision_callbacks();
+
+        // Update chunks
+        update_all_chunks();
+
+        // Load chests
+        load_chests(state);
     }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {
@@ -1110,7 +1158,7 @@ class world
     inline void kill_drones()
     {
         // Kill all the drones
-        _drones.clear();
+        _drones.reset();
     }
     inline bool launch_explosive(const min::vec3<float> &up)
     {
@@ -1164,7 +1212,7 @@ class world
         block_remove(spawn, _ex_radius);
 
         // Remove all chests and spawn new ones
-        _chests.clear();
+        _chests.reset();
         while (spawn_chest(spawn_random()))
         {
         }
@@ -1203,6 +1251,10 @@ class world
         {
             _preview_offset = _cached_offset;
         }
+    }
+    inline void save()
+    {
+        _grid.save();
     }
     inline size_t scatter_ray(const min::vec3<unsigned> &scale, const float size, const ray_call &f)
     {

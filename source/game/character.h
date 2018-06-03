@@ -44,30 +44,34 @@ class character
 
     // md5 model
     min::md5_model<float, uint32_t, min::vec4, min::aabbox> _md5_model;
+    const size_t _charge_index;
+    const size_t _shoot_index;
 
     // Buffers for model data and textures
     min::vertex_buffer<float, uint32_t, min::skeletal_vertex, GL_FLOAT, GL_UNSIGNED_INT> _skbuffer;
     min::texture_buffer _texture_buffer;
-    GLuint _dds_id;
+    const GLuint _dds_id;
 
     // Particle system
-    particle *_particles;
+    particle *const _particles;
 
     // Animation indices
     bool _need_bone_reset;
-    size_t _charge_index;
-    size_t _shoot_index;
 
-    inline void load_model()
+    inline size_t load_charge_anim()
     {
-        // Load animation
+        // Load charge animation
         const min::mem_file &gun_charge = memory_map::memory.get_file("data/models/gun_charge.md5anim");
-        _charge_index = _md5_model.load_animation(gun_charge);
-
+        return _md5_model.load_animation(gun_charge);
+    }
+    inline size_t load_shoot_anim()
+    {
         // Load shoot animation
         const min::mem_file &gun_shoot = memory_map::memory.get_file("data/models/gun_shoot.md5anim");
-        _shoot_index = _md5_model.load_animation(gun_shoot);
-
+        return _md5_model.load_animation(gun_shoot);
+    }
+    inline void load_model()
+    {
         // Setup the md5 mesh
         min::mesh<float, uint32_t> &md5 = _md5_model.get_meshes()[0];
         md5.calculate_normals();
@@ -81,14 +85,14 @@ class character
         // Load vertex buffer with data
         _skbuffer.upload();
     }
-    inline void load_textures()
+    inline GLuint load_texture()
     {
         // Load textures
         const min::mem_file &skin = memory_map::memory.get_file("data/texture/skin.dds");
         const min::dds d = min::dds(skin);
 
         // Load texture buffer
-        _dds_id = _texture_buffer.add_dds_texture(d);
+        return _texture_buffer.add_dds_texture(d);
     }
     inline void reset_animation()
     {
@@ -119,18 +123,20 @@ class character
           _fragment(memory_map::memory.get_file("data/shader/character.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _md5_model(min::md5_mesh<float, uint32_t>(memory_map::memory.get_file("data/models/gun.md5mesh"))),
-          _particles(particles),
-          _need_bone_reset(false)
+          _charge_index(load_charge_anim()), _shoot_index(load_shoot_anim()), _dds_id(load_texture()),
+          _particles(particles), _need_bone_reset(false)
     {
         // Load md5 model
         load_model();
 
-        // Load md5 model textures
-        load_textures();
-
         // Load the uniform buffer with the program we will use
         uniforms.set_program_lights(_prog);
         uniforms.set_program_matrix(_prog);
+    }
+    inline void reset()
+    {
+        _md5_model.get_current_animation().set_loop_count(0);
+        _need_bone_reset = false;
     }
     inline void abort_animation_grapple()
     {

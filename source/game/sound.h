@@ -700,6 +700,28 @@ class sound
         // Set the buffer distance model
         _buffer.set_distance_model(AL_INVERSE_DISTANCE_CLAMPED);
     }
+    inline void reset()
+    {
+        // Stop all sounds
+        for (sound_info &si : _si)
+        {
+            _buffer.stop_async(si.source());
+            si.set_fade_in(false);
+            si.set_fade_out(false);
+            si.set_play(false);
+        }
+
+        // Reset oldest positions
+        _drone_old = 0;
+        _ex_old = 0;
+        _miss_launch_old = 0;
+
+        // Reset the voice queue
+        _v_queue.clear();
+        _v_head = 0;
+        _v_delay = 1.0;
+        _v_enable = true;
+    }
     inline void bg_gain_up()
     {
         sound_info &si = bg_info();

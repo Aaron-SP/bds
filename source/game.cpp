@@ -20,6 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 void show_title(bds &game, min::loop_sync &sync, const size_t frames)
 {
+    // Time between frames
     double frame_time = 0.0;
 
     // Play the background music
@@ -65,13 +66,13 @@ void show_title(bds &game, min::loop_sync &sync, const size_t frames)
 void show_game(bds &game, min::loop_sync &sync, const size_t frames)
 {
     // Register the game callbacks
-    game.disable_title_screen();
+    game.title_screen_disable();
 
     // Calculate number of physics steps per frame
     double frame_time = 0.0;
 
-    // User can close with Q or use window manager
-    while (!game.is_closed())
+    // User can close game or return to title
+    while (!game.is_closed() && !game.is_show_title())
     {
         for (size_t i = 0; i < frames; i++)
         {
@@ -123,27 +124,36 @@ void show_game(bds &game, min::loop_sync &sync, const size_t frames)
     }
 }
 
-void run(const size_t frames, const size_t chunk, const size_t grid,
-         const size_t view, const size_t width, const size_t height,
-         const bool resize, const uint_fast8_t game_mode)
+void run(const game::options &opt)
 {
     // Load window shaders and program, enable shader program
-    bds game(chunk, grid, view, width, height, game_mode);
+    bds game(opt);
 
     // Setup controller to run at 60 frames per second
-    min::loop_sync sync(frames, 0.25, 0.25, 0.25);
+    min::loop_sync sync(opt.frames(), 0.25, 0.25, 0.25);
 
     // Maximize the window
-    if (resize)
+    if (opt.resize())
     {
         game.maximize();
     }
 
-    // Show the title screen
-    show_title(game, sync, 15);
+    // Loop until we exit game
+    while (!game.is_closed())
+    {
+        // Show the title screen
+        show_title(game, sync, 15);
 
-    // Run the game after the title screen
-    show_game(game, sync, frames);
+        // Run the game after the title screen
+        show_game(game, sync, opt.frames());
+
+        // If we are not closing the game
+        if (!game.is_closed())
+        {
+            // Switch to title
+            game.title_screen_enable();
+        }
+    }
 }
 
 void parse_uint(char *str, size_t &out)
@@ -167,14 +177,8 @@ int main(int argc, char *argv[])
     try
     {
         // Default parameters
-        size_t frames = 60;
-        size_t chunk = 8;
-        size_t grid = 64;
-        size_t view = 5;
-        size_t width = 1024;
-        size_t height = 768;
-        size_t hardcore = 2;
-        bool resize = true;
+        game::options opt;
+        size_t parse;
 
         // Try to parse commandline args
         for (int i = 2; i < argc; i += 2)
@@ -186,39 +190,46 @@ int main(int argc, char *argv[])
             if (input.compare("-fps") == 0)
             {
                 // Parse uint
-                parse_uint(argv[i], frames);
+                parse_uint(argv[i], parse);
+                opt.set_frames(parse);
             }
             else if (input.compare("-chunk") == 0)
             {
                 // Parse uint
-                parse_uint(argv[i], chunk);
+                parse_uint(argv[i], parse);
+                opt.set_chunk(parse);
             }
             else if (input.compare("-grid") == 0)
             {
                 // Parse uint
-                parse_uint(argv[i], grid);
+                parse_uint(argv[i], parse);
+                opt.set_grid(parse);
             }
             else if (input.compare("-view") == 0)
             {
                 // Parse uint
-                parse_uint(argv[i], view);
+                parse_uint(argv[i], parse);
+                opt.set_view(parse);
             }
             else if (input.compare("-width") == 0)
             {
                 // Parse uint
-                parse_uint(argv[i], width);
-                resize = false;
+                parse_uint(argv[i], parse);
+                opt.set_width(static_cast<uint_fast16_t>(parse));
+                opt.set_resize(false);
             }
             else if (input.compare("-height") == 0)
             {
                 // Parse uint
-                parse_uint(argv[i], height);
-                resize = false;
+                parse_uint(argv[i], parse);
+                opt.set_height(static_cast<uint_fast16_t>(parse));
+                opt.set_resize(false);
             }
             else if (input.compare("-hardcore") == 0)
             {
                 // Parse uint
-                parse_uint(argv[i], hardcore);
+                parse_uint(argv[i], parse);
+                opt.set_mode(static_cast<uint_fast8_t>(parse));
             }
             else
             {
@@ -227,31 +238,14 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Do some sanity checks on values
-        if (grid < 4)
+        // Exit if error in options
+        if (opt.check_error())
         {
-            std::cout << "bds: '-grid' must be atleast 4" << std::endl;
-            return 0;
-        }
-        else if (chunk < 2)
-        {
-            std::cout << "bds: '-chunk' must be atleast 2" << std::endl;
-            return 0;
-        }
-        else if (view < 3)
-        {
-            std::cout << "bds: '-view' must be atleast 3" << std::endl;
-            return 0;
-        }
-        else if (hardcore > 2)
-        {
-            std::cout << "bds: '-hardcore' must be 0 or 1" << std::endl;
             return 0;
         }
 
         // Run the game
-        const uint_fast8_t game_mode = static_cast<uint_fast8_t>(hardcore);
-        run(frames, chunk, grid, view, width, height, resize, game_mode);
+        run(opt);
     }
     catch (const std::exception &ex)
     {

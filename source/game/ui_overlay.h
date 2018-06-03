@@ -100,6 +100,14 @@ class ui_overlay
           _res("Not enough blocks/ether for that operation!"),
           _time(-1.0), _mult(1) {}
 
+    inline void reset()
+    {
+        _text.reset();
+        _bg.reset();
+        _order = -1;
+        _time = -1.0;
+        _mult = 1;
+    }
     void add_stream_float(const std::string &str, const float value)
     {
         _text.add_stream_float(str, value);
@@ -202,6 +210,14 @@ class ui_overlay
     {
         _bg.set_draw_console(true);
         _text.set_draw_console(true);
+    }
+    inline ui_menu &get_menu()
+    {
+        return _bg.get_menu();
+    }
+    inline const ui_menu &get_menu() const
+    {
+        return _bg.get_menu();
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
@@ -410,7 +426,14 @@ class ui_overlay
     }
     inline void switch_mode_base()
     {
+        // Reset the cursor
+        _bg.reset_cursor();
+
+        // Switch to base mode
         _bg.switch_mode(ui_mode::BASE);
+
+        // Turn off menu
+        _text.set_draw_menu(false);
     }
     inline void switch_mode_menu()
     {
@@ -419,6 +442,9 @@ class ui_overlay
 
         // Switch to menu mode
         _bg.switch_mode(ui_mode::MENU);
+
+        // Enable drawing menu
+        _text.set_draw_menu(true);
     }
     inline void switch_mode_no_menu()
     {
@@ -427,6 +453,9 @@ class ui_overlay
 
         // Switch to base mode
         _bg.switch_mode(ui_mode::BASE);
+
+        // Turn off menu
+        _text.set_draw_menu(false);
     }
     inline ui_text &text()
     {
@@ -478,6 +507,17 @@ class ui_overlay
             _text.set_debug_chunks(chunks);
             _text.set_debug_insts(insts);
             _text.set_debug_target(target);
+        }
+
+        // If menu needs updating
+        ui_menu &menu = _bg.get_menu();
+        if (menu.is_dirty())
+        {
+            // Update menu text
+            _text.set_menu(menu);
+
+            // Flag debouncer
+            menu.clean();
         }
 
         // Update the drone timer

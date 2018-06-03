@@ -31,11 +31,11 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/uniforms.h>
 #include <min/aabbox.h>
 #include <min/dds.h>
-#include <min/grid.h>
 #include <min/program.h>
 #include <min/shader.h>
 #include <min/text_buffer.h>
 #include <min/texture_buffer.h>
+#include <min/tree.h>
 #include <min/vec2.h>
 #include <min/vertex_buffer.h>
 #include <sstream>
@@ -47,7 +47,7 @@ namespace game
 class ui_bg
 {
   private:
-    typedef min::grid<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_grid;
+    typedef min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_tree;
 
     // OpenGL stuff
     min::shader _vertex;
@@ -57,12 +57,12 @@ class ui_bg
 
     // Instance buffer stuff
     min::vertex_buffer<float, uint32_t, ui_vertex, GL_FLOAT, GL_UNSIGNED_INT> _vb;
-    size_t _mesh_id;
+    const size_t _mesh_id;
 
     // Texture stuff
     min::texture_buffer _tbuffer;
-    GLuint _title_id;
-    GLuint _ui_id;
+    const GLuint _title_id;
+    const GLuint _ui_id;
 
     // UI state
     bool _focus;
@@ -71,7 +71,7 @@ class ui_bg
     min::text_buffer *const _text;
 
     // Click detection
-    ui_grid _grid;
+    ui_tree _tree;
     std::vector<min::aabbox<float, min::vec2>> _shapes;
 
     // UI controllers
@@ -134,6 +134,10 @@ class ui_bg
     }
     inline void draw_title() const
     {
+        // Get the start of the opaque ui
+        const size_t start = _assets.title_start();
+        set_start_index(start);
+
         // Draw the first thing in the buffer, title screen
         _vb.draw_many(GL_TRIANGLES, _mesh_id, 1);
     }
@@ -149,15 +153,29 @@ class ui_bg
     }
     inline void draw_transparent_ui() const
     {
-        // Get the start of the transparent ui
-        const size_t trans_start = _assets.transparent_start();
-        set_start_index(trans_start);
+        const ui_mode mode = _state.get_mode();
+        if (mode != ui_mode::MENU)
+        {
+            // Get the start of the transparent ui
+            const size_t trans_start = _assets.transparent_start();
+            set_start_index(trans_start);
 
-        // Draw the base ui elements
-        const size_t size = _assets.transparent_size();
-        _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
+            // Draw the transparent ui
+            const size_t size = _assets.transparent_size();
+            _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
+        }
+        else
+        {
+            // Get the start of the splash menu ui
+            const size_t menu_splash_start = _assets.menu_splash_start();
+            set_start_index(menu_splash_start);
+
+            // Draw the splash menu ui
+            const size_t size = _assets.menu_splash_size();
+            _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
+        }
     }
-    inline void load_base_rect()
+    inline size_t load_base_rect()
     {
         // Cached parent mesh
         min::mesh<float, uint32_t> rect("ui");
@@ -188,13 +206,16 @@ class ui_bg
                 2, 1, 3});
 
         // Add rect mesh to the buffer
-        _mesh_id = _vb.add_mesh(rect);
+        const size_t id = _vb.add_mesh(rect);
 
         // Unbind the last VAO to prevent scrambling buffers
         _vb.unbind();
 
         // Upload the text glyphs to the GPU
         _vb.upload();
+
+        // Return the id
+        return id;
     }
     inline GLint load_program_index(const uniforms &uniforms) const
     {
@@ -210,27 +231,23 @@ class ui_bg
 
         return location;
     }
-    inline void load_texture()
+    inline GLuint load_title_texture()
     {
-        // Load the UI texture
-        {
-            // Load texture
-            const min::mem_file &ui = memory_map::memory.get_file("data/texture/ui.dds");
-            const min::dds tex(ui);
+        // Load texture
+        const min::mem_file &title = memory_map::memory.get_file("data/texture/title.dds");
+        const min::dds tex(title);
 
-            // Load texture into texture buffer
-            _ui_id = _tbuffer.add_dds_texture(tex);
-        }
+        // Load texture into texture buffer
+        return _tbuffer.add_dds_texture(tex);
+    }
+    inline GLuint load_ui_texture()
+    {
+        // Load texture
+        const min::mem_file &ui = memory_map::memory.get_file("data/texture/ui.dds");
+        const min::dds tex(ui);
 
-        // Load the title screen texture
-        {
-            // Load texture
-            const min::mem_file &title = memory_map::memory.get_file("data/texture/title.dds");
-            const min::dds tex(title);
-
-            // Load texture into texture buffer
-            _title_id = _tbuffer.add_dds_texture(tex);
-        }
+        // Load texture into texture buffer
+        return _tbuffer.add_dds_texture(tex);
     }
     inline void position_ui(const min::vec2<float> &p)
     {
@@ -326,25 +343,36 @@ class ui_bg
     ui_bg(const uniforms &uniforms, inventory &inv, stats &stat, min::text_buffer &text, const uint_fast16_t width, const uint_fast16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
-          _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)), _mesh_id(0),
+          _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)),
+          _mesh_id(load_base_rect()), _title_id(load_title_texture()), _ui_id(load_ui_texture()),
           _focus(false), _state(inv.begin_key()), _assets(width, height), _text(&text),
-          _grid(screen_box(width, height)),
-          _control_inv(_assets, inv, stat, text, _grid, _shapes), _control_menu(_assets, inv, stat, text, _grid, _shapes)
+          _tree(screen_box(width, height)),
+          _control_inv(_assets, inv, stat, text, _tree, _shapes), _control_menu(_assets, inv, stat, _tree, _shapes)
     {
         // Format string stream
         _stream.precision(3);
-
-        // Create the instance rectangle
-        load_base_rect();
-
-        // Load texture
-        load_texture();
 
         // Reposition all ui on the screen
         position_ui(min::vec2<float>());
 
         // Reserve shape memory
         _shapes.reserve(inv.size());
+    }
+    inline void reset()
+    {
+        // Reset UI state
+        _focus = false;
+        _state = ui_state(_state.get_select());
+
+        // Reset UI assets
+        _assets.reset();
+
+        // Reset UI controllers
+        _control_inv.reset();
+        _control_menu.reset();
+
+        // Clear the stream
+        clear_stream();
     }
     inline std::pair<bool, ui_id> action_hover(const uint_fast8_t mult)
     {
@@ -502,6 +530,14 @@ class ui_bg
         // Didn't drop anything
         return false;
     }
+    inline ui_menu &get_menu()
+    {
+        return _control_menu.get_menu();
+    }
+    inline const ui_menu &get_menu() const
+    {
+        return _control_menu.get_menu();
+    }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
         return _assets.get_scale();
@@ -649,7 +685,7 @@ class ui_bg
     inline void set_splash_pause()
     {
         // Draw the menu
-        _assets.set_draw_pause();
+        _assets.set_draw_splash();
 
         // Show the pause menu
         _assets.load_splash_pause();
@@ -675,17 +711,17 @@ class ui_bg
         // Reposition all ui on the screen
         position_ui(p);
 
-        // Resize the screen grid box
-        _grid.resize(screen_box(width, height));
+        // Resize the screen tree box
+        _tree.resize(screen_box(width, height));
 
-        // Load grid inventory boxes
+        // Load tree inventory boxes
         if (_state.is_inv_mode())
         {
-            _control_inv.load_grid(_stream, width, height);
+            _control_inv.load_tree(_stream, width, height);
         }
         else if (_state.is_menu_mode())
         {
-            _control_menu.load_grid(_stream, width, height);
+            _control_menu.load_tree(_stream, width, height);
         }
     }
     inline void switch_mode(const ui_mode mode)
@@ -701,12 +737,12 @@ class ui_bg
         {
             _assets.load_health_overlay();
             _control_inv.position_ui(_state);
-            _control_inv.load_grid(_stream, width, height);
+            _control_inv.load_tree(_stream, width, height);
         }
         else if (_state.is_menu_mode())
         {
             _control_menu.position_ui(_state);
-            _control_menu.load_grid(_stream, width, height);
+            _control_menu.load_tree(_stream, width, height);
         }
         else if (_state.is_title_mode())
         {

@@ -94,10 +94,8 @@ class controls
         // Clear any keys mapped to keyboard
         keyboard.clear();
 
-        // Register click callback function for placing path
+        // Register data and function callbacks
         _window->register_data((void *)this);
-
-        // Register left click events
         _window->register_lclick_down(controls::left_click_down);
         _window->register_lclick_up(controls::left_click_up);
         _window->register_rclick_down(controls::right_click_down);
@@ -105,7 +103,6 @@ class controls
         _window->register_update(controls::on_resize);
 
         // Add FPS(WADS) keys to watch
-        keyboard.add(min::window::key_code::F1);
         keyboard.add(min::window::key_code::F2);
         keyboard.add(min::window::key_code::F3);
         keyboard.add(min::window::key_code::F4);
@@ -131,9 +128,6 @@ class controls
         keyboard.add(min::window::key_code::TAB);
         keyboard.add(min::window::key_code::LSHIFT);
         keyboard.add(min::window::key_code::KEYQ);
-
-        // Register callback function F1
-        keyboard.register_keydown(min::window::key_code::F1, controls::close_window, (void *)_window);
 
         // Register callback function F2
         keyboard.register_keydown(min::window::key_code::F2, controls::toggle_text, (void *)_ui);
@@ -219,15 +213,6 @@ class controls
         // Register callback function KEYQ
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::drop_item, (void *)this);
     }
-    static void close_window(void *ptr, double step)
-    {
-        // Cast to window pointer type and call shut down on window
-        min::window *const win = reinterpret_cast<min::window *>(ptr);
-        win->set_shutdown();
-
-        // Alert that we received the call back
-        std::cout << "controls: Shutdown called by user" << std::endl;
-    }
     static void toggle_text(void *ptr, double step)
     {
         // Cast to ui pointer type and toggle draw
@@ -265,13 +250,11 @@ class controls
         {
             // Close the extended UI
             ui->toggle_extend();
-
-            // Toggle user input
-            state->toggle_user_input();
         }
 
-        // Toggle pause and adjust cursor
+        // Toggle pause, adjust cursor, and set user input
         const bool paused = state->toggle_pause();
+        state->set_user_input(paused);
         win->display_cursor(paused);
 
         // Set the game mode caption from toggle state
@@ -1496,7 +1479,6 @@ class controls
     {
         // Get the ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
-        min::window *const win = control->get_window();
         ui_overlay *const ui = control->get_ui();
 
         // Ignore minimizing window
@@ -1518,15 +1500,15 @@ class controls
 
         // Update the aspect ratio
         f.set_aspect_ratio(width, height);
-        f.make_dirty();
         camera->make_dirty();
+        camera->force_update();
 
         // Get the screen dimensions
-        const uint_fast16_t w = win->get_width();
-        const uint_fast16_t h = win->get_height();
+        const uint_fast16_t w2 = width / 2;
+        const uint_fast16_t h2 = height / 2;
 
         // Update the screen size for ui and text
-        ui->set_screen(min::vec2<float>(w, h), width, height);
+        ui->set_screen(min::vec2<float>(w2, h2), width, height);
     }
     void die()
     {

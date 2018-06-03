@@ -141,9 +141,9 @@ class drones
     static constexpr uint_fast16_t _splash_level = 10;
     static constexpr uint_fast16_t _tunnel_level = 15;
     typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
-    physics *_sim;
-    static_instance *_inst;
-    sound *_sound;
+    physics *const _sim;
+    static_instance *const _inst;
+    sound *const _sound;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     min::vec3<float> _dest;
     std::vector<path> _paths;
@@ -238,25 +238,34 @@ class drones
     {
         reserve_memory();
     }
-    inline void clear()
+    inline void reset()
     {
-        // Kill all the drones
+        // Remove all the drones backwards to preserve drone-instance id mapping
         const size_t size = _drones.size();
-        for (size_t i = 0; i < size; i++)
+        for (size_t i = size; i-- != 0;)
         {
+            // Get the drone
+            const drone &d = _drones[i];
+
             // Get path id to set dead flag
-            const size_t path_id = _drones[i].path_id();
+            const size_t path_id = d.path_id();
             _paths[path_id].clear();
             _paths[path_id].set_dead(true);
 
             // Clear drone at index
-            _inst->get_drone().clear(_drones[i].inst_id());
-            _sim->clear_body(_drones[i].body_id());
-            _sound->stop_drone(_drones[i].sound_id());
+            _inst->get_drone().clear(d.inst_id());
+            _sim->clear_body(d.body_id());
+            _sound->stop_drone(d.sound_id());
         }
 
         // Clear all the drones
         _drones.clear();
+
+        // Reset the oldest path
+        _path_old = 0;
+
+        // Reset disable flag
+        _disable = false;
     }
     inline bool damage(const size_t index, const min::vec3<float> &dir, const float dam)
     {

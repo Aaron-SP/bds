@@ -63,8 +63,8 @@ class explosives
   private:
     static constexpr float _rotation_rate = 120.0;
     typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
-    physics *_sim;
-    static_instance *_inst;
+    physics *const _sim;
+    static_instance *const _inst;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     std::vector<explosive> _ex;
     const min::vec3<unsigned> _scale;
@@ -123,6 +123,26 @@ class explosives
     {
         // Reserve memory for collision cells
         reserve_memory();
+    }
+    inline void reset()
+    {
+        // Remove all the explosives backwards to preserve ex-instance id mapping
+        const size_t size = _ex.size();
+        for (size_t i = size; i-- != 0;)
+        {
+            // Get the explosive
+            const explosive &e = _ex[i];
+
+            // Clear instance and body
+            _inst->get_explosive().clear(e.inst_id());
+            _sim->clear_body(e.body_id());
+        }
+
+        // Clear all the drops
+        _ex.clear();
+
+        // Reset the angle
+        _angle = 0.0;
     }
     inline void explode(const size_t index)
     {

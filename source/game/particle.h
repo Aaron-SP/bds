@@ -135,11 +135,11 @@ class particle
     min::shader _vertex;
     min::shader _fragment;
     min::program _prog;
-    GLint _index_location;
+    const GLint _index_location;
 
     // Texture stuff
     min::texture_buffer _tbuffer;
-    GLuint _dds_id;
+    const GLuint _dds_id;
 
     // Particle stuff
     min::emitter_buffer<float, GL_FLOAT> _emit;
@@ -267,20 +267,20 @@ class particle
         // Reset the particle animation
         emit.reset();
     }
-    inline void load_textures()
+    inline GLuint load_textures()
     {
         // Load textures
         const min::mem_file &smoke = memory_map::memory.get_file("data/texture/smoke.dds");
         const min::dds b = min::dds(smoke);
 
         // Load texture buffer
-        _dds_id = _tbuffer.add_dds_texture(b);
+        return _tbuffer.add_dds_texture(b);
     }
-    inline void load_program_index(const game::uniforms &uniforms)
+    inline GLint load_program_index(const game::uniforms &uniforms) const
     {
         // Get the start_index uniform location
-        _index_location = glGetUniformLocation(_prog.id(), "camera_position");
-        if (_index_location == -1)
+        const GLint index_location = glGetUniformLocation(_prog.id(), "camera_position");
+        if (index_location == -1)
         {
             throw std::runtime_error("particle: could not find uniform 'camera_position'");
         }
@@ -288,6 +288,9 @@ class particle
         // Load the uniform buffer with program we will use
         uniforms.set_program_lights(_prog);
         uniforms.set_program_matrix(_prog);
+
+        // Return the index
+        return index_location;
     }
     inline void set_reference(const min::vec4<float> &ref) const
     {
@@ -306,18 +309,14 @@ class particle
         : _vertex(memory_map::memory.get_file("data/shader/emitter.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/emitter.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
+          _index_location(load_program_index(uniforms)),
+          _dds_id(load_textures()),
           _emit(min::vec3<float>(), 200, 5, 0.0625, 0.125, 0.5),
           _miss(_miss_limit), _miss_old(0),
           _static(_static_limit), _static_old(0),
           _attract_index(-1),
           _charge_time(-1)
     {
-        // Load textures
-        load_textures();
-
-        // Load program index
-        load_program_index(uniforms);
-
         // Load all missile particle systems
         for (size_t i = 0; i < _miss_limit; i++)
         {
@@ -327,6 +326,26 @@ class particle
 
         // Set the particle gravity for charge
         _emit.set_gravity(min::vec3<float>(0.0, 0.0, 0.0));
+    }
+    inline void reset()
+    {
+        // Reset missiles
+        for (size_t i = 0; i < _miss_limit; i++)
+        {
+            _miss[i].abort();
+        }
+        _miss_old = 0;
+
+        // Reset static
+        for (size_t i = 0; i < _static_limit; i++)
+        {
+            _static[i].abort();
+        }
+        _static_old = 0;
+
+        // Reset charge
+        _attract_index = -1;
+        _charge_time = -1.0;
     }
     inline void abort_charge()
     {

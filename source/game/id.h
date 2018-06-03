@@ -279,11 +279,11 @@ class ui_id
     }
     inline ui_id bg_menu_index() const
     {
-        return ui_id(_id + 41);
+        return ui_id(_id + 10);
     }
     inline ui_id fg_menu_index() const
     {
-        return ui_id(_id + 46);
+        return ui_id(_id + 15);
     }
     inline ui_id bg_cube_index() const
     {

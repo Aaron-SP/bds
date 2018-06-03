@@ -262,7 +262,7 @@ class static_instance
     min::shader _vertex;
     min::shader _fragment;
     min::program _prog;
-    GLint _index_location;
+    const GLint _index_location;
 
     // Buffers for model data and textures
     min::vertex_buffer<float, uint16_t, min::static_vertex, GL_FLOAT, GL_UNSIGNED_SHORT> _buffer;
@@ -454,11 +454,11 @@ class static_instance
         // Load vertex buffer with data
         _buffer.upload();
     }
-    inline void load_program_index(const game::uniforms &uniforms)
+    inline GLint load_program_index(const game::uniforms &uniforms)
     {
         // Get the start_index uniform location
-        _index_location = glGetUniformLocation(_prog.id(), "start_index");
-        if (_index_location == -1)
+        const GLint index_location = glGetUniformLocation(_prog.id(), "start_index");
+        if (index_location == -1)
         {
             throw std::runtime_error("static_instance: could not find uniform 'start_index'");
         }
@@ -466,6 +466,9 @@ class static_instance
         // Load the uniform buffer with the program we will use
         uniforms.set_program_lights(_prog);
         uniforms.set_program_matrix(_prog);
+
+        // Return the index
+        return index_location;
     }
     inline void reserve_memory()
     {
@@ -482,7 +485,7 @@ class static_instance
     static_instance(const game::uniforms &uniforms)
         : _vertex(memory_map::memory.get_file("data/shader/instance.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/instance.fragment"), GL_FRAGMENT_SHADER),
-          _prog(_vertex, _fragment)
+          _prog(_vertex, _fragment), _index_location(load_program_index(uniforms))
     {
         // Since we are using a BMESH, assert floating point compatibility
         static_assert(std::numeric_limits<float>::is_iec559, "IEEE 754 float required");
@@ -493,9 +496,6 @@ class static_instance
 
         // Load instance model
         load_models();
-
-        // Load program index
-        load_program_index(uniforms);
     }
     void draw(const game::uniforms &uniforms) const
     {

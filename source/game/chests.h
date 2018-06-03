@@ -60,10 +60,9 @@ class chests
 {
   private:
     typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
-    physics *_sim;
-    static_instance *_inst;
+    physics *const _sim;
+    static_instance *const _inst;
     std::vector<chest> _chests;
-    size_t _oldest;
     const std::string _str;
 
     inline min::body<float, min::vec3> &body(const size_t index)
@@ -96,10 +95,26 @@ class chests
 
   public:
     chests(physics &sim, static_instance &inst)
-        : _sim(&sim), _inst(&inst),
-          _oldest(0), _str("Chest")
+        : _sim(&sim), _inst(&inst), _str("Chest")
     {
         reserve_memory();
+    }
+    inline void reset()
+    {
+        // Remove all the chests backwards to preserve chest-instance id mapping
+        const size_t size = _chests.size();
+        for (size_t i = size; i-- != 0;)
+        {
+            // Get the chest
+            const chest &c = _chests[i];
+
+            // Clear instance and body
+            _inst->get_chest().clear(c.inst_id());
+            _sim->clear_body(c.body_id());
+        }
+
+        // Clear all the chests
+        _chests.clear();
     }
     inline bool add(const min::vec3<float> &p)
     {
@@ -126,20 +141,6 @@ class chests
 
         // Return chest added
         return true;
-    }
-    inline void clear()
-    {
-        // Remove all the chests
-        const size_t size = _chests.size();
-        for (size_t i = 0; i < size; i++)
-        {
-            // Clear chest at index
-            _inst->get_chest().clear(_chests[i].inst_id());
-            _sim->clear_body(_chests[i].body_id());
-        }
-
-        // Clear all the chests
-        _chests.clear();
     }
     inline const std::string &get_string() const
     {

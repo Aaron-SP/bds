@@ -34,12 +34,14 @@ static constexpr float _s_fg = 32.0;
 static constexpr size_t _num_buttons = 8;
 static constexpr size_t _num_half_buttons = _num_buttons / 2;
 static constexpr float _s_bg = _s_fg + 8.0;
-static constexpr float _s_inv = _s_fg * 0.5;
+static constexpr float _s_inv_2 = _s_fg * 0.5;
 static constexpr float _s_bg_menu_y = _s_bg;
 static constexpr float _s_bg_menu_x = _s_bg_menu_y * 10.0;
 static constexpr float _s_fg_menu_y = _s_fg;
 static constexpr float _s_fg_menu_x = _s_bg_menu_x - (_s_bg - _s_fg);
-static constexpr float _s_stat = _s_sfg * 0.5;
+static constexpr float _s_bg_menu_x_2 = _s_bg_menu_x * 0.5;
+static constexpr float _s_bg_menu_y_2 = _s_bg_menu_y * 0.5;
+static constexpr float _s_stat_2 = _s_sfg * 0.5;
 
 // Inventory
 static constexpr float _store_dy = _s_bg + 8.0;
@@ -101,6 +103,13 @@ static constexpr float _s_oxy_y = 8.0;
 static constexpr float _oxy_dx = (_s_oxy_y - _s_oxy_x) * 0.5;
 static constexpr float _oxy_dy = _console_dy + 34.0;
 
+// Menu Text
+static constexpr float _menu_dx = 0.0;
+static constexpr float _menu_dy = 400.0;
+static constexpr float _menu_text_dy = _menu_dy + 2.0;
+static constexpr float _x_menu_wrap = _s_bg_menu_x;
+static constexpr float _y_menu_wrap = _s_bg_menu_y;
+
 // Stream Text
 static constexpr float _stream_dy = _console_dy;
 static constexpr float _x_stream_wrap = _x_console_wrap;
@@ -120,8 +129,6 @@ static constexpr float _button_space = 20.0;
 static constexpr float _cube_dx = -42.0;
 static constexpr float _cube_dy = 461.0;
 static constexpr float _cube_space = 42.0;
-static constexpr float _menu_dx = 0.0;
-static constexpr float _menu_dy = 400.0;
 static constexpr float _menu_space = _s_bg_menu_y + 8.0;
 static constexpr float _splash_dy = 512.0;
 static constexpr float _stat_dx = 0.0;

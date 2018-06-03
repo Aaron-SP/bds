@@ -39,16 +39,28 @@ class title
     title(min::camera<float> &camera, game::ui_overlay &ui, min::window &window)
         : _camera(&camera), _ui(&ui), _window(&window), _show(true)
     {
+        // Register callbacks
+        register_control_callbacks();
+    }
+    void register_control_callbacks()
+    {
         // Enable the console and set default message
         _ui->enable_console();
         _ui->set_console_string("Click To Start");
 
-        // Register click callback function for placing path
-        _window->register_data((void *)this);
-        _window->register_update(title::on_resize);
+        // Get access to the keyboard
+        auto &keyboard = _window->get_keyboard();
 
-        // Register left click events
+        // Clear any keys mapped to keyboard
+        keyboard.clear();
+
+        // Register data and function callbacks
+        _window->register_data((void *)this);
         _window->register_lclick_down(title::left_click_down);
+        _window->register_lclick_up(nullptr);
+        _window->register_rclick_down(nullptr);
+        _window->register_rclick_up(nullptr);
+        _window->register_update(title::on_resize);
     }
     min::camera<float> *get_camera()
     {
@@ -89,7 +101,6 @@ class title
         // Cast to title pointer
         title *const t = reinterpret_cast<title *>(ptr);
         min::camera<float> *const camera = t->get_camera();
-        min::window *const win = t->get_window();
         game::ui_overlay *const ui = t->get_ui();
 
         // Get camera frustum
@@ -101,11 +112,11 @@ class title
         camera->make_dirty();
 
         // Get the screen dimensions
-        const uint_fast16_t w = win->get_width();
-        const uint_fast16_t h = win->get_height();
+        const uint_fast16_t w2 = width / 2;
+        const uint_fast16_t h2 = height / 2;
 
         // Update the screen size for ui and text
-        ui->set_screen(min::vec2<float>(w, h), width, height);
+        ui->set_screen(min::vec2<float>(w2, h2), width, height);
     }
 };
 }

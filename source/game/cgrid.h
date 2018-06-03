@@ -810,20 +810,6 @@ class cgrid
             chunk_update(i);
         }
     }
-    inline void world_save()
-    {
-        // Create output stream for saving world
-        std::vector<uint8_t> stream;
-
-        // Reserve space for grid
-        stream.reserve(_grid.size() * sizeof(block_id));
-
-        // Write data into stream
-        min::write_le_vector<block_id>(stream, _grid);
-
-        // Write data to file
-        save_file("bin/world.bmesh", stream);
-    }
 
   public:
     constexpr static float _player_dx = 0.45;
@@ -870,10 +856,20 @@ class cgrid
         // Reserve memory
         reserve_memory();
     }
-    ~cgrid()
+    inline void reset()
     {
-        // Save the world state in file
-        world_save();
+        // Clear out all vectors
+        _visit.clear();
+        _neighbors.clear();
+        _path.clear();
+        _stack.clear();
+        _chunk_update.clear();
+        _chunk_update_keys.clear();
+        _sort_chunk.clear();
+        _view_chunks.clear();
+
+        // Reload the world
+        world_load();
     }
     static inline min::aabbox<float, min::vec3> grid_box(const min::vec3<float> &p)
     {
@@ -1392,6 +1388,20 @@ class cgrid
     inline bool is_update_chunk(const size_t chunk_key) const
     {
         return _chunk_update[chunk_key];
+    }
+    inline void save()
+    {
+        // Create output stream for saving world
+        std::vector<uint8_t> stream;
+
+        // Reserve space for grid
+        stream.reserve(_grid.size() * sizeof(block_id));
+
+        // Write data into stream
+        min::write_le_vector<block_id>(stream, _grid);
+
+        // Write data to file
+        save_file("bin/world.bmesh", stream);
     }
     inline void update_chunk(const size_t chunk_key)
     {

@@ -56,6 +56,8 @@ class ui_bg_assets
     static constexpr float _y_red_trim_uv = 6.0 / _image_size;
     static constexpr float _x_blue_uv = 184.0 / _image_size;
     static constexpr float _y_blue_uv = 4.0 / _image_size;
+    static constexpr float _x_blue_trim_uv = 186.0 / _image_size;
+    static constexpr float _y_blue_trim_uv = 6.0 / _image_size;
     static constexpr float _x_white_uv = 220.0 / _image_size;
     static constexpr float _y_white_uv = 4.0 / _image_size;
     static constexpr float _x_light_blue_uv = 256.0 / _image_size;
@@ -256,6 +258,10 @@ class ui_bg_assets
     {
         return 24;
     }
+    inline static constexpr size_t max_menu_splash_size()
+    {
+        return 1;
+    }
     inline static constexpr size_t max_menu_size()
     {
         return 5;
@@ -291,6 +297,10 @@ class ui_bg_assets
         // 9 + 9
         return max_cube_size() * 2;
     }
+    inline static constexpr size_t title_start()
+    {
+        return 0;
+    }
     inline static constexpr size_t transparent_start()
     {
         return 0;
@@ -300,10 +310,15 @@ class ui_bg_assets
         // 5
         return max_transparent_size();
     }
+    inline static constexpr size_t menu_splash_start()
+    {
+        // 9
+        return max_transparent_size() + max_ui_size();
+    }
     inline static constexpr size_t menu_start()
     {
-        // 5
-        return opaque_start();
+        // 10
+        return max_transparent_size() + max_ui_size() + max_menu_splash_size();
     }
     inline static constexpr size_t focus_start()
     {
@@ -327,9 +342,13 @@ class ui_bg_assets
     {
         return focus_start() - opaque_start();
     }
+    inline static constexpr size_t menu_splash_size()
+    {
+        return max_menu_splash_size();
+    }
     inline static constexpr size_t menu_size()
     {
-        return opaque_base_size() + max_menu_size() * 2;
+        return max_menu_size() * 2;
     }
     inline static constexpr size_t focus_size()
     {
@@ -357,13 +376,15 @@ class ui_bg_assets
 
     {
         // Base ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 6 + 2 + 1
-        // Menu ui elements, 5 + 4 + 16 + 16 + 5 + 5 + [  empty  ] + 6 + 2 + 1
+        // Menu ui elements, 5 + 4 + 1 + 5 + 5 + [        empty          ] + 6 + 2 + 1
         static_assert(transparent_start() == 0);
         static_assert(transparent_size() == 5);
         static_assert(opaque_start() == 5);
         static_assert(opaque_base_size() == 36);
-        static_assert(menu_start() == 5);
-        static_assert(menu_size() == 46);
+        static_assert(menu_splash_start() == 9);
+        static_assert(menu_splash_size() == 1);
+        static_assert(menu_start() == 10);
+        static_assert(menu_size() == 10);
         static_assert(opaque_ext_size() == 109);
         static_assert(focus_start() == 5 + 109);
         static_assert(focus_size() == 1);
@@ -372,7 +393,17 @@ class ui_bg_assets
         static_assert(tooltip_size() == 1);
         static_assert(max_size() == 117);
     }
-
+    inline void reset()
+    {
+        _energy = 0.0;
+        _exp = 0.0;
+        _health = 1.0;
+        _oxy = 1.0;
+        _focus_bar = 1.0;
+        _cursor_angle = 0.0;
+        _draw_console = false;
+        _draw_splash = 0;
+    }
     inline bool get_draw_console() const
     {
         return _draw_console;
@@ -420,7 +451,15 @@ class ui_bg_assets
     inline static min::aabbox<float, min::vec2> inv_box(const min::vec2<float> &p)
     {
         // Create a box from the screen
-        const min::vec2<float> half(_s_inv, _s_inv);
+        const min::vec2<float> half(_s_inv_2, _s_inv_2);
+
+        // Return the inv_box
+        return min::aabbox<float, min::vec2>(p - half, p + half);
+    }
+    inline static min::aabbox<float, min::vec2> menu_box(const min::vec2<float> &p)
+    {
+        // Create a box from the screen
+        const min::vec2<float> half(_s_bg_menu_x_2, _s_bg_menu_y_2);
 
         // Return the inv_box
         return min::aabbox<float, min::vec2>(p - half, p + half);
@@ -428,7 +467,7 @@ class ui_bg_assets
     inline static min::aabbox<float, min::vec2> stat_box(const min::vec2<float> &p)
     {
         // Create a box from the screen
-        const min::vec2<float> half(_s_stat, _s_stat);
+        const min::vec2<float> half(_s_stat_2, _s_stat_2);
 
         // Return the inv_box
         return min::aabbox<float, min::vec2>(p - half, p + half);
@@ -467,15 +506,6 @@ class ui_bg_assets
         const min::vec2<float> p(_center_w, _splash_dy);
         const min::vec2<float> scale(_s_splash_x, _s_splash_y);
         const min::vec4<float> pause_coord(_x_dead_uv, _y_dead_uv, _s_splash_uv_x, _s_splash_uv_y);
-
-        // Load rect at position
-        set_rect_reset(2, p, scale, pause_coord);
-    }
-    inline void load_splash_pause()
-    {
-        const min::vec2<float> p(_center_w, _splash_dy);
-        const min::vec2<float> scale(_s_splash_x, _s_splash_y);
-        const min::vec4<float> pause_coord(_x_pause_uv, _y_pause_uv, _s_splash_uv_x, _s_splash_uv_y);
 
         // Load rect at position
         set_rect_reset(2, p, scale, pause_coord);
@@ -690,6 +720,15 @@ class ui_bg_assets
         // Load rect at position
         set_rect(id.id(), p, scale, white_coord);
     }
+    inline void load_splash_pause()
+    {
+        const min::vec2<float> p(_center_w, _splash_dy);
+        const min::vec2<float> scale(_s_splash_x, _s_splash_y);
+        const min::vec4<float> pause_coord(_x_pause_uv, _y_pause_uv, _s_splash_uv_x, _s_splash_uv_y);
+
+        // Load rect at position
+        set_rect_reset(menu_splash_start(), p, scale, pause_coord);
+    }
     inline void load_bg_menu_black(const ui_id id, const min::vec2<float> &p)
     {
         const min::vec2<float> scale(_s_bg_menu_x, _s_bg_menu_y);
@@ -709,6 +748,26 @@ class ui_bg_assets
 
         // Load rect at position
         set_rect(id.id(), p, scale, grey_coord);
+    }
+    inline void load_bg_menu_light_blue(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_bg_menu_x, _s_bg_menu_y);
+
+        // Offset texture to prevent blurring edges
+        const min::vec4<float> blue_coord(_x_light_blue_trim_uv, _y_light_blue_trim_uv, _s_uv_trim, _s_uv_trim);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, blue_coord);
+    }
+    inline void load_bg_menu_yellow(const ui_id id, const min::vec2<float> &p)
+    {
+        const min::vec2<float> scale(_s_bg_menu_x, _s_bg_menu_y);
+
+        // Offset texture to prevent blurring edges
+        const min::vec4<float> yellow_coord(_x_yellow_trim_uv, _y_yellow_trim_uv, _s_uv_trim, _s_uv_trim);
+
+        // Load rect at position
+        set_rect(id.id(), p, scale, yellow_coord);
     }
     inline void load_fg_menu_black(const ui_id id, const min::vec2<float> &p)
     {
@@ -898,7 +957,7 @@ class ui_bg_assets
     {
         _draw_splash = 0;
     }
-    inline void set_draw_pause()
+    inline void set_draw_splash()
     {
         _draw_splash = 4;
     }
@@ -993,11 +1052,20 @@ class ui_bg_assets
         // Return toolbar position
         return min::vec2<float>(x, y);
     }
-    inline min::vec2<float> menu_position(const unsigned row, const unsigned col) const
+    inline min::vec2<float> menu_position(const size_t row)
     {
         // Calculate offset from center for this toolbar element
-        const float x = (_center_w + _menu_dx) + (col * _menu_space);
+        const float x = (_center_w + _menu_dx);
         const float y = _menu_dy - (row * _menu_space);
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
+    }
+    static inline min::vec2<float> menu_text_position(const uint_fast16_t center_w, const size_t row)
+    {
+        // Calculate offset from center for this toolbar element
+        const float x = (center_w + _menu_dx);
+        const float y = _menu_text_dy - (row * _menu_space);
 
         // Return toolbar position
         return min::vec2<float>(x, y);

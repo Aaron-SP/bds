@@ -25,8 +25,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/ui_info.h>
 #include <game/ui_state.h>
 #include <min/aabbox.h>
-#include <min/grid.h>
 #include <min/text_buffer.h>
+#include <min/tree.h>
 #include <min/vec2.h>
 #include <utility>
 
@@ -39,7 +39,7 @@ class ui_control_inv
     static constexpr size_t _border = 6;
     static constexpr size_t _text_spacing = _inv_font_size + _border;
     static constexpr size_t _button_size = stats::stat_str_size() - 1;
-    typedef min::grid<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_grid;
+    typedef min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_tree;
     inline static constexpr size_t begin_button()
     {
         return 49;
@@ -52,7 +52,7 @@ class ui_control_inv
     inventory *const _inv;
     stats *const _stat;
     min::text_buffer *const _text;
-    min::grid<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> *const _grid;
+    ui_tree *const _tree;
     std::vector<min::aabbox<float, min::vec2>> *const _shapes;
     bool _minimized;
     const std::string _invalid_str;
@@ -513,11 +513,15 @@ class ui_control_inv
 
   public:
     ui_control_inv(ui_bg_assets &assets, inventory &inv, stats &stat, min::text_buffer &tb,
-                   ui_grid &grid, std::vector<min::aabbox<float, min::vec2>> &shapes)
+                   ui_tree &tree, std::vector<min::aabbox<float, min::vec2>> &shapes)
         : _assets(&assets), _inv(&inv), _stat(&stat),
-          _text(&tb), _grid(&grid), _shapes(&shapes),
+          _text(&tb), _tree(&tree), _shapes(&shapes),
           _minimized(false), _invalid_str("Invalid") {}
 
+    inline void reset()
+    {
+        _minimized = false;
+    }
     inline std::pair<bool, ui_id> action_hover(const ui_state &state, const uint_fast8_t mult)
     {
         const ui_id hover = state.get_hover();
@@ -549,14 +553,14 @@ class ui_control_inv
         {
             return _text->size();
         }
-        else if (state.get_mode() == ui_mode::TITLE)
+        else if (state.get_mode() == ui_mode::BASE)
         {
-            // Do not draw anything
-            return 0;
+            // If in base state
+            return _inv->end_key();
         }
 
-        // If in base state
-        return _inv->end_key();
+        // Do not draw anything
+        return 0;
     }
     inline bool click_down(ui_state &state)
     {
@@ -607,7 +611,7 @@ class ui_control_inv
         // Return ui info
         return ui_info(name, info, it);
     }
-    inline void load_grid(std::ostringstream &stream, const uint_fast16_t width, const uint_fast16_t height)
+    inline void load_tree(std::ostringstream &stream, const uint_fast16_t width, const uint_fast16_t height)
     {
         // Clear the shapes buffer
         _shapes->clear();
@@ -756,11 +760,11 @@ class ui_control_inv
             _text->add_text(stream.str(), p.x() + dx, p.y());
         }
 
-        // Calculate the grid scale
-        const uint_fast16_t scale = width / 24;
+        // Calculate the tree depth, 2^5 = 32 was 24
+        const uint_fast16_t depth = 5;
 
-        // Insert the shapes into the grid
-        _grid->insert(*_shapes, scale);
+        // Insert the shapes into the tree
+        _tree->insert(*_shapes, depth);
 
         // Upload text for display
         upload_text();
@@ -771,20 +775,20 @@ class ui_control_inv
         if (state.get_mode() == ui_mode::EXTEND && !_minimized)
         {
             // Bad point
-            if (!_grid->inside(p))
+            if (!_tree->inside(p))
             {
                 return std::make_pair(false, 0);
             }
 
             // Search for overlapping cells
-            const std::vector<uint_fast8_t> &map = _grid->get_index_map();
-            const std::vector<uint_fast8_t> &hits = _grid->point_inside(p);
+            const std::vector<uint_fast8_t> &map = _tree->get_index_map();
+            const std::vector<uint_fast8_t> &hits = _tree->point_inside(p);
 
+            bool hit = false;
             ui_id id(0);
 
             // Set hover if overlapping
-            bool hit = false;
-            for (auto &h : hits)
+            for (const auto &h : hits)
             {
                 if ((*_shapes)[map[h]].point_inside(p))
                 {

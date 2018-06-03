@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __CALLBACK__
 
 #include <functional>
+#include <game/id.h>
 #include <min/physics_nt.h>
 #include <min/vec3.h>
 
@@ -35,6 +36,7 @@ typedef std::function<std::pair<float, float>(const float, const float, const bl
 typedef std::function<void(const min::vec3<float> &, const bool, const block_id)> sound_call;
 typedef std::function<void(const min::vec3<float> &, const block_id)> ex_call;
 typedef std::function<void(const min::vec3<float> &, const min::vec3<unsigned> &, const block_id)> ex_scale_call;
+typedef std::function<void(void)> menu_call;
 typedef std::function<void(const min::vec3<float> &, const min::vec3<float> &)> miss_call;
 typedef std::function<void(min::body<float, min::vec3> &, const min::vec3<float> &)> ray_call;
 typedef std::function<void(const min::vec3<float> &, const block_id)> set_call;

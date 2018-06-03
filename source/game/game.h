@@ -18,8 +18,10 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __GAME_HEADER__
 #define __GAME_HEADER__
 
+#include <game/callback.h>
 #include <game/controls.h>
 #include <game/events.h>
+#include <game/options.h>
 #include <game/particle.h>
 #include <game/sound.h>
 #include <game/state.h>
@@ -48,6 +50,7 @@ class bds
     static constexpr size_t _gl_minor = 3;
 #endif
 
+    game::options _opt;
     min::window _win;
     game::uniforms _uniforms;
     game::particle _particles;
@@ -63,7 +66,7 @@ class bds
     double _fps;
     double _idle;
 
-    void set_cursor_center()
+    void center_cursor()
     {
         // Get the screen dimensions
         const uint_fast16_t w = _win.get_width();
@@ -72,7 +75,7 @@ class bds
         // Center cursor in middle of window
         _win.set_cursor(w / 2, h / 2);
     }
-    std::pair<uint_fast16_t, uint_fast16_t> cursor_center() const
+    std::pair<uint_fast16_t, uint_fast16_t> get_center() const
     {
         // Get the screen dimensions
         const uint_fast16_t w2 = _win.get_width() / 2;
@@ -86,7 +89,7 @@ class bds
         // If player is dead return screen center
         if (_world.get_player().is_dead())
         {
-            return cursor_center();
+            return get_center();
         }
 
         // Return cursor position
@@ -110,11 +113,59 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.247");
+        _ui.text().set_debug_version("VERSION: 0.1.250");
 
         // Set the game mode
         const bool hardcore = _state.get_load_state().is_hardcore();
         _ui.text().set_debug_game_mode((hardcore) ? "HARDCORE MODE" : "NORMAL MODE");
+    }
+    game::menu_call menu_resume_call()
+    {
+        // Create resume callback
+        return [this]() -> void {
+            this->_controls.toggle_pause(static_cast<void *>(&_controls), 0.0);
+        };
+    }
+    game::menu_call menu_title_call()
+    {
+        return [this]() -> void {
+            // Save
+            this->save();
+
+            // Return to title
+            this->_title.set_show_title(true);
+        };
+    }
+    game::menu_call menu_quit_call()
+    {
+        return [this]() -> void {
+            // Save
+            this->save();
+
+            // Quit game
+            this->_win.set_shutdown();
+
+            // Alert that we received the call back
+            std::cout << "controls: Shutdown called by user" << std::endl;
+        };
+    }
+    void register_menu_callbacks()
+    {
+        game::ui_menu &menu = _ui.get_menu();
+        menu.set_callback(0, menu_resume_call());
+        menu.set_callback(1, menu_title_call());
+        menu.set_callback(2, menu_quit_call());
+    }
+    void save()
+    {
+        // Get static instances
+        const game::static_instance &instance = _world.get_instance();
+
+        // Save game data to file
+        _state.save_state(instance, _world.get_player());
+
+        // Save the world
+        _world.save();
     }
     void update_alerts()
     {
@@ -279,13 +330,14 @@ class bds
 
   public:
     // Load window shaders and program
-    bds(const size_t chunk, const size_t grid, const size_t view, const size_t width, const size_t height, const uint8_t game_mode)
-        : _win("Beyond Dying Skies Official", width, height, _gl_major, _gl_minor),
+    bds(const game::options &opt)
+        : _opt(opt),
+          _win("Beyond Dying Skies Official", opt.width(), opt.height(), _gl_major, _gl_minor),
           _uniforms(),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
-          _state(grid, game_mode),
-          _world(_state.get_load_state(), _particles, _sound, _uniforms, chunk, grid, view),
+          _state(opt),
+          _world(_state.get_load_state(), _particles, _sound, _uniforms, opt.chunk(), opt.grid(), opt.view()),
           _ui(_uniforms, _world.get_player().get_inventory(), _world.get_player().get_stats(), _win.get_width(), _win.get_height()),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
           _title(_state.get_camera(), _ui, _win), _fps(0.0), _idle(0.0)
@@ -294,21 +346,16 @@ class bds
         min::settings::initialize();
 
         // Update cursor position for tracking
-        set_cursor_center();
+        center_cursor();
 
         // Delete the mem-file data
         game::memory_map::memory.clear();
 
         // Load gpu information
         load_gpu_info();
-    }
-    ~bds()
-    {
-        // Get static instances
-        const game::static_instance &instance = _world.get_instance();
 
-        // Save game data to file
-        _state.save_state(instance, _world.get_player());
+        // Register menu callbacks
+        register_menu_callbacks();
     }
     void blink_console_message()
     {
@@ -328,28 +375,6 @@ class bds
         const float color[] = {0.145, 0.145f, 0.150f, 1.0f};
         glClearBufferfv(GL_COLOR, 0, color);
         glClear(GL_DEPTH_BUFFER_BIT);
-    }
-    void disable_title_screen()
-    {
-        // Register window callbacks
-        _controls.register_control_callbacks();
-
-        // Stop drawing title in UI
-        _ui.switch_mode_base();
-        _ui.set_draw_text_ui(true);
-
-        // Turn off cursor
-        _win.display_cursor(false);
-
-        // Update the mouse cursor to center
-        set_cursor_center();
-
-        // If this is a new game
-        if (_state.get_load_state().is_new_game())
-        {
-            // Play intro message
-            _ui.set_alert_intro();
-        }
     }
     void draw() const
     {
@@ -402,6 +427,61 @@ class bds
     {
         _sound.play_bg(true);
     }
+    void title_screen_disable()
+    {
+        // Register window callbacks
+        _controls.register_control_callbacks();
+
+        // Stop drawing title in UI
+        _ui.switch_mode_base();
+        _ui.set_draw_text_ui(true);
+
+        // Turn off cursor
+        _win.display_cursor(false);
+
+        // Update the mouse cursor to center
+        center_cursor();
+
+        // If this is a new game
+        if (_state.get_load_state().is_new_game())
+        {
+            // Play intro message
+            _ui.set_alert_intro();
+        }
+    }
+    void title_screen_enable()
+    {
+        // Register window callbacks
+        _title.register_control_callbacks();
+
+        // Set the current window width and height
+        const uint_fast16_t w = _win.get_width();
+        const uint_fast16_t h = _win.get_height();
+        _opt.set_width(w);
+        _opt.set_height(h);
+
+        // Reset the game state
+        _particles.reset();
+        _sound.reset();
+        _character.reset();
+        _state = game::state(_opt);
+        _world.reset(_state.get_load_state(), _opt.chunk(), _opt.grid(), _opt.view());
+        _events = game::events();
+        _ui.reset();
+
+        // Get the screen dimensions
+        const uint_fast16_t w2 = w / 2;
+        const uint_fast16_t h2 = h / 2;
+        _ui.set_screen(min::vec2<float>(w2, h2), w, h);
+
+        // Center cursor
+        center_cursor();
+        _fps = 0.0;
+        _idle = 0.0;
+
+        // Turn off cursor
+        _win.display_cursor(true);
+    }
     void update(const float dt)
     {
         // Get player object
@@ -410,6 +490,17 @@ class bds
 
         bool update = false;
         min::camera<float> &camera = _state.get_camera();
+
+        // Process UI if user input
+        if (_state.get_user_input())
+        {
+            // Get the cursor coordinates
+            const auto c = _win.get_cursor();
+
+            // Flip the Y value to match screen coordinates
+            const uint_fast16_t height = _win.get_height() - c.second;
+            _ui.overlap(min::vec2<float>(c.first, height));
+        }
 
         // If game is not paused update game state
         if (!_state.get_pause())
@@ -430,18 +521,11 @@ class bds
                 _state.update(player.position(), c, _win.get_width(), _win.get_height(), v_mag, dt);
 
                 // Reset cursor position
-                set_cursor_center();
+                center_cursor();
             }
             else if (_state.get_user_input())
             {
-                // Get the cursor coordinates
-                const auto c = _win.get_cursor();
-
-                // Flip the Y value to match screen coordinates
-                const uint_fast16_t height = _win.get_height() - c.second;
-                _ui.overlap(min::vec2<float>(c.first, height));
-
-                // Calculate the center of the screen
+                // Calculate the center of the screen, to avoid camera movement
                 const auto center = std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
 
                 // Must update state properties, camera before drawing world
