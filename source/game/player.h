@@ -24,6 +24,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/inventory.h>
 #include <game/load_state.h>
 #include <game/skills.h>
+#include <game/sound.h>
 #include <game/stats.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
@@ -119,7 +120,8 @@ class player
     static constexpr float _grav_mag = 10.0;
     static constexpr float _project_dist = 1.59;
 
-    min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *_sim;
+    physics *_sim;
+    sound *_sound;
     size_t _body_id;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     inventory _inv;
@@ -323,8 +325,8 @@ class player
     }
 
   public:
-    player(min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> *sim, const load_state &state, const size_t body_id)
-        : _sim(sim), _body_id(body_id),
+    player(physics &sim, sound *const s, const load_state &state, const size_t body_id)
+        : _sim(&sim), _sound(s), _body_id(body_id),
           _damage_cd(0), _explode_cd(0),
           _exploded(false), _explode_id(block_id::EMPTY),
           _hooked(false), _hook_length(0.0),
@@ -495,8 +497,16 @@ class player
             // Consume energy
             _stats.consume_dynamics();
 
+            // Get the current position and set y movement to zero
+            const min::vec3<float> xz(_forward.x(), 0.0, _forward.z());
+            const min::vec3<float> zero;
+            const min::vec3<float> dxz = min::vec3<float>(xz).normalize_safe(zero);
+
             // Add force to the player body
-            force(_forward * 3000.0);
+            force(dxz * 3000.0);
+
+            // Play the thrust sound
+            _sound->play_thrust();
         }
     }
     inline void jump()
@@ -523,6 +533,9 @@ class player
 
                 // Add force to the player body
                 force(min::vec3<float>(0.0, 900.0, 0.0));
+
+                // Play the thrust sound
+                _sound->play_thrust();
             }
         }
     }

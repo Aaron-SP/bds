@@ -377,21 +377,21 @@ class ui_bg_assets
     {
         // Base ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 6 + 2 + 1
         // Menu ui elements, 5 + 4 + 1 + 5 + 5 + [        empty          ] + 6 + 2 + 1
-        static_assert(transparent_start() == 0);
-        static_assert(transparent_size() == 5);
-        static_assert(opaque_start() == 5);
-        static_assert(opaque_base_size() == 36);
-        static_assert(menu_splash_start() == 9);
-        static_assert(menu_splash_size() == 1);
-        static_assert(menu_start() == 10);
-        static_assert(menu_size() == 10);
-        static_assert(opaque_ext_size() == 109);
-        static_assert(focus_start() == 5 + 109);
-        static_assert(focus_size() == 1);
-        static_assert(focus_bar_size() == 2);
-        static_assert(tooltip_start() == 5 + 109 + 2);
-        static_assert(tooltip_size() == 1);
-        static_assert(max_size() == 117);
+        static_assert(transparent_start() == 0, "Invalid transparent_start");
+        static_assert(transparent_size() == 5, "Invalid transparent_size");
+        static_assert(opaque_start() == 5, "Invalid opaque_start");
+        static_assert(opaque_base_size() == 36, "Invalid opaque_base_size");
+        static_assert(menu_splash_start() == 9, "Invalid menu_splash_start");
+        static_assert(menu_splash_size() == 1, "Invalid menu_splash_size");
+        static_assert(menu_start() == 10, "Invalid menu_start");
+        static_assert(menu_size() == 10, "Invalid menu_size");
+        static_assert(opaque_ext_size() == 109, "Invalid opaque_ext_size");
+        static_assert(focus_start() == 5 + 109, "Invalid focus_start");
+        static_assert(focus_size() == 1, "Invalid focus_size");
+        static_assert(focus_bar_size() == 2, "Invalid focus_bar_size");
+        static_assert(tooltip_start() == 5 + 109 + 2, "Invalid tooltip_start");
+        static_assert(tooltip_size() == 1, "Invalid tooltip_size");
+        static_assert(max_size() == 117, "Invalid max_size");
     }
     inline void reset()
     {

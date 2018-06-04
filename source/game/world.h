@@ -78,7 +78,7 @@ class world
     const min::vec3<unsigned> _ex_radius;
     const float _top;
     const min::vec3<float> _gravity;
-    min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> _simulation;
+    physics _simulation;
     size_t _char_id;
 
     // Terrain control stuff
@@ -389,6 +389,9 @@ class world
             }
             default:
             {
+                // Play pickup sound
+                this->_sound->play_pickup();
+
                 // Apply force to the body per mass along ray direction
                 b.add_force(dir * b.get_mass() * 5000.0);
                 break;
@@ -506,7 +509,7 @@ class world
         const float sq_dist = dp.dot(dp);
 
         // Check if character is too close to the explosion
-        return {sq_dist < ex_squared_radius, ex_squared_radius, sq_dist};
+        return std::tuple<bool, float, float>(sq_dist < ex_squared_radius, ex_squared_radius, sq_dist);
     }
     inline void item_extra(inventory &inv, const block_id atlas)
     {
@@ -641,6 +644,10 @@ class world
             if (atlas == block_id::SODIUM)
             {
                 this->play_sodium_blast(p, in_range, atlas);
+            }
+            else
+            {
+                this->_sound->play_shot_ex(p);
             }
         };
     }
@@ -915,7 +922,7 @@ class world
           _edit_mode(false),
           _atlas_id(block_id::EMPTY),
           _swatch_cost(0), _swatch_mode(false), _swatch_copy_place(false),
-          _player(&_simulation, state, character_load(state)),
+          _player(_simulation, _sound, state, character_load(state)),
           _sky(uniforms),
           _instance(uniforms),
           _chests(_simulation, _instance),
@@ -975,7 +982,7 @@ class world
         _simulation.clear();
 
         // Reset player
-        _player = player(&_simulation, state, character_load(state));
+        _player = player(_simulation, _sound, state, character_load(state));
 
         // Set collision callbacks
         set_collision_callbacks();

@@ -121,7 +121,7 @@ class sound
     static constexpr size_t _drone_limit = 10;
     static constexpr size_t _ex_limit = 30;
     static constexpr size_t _miss_launch_limit = 10;
-    static constexpr size_t _sounds = 14 + _drone_limit + _ex_limit + _miss_launch_limit;
+    static constexpr size_t _sounds = 16 + _drone_limit + _ex_limit + _miss_launch_limit;
     static constexpr size_t _voice_sounds = 9;
     static constexpr float _fade_tol = 0.001;
     static constexpr float _fade_in = _fade_tol * 2.0;
@@ -154,7 +154,9 @@ class sound
     static constexpr float _miss_launch_gain = 0.7;
     static constexpr float _oxygen_gain = 0.5;
     static constexpr float _pickup_gain = 0.25;
-    static constexpr float _shot_gain = 0.125;
+    static constexpr float _shot_gain = 0.25;
+    static constexpr float _shot_ex_gain = 0.25;
+    static constexpr float _thrust_gain = 0.15;
     static constexpr float _voice_gain = 0.25;
     static constexpr float _zap_gain = 0.5;
 
@@ -250,26 +252,34 @@ class sound
     {
         return _si[11];
     }
-    inline sound_info &voice_info()
+    inline sound_info &shot_ex_info()
     {
         return _si[12];
     }
-    inline sound_info &zap_info()
+    inline sound_info &thrust_info()
     {
         return _si[13];
     }
+    inline sound_info &voice_info()
+    {
+        return _si[14];
+    }
+    inline sound_info &zap_info()
+    {
+        return _si[15];
+    }
     inline sound_info &drone_info(const size_t index)
     {
-        return _si[14 + index];
+        return _si[16 + index];
     }
     inline sound_info &ex_info(const size_t index)
     {
-        constexpr size_t offset = 14 + _drone_limit;
+        constexpr size_t offset = 16 + _drone_limit;
         return _si[offset + index];
     }
     inline sound_info &miss_launch_info(const size_t index)
     {
-        constexpr size_t offset = 14 + _drone_limit + _ex_limit;
+        constexpr size_t offset = 16 + _drone_limit + _ex_limit;
         return _si[offset + index];
     }
     inline static size_t v_comply()
@@ -380,7 +390,7 @@ class sound
     }
     inline void load_charge_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/charge_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _charge_gain, _charge_fade);
@@ -397,7 +407,7 @@ class sound
     }
     inline void load_drone_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/drone_m.ogg");
         const min::ogg sound(ogg);
 
@@ -431,7 +441,7 @@ class sound
     }
     inline void load_blast_mono_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/blast_m.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _blast_gain);
@@ -441,7 +451,7 @@ class sound
     }
     inline void load_blast_stereo_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/blast_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _blast_gain);
@@ -451,14 +461,14 @@ class sound
     }
     inline void load_focus_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/focus_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _focus_gain);
     }
     inline void load_grapple_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/grapple_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _grap_gain, _grap_fade);
@@ -480,7 +490,7 @@ class sound
     }
     inline void load_jet_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/jet_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _jet_gain, _jet_fade);
@@ -497,7 +507,7 @@ class sound
     }
     inline void load_explode_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/explode_m.ogg");
         const min::ogg sound(ogg);
 
@@ -528,7 +538,7 @@ class sound
     }
     inline void load_miss_launch_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/jet_m.ogg");
         const min::ogg sound(ogg);
 
@@ -562,7 +572,7 @@ class sound
     }
     inline void load_oxygen_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/oxygen_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _oxygen_gain, _oxygen_fade);
@@ -572,21 +582,38 @@ class sound
     }
     inline void load_pickup_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/pickup_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _pickup_gain);
     }
     inline void load_shot_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/shot_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _shot_gain);
     }
+    inline void load_shot_ex_sound()
+    {
+        // Load a OGG file
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/shot_ex_m.ogg");
+        const min::ogg sound(ogg);
+        load_ogg_sound(sound, _shot_ex_gain);
+
+        // Load explosion settings
+        load_explosion_settings(shot_ex_info().source());
+    }
+    inline void load_thrust_sound()
+    {
+        // Load a OGG file
+        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/thrust_s.ogg");
+        const min::ogg sound(ogg);
+        load_ogg_sound(sound, _thrust_gain);
+    }
     inline void load_zap_sound()
     {
-        // Load a WAVE file
+        // Load a OGG file
         const min::mem_file &ogg = memory_map::memory.get_file("data/sound/zap_m.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _zap_gain);
@@ -681,6 +708,12 @@ class sound
 
         // Load shot sound into buffer
         load_shot_sound();
+
+        // Load shot explode sound into buffer
+        load_shot_ex_sound();
+
+        // Load thrust sound into buffer
+        load_thrust_sound();
 
         // Load voice sounds into buffer
         load_voice_sound();
@@ -958,7 +991,7 @@ class sound
         // Increment next explode source
         const size_t index = (_ex_old %= _ex_limit)++;
 
-        // Get the missile explode source
+        // Get the explode source
         const size_t s = ex_info(index).source();
 
         // Set the sound position
@@ -1029,6 +1062,21 @@ class sound
     inline void play_shot()
     {
         _buffer.play_async(shot_info().source());
+    }
+    inline void play_shot_ex(const min::vec3<float> &p)
+    {
+        // Get the shot explode source
+        const size_t s = shot_ex_info().source();
+
+        // Set the sound position
+        _buffer.set_source_position(s, p);
+
+        // Play the sound
+        _buffer.play_async(s);
+    }
+    inline void play_thrust()
+    {
+        _buffer.play_async(thrust_info().source());
     }
     inline void play_voice_comply()
     {

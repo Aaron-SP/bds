@@ -140,7 +140,6 @@ class drones
     static constexpr uint_fast16_t _missile_level = 5;
     static constexpr uint_fast16_t _splash_level = 10;
     static constexpr uint_fast16_t _tunnel_level = 15;
-    typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *const _sim;
     static_instance *const _inst;
     sound *const _sound;

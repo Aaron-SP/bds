@@ -62,7 +62,6 @@ class explosives
 {
   private:
     static constexpr float _rotation_rate = 120.0;
-    typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *const _sim;
     static_instance *const _inst;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;

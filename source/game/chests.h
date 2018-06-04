@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __CHESTS__
 #define __CHESTS__
 
+#include <game/callback.h>
 #include <game/static_instance.h>
 #include <min/aabbox.h>
 #include <min/grid.h>
@@ -59,7 +60,6 @@ class chest
 class chests
 {
   private:
-    typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     physics *const _sim;
     static_instance *const _inst;
     std::vector<chest> _chests;
