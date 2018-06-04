@@ -506,7 +506,7 @@ class world
         const float sq_dist = dp.dot(dp);
 
         // Check if character is too close to the explosion
-        return {sq_dist < ex_squared_radius, ex_squared_radius, sq_dist};
+        return std::tuple<bool, float, float>(sq_dist < ex_squared_radius, ex_squared_radius, sq_dist);
     }
     inline void item_extra(inventory &inv, const block_id atlas)
     {
