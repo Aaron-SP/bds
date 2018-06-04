@@ -110,17 +110,8 @@ void show_game(bds &game, min::loop_sync &sync, const size_t frames)
         // Perform second update
         game.update_second();
 
-        // Check for errors
-        if (game.check_gl_error())
-        {
-            std::cout << "OpenGL errors detected in show_game, quitting" << std::endl;
-            break;
-        }
-        else if (game.check_al_error())
-        {
-            std::cout << "OpenAL errors detected in show_game, quitting" << std::endl;
-            break;
-        }
+        // Check for fatal errors
+        game.throw_fatal_error();
     }
 }
 
@@ -129,30 +120,38 @@ void run(const game::options &opt)
     // Load window shaders and program, enable shader program
     bds game(opt);
 
-    // Setup controller to run at 60 frames per second
-    min::loop_sync sync(opt.frames(), 0.25, 0.25, 0.25);
-
-    // Maximize the window
-    if (opt.resize())
+    // Catch any errors and print to window
+    try
     {
-        game.maximize();
-    }
+        // Setup controller to run at 60 frames per second
+        min::loop_sync sync(opt.frames(), 0.25, 0.25, 0.25);
 
-    // Loop until we exit game
-    while (!game.is_closed())
-    {
-        // Show the title screen
-        show_title(game, sync, 15);
-
-        // Run the game after the title screen
-        show_game(game, sync, opt.frames());
-
-        // If we are not closing the game
-        if (!game.is_closed())
+        // Maximize the window
+        if (opt.resize())
         {
-            // Switch to title
-            game.title_screen_enable();
+            game.maximize();
         }
+
+        // Loop until we exit game
+        while (!game.is_closed())
+        {
+            // Show the title screen
+            show_title(game, sync, 15);
+
+            // Run the game after the title screen
+            show_game(game, sync, opt.frames());
+
+            // If we are not closing the game
+            if (!game.is_closed())
+            {
+                // Switch to title
+                game.title_screen_enable();
+            }
+        }
+    }
+    catch (const std::exception &ex)
+    {
+        game.error_message(ex.what());
     }
 }
 
@@ -174,83 +173,76 @@ void parse_uint(char *str, size_t &out)
 
 int main(int argc, char *argv[])
 {
-    try
+    // Default parameters
+    game::options opt;
+    size_t parse;
+
+    // Try to parse commandline args
+    for (int i = 2; i < argc; i += 2)
     {
-        // Default parameters
-        game::options opt;
-        size_t parse;
+        // Get input flag
+        std::string input(argv[i - 1]);
 
-        // Try to parse commandline args
-        for (int i = 2; i < argc; i += 2)
+        // Check for fps flag
+        if (input.compare("-fps") == 0)
         {
-            // Get input flag
-            std::string input(argv[i - 1]);
-
-            // Check for fps flag
-            if (input.compare("-fps") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_frames(parse);
-            }
-            else if (input.compare("-chunk") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_chunk(parse);
-            }
-            else if (input.compare("-grid") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_grid(parse);
-            }
-            else if (input.compare("-view") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_view(parse);
-            }
-            else if (input.compare("-width") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_width(static_cast<uint_fast16_t>(parse));
-                opt.set_resize(false);
-            }
-            else if (input.compare("-height") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_height(static_cast<uint_fast16_t>(parse));
-                opt.set_resize(false);
-            }
-            else if (input.compare("-hardcore") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_mode(static_cast<uint_fast8_t>(parse));
-            }
-            else
-            {
-                std::cout << "bds: unknown flag '"
-                          << input << "'\"" << std::endl;
-            }
+            // Parse uint
+            parse_uint(argv[i], parse);
+            opt.set_frames(parse);
         }
-
-        // Exit if error in options
-        if (opt.check_error())
+        else if (input.compare("-chunk") == 0)
         {
-            return 0;
+            // Parse uint
+            parse_uint(argv[i], parse);
+            opt.set_chunk(parse);
         }
-
-        // Run the game
-        run(opt);
+        else if (input.compare("-grid") == 0)
+        {
+            // Parse uint
+            parse_uint(argv[i], parse);
+            opt.set_grid(parse);
+        }
+        else if (input.compare("-view") == 0)
+        {
+            // Parse uint
+            parse_uint(argv[i], parse);
+            opt.set_view(parse);
+        }
+        else if (input.compare("-width") == 0)
+        {
+            // Parse uint
+            parse_uint(argv[i], parse);
+            opt.set_width(static_cast<uint_fast16_t>(parse));
+            opt.set_resize(false);
+        }
+        else if (input.compare("-height") == 0)
+        {
+            // Parse uint
+            parse_uint(argv[i], parse);
+            opt.set_height(static_cast<uint_fast16_t>(parse));
+            opt.set_resize(false);
+        }
+        else if (input.compare("-hardcore") == 0)
+        {
+            // Parse uint
+            parse_uint(argv[i], parse);
+            opt.set_mode(static_cast<uint_fast8_t>(parse));
+        }
+        else
+        {
+            std::cout << "bds: unknown flag '"
+                      << input << "'\"" << std::endl;
+        }
     }
-    catch (const std::exception &ex)
+
+    // Exit if error in options
+    if (opt.check_error())
     {
-        std::cout << ex.what() << std::endl;
+        return 0;
     }
+
+    // Run the game
+    run(opt);
 
     return 0;
 }

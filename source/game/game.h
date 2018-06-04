@@ -113,7 +113,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.251");
+        _ui.text().set_debug_version("VERSION: 0.1.252");
 
         // Set the game mode
         const bool hardcore = _state.get_load_state().is_hardcore();
@@ -361,13 +361,18 @@ class bds
     {
         _ui.blink_console();
     }
-    bool check_gl_error() const
-    {
-        return min::check_gl_error();
-    }
     bool check_al_error() const
     {
         return _sound.check_error();
+    }
+    void throw_fatal_error() const
+    {
+        min::throw_al_error();
+        min::throw_gl_error();
+    }
+    bool check_gl_error() const
+    {
+        return min::check_gl_error();
     }
     void clear_background() const
     {
@@ -410,6 +415,10 @@ class bds
         // Draw the ui
         _ui.draw_opaque();
         _ui.draw_transparent();
+    }
+    void error_message(const std::string &error)
+    {
+        _win.error_message(error);
     }
     bool is_closed() const
     {
