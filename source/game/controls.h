@@ -1331,7 +1331,7 @@ class controls
                     if (skill.is_portal_charged())
                     {
                         // Launch portal
-                        world->portal(state->get_load_state());
+                        world->portal();
 
                         // Play portal sound
                         sound->play_shot();

@@ -727,7 +727,7 @@ class player
         // Warp character to new position
         body().set_linear_velocity(v);
     }
-    inline void warp(const min::vec3<float> &p)
+    inline void set_position(const min::vec3<float> &p)
     {
         // Warp character to new position
         body().set_position(p);

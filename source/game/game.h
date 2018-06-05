@@ -56,8 +56,8 @@ class bds
     game::particle _particles;
     game::sound _sound;
     game::character _character;
-    game::state _state;
     game::world _world;
+    game::state _state;
     game::events _events;
     game::ui_overlay _ui;
     game::controls _controls;
@@ -113,10 +113,10 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.252");
+        _ui.text().set_debug_version("VERSION: 0.1.253");
 
         // Set the game mode
-        const bool hardcore = _state.get_load_state().is_hardcore();
+        const bool hardcore = _world.get_load_state().is_hardcore();
         _ui.text().set_debug_game_mode((hardcore) ? "HARDCORE MODE" : "NORMAL MODE");
     }
     game::menu_call menu_resume_call()
@@ -158,14 +158,8 @@ class bds
     }
     void save()
     {
-        // Get static instances
-        const game::static_instance &instance = _world.get_instance();
-
-        // Save game data to file
-        _state.save_state(instance, _world.get_player());
-
         // Save the world
-        _world.save();
+        _world.save(_state.get_camera());
     }
     void update_alerts()
     {
@@ -198,14 +192,14 @@ class bds
         // Check if we need to respawn
         if (_state.is_respawn())
         {
+            // Refresh the world exploded flag
+            _world.respawn();
+
             // Refresh state
-            _state.respawn();
+            _state.respawn(_world.get_load_state());
 
             // Refresh ui
             _ui.respawn();
-
-            // Refresh the world exploded flag
-            _world.respawn(_state.get_load_state());
 
             // Reset control class
             _controls.respawn();
@@ -336,8 +330,8 @@ class bds
           _uniforms(),
           _particles(_uniforms),
           _character(&_particles, _uniforms),
-          _state(opt),
-          _world(_state.get_load_state(), _particles, _sound, _uniforms, opt.chunk(), opt.grid(), opt.view()),
+          _world(opt, _particles, _sound, _uniforms),
+          _state(opt, _world.get_load_state()),
           _ui(_uniforms, _world.get_player().get_inventory(), _world.get_player().get_stats(), _win.get_width(), _win.get_height()),
           _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound),
           _title(_state.get_camera(), _ui, _win), _fps(0.0), _idle(0.0)
@@ -452,7 +446,7 @@ class bds
         center_cursor();
 
         // If this is a new game
-        if (_state.get_load_state().is_new_game())
+        if (_world.get_load_state().is_new_game())
         {
             // Play intro message
             _ui.set_alert_intro();
@@ -473,8 +467,8 @@ class bds
         _particles.reset();
         _sound.reset();
         _character.reset();
-        _state = game::state(_opt);
-        _world.reset(_state.get_load_state(), _opt.chunk(), _opt.grid(), _opt.view());
+        _world.reset(_opt);
+        _state = game::state(_opt, _world.get_load_state());
         _events = game::events();
         _ui.reset();
 

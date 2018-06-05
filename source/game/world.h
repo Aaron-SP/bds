@@ -68,6 +68,7 @@ class world
     static constexpr float _explode_scale = 0.9;
 
     // Terrain stuff
+    load_state _state;
     cgrid _grid;
     terrain _terrain;
     particle *const _particles;
@@ -76,7 +77,6 @@ class world
 
     // Physics stuff
     const min::vec3<unsigned> _ex_radius;
-    const float _top;
     const min::vec3<float> _gravity;
     physics _simulation;
     size_t _char_id;
@@ -136,13 +136,13 @@ class world
         // return center position
         return center;
     }
-    inline size_t character_load(const load_state &state)
+    inline size_t character_load()
     {
         // Is this a new game?
-        const bool new_game = state.is_new_game();
+        const bool new_game = _state.is_new_game();
 
         // Get spawn point
-        const min::vec3<float> &p = state.get_spawn();
+        const min::vec3<float> &p = _state.get_position();
 
         // Spawn character position
         const min::vec3<float> spawn = (new_game) ? ray_spawn(p) : p;
@@ -570,9 +570,9 @@ class world
             return this->_missiles.launch_missile(proj, dir, min::vec3<float>());
         };
     }
-    inline void load_chests(const load_state &state)
+    inline void load_chests()
     {
-        if (state.is_new_game())
+        if (_state.is_new_game())
         {
             while (spawn_chest(spawn_random()))
             {
@@ -581,7 +581,7 @@ class world
         else
         {
             // Get the chests to load
-            const std::vector<min::vec3<float>> &chests = state.get_chests();
+            const std::vector<min::vec3<float>> &chests = _state.get_chests();
 
             // Load the persisted chests
             const size_t size = chests.size();
@@ -819,7 +819,7 @@ class world
     inline min::vec3<float> spawn_event()
     {
         const float x = _grid_dist(_gen);
-        const float y = _top - _spawn_limit;
+        const float y = _state.get_top().y() - _spawn_limit;
         const float z = _grid_dist(_gen);
 
         return min::vec3<float>(x, y, z);
@@ -905,14 +905,13 @@ class world
     }
 
   public:
-    world(const load_state &state, particle &particles, sound &s, const uniforms &uniforms,
-          const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
-        : _grid(chunk_size, grid_size, view_chunk_size),
-          _terrain(uniforms, _grid.get_chunks(), chunk_size),
+    world(const options &opt, particle &particles, sound &s, const uniforms &uniforms)
+        : _state(opt),
+          _grid(opt.chunk(), opt.grid(), opt.view()),
+          _terrain(uniforms, _grid.get_chunks(), opt.chunk()),
           _particles(&particles),
           _sound(&s),
           _ex_radius(3, 3, 3),
-          _top(state.get_top().y()),
           _gravity(0.0, -_grav_mag, 0.0),
           _simulation(_grid.get_world(), _gravity),
           _terr_mesh("atlas"),
@@ -922,7 +921,7 @@ class world
           _edit_mode(false),
           _atlas_id(block_id::EMPTY),
           _swatch_cost(0), _swatch_mode(false), _swatch_copy_place(false),
-          _player(_simulation, _sound, state, character_load(state)),
+          _player(_simulation, _sound, _state, character_load()),
           _sky(uniforms),
           _instance(uniforms),
           _chests(_simulation, _instance),
@@ -935,7 +934,7 @@ class world
           _drop_dist(0, 80),
           _drop_off_dist(-0.5, 0.5),
           _ex_mult(0.1, 3.0),
-          _grid_dist((grid_size * -1.0) + _spawn_limit, grid_size - _spawn_limit),
+          _grid_dist(_spawn_limit - opt.grid(), opt.grid() - _spawn_limit),
           _health_dist(0.75, 1.5),
           _miss_dist(-0.5, 0.5),
           _scat_dist(-0.1, 0.1),
@@ -948,16 +947,19 @@ class world
         set_collision_callbacks();
 
         // Reserve space for used vectors
-        reserve_memory(view_chunk_size);
+        reserve_memory(opt.view());
 
         // Update chunks
         update_all_chunks();
 
         // Load chests
-        load_chests(state);
+        load_chests();
     }
-    inline void reset(const load_state &state, const size_t chunk_size, const size_t grid_size, const size_t view_chunk_size)
+    inline void reset(const options &opt)
     {
+        // Reset the load state
+        _state = load_state(opt);
+
         // Reload grid
         _grid.reset();
 
@@ -982,7 +984,7 @@ class world
         _simulation.clear();
 
         // Reset player
-        _player = player(_simulation, _sound, state, character_load(state));
+        _player = player(_simulation, _sound, _state, character_load());
 
         // Set collision callbacks
         set_collision_callbacks();
@@ -991,7 +993,7 @@ class world
         update_all_chunks();
 
         // Load chests
-        load_chests(state);
+        load_chests();
     }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {
@@ -1071,6 +1073,10 @@ class world
     inline size_t get_inst_in_view() const
     {
         return _instance.get_inst_in_view();
+    }
+    inline const load_state &get_load_state() const
+    {
+        return _state;
     }
     inline player &get_player()
     {
@@ -1201,10 +1207,10 @@ class world
         // Generate new preview
         generate_preview();
     }
-    inline void portal(const load_state &state)
+    inline void portal()
     {
         // Get default spawn point
-        const min::vec3<float> &p = state.get_top();
+        const min::vec3<float> &p = _state.get_top();
 
         // Generate a new world in grid
         _grid.portal();
@@ -1213,7 +1219,7 @@ class world
         const min::vec3<float> spawn = ray_spawn(p);
 
         // Warp player
-        _player.warp(spawn);
+        _player.set_position(spawn);
 
         // Remove geometry around player
         block_remove(spawn, _ex_radius);
@@ -1231,13 +1237,13 @@ class world
     {
         _player.get_inventory().random_item();
     }
-    inline void respawn(const load_state &state)
+    inline void respawn()
     {
         // Respawn player
-        _player.respawn(state);
+        _player.respawn(_state);
 
         // Spawn character position
-        _player.warp(ray_spawn(state.get_default_spawn()));
+        _player.set_position(ray_spawn(_state.get_default_spawn()));
 
         // Zero out character velocity
         _player.velocity(min::vec3<float>());
@@ -1259,8 +1265,15 @@ class world
             _preview_offset = _cached_offset;
         }
     }
-    inline void save()
+    inline void save(const min::camera<float> &cam)
     {
+        // Set the state
+        _state.set_state(_player.position(), cam, _player.get_inventory(), _player.get_stats(), _instance);
+
+        // Save the state
+        _state.save_state();
+
+        // Save the world state
         _grid.save();
     }
     inline size_t scatter_ray(const min::vec3<unsigned> &scale, const float size, const ray_call &f)

@@ -351,7 +351,7 @@ class drones
         // Spawned a drone
         return true;
     }
-    inline void warp(const size_t index, const min::vec3<float> &p)
+    inline void set_position(const size_t index, const min::vec3<float> &p)
     {
         // Warp character to new position
         body(index).set_position(p);

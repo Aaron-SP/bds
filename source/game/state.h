@@ -33,15 +33,14 @@ class state
     static constexpr unsigned _frame_average = 4;
     static constexpr float _recoil_x = 60.0;
     static constexpr float _recoil_y = -60.0;
-    static constexpr unsigned _recoil_frames = 6;
+    static constexpr float _recoil_time = 0.1;
     static constexpr float _run_stride = 0.05;
-    load_state _state;
     bool _tracking;
     min::vec3<float> _target;
     unsigned _frame_count;
     float _x[_frame_average];
     float _y[_frame_average];
-    int _recoil;
+    float _recoil;
     min::camera<float> _camera;
     min::quat<float> _q;
     float _run_accum;
@@ -52,7 +51,7 @@ class state
     bool _respawn;
     bool _user_input;
 
-    inline void load_camera(const options &opt)
+    inline void load_camera(const options &opt, const load_state &state)
     {
         // Set camera near and far plane, and set perspective
         auto &f = _camera.get_frustum();
@@ -62,7 +61,7 @@ class state
         _camera.set_perspective();
 
         // Load camera settings
-        set_camera(_state.get_spawn(), _state.get_look());
+        set_camera(state.get_position(), state.get_look_at());
     }
     inline void update_model_matrix(const float speed, const float dt)
     {
@@ -108,13 +107,13 @@ class state
     }
 
   public:
-    state(const options &opt)
-        : _state(opt.grid(), opt.mode()), _tracking(false), _frame_count(0), _x{}, _y{},
-          _recoil(0), _run_accum(0.0), _run_accum_sin(0.0),
+    state(const options &opt, const load_state &state)
+        : _tracking(false), _frame_count(0), _x{}, _y{},
+          _recoil(-1.0), _run_accum(0.0), _run_accum_sin(0.0),
           _dead(false), _pause(false), _respawn(false), _user_input(false)
     {
         // Load camera
-        load_camera(opt);
+        load_camera(opt, state);
     }
     inline min::camera<float> &get_camera()
     {
@@ -123,10 +122,6 @@ class state
     inline const min::camera<float> &get_camera() const
     {
         return _camera;
-    }
-    inline const load_state &get_load_state() const
-    {
-        return _state;
     }
     inline const min::mat4<float> &get_model_matrix() const
     {
@@ -152,24 +147,20 @@ class state
     {
         return _respawn;
     }
-    inline void respawn()
+    inline void respawn(const load_state &state)
     {
         // Reset flags
         _tracking = false;
-        _recoil = 0;
+        _recoil = -1.0;
 
         // Reload camera settings
-        set_camera(_state.get_default_spawn(), _state.get_default_look());
+        set_camera(state.get_default_spawn(), state.get_default_look());
 
         // Reset flags
         _run_accum = 0.0;
         _run_accum_sin = 0.0;
         _dead = false;
         _respawn = false;
-    }
-    inline void save_state(const static_instance &si, const player &p)
-    {
-        _state.save_state(si, p.get_inventory(), p.get_stats(), _camera, p.position());
     }
     inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
     {
@@ -192,7 +183,7 @@ class state
     }
     inline void set_recoil()
     {
-        _recoil = _recoil_frames;
+        _recoil = _recoil_time;
     }
     inline void set_respawn(const bool flag)
     {
@@ -209,7 +200,6 @@ class state
     }
     inline void set_tracking(const bool flag)
     {
-        // Enable fixed look at
         _tracking = flag;
     }
     inline bool toggle_pause()
@@ -268,13 +258,13 @@ class state
             y /= _frame_average;
 
             // If we need to apply recoil
-            if (_recoil > 0)
+            if (_recoil > 0.0)
             {
                 x += (_run_accum_sin * _recoil_x * dt);
                 y += (_recoil_y * dt);
 
                 // Decrement recoil flag
-                _recoil--;
+                _recoil -= dt;
             }
 
             // If the mouse coordinates moved at all
@@ -284,12 +274,12 @@ class state
                 const min::vec3<float> &forward = _camera.get_forward();
 
                 // Check if we have looked too far on the global y axis
-                const float dy = forward.dot(min::vec3<float>::up());
-                if (dy > 0.999 && y < 0.0)
+                const float dot = forward.dot(min::vec3<float>::up());
+                if (dot > 0.999 && y < 0.0)
                 {
                     y = 0.0;
                 }
-                else if (dy < -0.999 && y > 0.0)
+                else if (dot < -0.999 && y > 0.0)
                 {
                     y = 0.0;
                 }
