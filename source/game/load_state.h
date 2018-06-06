@@ -40,7 +40,7 @@ struct game_state
     min::vec3<float> position;
     min::vec3<float> look;
     std::vector<item> inventory;
-    std::array<uint_fast16_t, stats::stat_str_size()> stats;
+    std::array<uint_fast16_t, stats::stat_str_size()> stat;
     uint_fast16_t stat_points;
     float energy;
     float exp;
@@ -209,7 +209,7 @@ class load_state
             // Copy data
             for (size_t i = 0; i < stat_size; i++)
             {
-                _state.stats[i] = min::read_le<uint16_t>(stream, next);
+                _state.stat[i] = min::read_le<uint16_t>(stream, next);
             }
 
             // Load misc data
@@ -298,7 +298,7 @@ class load_state
     }
     inline const std::array<uint_fast16_t, stats::stat_str_size()> &get_stats() const
     {
-        return _state.stats;
+        return _state.stat;
     }
     inline uint_fast16_t get_stat_points() const
     {
@@ -362,11 +362,11 @@ class load_state
         }
 
         // Write stats into stream
-        const uint32_t stat_size = _state.stats.size();
+        const uint32_t stat_size = _state.stat.size();
         min::write_le<uint32_t>(stream, stat_size);
         for (size_t i = 0; i < stat_size; i++)
         {
-            min::write_le<uint16_t>(stream, _state.stats[i]);
+            min::write_le<uint16_t>(stream, _state.stat[i]);
         }
 
         // Save misc data
@@ -412,7 +412,7 @@ class load_state
         const uint32_t stat_size = stat.stat_str_size();
         for (size_t i = 0; i < stat_size; i++)
         {
-            _state.stats[i] = stat.stat_value(i);
+            _state.stat[i] = stat.stat_value(i);
         }
 
         // Copy misc data

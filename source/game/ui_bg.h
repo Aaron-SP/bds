@@ -347,7 +347,7 @@ class ui_bg
           _mesh_id(load_base_rect()), _title_id(load_title_texture()), _ui_id(load_ui_texture()),
           _focus(false), _state(inv.begin_key()), _assets(width, height), _text(&text),
           _tree(screen_box(width, height)),
-          _control_inv(_assets, inv, stat, text, _tree, _shapes), _control_menu(_assets, inv, stat, _tree, _shapes)
+          _control_inv(_assets, inv, stat, text, _tree, _shapes), _control_menu(_assets, _tree, _shapes)
     {
         // Format string stream
         _stream.precision(3);

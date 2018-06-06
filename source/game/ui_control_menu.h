@@ -19,8 +19,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __UI_CONTROL_MENU__
 
 #include <game/id.h>
-#include <game/inventory.h>
-#include <game/stats.h>
 #include <game/ui_bg_assets.h>
 #include <game/ui_info.h>
 #include <game/ui_menu.h>
@@ -47,8 +45,6 @@ class ui_control_menu
     }
     typedef min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_tree;
     ui_bg_assets *const _assets;
-    inventory *const _inv;
-    stats *const _stat;
     ui_menu _menu;
     ui_tree *const _tree;
     std::vector<min::aabbox<float, min::vec2>> *const _shapes;
@@ -67,7 +63,7 @@ class ui_control_menu
         // Have we clicked?
         if (state.is_clicking())
         {
-            // Determine inventory type to update bg color
+            // Update menu bg color
             const ui_id click = state.get_click();
             _assets->load_bg_menu_light_blue(click.bg_menu_index(), pos_menu(click));
         }
@@ -77,7 +73,7 @@ class ui_control_menu
         // Are we hovering?
         if (state.is_hovering())
         {
-            // Determine inventory type to update bg color
+            // Update menu bg color
             const ui_id hover = state.get_hover();
             _assets->load_bg_menu_yellow(hover.bg_menu_index(), pos_menu(hover));
         }
@@ -128,10 +124,8 @@ class ui_control_menu
     }
 
   public:
-    ui_control_menu(ui_bg_assets &assets, inventory &inv, stats &stat,
-                    ui_tree &tree, std::vector<min::aabbox<float, min::vec2>> &shapes)
-        : _assets(&assets), _inv(&inv), _stat(&stat),
-          _tree(&tree), _shapes(&shapes), _minimized(false) {}
+    ui_control_menu(ui_bg_assets &assets, ui_tree &tree, std::vector<min::aabbox<float, min::vec2>> &shapes)
+        : _assets(&assets), _tree(&tree), _shapes(&shapes), _minimized(false) {}
 
     inline void reset()
     {
@@ -210,7 +204,7 @@ class ui_control_menu
     }
     inline std::pair<bool, ui_id> overlap(ui_state &state, const min::vec2<float> &p)
     {
-        // Is the inventory open?
+        // Is not minimzed?
         if (!_minimized)
         {
             // Bad point
@@ -237,7 +231,7 @@ class ui_control_menu
                     // Cache id
                     id = ui_id(map[h]);
 
-                    // Highlight the inventory cell
+                    // Highlight the menu cell
                     set_hover_down(state, id);
                     break;
                 }

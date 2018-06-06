@@ -277,7 +277,7 @@ class world
             const min::vec3<float> dir = this->direction(this->_player.position(), p);
 
             // Explode the block
-            this->explode(p, dir, scale, atlas, this->_explode_size, nullptr, d, s);
+            this->explode(p, dir, scale, atlas, _explode_size, nullptr, d, s);
         };
     }
     inline ex_scale_call explode_block_call(const dmg_call &d, const sound_call &s)
@@ -290,7 +290,7 @@ class world
             const min::vec3<float> dir = this->direction(this->_player.position(), p);
 
             // Explode the block
-            this->explode_block(p, dir, scale, atlas, this->_explode_size, d, s);
+            this->explode_block(p, dir, scale, atlas, _explode_size, d, s);
         };
     }
     inline ex_call explode_default_call()
@@ -769,10 +769,10 @@ class world
                 const min::vec3<float> dir = this->direction(b2.get_position(), b1.get_position());
 
                 // Add the damage multiplier to damage
-                const float damage = this->_player.get_stats().do_damage(this->_damage_ex, _crit_dist(_gen));
+                const float damage = this->_player.get_stats().do_damage(_damage_ex, _crit_dist(_gen));
 
                 // Do damage to the drone
-                this->drone_damage(drone_index, this->_ex_radius, dir, this->_explode_size, damage);
+                this->drone_damage(drone_index, this->_ex_radius, dir, _explode_size, damage);
             }
         };
 
@@ -807,10 +807,10 @@ class world
                 const min::vec3<float> dir = this->direction(b2.get_position(), b1.get_position());
 
                 // Add the damage multiplier to damage
-                const float damage = this->_player.get_stats().do_damage(this->_damage_miss, _crit_dist(_gen));
+                const float damage = this->_player.get_stats().do_damage(_damage_miss, _crit_dist(_gen));
 
                 // Do damage to the drone
-                this->drone_damage(drone_index, this->_ex_radius, dir, this->_explode_size, damage);
+                this->drone_damage(drone_index, this->_ex_radius, dir, _explode_size, damage);
             }
         };
 
