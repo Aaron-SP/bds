@@ -352,6 +352,7 @@ class cgrid
             const block_id atlas = _grid[key];
             if (atlas != block_id::EMPTY)
             {
+#if defined(USE_INST_RENDER)
                 // Find out if we are on a world edge
                 const auto t = grid_key_unpack(key);
                 const size_t tx = std::get<0>(t);
@@ -389,6 +390,60 @@ class cgrid
                         _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
                     }
                 }
+#else
+                // Find out if we are on a world edge
+                const auto t = grid_key_unpack(key);
+                const size_t tx = std::get<0>(t);
+                const size_t ty = std::get<1>(t);
+                const size_t tz = std::get<2>(t);
+                const size_t edge = _grid_scale - 1;
+                const min::vec3<float> p = grid_cell_center(key);
+                if (tx % edge == 0 || ty % edge == 0 || tz % edge == 0)
+                {
+                    // Push back block, store atlas in w component see vertex/geometry shader
+                    _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
+                    _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 255.0));
+                    _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 510.0));
+                    _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 765.0));
+                    _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 1020.0));
+                    _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 1275.0));
+                }
+                else
+                {
+                    // Get surrounding 6 cells unsafely, check if cell is within the grid
+                    // Push back each face, store atlas in w component see vertex shader
+                    const size_t x1 = grid_key_pack(std::make_tuple(tx - 1, ty, tz));
+                    if (_grid[x1] == block_id::EMPTY)
+                    {
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
+                    }
+                    const size_t x2 = grid_key_pack(std::make_tuple(tx + 1, ty, tz));
+                    if (_grid[x2] == block_id::EMPTY)
+                    {
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 255.0));
+                    }
+                    const size_t y1 = grid_key_pack(std::make_tuple(tx, ty - 1, tz));
+                    if (_grid[y1] == block_id::EMPTY)
+                    {
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 510.0));
+                    }
+                    const size_t y2 = grid_key_pack(std::make_tuple(tx, ty + 1, tz));
+                    if (_grid[y2] == block_id::EMPTY)
+                    {
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 765.0));
+                    }
+                    const size_t z1 = grid_key_pack(std::make_tuple(tx, ty, tz - 1));
+                    if (_grid[z1] == block_id::EMPTY)
+                    {
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 1020.0));
+                    }
+                    const size_t z2 = grid_key_pack(std::make_tuple(tx, ty, tz + 1));
+                    if (_grid[z2] == block_id::EMPTY)
+                    {
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 1275.0));
+                    }
+                }
+#endif
             }
         };
 

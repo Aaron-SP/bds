@@ -20,6 +20,12 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/terrain_vertex.h>
 
+#ifdef USE_INST_RENDER
+#include <min/vertex_buffer.h>
+#else
+#include <min/array_buffer.h>
+#endif
+
 #ifndef USE_GS_RENDER
 #include <game/geometry.h>
 #include <game/work_queue.h>
@@ -30,7 +36,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/program.h>
 #include <min/shader.h>
 #include <min/texture_buffer.h>
-#include <min/vertex_buffer.h>
 #include <numeric>
 #include <stdexcept>
 
@@ -46,18 +51,12 @@ class terrain
     min::shader _tg;
     min::shader _tf;
     min::program _prog;
-    min::vertex_buffer<float, uint32_t, terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
-    min::vertex_buffer<float, uint32_t, terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
+    min::array_buffer<float, uint32_t, terrain_vertex, GL_FLOAT> _pb;
+    min::array_buffer<float, uint32_t, terrain_vertex, GL_FLOAT> _gb;
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
     GLint _pre_loc;
 
-    inline void generate_indices(min::mesh<float, uint32_t> &mesh)
-    {
-        // Generate indices
-        mesh.index.resize(mesh.vertex.size());
-        std::iota(mesh.index.begin(), mesh.index.end(), 0);
-    }
     inline void load_texture()
     {
         // Load texture
@@ -70,19 +69,17 @@ class terrain
     inline void reserve_memory(const size_t chunks, const size_t chunk_size)
     {
         // Reserve maximum number of cells in a chunk
-        const size_t cells = chunk_size * chunk_size * chunk_size;
-        const size_t vertex = 24 * cells;
-        const size_t index = 36 * cells;
+        const size_t vertex = chunk_size * chunk_size * chunk_size;
 
         // Reserve vertex buffer memory for geometry
         for (size_t i = 0; i < chunks; i++)
         {
             _gb.set_buffer(i);
-            _gb.reserve(vertex, index, 1);
+            _gb.reserve(vertex, 1);
         }
 
         // Reserve vertex buffer memory for preview
-        _pb.reserve(vertex, index, 1);
+        _pb.reserve(vertex, 1);
     }
 
   public:
@@ -158,9 +155,6 @@ class terrain
         // Only add if contains cells
         if (child.vertex.size() > 0)
         {
-            // Generate indices
-            generate_indices(child);
-
             // Add mesh to vertex buffer
             _gb.add_mesh(child);
 
@@ -179,9 +173,6 @@ class terrain
         // Only add if contains cells
         if (terrain.vertex.size() > 0)
         {
-            // Generate indices
-            generate_indices(terrain);
-
             // Add mesh to the buffer
             _pb.add_mesh(terrain);
 
@@ -551,7 +542,7 @@ class terrain
             // Reserve space in parent mesh
             allocate_mesh_buffer(terrain.vertex);
 
-            // Convert cells to mesh in parallel
+            // Convert cells to mesh
             for (size_t i = 0; i < size; i++)
             {
                 set_cell(i, terrain.vertex);
@@ -577,8 +568,8 @@ class terrain
     min::shader _tv;
     min::shader _tf;
     min::program _prog;
-    min::vertex_buffer<float, uint32_t, terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _pb;
-    min::vertex_buffer<float, uint32_t, terrain_vertex, GL_FLOAT, GL_UNSIGNED_INT> _gb;
+    min::array_buffer<float, uint32_t, terrain_vertex, GL_FLOAT> _pb;
+    min::array_buffer<float, uint32_t, terrain_vertex, GL_FLOAT> _gb;
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
     min::mesh<float, uint32_t> _parent;
@@ -590,14 +581,10 @@ class terrain
         const size_t size = cell_buffer.size();
 
         // Vertex sizes
-        const size_t size24 = size * 24;
-        _parent.vertex.resize(size24);
-        _parent.uv.resize(size24);
-        _parent.normal.resize(size24);
-
-        // Index sizes
         const size_t size36 = size * 36;
-        _parent.index.resize(size36);
+        _parent.vertex.resize(size36);
+        _parent.uv.resize(size36);
+        _parent.normal.resize(size36);
     }
     static inline min::aabbox<float, min::vec3> create_box(const min::vec3<float> &center)
     {
@@ -621,24 +608,22 @@ class terrain
     {
         // Reserve maximum number of cells in a chunk
         const size_t cells = chunk_size * chunk_size * chunk_size;
-        const size_t vertex = 24 * cells;
-        const size_t index = 36 * cells;
+        const size_t vertex = 36 * cells;
 
         // Reserve maximum size of chunk
         _parent.vertex.reserve(vertex);
         _parent.uv.reserve(vertex);
         _parent.normal.reserve(vertex);
-        _parent.index.reserve(index);
 
         // Reserve vertex buffer memory for geometry
         for (size_t i = 0; i < chunks; i++)
         {
             _gb.set_buffer(i);
-            _gb.reserve(vertex, index, 1);
+            _gb.reserve(vertex, 1);
         }
 
         // Reserve vertex buffer memory for preview
-        _pb.reserve(vertex, index, 1);
+        _pb.reserve(vertex, 1);
     }
     inline void set_cell(const size_t cell, std::vector<min::vec4<float>> &cell_buffer)
     {
@@ -646,8 +631,7 @@ class terrain
         const min::vec4<float> &unpack = cell_buffer[cell];
 
         // Calculate vertex start position
-        const size_t vertex_start = 24 * cell;
-        const size_t index_start = 36 * cell;
+        const size_t vertex_start = 36 * cell;
 
         // Create bounding box of cell and get box dimensions
         const min::vec3<float> p = min::vec3<float>(unpack.x(), unpack.y(), unpack.z());
@@ -655,21 +639,21 @@ class terrain
         const min::vec3<float> &min = b.get_min();
         const min::vec3<float> &max = b.get_max();
 
+        // Extract the face type and atlas
+        const int_fast8_t face_type = static_cast<int>(unpack.w()) / 255;
+        const int_fast8_t atlas_id = static_cast<int>(unpack.w()) % 255;
+
         // Calculate block vertices
-        block_vertex(_parent.vertex, vertex_start, min, max);
+        face_vertex(_parent.vertex, vertex_start, min, max, face_type);
 
         // Calculate block uv's
-        block_uv(_parent.uv, vertex_start);
+        face_uv(_parent.uv, vertex_start, face_type);
 
         // Scale uv's based off atlas id
-        const int_fast8_t atlas_id = static_cast<int_fast8_t>(unpack.w());
-        block_uv_scale(_parent.uv, vertex_start, atlas_id);
+        face_uv_scale(_parent.uv, vertex_start, atlas_id);
 
         // Calculate block normals
-        block_normal(_parent.normal, vertex_start);
-
-        // Calculate block indices
-        block_index<uint32_t>(_parent.index, index_start, vertex_start);
+        face_normal(_parent.normal, vertex_start, face_type);
     }
 
   public:
@@ -778,7 +762,7 @@ class terrain
             // Reserve space in parent mesh
             allocate_mesh_buffer(terrain.vertex);
 
-            // Convert cells to mesh in parallel
+            // Convert cells to mesh
             for (size_t i = 0; i < size; i++)
             {
                 set_cell(i, terrain.vertex);

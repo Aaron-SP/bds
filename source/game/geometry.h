@@ -172,6 +172,190 @@ inline void block_index(std::vector<T> &index, size_t i, const T vertex_start)
     index[i++] = 23 + vertex_start;
     index[i++] = 16 + vertex_start;
 }
+
+static inline void face_uv_scale(std::vector<min::vec2<float>> &uv, size_t index, const int_fast8_t atlas_id)
+{
+    // Calculate grid index
+    const size_t col = atlas_id % 8;
+    const size_t row = atlas_id / 8;
+    const float x_offset = 0.001 + 0.125 * col;
+    const float y_offset = 0.001 + (1.0 - 0.125 * (row + 1));
+
+    // Scale at uv's in place
+    const size_t end = index + 36;
+    for (size_t i = index; i < end; i++)
+    {
+        uv[i] *= 0.124;
+        uv[i].x(uv[i].x() + x_offset);
+        uv[i].y(uv[i].y() + y_offset);
+    }
+}
+
+inline void face_vertex(std::vector<min::vec4<float>> &vertex, size_t i, const min::vec3<float> &min, const min::vec3<float> &max, const int_fast8_t face_type)
+{
+    switch (face_type)
+    {
+    case 0:
+        vertex[i++] = min::vec4<float>(min.x(), max.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), min.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), min.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), max.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), max.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), min.y(), min.z(), 1.0);
+        break;
+    case 1:
+        vertex[i++] = min::vec4<float>(max.x(), min.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), max.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), min.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), min.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), max.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), max.y(), max.z(), 1.0);
+        break;
+    case 2:
+        vertex[i++] = min::vec4<float>(min.x(), min.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), min.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), min.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), min.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), min.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), min.y(), max.z(), 1.0);
+        break;
+    case 3:
+        vertex[i++] = min::vec4<float>(max.x(), max.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), max.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), max.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), max.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), max.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), max.y(), min.z(), 1.0);
+        break;
+    case 4:
+        vertex[i++] = min::vec4<float>(min.x(), max.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), min.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), min.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), max.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), max.y(), min.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), min.y(), min.z(), 1.0);
+        break;
+    case 5:
+        vertex[i++] = min::vec4<float>(min.x(), min.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), max.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), max.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(min.x(), min.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), min.y(), max.z(), 1.0);
+        vertex[i++] = min::vec4<float>(max.x(), max.y(), max.z(), 1.0);
+        break;
+    }
+}
+
+inline void face_uv(std::vector<min::vec2<float>> &uv, size_t i, const int_fast8_t face_type)
+{
+    switch (face_type)
+    {
+    case 0:
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        break;
+    case 1:
+        uv[i++] = min::vec2<float>(0.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 1.0);
+        break;
+    case 2:
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        break;
+    case 3:
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        break;
+    case 4:
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        break;
+    case 5:
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 0.0);
+        uv[i++] = min::vec2<float>(1.0, 1.0);
+        uv[i++] = min::vec2<float>(0.0, 1.0);
+        break;
+    }
+}
+
+inline void face_normal(std::vector<min::vec3<float>> &normal, size_t i, const int_fast8_t face_type)
+{
+
+    switch (face_type)
+    {
+    case 0:
+        normal[i++] = min::vec3<float>(-1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(-1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(-1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(-1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(-1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(-1.0, 0.0, 0.0);
+        break;
+    case 1:
+        normal[i++] = min::vec3<float>(1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(1.0, 0.0, 0.0);
+        normal[i++] = min::vec3<float>(1.0, 0.0, 0.0);
+        break;
+    case 2:
+        normal[i++] = min::vec3<float>(0.0, -1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, -1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, -1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, -1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, -1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, -1.0, 0.0);
+        break;
+    case 3:
+        normal[i++] = min::vec3<float>(0.0, 1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, 1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, 1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, 1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, 1.0, 0.0);
+        normal[i++] = min::vec3<float>(0.0, 1.0, 0.0);
+        break;
+    case 4:
+        normal[i++] = min::vec3<float>(0.0, 0.0, -1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, -1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, -1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, -1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, -1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, -1.0);
+        break;
+    case 5:
+        normal[i++] = min::vec3<float>(0.0, 0.0, 1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, 1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, 1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, 1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, 1.0);
+        normal[i++] = min::vec3<float>(0.0, 0.0, 1.0);
+        break;
+    }
+}
 }
 
 #endif
