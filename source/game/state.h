@@ -50,6 +50,7 @@ class state
     bool _pause;
     bool _respawn;
     bool _user_input;
+    bool _wireframe;
 
     inline void load_camera(const options &opt, const load_state &state)
     {
@@ -110,7 +111,8 @@ class state
     state(const options &opt, const load_state &state)
         : _tracking(false), _frame_count(0), _x{}, _y{},
           _recoil(-1.0), _run_accum(0.0), _run_accum_sin(0.0),
-          _dead(false), _pause(false), _respawn(false), _user_input(false)
+          _dead(false), _pause(false), _respawn(false),
+          _user_input(false), _wireframe(false)
     {
         // Load camera
         load_camera(opt, state);
@@ -201,6 +203,19 @@ class state
     inline void set_tracking(const bool flag)
     {
         _tracking = flag;
+    }
+    inline void toggle_wireframe()
+    {
+        // Toggle wireframe mode
+        _wireframe = !_wireframe;
+        if (_wireframe)
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }
+        else
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
     }
     inline bool toggle_pause()
     {

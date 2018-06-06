@@ -49,9 +49,7 @@ An alternative rendering mode can be enabled by exporting a variable to bash bef
 This mode benefits computers with slow CPU's but have modern GPU's that run geometry shaders quickly.
 - 'export MGL_GS_RENDER=true'
 
-An alternative rendering mode can be enabled by exporting a variable to bash before compiling with the makefile.
-This mode benefits computers with slow CPU's but have modern GPU's that run instancing shaders quickly.
-- 'export MGL_INST_RENDER=true'
+MGL_INST_RENDER is no longer supported.
 
 An alternative VBO mode can be enabled by exporting a variable to bash before compiling with the makefile. 
 This mode allows faster vertex_buffer.bind_buffer() switching because it uses OpenGL 4.3 features to separate VBO specification from within VAO state.
@@ -128,8 +126,8 @@ The '-hardcore' flag changes the game mode between normal and hardcore difficult
 9. Right mouse and hold: target and track block
 10. [SPACE] jump, can double jump after level 3
 11. [SHIFT] dash, dashs in the forward direction after level 3
-12. Key [F1]: quit
-13. Key [F2]: toggle debug text
+12. Key [F1]: toggle debug text
+13. Key [F2]: toggle wireframe mode
 14. Key [F3]: music up
 15. Key [F4]: music down
 16. Key [ESCAPE]: pause the game
@@ -142,7 +140,9 @@ Lag usually comes in two forms, a CPU bottleneck or a GPU bottleneck. If you are
 
 #### CPU Bottleneck
 The MGL_VB43 compile time flag can only be used on OpenGL 4.3 systems, but will reduce the number of OpenGL calls by a factor of 2. 
-If your GPU supports OpenGL geometry shaders, the MGL_GS_RENDER compile time flag should alleviate any CPU bottleneck since it removes the need for the CPU to create terrain memory buffers. However this can **increase lag if** your GPU doesn't render geometry shaders efficiently. MGL_INST_RENDER is basically in the same vein as MGL_GS_RENDER and should alleviate most the of terrain processing and memory overhead compared with the default option. This flag requires the CPU to batch matrices instead of entire geometry primitives, so some CPU processing is still required, unlike that of MGL_GS_RENDER which requires no processing at all.
+If your GPU supports OpenGL geometry shaders, the MGL_GS_RENDER compile time flag should alleviate any CPU bottleneck since it removes the need for the CPU to create terrain memory buffers. However this can **increase lag if** your GPU doesn't render geometry shaders efficiently. 
+
+MGL_INST_RENDER is no longer supported.
 
 Known CPU bottleneck system configurations include AMD Phenom II x4 965 + Radeon HD 5770. However the MGL_VB43 and MGL_GS_RENDER increase performance to playable status, where previously the game would be unplayable.
 

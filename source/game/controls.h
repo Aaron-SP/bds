@@ -103,6 +103,7 @@ class controls
         _window->register_update(controls::on_resize);
 
         // Add FPS(WADS) keys to watch
+        keyboard.add(min::window::key_code::F1);
         keyboard.add(min::window::key_code::F2);
         keyboard.add(min::window::key_code::F3);
         keyboard.add(min::window::key_code::F4);
@@ -129,8 +130,11 @@ class controls
         keyboard.add(min::window::key_code::LSHIFT);
         keyboard.add(min::window::key_code::KEYQ);
 
+        // Register callback function F1
+        keyboard.register_keydown(min::window::key_code::F1, controls::toggle_text, (void *)this);
+
         // Register callback function F2
-        keyboard.register_keydown(min::window::key_code::F2, controls::toggle_text, (void *)_ui);
+        keyboard.register_keydown(min::window::key_code::F2, controls::toggle_wireframe, (void *)this);
 
         // Register callback function F3
         keyboard.register_keydown(min::window::key_code::F3, controls::music_down, (void *)_sound);
@@ -215,11 +219,21 @@ class controls
     }
     static void toggle_text(void *ptr, double step)
     {
-        // Cast to ui pointer type and toggle draw
-        ui_overlay *const ui = reinterpret_cast<ui_overlay *>(ptr);
+        // Get the state pointers
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        ui_overlay *const ui = control->get_ui();
 
-        // Enable / Disable drawing debug text
+        // Enable / disable drawing debug text
         ui->toggle_debug_text();
+    }
+    static void toggle_wireframe(void *ptr, double step)
+    {
+        // Get the state pointers
+        controls *const control = reinterpret_cast<controls *>(ptr);
+        state *const state = control->get_state();
+
+        // Enable / disable drawing wireframe
+        state->toggle_wireframe();
     }
     static void music_down(void *ptr, double step)
     {

@@ -1482,11 +1482,6 @@ class world
         // Flush out the update chunks
         _grid.flush_chunk_updates();
 
-// Only used for instance rendering
-#ifdef USE_INST_RENDER
-        _terrain.update_matrices(cam.get_pv_matrix(), get_preview_matrix());
-#endif
-
         // For all chunk meshes
         for (const auto &i : _view_chunk_index)
         {
