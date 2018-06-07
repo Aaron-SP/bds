@@ -360,6 +360,9 @@ class cgrid
                 const size_t edge = _grid_scale - 1;
                 const min::vec3<float> p = grid_cell_center(key);
 
+                // Convert atlas to a float
+                const float float_atlas = static_cast<float>(atlas);
+
                 // Generate X Faces
                 const bool on_edge_nx = tx == 0;
                 const bool on_edge_px = tx == edge;
@@ -369,7 +372,7 @@ class cgrid
                     const size_t x1 = grid_key_pack(std::make_tuple(tx - 1, ty, tz));
                     if (_grid[x1] == block_id::EMPTY)
                     {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas)));
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 0.1));
                     }
                 }
                 if (!on_edge_px)
@@ -377,7 +380,7 @@ class cgrid
                     const size_t x2 = grid_key_pack(std::make_tuple(tx + 1, ty, tz));
                     if (_grid[x2] == block_id::EMPTY)
                     {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 255.0));
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 255.1));
                     }
                 }
 
@@ -390,7 +393,7 @@ class cgrid
                     const size_t y1 = grid_key_pack(std::make_tuple(tx, ty - 1, tz));
                     if (_grid[y1] == block_id::EMPTY)
                     {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 510.0));
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 510.1));
                     }
                 }
                 if (!on_edge_py)
@@ -398,7 +401,7 @@ class cgrid
                     const size_t y2 = grid_key_pack(std::make_tuple(tx, ty + 1, tz));
                     if (_grid[y2] == block_id::EMPTY)
                     {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 765.0));
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 765.1));
                     }
                 }
 
@@ -411,7 +414,7 @@ class cgrid
                     const size_t z1 = grid_key_pack(std::make_tuple(tx, ty, tz - 1));
                     if (_grid[z1] == block_id::EMPTY)
                     {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 1020.0));
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1020.1));
                     }
                 }
                 if (!on_edge_pz)
@@ -419,7 +422,7 @@ class cgrid
                     const size_t z2 = grid_key_pack(std::make_tuple(tx, ty, tz + 1));
                     if (_grid[z2] == block_id::EMPTY)
                     {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), static_cast<float>(atlas) + 1275.0));
+                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1275.1));
                     }
                 }
             }
@@ -1138,13 +1141,48 @@ class cgrid
         mesh.vertex.clear();
         mesh.index.clear();
 
+        // Convert atlas to a float
+        const float float_atlas = static_cast<float>(atlas);
+
+        // Calculate max edges
+        const unsigned x_edge = length.x() - 1;
+        const unsigned y_edge = length.y() - 1;
+        const unsigned z_edge = length.z() - 1;
+
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &mesh, &atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
+        const auto f = [this, &mesh, &offset, x_edge, y_edge, z_edge, float_atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
             // Add data to mesh for each cell
             const min::vec3<float> p = grid_cell(key);
 
-            const float float_atlas = static_cast<float>(atlas);
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas));
+            // Generate X faces on edges accounting for offset rotation
+            if ((i == 0 && offset.x() > 0) || (i == x_edge && offset.x() < 0))
+            {
+                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 0.1));
+            }
+            if ((i == 0 && offset.x() < 0) || (i == x_edge && offset.x() > 0))
+            {
+                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 255.1));
+            }
+
+            // Generate Y faces on edges accounting for offset rotation
+            if ((j == 0 && offset.y() > 0) || (j == y_edge && offset.y() < 0))
+            {
+                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 510.1));
+            }
+            if ((j == 0 && offset.y() < 0) || (j == y_edge && offset.y() > 0))
+            {
+                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 765.1));
+            }
+
+            // Generate Z faces on edges accounting for offset rotation
+            if ((k == 0 && offset.z() > 0) || (k == z_edge && offset.z() < 0))
+            {
+                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1020.1));
+            }
+            if ((k == 0 && offset.z() < 0) || (k == z_edge && offset.z() > 0))
+            {
+                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1275.1));
+            }
         };
 
         // Store start point => (0,0,0),
@@ -1168,8 +1206,13 @@ class cgrid
 
             // Add data to mesh for each cell
             const min::vec3<float> p = grid_cell(key);
-            const float float_atlas = static_cast<float>(atlas);
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas));
+            const float float_atlas = (atlas == block_id::EMPTY) ? static_cast<float>(block_id::CRYSTAL_P) : static_cast<float>(atlas);
+            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 0.1));
+            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 255.1));
+            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 510.1));
+            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 765.1));
+            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1020.1));
+            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1275.1));
         };
 
         // Store start point => (0,0,0),

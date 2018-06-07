@@ -1110,7 +1110,7 @@ class controls
         };
 
         // Check if we are in edit mode
-        const bool mode = world->get_edit_mode();
+        const bool mode = world->is_edit_mode();
         if (mode)
         {
             // Try to consume energy to create this resource
@@ -1121,10 +1121,24 @@ class controls
 
                 // Consume the resource
                 bool consumed = false;
-                if (world->get_swatch_mode())
+                if (world->is_swatch_mode())
                 {
-                    const unsigned count = world->get_swatch_cost();
-                    consumed = inv.consume_multi(item_id::CONS_ETHER, count);
+                    if (world->is_swatch_copy())
+                    {
+                        // Swap copy / place mode
+                        world->toggle_swatch_copy_place();
+
+                        // Load the current swatch data
+                        world->load_swatch();
+
+                        // Early return
+                        return;
+                    }
+                    else
+                    {
+                        const unsigned count = world->get_swatch_cost();
+                        consumed = inv.consume_multi(item_id::CONS_ETHER, count);
+                    }
                 }
                 else
                 {

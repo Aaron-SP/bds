@@ -489,15 +489,18 @@ class world
 
             // If generating a swatch preview
             _grid.preview_swatch(_terr_mesh, _swatch);
+
+            // Upload preview geometry
+            _terrain.upload_preview(_terr_mesh);
         }
-        else
+        else if (_atlas_id != block_id::EMPTY)
         {
             // If generating a block preview
             _grid.preview_atlas(_terr_mesh, _preview_offset, _scale, _atlas_id);
-        }
 
-        // Upload preview geometry
-        _terrain.upload_preview(_terr_mesh);
+            // Upload preview geometry
+            _terrain.upload_preview(_terr_mesh);
+        }
     }
     inline std::tuple<bool, float, float> in_range_explode(const min::vec3<float> &p1, const min::vec3<float> &p2, const min::vec3<unsigned> &scale) const
     {
@@ -1058,10 +1061,6 @@ class world
     {
         return _drops;
     }
-    inline bool get_edit_mode() const
-    {
-        return _edit_mode;
-    }
     inline const cgrid &get_grid() const
     {
         return _grid;
@@ -1097,10 +1096,6 @@ class world
     inline unsigned get_swatch_cost() const
     {
         return _swatch_cost;
-    }
-    inline bool get_swatch_mode() const
-    {
-        return _swatch_mode;
     }
     inline std::pair<const std::string *, float> get_target_info(const target &t) const
     {
@@ -1167,6 +1162,14 @@ class world
     inline bool is_edit_mode() const
     {
         return _edit_mode;
+    }
+    inline bool is_swatch_mode() const
+    {
+        return _swatch_mode;
+    }
+    inline bool is_swatch_copy() const
+    {
+        return _swatch_copy_place;
     }
     inline void kill_drones()
     {
@@ -1252,7 +1255,12 @@ class world
     {
         // Reset the scale and the cached offset
         _scale = min::vec3<unsigned>(1, 1, 1);
-        _cached_offset = min::vec3<int>(1, 1, 1);
+
+        // Reset the swatch contents
+        if (_swatch_mode)
+        {
+            _swatch.reset();
+        }
 
         // Only applicable in edit mode
         if (_edit_mode)
