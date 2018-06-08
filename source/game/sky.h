@@ -45,7 +45,7 @@ class sky
         min::dds tex(sky);
 
         // Load texture buffer
-        return _tbuffer.add_dds_texture(tex);
+        return _tbuffer.add_dds_texture(tex, true);
     }
 
   public:

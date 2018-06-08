@@ -238,7 +238,7 @@ class ui_bg
         const min::dds tex(title);
 
         // Load texture into texture buffer
-        return _tbuffer.add_dds_texture(tex);
+        return _tbuffer.add_dds_texture(tex, true);
     }
     inline GLuint load_ui_texture()
     {
@@ -247,7 +247,7 @@ class ui_bg
         const min::dds tex(ui);
 
         // Load texture into texture buffer
-        return _tbuffer.add_dds_texture(tex);
+        return _tbuffer.add_dds_texture(tex, true);
     }
     inline void position_ui(const min::vec2<float> &p)
     {

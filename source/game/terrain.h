@@ -59,7 +59,7 @@ class terrain
         min::dds tex(atlas);
 
         // Load texture buffer
-        _dds_id = _tbuffer.add_dds_texture(tex);
+        _dds_id = _tbuffer.add_dds_texture(tex, true);
     }
     inline void reserve_memory(const size_t chunks, const size_t chunk_size)
     {
@@ -222,7 +222,7 @@ class terrain
         min::dds tex(atlas);
 
         // Load texture buffer
-        _dds_id = _tbuffer.add_dds_texture(tex);
+        _dds_id = _tbuffer.add_dds_texture(tex, true);
     }
     inline void reserve_memory(const size_t chunks, const size_t chunk_size)
     {

@@ -325,7 +325,7 @@ class static_instance
         const min::dds chest = min::dds(text);
 
         // Load dds into texture buffer
-        const size_t tid = _texture_buffer.add_dds_texture(chest);
+        const size_t tid = _texture_buffer.add_dds_texture(chest, true);
 
         // Create bounding box from mesh data
         const min::aabbox<float, min::vec4> box(mesh.vertex);
@@ -350,7 +350,7 @@ class static_instance
         const min::dds drone = min::dds(text);
 
         // Load dds into texture buffer
-        const size_t tid = _texture_buffer.add_dds_texture(drone);
+        const size_t tid = _texture_buffer.add_dds_texture(drone, true);
 
         // Create bounding box from mesh data
         const min::aabbox<float, min::vec4> box(mesh.vertex);
@@ -398,7 +398,7 @@ class static_instance
         const min::dds drop = min::dds(text);
 
         // Load dds into texture buffer
-        const size_t tid = _texture_buffer.add_dds_texture(drop);
+        const size_t tid = _texture_buffer.add_dds_texture(drop, true);
 
         // Create bounding box from box dimensions
         const min::aabbox<float, min::vec3> box(min, max);
@@ -424,7 +424,7 @@ class static_instance
         const min::dds missile = min::dds(text);
 
         // Load dds into texture buffer
-        const size_t tid = _texture_buffer.add_dds_texture(missile);
+        const size_t tid = _texture_buffer.add_dds_texture(missile, true);
 
         // Create bounding box from mesh data
         const min::aabbox<float, min::vec4> box(mesh.vertex);

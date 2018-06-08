@@ -92,7 +92,7 @@ class character
         const min::dds d = min::dds(skin);
 
         // Load texture buffer
-        return _texture_buffer.add_dds_texture(d);
+        return _texture_buffer.add_dds_texture(d, true);
     }
     inline void reset_animation()
     {

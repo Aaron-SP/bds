@@ -113,7 +113,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.257");
+        _ui.text().set_debug_version("VERSION: 0.1.258");
 
         // Set the game mode
         const bool hardcore = _world.get_load_state().is_hardcore();
@@ -292,6 +292,10 @@ class bds
         // Bind uniforms
         _uniforms.bind();
 
+        // Update the light position
+        _uniforms.update_light_position(camera.get_position());
+        _uniforms.update_light();
+
         // Update camera properties
         _uniforms.update_camera(camera);
 
@@ -319,6 +323,7 @@ class bds
         }
 
         // Update all matrices
+        _uniforms.update_light_buffer();
         _uniforms.update_matrix_buffer();
     }
 
@@ -338,6 +343,7 @@ class bds
     {
         // Set depth and cull settings
         min::settings::initialize();
+        min::settings::enable_gamma_correction();
 
         // Update cursor position for tracking
         center_cursor();

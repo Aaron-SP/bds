@@ -104,14 +104,17 @@ The '-hardcore' flag changes the game mode between normal and hardcore difficult
 
 #### Title Screen
 
-![Alt text](pictures/intro.png)
+![Alt text](pictures/intro.jpg)
 
 #### Pre-Texture Update
 
-![Alt text](pictures/spawn.png)
+![Alt text](pictures/spawn.jpg)
 
 #### Texture Update
-![Alt text](pictures/up1.png)
+![Alt text](pictures/up1.jpg)
+
+#### Shader Update
+![Alt text](pictures/shaders.jpg)
 
 ### PLAYER USAGE INSTRUCTIONS:
 

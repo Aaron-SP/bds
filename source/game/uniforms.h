@@ -29,9 +29,11 @@ class uniforms
 {
   private:
     min::uniform_buffer<float> _ub;
-    min::light<float> _light1;
+    min::light<float> _sun;
+    min::light<float> _light;
 
-    size_t _light;
+    size_t _sun_id;
+    size_t _light_id;
     size_t _proj_view_id;
     size_t _view_id;
     size_t _particle_id;
@@ -49,14 +51,21 @@ class uniforms
 
     inline void load_uniforms(const size_t ui, const size_t chests, const size_t drones, const size_t drops, const size_t explosives, const size_t missiles, const size_t bones)
     {
-        // Change light alpha for placemark
-        const min::vec4<float> col1(1.0, 1.0, 1.0, 1.0);
-        const min::vec4<float> pos1(0.0, 100.0, 0.0, 1.0);
-        const min::vec4<float> pow1(0.3, 0.7, 0.0, 1.0);
-        _light1 = min::light<float>(col1, pos1, pow1);
+        // Create sun light
+        const min::vec4<float> sun_col(1.0, 1.0, 1.0, 1.0);
+        const min::vec4<float> sun_pos(1000.0, 1000.0, -1000.0, 1.0);
+        const min::vec4<float> sun_pow(15000.0, 1000000.0, 100000.0, 1.0);
+        _sun = min::light<float>(sun_col, sun_pos, sun_pow);
+
+        // Create player light
+        const min::vec4<float> light_col(1.0, 1.0, 1.0, 1.0);
+        const min::vec4<float> light_pos(0.0, 1.0, 0.0, 1.0);
+        const min::vec4<float> light_pow(0.3, 0.7, 0.1, 1.0);
+        _light = min::light<float>(light_col, light_pos, light_pow);
 
         // Add light to buffer
-        _light = _ub.add_light(_light1);
+        _sun_id = _ub.add_light(_sun);
+        _light_id = _ub.add_light(_light);
 
         // Load projection, view, camera, and md5 matrix into uniform buffer
         _proj_view_id = _ub.add_matrix(min::mat4<float>());
@@ -126,7 +135,7 @@ class uniforms
     }
 
   public:
-    uniforms() : _ub(1, 435, 0)
+    uniforms() : _ub(2, 435, 0)
     {
         // Load the number of used uniforms into the buffer
         load_uniforms(120, 10, 10, 50, 10, 10, 100);
@@ -147,6 +156,10 @@ class uniforms
     {
         _ub.set_program_vector(p);
     }
+    inline void update_light_buffer()
+    {
+        _ub.update_lights();
+    }
     inline void update_matrix_buffer()
     {
         _ub.update_matrix();
@@ -164,10 +177,6 @@ class uniforms
     {
         _ub.set_matrix(cam.get_pv_matrix(), _proj_view_id);
         _ub.set_matrix(cam.get_v_matrix(), _view_id);
-    }
-    inline void update_md5_model(const min::mat4<float> &model)
-    {
-        _ub.set_matrix(model, _md5_id);
     }
     inline void update_chests(const std::vector<min::mat4<float>> &matrices)
     {
@@ -204,6 +213,18 @@ class uniforms
         {
             _ub.set_matrix(matrices[i], _explode_id[i]);
         }
+    }
+    inline void update_light_position(const min::vec3<float> &p)
+    {
+        _light.set_position(p);
+    }
+    inline void update_light()
+    {
+        _ub.set_light(_light, _light_id);
+    }
+    inline void update_md5_model(const min::mat4<float> &model)
+    {
+        _ub.set_matrix(model, _md5_id);
     }
     inline void update_missiles(const std::vector<min::mat4<float>> &matrices)
     {

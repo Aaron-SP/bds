@@ -274,7 +274,7 @@ class particle
         const min::dds b = min::dds(smoke);
 
         // Load texture buffer
-        return _tbuffer.add_dds_texture(b);
+        return _tbuffer.add_dds_texture(b, true);
     }
     inline GLint load_program_index(const game::uniforms &uniforms) const
     {
@@ -286,7 +286,6 @@ class particle
         }
 
         // Load the uniform buffer with program we will use
-        uniforms.set_program_lights(_prog);
         uniforms.set_program_matrix(_prog);
 
         // Return the index

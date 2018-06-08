@@ -442,7 +442,7 @@ class ui_text
         }
 
         // Set reference to red
-        set_reference(0.9, 0.3, 0.2);
+        set_reference(0.4, 0.025, 0.025);
 
         // Draw batch
         if (_stream_batch > 0)
@@ -478,16 +478,18 @@ class ui_text
             if (_draw_stats)
             {
                 // Set reference to orange and draw primary
-                set_reference(0.976, 0.541, 0.0);
+                set_reference(0.65, 0.275, 0.0);
                 _text_info.draw(_hover + 1);
 
-                // Set reference to green and draw secondary
-                set_reference(0.592, 0.988, 0.592);
+                // Set reference to blue and draw secondary
+                set_reference(0.27, 0.45, 0.5);
                 _text_info.draw(_hover + 2);
             }
 
-            // Set reference to gold
-            set_reference(0.985, 0.765, 0.482);
+            // Saved 0.4, 0.4, 0.2, Good light green color
+
+            // Set reference to gold text
+            set_reference(0.65, 0.5, 0.22);
             _text_info.draw(_hover + 3);
         }
     }
