@@ -27,7 +27,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-#ifdef USE_GS_RENDER
+#ifdef MGL_GS_RENDER
 
 template <typename T, typename K, GLenum FLOAT_TYPE>
 class terrain_vertex

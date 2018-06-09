@@ -20,7 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/terrain_vertex.h>
 
-#ifndef USE_GS_RENDER
+#ifndef MGL_GS_RENDER
 #include <game/geometry.h>
 #include <game/work_queue.h>
 #endif
@@ -37,7 +37,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-#ifdef USE_GS_RENDER
+#ifdef MGL_GS_RENDER
 
 class terrain
 {

@@ -4,4 +4,4 @@
 cd /opt/bds
 
 # Execute the game
-bin/game
+bin/game "$@"
