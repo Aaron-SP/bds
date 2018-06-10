@@ -46,12 +46,12 @@ endif
 
 # Enable opengl43 features
 ifdef MGL_VB43
-	MGL_VB43 = -DMGL_VB43
+	MGL_RENDER_VB = -DMGL_VB43
 endif
 
 # Compile parameters
-CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math $(STATIC) $(MGL_RENDER) $(MGL_VB43)
-DEBUG = -g -std=c++14 -Wall -O1 $(STATIC) $(MGL_RENDER) $(MGL_VB43)
+CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math $(STATIC) $(MGL_RENDER) $(MGL_RENDER_VB)
+DEBUG = -g -std=c++14 -Wall -O1 $(STATIC) $(MGL_RENDER) $(MGL_RENDER_VB)
 NATIVE =  $(CPP) -march=native
 BUILD32 = $(CPP) -m32
 BUILD64 = $(CPP) -m64

@@ -46,15 +46,24 @@ The default path is 'C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include' for 
 ### Compile Flags
 
 An alternative rendering mode can be enabled by exporting a variable to bash before compiling with the makefile.
+- `export MGL_GS_RENDER=true`
+
+You can also pass this variable directly to the makefile without exporting.
+- `make MGL_GS_RENDER=true`
+
 This mode benefits computers with slow CPU's but have modern GPU's that run geometry shaders quickly.
-- 'export MGL_GS_RENDER=true'
 
 MGL_INST_RENDER is no longer supported.
 
-An alternative VBO mode can be enabled by exporting a variable to bash before compiling with the makefile. 
-This mode allows faster vertex_buffer.bind_buffer() switching because it uses OpenGL 4.3 features to separate VBO specification from within VAO state.
-This mode requires using a OpenGL 4.3 core profile.
-- 'export MGL_VB43=true'
+An alternative VBO mode can be enabled by exporting a variable to bash before compiling with the makefile.
+- `export MGL_VB43=true`
+
+You can also pass this variable directly to the makefile without exporting.
+- `make MGL_VB43=true`
+
+This mode allows faster vertex_buffer.bind_buffer() switching because it uses OpenGL 4.3 features to separate VBO specification from within VAO state. This mode requires using a OpenGL 4.3 core profile.
+
+**When installing using `sudo`, pass the compile flags directly to the makefile, since the variables will not be defined using export due to switching of user environments.**
 
 ### For compiling on CYGWIN:
 
@@ -72,6 +81,25 @@ This mode requires using a OpenGL 4.3 core profile.
 - C:\cygwin\lib\gcc\x86_64-w64-mingw32\5.4.0\include;
 - C:\cygwin\usr\x86_64-w64-mingw32\sys-root\mingw\include;
 - C:\cygwin\usr\x86_64-w64-mingw32\sys-root\mingw\bin;
+
+### Makefile install target
+By default, the makefile will install the game in the /opt/bds directory. You can override this location with the $(DESTDIR) variable in the makefile.
+You can run this makefile target with the following command.
+- `make install`
+
+With OpenGL 4.3 and geometry shader optimizations.
+- `make MGL_GS_RENDER=true MGL_VB43=true install`
+
+Customizing the install location.
+- `make DESTDIR=/opt/custom MGL_GS_RENDER=true MGL_VB43=true install`
+
+The install target will create a bash script with $(DESTDIR) captured inside of it. This bash script is called bds.game and will be symlinked into /usr/bin. This allows you to run the game from any directory, since the script will always internally switch to the correct directory to run the game. This is important because the game assumes it will be run in the root folder, and otherwise will not be able to locate the data files.
+
+### Makefile uninstall target
+By default, the makefile will uninstall the game from the /opt/bds directory. You can override this location with the $(DESTDIR) variable in the makefile.
+Be extremely careful using this, the uninstall target will not check if the directory is valid. It will simply remove files from this directory after prompting the user to confirm deletion of files and directories. 
+
+**USE THIS TARGET AT YOUR OWN RISK OF DELETING IMPORTANT FILES**
 
 ### Run flags
 
