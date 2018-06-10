@@ -139,7 +139,15 @@ class ui_state
     }
     inline void set_mode(const ui_mode mode)
     {
+        // Set to the new mode
         _mode = mode;
+
+        // Reset the state
+        _clicking = false;
+        _click = 0;
+        _hovering = false;
+        _hover = 0;
+        _selecting = false;
     }
     inline void set_hover(const ui_id id)
     {

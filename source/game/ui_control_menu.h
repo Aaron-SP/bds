@@ -240,11 +240,15 @@ class ui_control_menu
             // If he didn't hit anything
             if (!hit)
             {
-                // Unselect hover
-                unselect_hover(state);
+                // If we are hovering, unselect hover
+                if (state.is_hovering())
+                {
+                    // Unselect hover
+                    unselect_hover(state);
 
-                // Reset the hover index
-                state.set_hovering(false);
+                    // Reset the hover index
+                    state.set_hovering(false);
+                }
 
                 // Not overlapping a UI element
                 return std::make_pair(false, 0);

@@ -726,7 +726,7 @@ class ui_bg
     }
     inline void switch_mode(const ui_mode mode)
     {
-        // Set the state to base
+        // Reset the state
         _state.set_mode(mode);
 
         const uint_fast16_t width = _assets.get_width();
