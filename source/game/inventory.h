@@ -291,6 +291,7 @@ class inventory
         _inv_name[91] = "Potassium [K+]";
         _inv_name[92] = "Sodium [Na+]";
         _inv_name[93] = "Carbonate [(CO3)2-]";
+        _inv_desc[93] = "Contains sequestered oxygen";
         _inv_name[94] = "Chloride [Cl-]";
         _inv_name[95] = "Nitrate [NO3-]";
         _inv_name[96] = "Phosphate [(PO4)3-]";

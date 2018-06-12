@@ -268,6 +268,9 @@ class stats
     }
     void update_cache()
     {
+        // Are dynamics offline?
+        const bool dynamics_above = get_dynamics_cost_frac() > 1.0;
+
         // Cache the sqrt of level
         _sqrt_level = std::sqrt(level());
 
@@ -285,6 +288,12 @@ class stats
 
         // Update max experience
         _max_exp = calc_max_exp();
+
+        // Set dynamics alert if enabled
+        if (dynamics_above && get_dynamics_cost_frac() <= 1.0)
+        {
+            _alert = stat_alert::dynamics;
+        }
     }
 
   public:
@@ -479,7 +488,17 @@ class stats
     }
     inline void consume_oxygen()
     {
+        // Consume oxygen
         set_oxygen(_oxygen - _oxygen_consume);
+
+        // Take damage if less than 10% max oxygen
+        const float threshold = _max_oxygen * 0.10;
+        if (_oxygen <= threshold)
+        {
+            // Take damage per second because of low oxygen
+            const float dmg = get_health_regen() * 1.5;
+            set_health(_health - dmg);
+        }
     }
     inline void damage(const float in)
     {
@@ -663,7 +682,8 @@ class stats
     }
     inline bool is_low_oxygen() const
     {
-        return _oxygen < 25.0;
+        const float threshold = _max_oxygen * 0.25;
+        return _oxygen < threshold;
     }
     inline bool is_low_oxygen_flag() const
     {
@@ -754,9 +774,6 @@ class stats
     {
         if (_stat_points > 0)
         {
-            // Are dynamics offline?
-            const bool dynamics_above = get_dynamics_cost_frac() > 1.0;
-
             // Subtract stat point
             _stat_points--;
 
@@ -765,12 +782,6 @@ class stats
 
             // Update the stat cache
             update_cache();
-
-            // Set dynamics alert if enabled
-            if (dynamics_above && get_dynamics_cost_frac() <= 1.0)
-            {
-                _alert = stat_alert::dynamics;
-            }
 
             // Set dirty flag
             _dirty = true;
