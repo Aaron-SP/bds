@@ -113,7 +113,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.263");
+        _ui.text().set_debug_version("VERSION: 0.1.265");
 
         // Set the game mode
         const bool hardcore = _world.get_load_state().is_hardcore();
@@ -377,7 +377,7 @@ class bds
     void clear_background() const
     {
         // blue background
-        const float color[] = {0.145, 0.145f, 0.150f, 1.0f};
+        const float color[] = {0.025f, 0.025f, 0.025f, 1.0f};
         glClearBufferfv(GL_COLOR, 0, color);
         glClear(GL_DEPTH_BUFFER_BIT);
     }

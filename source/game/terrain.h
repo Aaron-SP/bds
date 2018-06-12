@@ -63,7 +63,7 @@ class terrain
     }
     inline void reserve_memory(const size_t chunks, const size_t chunk_size)
     {
-        // Reserve maximum number of cells in a chunk
+        // Reserve maximum number of faces in a chunk
         const size_t vertex = chunk_size * chunk_size * chunk_size;
 
         // Reserve vertex buffer memory for geometry
@@ -147,7 +147,7 @@ class terrain
         // Reset the buffer
         _gb.clear();
 
-        // Only add if contains cells
+        // Only add if contains faces
         if (child.vertex.size() > 0)
         {
             // Add mesh to vertex buffer
@@ -165,7 +165,7 @@ class terrain
         // Reset the buffer
         _pb.clear();
 
-        // Only add if contains cells
+        // Only add if contains faces
         if (terrain.vertex.size() > 0)
         {
             // Add mesh to the buffer
@@ -201,10 +201,10 @@ class terrain
         const size_t size = cell_buffer.size();
 
         // Vertex sizes
-        const size_t size36 = size * 36;
-        _parent.vertex.resize(size36);
-        _parent.uv.resize(size36);
-        _parent.normal.resize(size36);
+        const size_t size6 = size * 6;
+        _parent.vertex.resize(size6);
+        _parent.uv.resize(size6);
+        _parent.normal.resize(size6);
     }
     static inline min::aabbox<float, min::vec3> create_box(const min::vec3<float> &center)
     {
@@ -228,30 +228,32 @@ class terrain
     {
         // Reserve maximum number of cells in a chunk
         const size_t cells = chunk_size * chunk_size * chunk_size;
-        const size_t vertex = 36 * cells;
+
+        // Reserve 6 faces per cell maximum
+        const size_t max_vertex = cells * 36;
 
         // Reserve maximum size of chunk
-        _parent.vertex.reserve(vertex);
-        _parent.uv.reserve(vertex);
-        _parent.normal.reserve(vertex);
+        _parent.vertex.reserve(max_vertex);
+        _parent.uv.reserve(max_vertex);
+        _parent.normal.reserve(max_vertex);
 
         // Reserve vertex buffer memory for geometry
         for (size_t i = 0; i < chunks; i++)
         {
             _gb.set_buffer(i);
-            _gb.reserve(vertex, 1);
+            _gb.reserve(max_vertex, 1);
         }
 
         // Reserve vertex buffer memory for preview
-        _pb.reserve(vertex, 1);
+        _pb.reserve(max_vertex, 1);
     }
-    inline void set_cell(const size_t cell, std::vector<min::vec4<float>> &cell_buffer)
+    inline void set_face(const size_t cell, std::vector<min::vec4<float>> &cell_buffer)
     {
         // Unpack the point and the atlas
         const min::vec4<float> &unpack = cell_buffer[cell];
 
         // Calculate vertex start position
-        const size_t vertex_start = 36 * cell;
+        const size_t vertex_start = cell * 6;
 
         // Create bounding box of cell and get box dimensions
         const min::vec3<float> p = min::vec3<float>(unpack.x(), unpack.y(), unpack.z());
@@ -345,19 +347,19 @@ class terrain
         // Reset the buffer
         _gb.clear();
 
-        // Convert cells to mesh in parallel
+        // Convert faces to mesh in parallel
         const size_t size = child.vertex.size();
         if (size > 0)
         {
             // Reserve space in parent mesh
             allocate_mesh_buffer(child.vertex);
 
-            // Parallelize on generating cells
+            // Parallelize on generating faces
             const auto work = [this, &child](std::mt19937 &gen, const size_t i) {
-                set_cell(i, child.vertex);
+                set_face(i, child.vertex);
             };
 
-            // Convert cells to mesh in parallel
+            // Convert faces to mesh in parallel
             work_queue::worker.run(work, 0, size);
 
             // Add mesh to vertex buffer
@@ -375,17 +377,17 @@ class terrain
         // Reset the buffer
         _pb.clear();
 
-        // Only add if contains cells
+        // Only add if contains faces
         const size_t size = terrain.vertex.size();
         if (size > 0)
         {
             // Reserve space in parent mesh
             allocate_mesh_buffer(terrain.vertex);
 
-            // Convert cells to mesh
+            // Convert faces to mesh
             for (size_t i = 0; i < size; i++)
             {
-                set_cell(i, terrain.vertex);
+                set_face(i, terrain.vertex);
             }
 
             _pb.add_mesh(_parent);

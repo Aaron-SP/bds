@@ -83,7 +83,7 @@ inline void block_uv(std::vector<min::vec2<float>> &uv, size_t i)
     uv[i++] = min::vec2<float>(1.0, 1.0);
 }
 
-static inline void block_uv_scale(std::vector<min::vec2<float>> &uv, size_t index, const int_fast8_t atlas_id)
+static inline void block_uv_scale(std::vector<min::vec2<float>> &uv, const size_t index, const int_fast8_t atlas_id)
 {
     // Calculate grid index
     const size_t col = atlas_id % 8;
@@ -173,7 +173,7 @@ inline void block_index(std::vector<T> &index, size_t i, const T vertex_start)
     index[i++] = 16 + vertex_start;
 }
 
-static inline void face_uv_scale(std::vector<min::vec2<float>> &uv, size_t index, const int_fast8_t atlas_id)
+static inline void face_uv_scale(std::vector<min::vec2<float>> &uv, const size_t index, const int_fast8_t atlas_id)
 {
     // Calculate grid index
     const size_t col = atlas_id % 8;
@@ -182,7 +182,7 @@ static inline void face_uv_scale(std::vector<min::vec2<float>> &uv, size_t index
     const float y_offset = 0.001 + (1.0 - 0.125 * (row + 1));
 
     // Scale at uv's in place
-    const size_t end = index + 36;
+    const size_t end = index + 6;
     for (size_t i = index; i < end; i++)
     {
         uv[i] *= 0.124;
