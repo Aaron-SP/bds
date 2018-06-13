@@ -86,13 +86,11 @@ class missiles
     {
         return _sim->get_body(_miss[index].body_id());
     }
-    inline void explode(const size_t index, const block_id atlas, const ex_scale_call &f)
+    template <typename ES>
+    inline void explode(const size_t index, const block_id atlas, const ES &ex_scale_call)
     {
         // Call the explosion callback function if available
-        if (f)
-        {
-            f(position(index), _scale, atlas);
-        }
+        ex_scale_call(position(index), _scale, atlas);
 
         // Blow up the missile
         explode(index);
@@ -233,7 +231,8 @@ class missiles
     {
         _f = f;
     }
-    inline void update_frame(const cgrid &grid, const ex_scale_call &f)
+    template <typename ES>
+    inline void update_frame(const cgrid &grid, const ES &ex_scale_call)
     {
         // Do missile collisions
         const size_t size = _miss.size();
@@ -249,7 +248,7 @@ class missiles
                 if (_sim->collide(body, cell.first))
                 {
                     // Explode the missile
-                    explode(i, cell.second, f);
+                    explode(i, cell.second, ex_scale_call);
 
                     // Decrement current index
                     i--;

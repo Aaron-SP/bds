@@ -59,7 +59,7 @@ class cgrid_generator
         };
 
         // Convert cells to mesh in parallel
-        work_queue::worker.run(work, 0, grid.size());
+        work_queue::worker.run(std::cref(work), 0, grid.size());
     }
     inline void clear_stream(const std::string &str)
     {
@@ -189,11 +189,9 @@ class cgrid_generator
         };
 
         // Convert cells to mesh in parallel
-        work_queue::worker.run(work, 0, grid.size());
+        work_queue::worker.run(std::cref(work), 0, grid.size());
     }
-    void generate_world(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size,
-                        const std::function<size_t(const std::tuple<size_t, size_t, size_t> &)> &grid_key_unpack,
-                        const std::function<min::vec3<float>(const size_t)> &grid_cell_center)
+    void generate_world(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size)
     {
         // Wake up the threads for processing
         work_queue::worker.wake();
@@ -212,9 +210,9 @@ class cgrid_generator
         // Put the threads back to sleep
         work_queue::worker.sleep();
     }
+    template <typename F, typename G>
     void generate_portal(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size,
-                         const std::function<size_t(const std::tuple<size_t, size_t, size_t> &)> &grid_key_unpack,
-                         const std::function<min::vec3<float>(const size_t)> &grid_cell_center)
+                         const F &grid_key_unpack, const G &grid_cell_center)
     {
         // Wake up the threads for processing
         work_queue::worker.wake();

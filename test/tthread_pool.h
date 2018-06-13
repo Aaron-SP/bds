@@ -38,13 +38,13 @@ bool test_thread_pool()
     };
 
     // Run the job in parallel
-    pool.run(work, 0, 8);
+    pool.run(std::cref(work), 0, 8);
 
     // Run the job in parallel
-    pool.run(work, 0, 8);
+    pool.run(std::cref(work), 0, 8);
 
     // Run the job in parallel
-    pool.run(work, 0, 8);
+    pool.run(std::cref(work), 0, 8);
 
     // Kill the pool
     pool.kill();

@@ -90,7 +90,7 @@ class terrain_height
         };
 
         // Run height map in parallel
-        pool.run(work, 0, _scale);
+        pool.run(std::cref(work), 0, _scale);
     }
     inline void plants(game::thread_pool &pool, std::vector<game::block_id> &write, const game::height_map<float, float> &map, const size_t size) const
     {
@@ -115,7 +115,7 @@ class terrain_height
         };
 
         // Run height map in parallel
-        pool.run(work, 0, size);
+        pool.run(std::cref(work), 0, size);
     }
     inline void trees(game::thread_pool &pool, std::vector<game::block_id> &write, const game::height_map<float, float> &map, const size_t size) const
     {
@@ -176,7 +176,7 @@ class terrain_height
         };
 
         // Run height map in parallel
-        pool.run(work, 0, size);
+        pool.run(std::cref(work), 0, size);
     }
 
   public:

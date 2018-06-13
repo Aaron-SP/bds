@@ -215,7 +215,8 @@ class drops
             body(i).set_data(min::body_data(i));
         }
     }
-    inline void update_frame(const cgrid &grid, const float friction, const ex_call &ex)
+    template <typename E>
+    inline void update_frame(const cgrid &grid, const float friction, const E &ex_call)
     {
         // Do drop collisions
         const size_t size = _drops.size();
@@ -239,7 +240,7 @@ class drops
                     if (cell.second == block_id::SODIUM)
                     {
                         // Call explosion callback
-                        ex(cell.first.get_center(), cell.second);
+                        ex_call(cell.first.get_center(), cell.second);
                     }
                 }
 

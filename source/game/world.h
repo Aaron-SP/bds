@@ -120,13 +120,130 @@ class world
     std::uniform_real_distribution<float> _scat_dist;
     std::mt19937 _gen;
 
+    // Callback functions
+    inline auto dmg_default_call()
+    {
+        // On explode callback, return default damage
+        return [this](const float sq_dist, const float ex_size, const block_id atlas) -> std::pair<float, float> {
+            // Calculate damage
+            // Max power = 400
+            // Max size = 63
+            // Min dist = 1
+            // Max Num = 400 * 63 * 3 = 75600
+            // Denom = 400 * 63 = 25200
+            // Damage multipler = 0.1 - 3
+            const float fraction = this->_ex_mult(_gen) / 25200.0;
+            const float min_dist = 1.0;
+            const float power = (atlas == block_id::SODIUM) ? 400.0 : 100.0;
+            const float force = power * ex_size / std::max(sq_dist, min_dist);
+            const float dmg_frac = force * fraction;
+
+            // Calculate fractional damage and explosion force
+            return std::make_pair(force, dmg_frac);
+        };
+    }
+    inline auto dmg_drone_call()
+    {
+        // On damage callback, return drone damage
+        return [this](const float sq_dist, const float ex_size, const block_id atlas) -> std::pair<float, float> {
+            // Calculate damage
+            // Max power = 40
+            // Max size = 63
+            // Min dist = 1
+            // Max Num = 40 * 63 * 3 = 7560
+            // Denom = 400 * 63 = 25200
+            // Damage multipler = 0.1 - 3
+            const float fraction = this->_ex_mult(_gen) / 25200.0;
+            const float min_dist = 1.0;
+            const float power = (atlas == block_id::SODIUM) ? 40.0 : 10.0;
+            const float force = power * ex_size / std::max(sq_dist, min_dist);
+            const float dmg_frac = force * fraction;
+
+            // Calculate fractional damage and explosion force
+            return std::make_pair(force, dmg_frac);
+        };
+    }
+    inline auto sound_default_call()
+    {
+        // On explode callback, play sodium blast if sodium
+        return [this](const min::vec3<float> &p, const bool in_range, const block_id atlas) -> void {
+            if (atlas == block_id::SODIUM)
+            {
+                this->play_sodium_blast(p, in_range, atlas);
+            }
+            else
+            {
+                this->_sound->play_shot_ex(p);
+            }
+        };
+    }
+    inline auto sound_ex_call()
+    {
+        // On explode callback, play explosion sound
+        return [this](const min::vec3<float> &p, const bool in_range, const block_id atlas) -> void {
+            this->_sound->play_explode(p);
+        };
+    }
+    inline auto sound_choose_call()
+    {
+        // On explode callback, choose explosion sound
+        return [this](const min::vec3<float> &p, const bool in_range, const block_id atlas) -> void {
+            // Play sodium blast if sodium
+            if (atlas == block_id::SODIUM)
+            {
+                this->play_sodium_blast(p, in_range, atlas);
+            }
+            else
+            {
+                // Play explosion sound
+                this->_sound->play_explode(p);
+            }
+        };
+    }
+    template <typename D, typename S>
+    inline auto explode_call(const D &d, const S &s)
+    {
+        // On collision explode callback
+        return [this, d, s](const min::vec3<float> &p,
+                            const min::vec3<unsigned> &scale,
+                            const block_id atlas) {
+            // Calculate direction
+            const min::vec3<float> dir = this->direction(this->_player.position(), p);
+
+            // Dummy callback
+            const auto f = [](const min::vec3<float> &, const block_id) -> void {
+            };
+
+            // Explode the block
+            this->explode(p, dir, scale, atlas, _explode_size, f, d, s);
+        };
+    }
+    inline auto explode_default_call()
+    {
+        // Block explosion callback
+        return [this](const min::vec3<float> &p, const block_id atlas) {
+            return this->explode_call(this->dmg_default_call(), this->sound_default_call())(p, _ex_radius, atlas);
+        };
+    }
+    inline auto explode_drop_call()
+    {
+        // Block explosion callback
+        return [this](const min::vec3<float> &p, const block_id atlas) {
+            return this->explode_call(this->dmg_default_call(), this->sound_ex_call())(p, _ex_radius, atlas);
+        };
+    }
+
     // Private methods
     inline unsigned block_remove(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {
         const min::vec3<int> offset(1, 1, 1);
 
+        // Dummy callback
+        const auto f = [](const min::vec3<float> &, const block_id) -> void {
+        };
+
         // Offset remove radius for geometry removal
-        return _grid.set_geometry(_grid.snap(center_radius(p, scale)), scale, offset, block_id::EMPTY, nullptr);
+        return _grid.set_geometry(_grid.snap(center_radius(p, scale)), scale, offset, block_id::EMPTY, f);
     }
     static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
     {
@@ -162,48 +279,6 @@ class world
         // Return the character body id
         return _char_id;
     }
-    inline dmg_call dmg_default_call()
-    {
-        // On explode callback, return default damage
-        return [this](const float sq_dist, const float ex_size, const block_id atlas) -> std::pair<float, float> {
-            // Calculate damage
-            // Max power = 400
-            // Max size = 63
-            // Min dist = 1
-            // Max Num = 400 * 63 * 3 = 75600
-            // Denom = 400 * 63 = 25200
-            // Damage multipler = 0.1 - 3
-            const float fraction = this->_ex_mult(_gen) / 25200.0;
-            const float min_dist = 1.0;
-            const float power = (atlas == block_id::SODIUM) ? 400.0 : 100.0;
-            const float force = power * ex_size / std::max(sq_dist, min_dist);
-            const float dmg_frac = force * fraction;
-
-            // Calculate fractional damage and explosion force
-            return std::make_pair(force, dmg_frac);
-        };
-    }
-    inline dmg_call dmg_drone_call()
-    {
-        // On damage callback, return drone damage
-        return [this](const float sq_dist, const float ex_size, const block_id atlas) -> std::pair<float, float> {
-            // Calculate damage
-            // Max power = 40
-            // Max size = 63
-            // Min dist = 1
-            // Max Num = 40 * 63 * 3 = 7560
-            // Denom = 400 * 63 = 25200
-            // Damage multipler = 0.1 - 3
-            const float fraction = this->_ex_mult(_gen) / 25200.0;
-            const float min_dist = 1.0;
-            const float power = (atlas == block_id::SODIUM) ? 40.0 : 10.0;
-            const float force = power * ex_size / std::max(sq_dist, min_dist);
-            const float dmg_frac = force * fraction;
-
-            // Calculate fractional damage and explosion force
-            return std::make_pair(force, dmg_frac);
-        };
-    }
     inline min::vec3<float> direction(const min::vec3<float> &to, const min::vec3<float> &from) const
     {
         // Calculate direction, safe if zero vector
@@ -222,6 +297,10 @@ class world
         // Cache the drone position, no reference here
         const min::vec3<float> p = _drones.position(drone_index);
 
+        // Dummy callback
+        const auto f = [](const min::vec3<float> &, const block_id) -> void {
+        };
+
         // Drone may be removed, do not used drone index after this!!!
         const min::vec3<float> flip = dir * -1.0;
         if (_drones.damage(drone_index, dir, damage))
@@ -237,7 +316,7 @@ class world
 
             // Do explode animation for sodium
             min::vec3<unsigned> ex_scale(3, 5, 3);
-            explode(p, flip, ex_scale, atlas, size, nullptr, dmg_drone_call(), sound_choose_call());
+            explode(p, flip, ex_scale, atlas, size, f, dmg_drone_call(), sound_choose_call());
 
             // Drop block
             drop_block(p + flip, flip, atlas);
@@ -248,7 +327,7 @@ class world
             const block_id atlas = block_id::IRON;
 
             // Do explode animation
-            explode(p, flip, scale, atlas, size, nullptr, dmg_drone_call(), sound_ex_call());
+            explode(p, flip, scale, atlas, size, f, dmg_drone_call(), sound_ex_call());
 
             // Drop block
             drop_block(p + flip, flip, atlas);
@@ -267,49 +346,10 @@ class world
             _drops.add(random_drop_offset(p), dir, drop_id);
         }
     }
-    inline ex_scale_call explode_call(const dmg_call &d, const sound_call &s)
-    {
-        // On collision explode callback
-        return [this, d, s](const min::vec3<float> &p,
-                            const min::vec3<unsigned> &scale,
-                            const block_id atlas) {
-            // Calculate direction
-            const min::vec3<float> dir = this->direction(this->_player.position(), p);
-
-            // Explode the block
-            this->explode(p, dir, scale, atlas, _explode_size, nullptr, d, s);
-        };
-    }
-    inline ex_scale_call explode_block_call(const dmg_call &d, const sound_call &s)
-    {
-        // On collision explode callback
-        return [this, d, s](const min::vec3<float> &p,
-                            const min::vec3<unsigned> &scale,
-                            const block_id atlas) {
-            // Calculate direction
-            const min::vec3<float> dir = this->direction(this->_player.position(), p);
-
-            // Explode the block
-            this->explode_block(p, dir, scale, atlas, _explode_size, d, s);
-        };
-    }
-    inline ex_call explode_default_call()
-    {
-        // Block explosion callback
-        return [this](const min::vec3<float> &p, const block_id atlas) {
-            return this->explode_call(this->dmg_default_call(), this->sound_default_call())(p, _ex_radius, atlas);
-        };
-    }
-    inline ex_call explode_drop_call()
-    {
-        // Block explosion callback
-        return [this](const min::vec3<float> &p, const block_id atlas) {
-            return this->explode_call(this->dmg_default_call(), this->sound_ex_call())(p, _ex_radius, atlas);
-        };
-    }
+    template <typename D, typename S>
     inline void explode_block(
         const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
-        const block_id atlas, const float size, const dmg_call &d, const sound_call &s)
+        const block_id atlas, const float size, const D &d, const S &s)
     {
         // On remove callback
         const auto f = [this, dir](const min::vec3<float> &p, const block_id atlas) {
@@ -319,9 +359,10 @@ class world
         // Do explode with callback
         explode(p, dir, scale, atlas, size, f, d, s);
     }
+    template <typename F, typename D, typename S>
     inline void explode(
         const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
-        const block_id atlas, const float size, const set_call &f, const dmg_call &d, const sound_call &s)
+        const block_id atlas, const float size, const F &f, const D &d, const S &s)
     {
         // Offset explosion radius for geometry removal
         const min::vec3<float> center = center_radius(p, scale);
@@ -341,13 +382,10 @@ class world
         const bool in_range = std::get<0>(pack);
 
         // Play the sound call
-        if (s)
-        {
-            s(p, in_range, atlas);
-        }
+        s(p, in_range, atlas);
 
         // If explode hasn't been flagged yet
-        if (!_player.is_exploded() && in_range && d)
+        if (!_player.is_exploded() && in_range)
         {
             // Calculate damage from function
             const float ex_size = std::get<1>(pack);
@@ -405,19 +443,16 @@ class world
         // Didn't hit anything
         return false;
     }
+    template <typename R>
     void explode_ray_block(const min::vec3<float> &p, const block_id atlas,
                            const min::vec3<unsigned> &scale, const float size,
-                           const ray_call &f)
+                           const R &ray_call)
     {
-        // Invoke the function callback if provided
-        if (f)
-        {
-            // Get character body
-            min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
+        // Get character body
+        min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
 
-            // Call function callback
-            f(body, p);
-        }
+        // Call function callback
+        ray_call(body, p);
 
         // Calculate direction
         const min::vec3<float> dir = direction(_player.position(), p);
@@ -432,8 +467,9 @@ class world
             explode_block(p, dir, scale, atlas, size, dmg_default_call(), sound_default_call());
         }
     }
+    template <typename R>
     block_id explode_ray(const min::ray<float, min::vec3> &r, const target &t,
-                         const min::vec3<unsigned> &scale, const float size, const bool is_charge, const ray_call &f)
+                         const min::vec3<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
     {
         // Get the target id
         const target_id tid = t.get_id();
@@ -445,7 +481,7 @@ class world
             const block_id atlas = t.get_atlas();
 
             // Call explode ray for block collision at target position
-            explode_ray_block(t.get_position(), atlas, scale, size, f);
+            explode_ray_block(t.get_position(), atlas, scale, size, ray_call);
 
             return atlas;
         }
@@ -639,43 +675,6 @@ class world
 
         // Reserve space for view chunks
         _view_chunk_index.reserve(view_chunk_size * view_chunk_size * view_chunk_size);
-    }
-    inline sound_call sound_default_call()
-    {
-        // On explode callback, play sodium blast if sodium
-        return [this](const min::vec3<float> &p, const bool in_range, const block_id atlas) -> void {
-            if (atlas == block_id::SODIUM)
-            {
-                this->play_sodium_blast(p, in_range, atlas);
-            }
-            else
-            {
-                this->_sound->play_shot_ex(p);
-            }
-        };
-    }
-    inline sound_call sound_ex_call()
-    {
-        // On explode callback, play explosion sound
-        return [this](const min::vec3<float> &p, const bool in_range, const block_id atlas) -> void {
-            this->_sound->play_explode(p);
-        };
-    }
-    inline sound_call sound_choose_call()
-    {
-        // On explode callback, choose explosion sound
-        return [this](const min::vec3<float> &p, const bool in_range, const block_id atlas) -> void {
-            // Play sodium blast if sodium
-            if (atlas == block_id::SODIUM)
-            {
-                this->play_sodium_blast(p, in_range, atlas);
-            }
-            else
-            {
-                // Play explosion sound
-                this->_sound->play_explode(p);
-            }
-        };
     }
     inline void set_collision_callbacks()
     {
@@ -1007,7 +1006,11 @@ class world
         }
         else
         {
-            _grid.set_geometry(_preview, _scale, _preview_offset, _atlas_id, nullptr);
+            // Dummy callback
+            const auto f = [](const min::vec3<float> &, const block_id) -> void {
+            };
+
+            _grid.set_geometry(_preview, _scale, _preview_offset, _atlas_id, f);
         }
     }
     inline bool can_add_block() const
@@ -1041,9 +1044,10 @@ class world
         // Draw the sky, uses geometry VAO -- HACK!
         _sky.draw();
     }
-    block_id explode_ray(const min::vec3<unsigned> &scale, const float size, const bool is_charge, const ray_call &f)
+    template <typename R>
+    block_id explode_ray(const min::vec3<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
     {
-        return explode_ray(_player.ray(), _player.get_target(), scale, size, is_charge, f);
+        return explode_ray(_player.ray(), _player.get_target(), scale, size, is_charge, ray_call);
     }
     inline block_id get_atlas_id() const
     {
@@ -1284,7 +1288,8 @@ class world
         // Save the world state
         _grid.save();
     }
-    inline size_t scatter_ray(const min::vec3<unsigned> &scale, const float size, const ray_call &f)
+    template <typename R>
+    inline size_t scatter_ray(const min::vec3<unsigned> &scale, const float size, const R &ray_call)
     {
         size_t count = 0;
 
@@ -1305,7 +1310,7 @@ class world
             const target t = _player.target_ray(_grid, r, _ray_max_dist);
 
             // Cast an explode ray on this random ray
-            if (explode_ray(r, t, scale, size, false, f) != block_id::EMPTY)
+            if (explode_ray(r, t, scale, size, false, ray_call) != block_id::EMPTY)
             {
                 count++;
             }

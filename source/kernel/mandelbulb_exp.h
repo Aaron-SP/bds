@@ -18,7 +18,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __MANDELBULB_EXP__
 #define __MANDELBULB_EXP__
 
-#include <functional>
 #include <game/id.h>
 #include <game/thread_pool.h>
 #include <min/vec3.h>
@@ -134,7 +133,8 @@ class mandelbulb_exp
         std::cout << "C: " << _c << std::endl;
         std::cout << "D: " << _d << std::endl;
     }
-    inline void generate(game::thread_pool &pool, std::vector<game::block_id> &grid, const size_t gsize, const std::function<min::vec3<float>(const size_t)> &f)
+    template <typename F>
+    inline void generate(game::thread_pool &pool, std::vector<game::block_id> &grid, const size_t gsize, const F &f)
     {
         // Create working function
         const auto work = [this, &grid, gsize, &f](std::mt19937 &gen, const size_t i) {
@@ -146,7 +146,7 @@ class mandelbulb_exp
         };
 
         // Run the job in parallel
-        pool.run(work, 0, grid.size());
+        pool.run(std::cref(work), 0, grid.size());
     }
 };
 }

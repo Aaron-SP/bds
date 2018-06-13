@@ -356,7 +356,8 @@ class drones
         // Warp character to new position
         body(index).set_position(p);
     }
-    inline void update_frame(cgrid &grid, const uint_fast16_t player_level, const std::function<min::vec3<float>(void)> &respawn, const ex_scale_call &f)
+    template <typename R, typename ES>
+    inline void update_frame(cgrid &grid, const uint_fast16_t player_level, const R &respawn, const ES &ex_scale_call)
     {
         // Do drone collisions
         const size_t size = _drones.size();
@@ -449,7 +450,7 @@ class drones
                     const min::vec3<unsigned> scale(3, 3, 3);
 
                     // First collision, _col_cells must have a size if hit
-                    f(p, scale, _col_cells[0].second);
+                    ex_scale_call(p, scale, _col_cells[0].second);
                 }
 
                 // Create new path
@@ -457,7 +458,8 @@ class drones
             }
         }
     }
-    inline void update(cgrid &grid, const min::vec3<float> &player_pos, const uint_fast16_t player_level, const miss_call &f)
+    template <typename M>
+    inline void update(cgrid &grid, const min::vec3<float> &player_pos, const uint_fast16_t player_level, const M &miss_call)
     {
         // Update all drone positions
         const size_t size = _drones.size();
@@ -483,10 +485,7 @@ class drones
             if (launch)
             {
                 // Launch missile
-                if (f)
-                {
-                    f(p, p + dir);
-                }
+                miss_call(p, p + dir);
 
                 // Set cooldown
                 d.set_launch(_drone_cooldown);

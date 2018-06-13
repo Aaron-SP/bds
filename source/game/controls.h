@@ -18,7 +18,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __CONTROLS__
 #define __CONTROLS__
 
-#include <functional>
 #include <game/id.h>
 #include <game/sound.h>
 #include <game/state.h>
@@ -1388,9 +1387,13 @@ class controls
                     // Remove block from world, get the removed block id
                     if (stat.can_consume_scatter())
                     {
+                        // Dummy callback
+                        const auto f = [](min::body<float, min::vec3> &body, const min::vec3<float> &point) -> void {
+                        };
+
                         // Shot scatter
                         const min::vec3<unsigned> radius(1, 1, 1);
-                        const size_t hits = world->scatter_ray(radius, 20.0, nullptr);
+                        const size_t hits = world->scatter_ray(radius, 20.0, f);
                         if (hits == 0)
                         {
                             ui->add_stream_text("Miss!");
@@ -1562,9 +1565,13 @@ class controls
         skills &skill = play.get_skills();
         stats &stat = play.get_stats();
 
+        // Dummy callback
+        const auto f = [](min::body<float, min::vec3> &body, const min::vec3<float> &point) -> void {
+        };
+
         // Fire an explosion ray
         const min::vec3<unsigned> radius(1, 1, 1);
-        const block_id hit = _world->explode_ray(radius, 20.0, false, nullptr);
+        const block_id hit = _world->explode_ray(radius, 20.0, false, f);
         if (hit == block_id::EMPTY)
         {
             _ui->add_stream_text("Miss!");

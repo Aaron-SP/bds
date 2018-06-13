@@ -360,7 +360,7 @@ class terrain
             };
 
             // Convert faces to mesh in parallel
-            work_queue::worker.run(work, 0, size);
+            work_queue::worker.run(std::cref(work), 0, size);
 
             // Add mesh to vertex buffer
             _gb.add_mesh(_parent);

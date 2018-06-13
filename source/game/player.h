@@ -732,7 +732,8 @@ class player
         // Warp character to new position
         body().set_position(p);
     }
-    inline void update_frame(const cgrid &grid, const float friction, const ex_call &ex)
+    template <typename E>
+    inline void update_frame(const cgrid &grid, const float friction, const E &ex_call)
     {
         // Check if player is still in the grid
         const min::vec3<float> &p = position();
@@ -766,7 +767,7 @@ class player
                 if (!is_exploded() && cell.second == block_id::SODIUM)
                 {
                     // Call explosion callback
-                    ex(cell.first.get_center(), cell.second);
+                    ex_call(cell.first.get_center(), cell.second);
                 }
             }
         }
@@ -794,7 +795,7 @@ class player
                     if (!is_exploded() && t.get_atlas() == block_id::SODIUM)
                     {
                         // Call explosion callback
-                        ex(t.get_position(), t.get_atlas());
+                        ex_call(t.get_position(), t.get_atlas());
                     }
                 }
             }

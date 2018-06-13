@@ -24,6 +24,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/file.h>
 #include <game/id.h>
 #include <game/swatch.h>
+#include <game/terrain_mesher.h>
 #include <min/aabbox.h>
 #include <min/camera.h>
 #include <min/intersect.h>
@@ -93,6 +94,7 @@ class cgrid
     const min::aabbox<float, min::vec3> _world;
     const min::vec3<float> _cell_extent;
     cgrid_generator _generator;
+    terrain_mesher _mesher;
 
     static inline bool in_x(const min::vec3<float> &p, const min::vec3<float> &min, const min::vec3<float> &max)
     {
@@ -154,8 +156,8 @@ class cgrid
             }
         }
     }
-    inline void cubic(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
-                      const std::function<void(const min::vec3<float> &)> &f) const
+    template <typename F>
+    inline void cubic(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset, const F &f) const
     {
         // Begin at start position
         min::vec3<float> p = start;
@@ -196,8 +198,8 @@ class cgrid
             }
         }
     }
-    inline void cubic_grid(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
-                           const std::function<void(const size_t, const size_t, const size_t, const size_t)> &f) const
+    template <typename F>
+    inline void cubic_grid(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset, const F &f) const
     {
         // Get world extents
         const min::vec3<float> min = _world.get_min();
@@ -346,85 +348,32 @@ class cgrid
         // Clear this chunk
         _chunks[chunk_key].clear();
 
+        // Function to retrieve block value
+        const auto get_block = [this](const std::tuple<size_t, size_t, size_t> &t) -> block_id {
+            return _grid[this->grid_key_pack(t)];
+        };
+
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, chunk_key](const size_t i, const size_t j, const size_t k, const size_t key) {
-            // cell should always be in the chunk, if not empty
+        const auto f = [this, chunk_key, &get_block](const size_t i, const size_t j, const size_t k, const size_t key) {
+            // Cell should always be in the chunk, if not empty
             const block_id atlas = _grid[key];
             if (atlas != block_id::EMPTY)
             {
-                // Find out if we are on a world edge
-                const auto t = grid_key_unpack(key);
-                const size_t tx = std::get<0>(t);
-                const size_t ty = std::get<1>(t);
-                const size_t tz = std::get<2>(t);
-                const size_t edge = _grid_scale - 1;
-                const min::vec3<float> p = grid_cell_center(key);
+                // Get the point
+                const min::vec3<float> p = this->grid_cell_center(key);
+
+                // Get the cell index
+                const auto index = this->grid_key_unpack(key);
+
+                // Get the edge in each dimension
+                const size_t edge = this->_grid_scale - 1;
+                const auto edges = std::make_tuple(edge, edge, edge);
 
                 // Convert atlas to a float
                 const float float_atlas = static_cast<float>(atlas);
 
-                // Generate X Faces
-                const bool on_edge_nx = tx == 0;
-                const bool on_edge_px = tx == edge;
-                if (!on_edge_nx)
-                {
-                    // Unsafely check if cell is within the grid
-                    const size_t x1 = grid_key_pack(std::make_tuple(tx - 1, ty, tz));
-                    if (_grid[x1] == block_id::EMPTY)
-                    {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 0.1));
-                    }
-                }
-                if (!on_edge_px)
-                {
-                    const size_t x2 = grid_key_pack(std::make_tuple(tx + 1, ty, tz));
-                    if (_grid[x2] == block_id::EMPTY)
-                    {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 255.1));
-                    }
-                }
-
-                // Generate Y Faces
-                const bool on_edge_ny = ty == 0;
-                const bool on_edge_py = ty == edge;
-                if (!on_edge_ny)
-                {
-                    // Unsafely check if cell is within the grid
-                    const size_t y1 = grid_key_pack(std::make_tuple(tx, ty - 1, tz));
-                    if (_grid[y1] == block_id::EMPTY)
-                    {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 510.1));
-                    }
-                }
-                if (!on_edge_py)
-                {
-                    const size_t y2 = grid_key_pack(std::make_tuple(tx, ty + 1, tz));
-                    if (_grid[y2] == block_id::EMPTY)
-                    {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 765.1));
-                    }
-                }
-
-                // Generate Z Faces
-                const bool on_edge_nz = tz == 0;
-                const bool on_edge_pz = tz == edge;
-                if (!on_edge_nz)
-                {
-                    // Unsafely check if cell is within the grid
-                    const size_t z1 = grid_key_pack(std::make_tuple(tx, ty, tz - 1));
-                    if (_grid[z1] == block_id::EMPTY)
-                    {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1020.1));
-                    }
-                }
-                if (!on_edge_pz)
-                {
-                    const size_t z2 = grid_key_pack(std::make_tuple(tx, ty, tz + 1));
-                    if (_grid[z2] == block_id::EMPTY)
-                    {
-                        _chunks[chunk_key].vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1275.1));
-                    }
-                }
+                // Mesh the cell
+                this->_mesher.generate_chunk_faces(this->_chunks[chunk_key], p, index, edges, get_block, float_atlas);
             }
         };
 
@@ -498,13 +447,14 @@ class cgrid
         // Return count
         return out;
     }
+    template <typename SB>
     inline unsigned geometry_remove(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
-                                    const block_id atlas_id, const set_call &callback)
+                                    const block_id atlas_id, const SB &set_block_call)
     {
         unsigned out = 0;
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &out, atlas_id, callback](const size_t i, const size_t j, const size_t k, const size_t key) {
+        const auto f = [this, &out, atlas_id, &set_block_call](const size_t i, const size_t j, const size_t k, const size_t key) {
             // Get the old value
             const block_id old_value = _grid[key];
 
@@ -521,10 +471,7 @@ class cgrid
                 set_boundary_chunk(key);
 
                 // Callback on cell
-                if (callback)
-                {
-                    callback(p, old_value);
-                }
+                set_block_call(p, old_value);
             }
         };
 
@@ -564,18 +511,8 @@ class cgrid
     }
     inline void generate_world()
     {
-        // Function for finding grid key index
-        const auto f = [this](const std::tuple<size_t, size_t, size_t> &t) -> size_t {
-            return grid_key_pack(t);
-        };
-
-        // Function for finding grid center
-        const auto g = [this](const size_t key) -> min::vec3<float> {
-            return grid_cell_center(key);
-        };
-
         // Generate the cgrid data
-        _generator.generate_world(_grid, _grid_scale, _chunk_size, f, g);
+        _generator.generate_world(_grid, _grid_scale, _chunk_size);
     }
     inline float grid_center_square_dist(const size_t key, const min::vec3<float> &point) const
     {
@@ -866,7 +803,7 @@ class cgrid
           _view_dist(calculate_view_distance()),
           _world(calculate_world_size(grid_scale)),
           _cell_extent(1.0, 1.0, 1.0),
-          _generator(_grid)
+          _generator(_grid), _mesher(chunk_size)
     {
         // Check chunk size
         if (grid_scale % chunk_size != 0)
@@ -1145,44 +1082,18 @@ class cgrid
         const float float_atlas = static_cast<float>(atlas);
 
         // Calculate max edges
-        const unsigned x_edge = length.x() - 1;
-        const unsigned y_edge = length.y() - 1;
-        const unsigned z_edge = length.z() - 1;
+        const auto edges = std::make_tuple(length.x() - 1, length.y() - 1, length.z() - 1);
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &mesh, &offset, x_edge, y_edge, z_edge, float_atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
+        const auto f = [this, &mesh, &offset, &edges, float_atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
             // Add data to mesh for each cell
             const min::vec3<float> p = grid_cell(key);
 
-            // Generate X faces on edges accounting for offset rotation
-            if ((i == 0 && offset.x() > 0) || (i == x_edge && offset.x() < 0))
-            {
-                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 0.1));
-            }
-            if ((i == 0 && offset.x() < 0) || (i == x_edge && offset.x() > 0))
-            {
-                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 255.1));
-            }
+            // Pack the current index
+            const auto index = std::make_tuple(i, j, k);
 
-            // Generate Y faces on edges accounting for offset rotation
-            if ((j == 0 && offset.y() > 0) || (j == y_edge && offset.y() < 0))
-            {
-                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 510.1));
-            }
-            if ((j == 0 && offset.y() < 0) || (j == y_edge && offset.y() > 0))
-            {
-                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 765.1));
-            }
-
-            // Generate Z faces on edges accounting for offset rotation
-            if ((k == 0 && offset.z() > 0) || (k == z_edge && offset.z() < 0))
-            {
-                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1020.1));
-            }
-            if ((k == 0 && offset.z() < 0) || (k == z_edge && offset.z() > 0))
-            {
-                mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1275.1));
-            }
+            // Generate the rotated chunk face
+            _mesher.generate_place_faces_rotated(mesh, p, offset, index, edges, float_atlas);
         };
 
         // Store start point => (0,0,0),
@@ -1199,20 +1110,32 @@ class cgrid
         mesh.vertex.clear();
         mesh.index.clear();
 
-        // Create cubic function, for each cell in cubic space
-        const auto f = [this, &mesh, &sw](const size_t i, const size_t j, const size_t k, const size_t key) {
-            // If the cell is not empty
-            const block_id atlas = sw.get(i, j, k);
+        // Calculate max edges
+        const min::vec3<unsigned> &length = sw.get_length();
+        const auto edges = std::make_tuple(length.x() - 1, length.y() - 1, length.z() - 1);
 
+        // Function to retrieve block value
+        const auto get_block = [this, &sw](const std::tuple<size_t, size_t, size_t> &t) -> block_id {
+            // Get the block atlas
+            const block_id atlas = sw.get(std::get<0>(t), std::get<1>(t), std::get<2>(t));
+
+            // If it's empty return purple crystals
+            return (atlas == block_id::EMPTY) ? block_id::CRYSTAL_P : atlas;
+        };
+
+        // Create cubic function, for each cell in cubic space
+        const auto f = [this, &sw, &mesh, &edges, &get_block](const size_t i, const size_t j, const size_t k, const size_t key) {
             // Add data to mesh for each cell
-            const min::vec3<float> p = grid_cell(key);
-            const float float_atlas = (atlas == block_id::EMPTY) ? static_cast<float>(block_id::CRYSTAL_P) : static_cast<float>(atlas);
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 0.1));
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 255.1));
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 510.1));
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 765.1));
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1020.1));
-            mesh.vertex.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1275.1));
+            const min::vec3<float> p = this->grid_cell(key);
+
+            // Pack the current index
+            const auto index = std::make_tuple(i, j, k);
+
+            // Convert atlas to a float
+            const float float_atlas = static_cast<float>(get_block(index));
+
+            // Mesh the cell
+            this->_mesher.generate_chunk_faces_rotated(mesh, p, sw.get_offset(), index, edges, get_block, float_atlas);
         };
 
         // Store start point => (0,0,0),
@@ -1379,8 +1302,9 @@ class cgrid
         // Return the number of modified blocks
         return out;
     }
+    template <typename SB>
     unsigned set_geometry(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
-                          const block_id atlas_id, const set_call &callback)
+                          const block_id atlas_id, const SB &set_block_call)
     {
         // Modified geometry
         unsigned out = 0;
@@ -1393,7 +1317,7 @@ class cgrid
         if (atlas_id == block_id::EMPTY && in)
         {
             // Remove geometry
-            out += geometry_remove(start, length, offset, atlas_id, callback);
+            out += geometry_remove(start, length, offset, atlas_id, set_block_call);
         }
         else if (in)
         {
@@ -1420,8 +1344,12 @@ class cgrid
         min::vec3<unsigned> length(3, 3, 3);
         const min::vec3<int> offset(1, 1, 1);
 
+        // Dummy callback
+        const auto f = [](const min::vec3<float> &, const block_id) -> void {
+        };
+
         // Carve out inside of box
-        geometry_remove(start, length, offset, block_id::EMPTY, nullptr);
+        geometry_remove(start, length, offset, block_id::EMPTY, f);
 
         // Create -XZ floor
         start.y(ny - 1.0);

@@ -213,7 +213,7 @@ class brownian_grow
         }
 
         // Run the job in parallel
-        pool.run(work, 0, size);
+        pool.run(std::cref(work), 0, size);
     }
 
   public:

@@ -67,7 +67,7 @@ class state
     inline void update_model_matrix(const float speed, const float dt)
     {
         const min::vec3<float> &f = _camera.get_forward();
-        const min::vec3<float> &fup = _camera.get_frustum().get_up();
+        const min::vec3<float> &fup = _camera.get_up();
         const min::vec3<float> &fr = _camera.get_frustum().get_right();
 
         // Update the md5 model matrix
@@ -88,20 +88,34 @@ class state
     inline min::quat<float> update_model_rotation() const
     {
         const min::vec3<float> &f = _camera.get_forward();
-        const min::vec3<float> &fup = _camera.get_frustum().get_up();
-        const min::vec3<float> &fr = _camera.get_frustum().get_right();
+        const min::vec3<float> &fup = _camera.get_up();
+        const min::vec3<float> y(0.0, 1.0, 0.0);
 
         // Calculate the forward vector
         min::vec3<float> d(f.x(), 0.0, f.z());
+
+        // Use head vector for gun direction to bypass singularity
+        if (std::abs(f.y()) > 0.90)
+        {
+            if (f.y() < -0.90)
+            {
+                d = min::vec3<float>(fup.x(), 0.0, fup.z());
+            }
+            else
+            {
+                d = min::vec3<float>(-fup.x(), 0.0, -fup.z());
+            }
+        }
+        else if (y.dot(fup) < 0.0)
+        {
+            // Flip direction
+            d *= -1.0;
+        }
         d.normalize();
 
-        // Transform the model rotation around shortest arc or Y axis
-        const min::vec3<float> y(0.0, 1.0, 0.0);
-        const min::vec3<float> x(-1.0, 0.0, 0.0);
-        const min::quat<float> roty(x, d, y);
-
-        // Transform the model rotation around shortest arc or RIGHT axis
-        const min::quat<float> rotzx(y, fup, fr);
+        // Rotate in zx and y plane
+        const min::quat<float> rotzx(y, fup);
+        const min::quat<float> roty = min::quat<float>::from_x_axis(-1.0, d);
 
         // Return the transformed model rotation
         return rotzx * roty;
@@ -285,20 +299,6 @@ class state
             // If the mouse coordinates moved at all
             if (std::abs(x) > 1E-3 || std::abs(y) > 1E-3)
             {
-                // Get the camera forward vector
-                const min::vec3<float> &forward = _camera.get_forward();
-
-                // Check if we have looked too far on the global y axis
-                const float dot = forward.dot(min::vec3<float>::up());
-                if (dot > 0.999 && y < 0.0)
-                {
-                    y = 0.0;
-                }
-                else if (dot < -0.999 && y > 0.0)
-                {
-                    y = 0.0;
-                }
-
                 // Adjust the camera by the offset from screen center
                 _camera.move_look_at(x, y);
 

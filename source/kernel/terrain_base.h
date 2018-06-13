@@ -182,7 +182,7 @@ class terrain_base
         };
 
         // Parallelize on X axis
-        pool.run(work, 0, _scale);
+        pool.run(std::cref(work), 0, _scale);
     }
 };
 }

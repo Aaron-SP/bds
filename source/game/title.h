@@ -18,7 +18,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __TITLE_CONTROLS__
 #define __TITLE_CONTROLS__
 
-#include <functional>
 #include <game/ui_overlay.h>
 #include <min/camera.h>
 #include <min/window.h>
