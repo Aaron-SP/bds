@@ -149,6 +149,15 @@ class player
     skills _skills;
     stats _stats;
 
+    inline void reset_land_info()
+    {
+        // Reset landed flags
+        _land_count = 0;
+        _landed = false;
+
+        // Cache the land velocity at time of landing
+        _land_vel = velocity();
+    }
     inline void reserve_memory()
     {
         _col_cells.reserve(36);
@@ -254,12 +263,8 @@ class player
         }
         else if (!_landed && _falling)
         {
-            // Reset landed flags
-            _land_count = 0;
-            _landed = false;
-
-            // Cache the land velocity at time of landing
-            _land_vel = v;
+            // Rest land info
+            reset_land_info();
         }
     }
     inline void update_position(const float friction)
@@ -356,6 +361,10 @@ class player
     inline min::body<float, min::vec3> &body()
     {
         return _sim->get_body(_body_id);
+    }
+    inline void clear_landed()
+    {
+        _landed = false;
     }
     inline void clear_target_update()
     {
@@ -517,6 +526,9 @@ class player
             // Allow user to jump and user boosters
             if (_jump_count == 0 && !_airborn)
             {
+                // Reset land info
+                reset_land_info();
+
                 // Increment jump count
                 _jump_count++;
 
@@ -525,6 +537,9 @@ class player
             }
             else if (_jump_count == 1 && _stats.can_consume_dynamics())
             {
+                // Reset land info
+                reset_land_info();
+
                 // Increment jump count
                 _jump_count++;
 
@@ -595,10 +610,6 @@ class player
     {
         _exploded = false;
         _explode_id = block_id::EMPTY;
-    }
-    inline void reset_landed()
-    {
-        _landed = false;
     }
     inline void respawn(const load_state &state)
     {

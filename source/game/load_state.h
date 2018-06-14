@@ -39,6 +39,7 @@ struct game_state
   public:
     min::vec3<float> position;
     min::vec3<float> look;
+    min::vec3<float> up;
     std::vector<item> inventory;
     std::array<uint_fast16_t, stats::stat_str_size()> stat;
     uint_fast16_t stat_points;
@@ -49,8 +50,8 @@ struct game_state
     std::vector<min::vec3<float>> chest;
 
   public:
-    game_state(const min::vec3<float> &p, const min::vec3<float> &dir)
-        : position(p), look(dir),
+    game_state(const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<float> &u)
+        : position(p), look(dir), up(u),
           stat_points(0), energy(0.0),
           exp(0.0), health(0.0), oxygen(0.0) {}
 };
@@ -61,6 +62,7 @@ class load_state
     uint32_t _grid_size;
     min::vec3<float> _default_spawn;
     min::vec3<float> _default_look;
+    min::vec3<float> _default_up;
     min::vec3<float> _top;
     int_fast8_t _game_mode;
     bool _new_game;
@@ -88,6 +90,7 @@ class load_state
             // Set a valid spawn
             _state.position = _default_spawn;
             _state.look = _default_look;
+            _state.up = _default_up;
 
             // Test if the spawn is valid
             if (!_state.position.inside(gmin, gmax))
@@ -173,6 +176,14 @@ class load_state
             // Load look vector
             _state.look = min::vec3<float>(lx, ly, lz);
 
+            // Up vector
+            const float ux = min::read_le<float>(stream, next);
+            const float uy = min::read_le<float>(stream, next);
+            const float uz = min::read_le<float>(stream, next);
+
+            // Load look vector
+            _state.up = min::vec3<float>(ux, uy, uz);
+
             // Load inventory data from stream
             const size_t start = inventory::begin_store();
             const size_t end = inventory::end_cube();
@@ -244,10 +255,11 @@ class load_state
         : _grid_size(static_cast<uint32_t>(opt.grid())),
           _default_spawn(0.0, _grid_size * 0.75, 0.0),
           _default_look(1.0, _grid_size * 0.75, 0.0),
+          _default_up(0.0, 1.0, 0.0),
           _top(0.0, _grid_size - 1.0, 0.0),
           _game_mode(opt.mode()),
           _new_game(true),
-          _state(_default_spawn, _default_look)
+          _state(_default_spawn, _default_look, _default_up)
     {
         // Check for integer overflow
         if (opt.grid() > std::numeric_limits<uint32_t>::max())
@@ -264,13 +276,17 @@ class load_state
         // Check that we loaded a valid point
         check_inside();
     }
+    inline const min::vec3<float> &get_default_spawn() const
+    {
+        return _default_spawn;
+    }
     inline const min::vec3<float> &get_default_look() const
     {
         return _default_look;
     }
-    inline const min::vec3<float> &get_default_spawn() const
+    inline const min::vec3<float> &get_default_up() const
     {
-        return _default_spawn;
+        return _default_up;
     }
     inline const min::vec3<float> &get_top() const
     {
@@ -291,6 +307,10 @@ class load_state
     inline const min::vec3<float> &get_look_at() const
     {
         return _state.look;
+    }
+    inline const min::vec3<float> &get_up() const
+    {
+        return _state.up;
     }
     inline const std::vector<item> &get_inventory() const
     {
@@ -343,10 +363,15 @@ class load_state
         min::write_le<float>(stream, _state.position.y());
         min::write_le<float>(stream, _state.position.z());
 
-        // Get the camera look position and write into stream
+        // Get the camera look and write into stream
         min::write_le<float>(stream, _state.look.x());
         min::write_le<float>(stream, _state.look.y());
         min::write_le<float>(stream, _state.look.z());
+
+        // Get the camera up and write into stream
+        min::write_le<float>(stream, _state.up.x());
+        min::write_le<float>(stream, _state.up.y());
+        min::write_le<float>(stream, _state.up.z());
 
         // Write inventory data into stream
         const uint32_t inv_size = _state.inventory.size();
@@ -398,6 +423,9 @@ class load_state
 
         // Copy look
         _state.look = camera.project_point(1.0);
+
+        // Copy up
+        _state.up = camera.get_up();
 
         // Copy inventory
         const size_t start = inv.begin_store();

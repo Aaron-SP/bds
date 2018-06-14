@@ -62,7 +62,18 @@ class state
         _camera.set_perspective();
 
         // Load camera settings
-        set_camera(state.get_position(), state.get_look_at());
+        set_camera(state.get_position(), state.get_look_at(), state.get_up());
+    }
+    inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look, const min::vec3<float> &up)
+    {
+        // Set camera start position and look position
+        _camera.set(p + min::vec3<float>(0.0, 0.5, 0.0), look, up);
+
+        // Force camera to update internals
+        _camera.force_update();
+
+        // Update rotation quaternion
+        _q = update_model_rotation();
     }
     inline void update_model_matrix(const float speed, const float dt)
     {
@@ -170,24 +181,13 @@ class state
         _recoil = -1.0;
 
         // Reload camera settings
-        set_camera(state.get_default_spawn(), state.get_default_look());
+        set_camera(state.get_default_spawn(), state.get_default_look(), state.get_default_up());
 
         // Reset flags
         _run_accum = 0.0;
         _run_accum_sin = 0.0;
         _dead = false;
         _respawn = false;
-    }
-    inline void set_camera(const min::vec3<float> &p, const min::vec3<float> &look)
-    {
-        // Set camera start position and look position
-        _camera.set(p + min::vec3<float>(0.0, 0.5, 0.0), look);
-
-        // Force camera to update internals
-        _camera.force_update();
-
-        // Update rotation quaternion
-        _q = update_model_rotation();
     }
     inline void set_dead(const bool flag)
     {
