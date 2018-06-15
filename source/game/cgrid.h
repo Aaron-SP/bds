@@ -323,10 +323,8 @@ class cgrid
 
         return grid_key_unsafe(point);
     }
-    inline min::vec3<float> grid_cell(const size_t key) const
+    inline min::vec3<float> grid_cell(const std::tuple<size_t, size_t, size_t> &comp) const
     {
-        const std::tuple<size_t, size_t, size_t> comp = grid_key_unpack(key);
-
         // Unpack tuple
         const size_t col = std::get<0>(comp);
         const size_t row = std::get<1>(comp);
@@ -339,59 +337,81 @@ class cgrid
 
         return min::vec3<float>(x, y, z);
     }
+    inline min::vec3<float> grid_cell(const size_t key) const
+    {
+        return grid_cell(grid_key_unpack(key));
+    }
     inline min::vec3<float> grid_cell_center(const size_t key) const
     {
         return grid_cell(key) + 0.5;
     }
+    inline min::vec3<float> grid_cell_center(const std::tuple<size_t, size_t, size_t> &comp) const
+    {
+        return grid_cell(comp) + 0.5;
+    }
     inline void chunk_update(const size_t chunk_key)
     {
-        // Clear this chunk
-        _chunks[chunk_key].clear();
+        // Clear the mesher
+        _mesher.clear();
+
+        // Get the last valid cell on each grid dimension
+        const size_t edge = _grid_scale - 1;
+        const auto edges = std::make_tuple(edge, edge, edge);
+
+        // Begin at start position, clamp out of bound to world boundary
+        const min::vec3<float> start = min::vec3<float>(chunk_start(chunk_key)).clamp(_world.get_min(), _world.get_max());
+
+        // Get the grid axis components
+        const auto t = min::vec3<float>::grid_index(_world.get_min(), _cell_extent, start);
+        const size_t xend = std::min(std::get<0>(t) + _chunk_size, _grid_scale);
+        const size_t yend = std::min(std::get<1>(t) + _chunk_size, _grid_scale);
+        const size_t zend = std::min(std::get<2>(t) + _chunk_size, _grid_scale);
 
         // Function to retrieve block value
         const auto get_block = [this](const std::tuple<size_t, size_t, size_t> &t) -> block_id {
             return _grid[this->grid_key_pack(t)];
         };
 
-        // Create cubic function, for each cell in cubic space
-        const auto f = [this, chunk_key, &get_block](const size_t i, const size_t j, const size_t k, const size_t key) {
-            // Cell should always be in the chunk, if not empty
-            const block_id atlas = _grid[key];
-            if (atlas != block_id::EMPTY)
+        // Iterate through the chunk
+        for (size_t tx = std::get<0>(t); tx < xend; tx++)
+        {
+            for (size_t ty = std::get<1>(t); ty < yend; ty++)
             {
-                // Get the point
-                const min::vec3<float> p = this->grid_cell_center(key);
+                for (size_t tz = std::get<2>(t); tz < zend; tz++)
+                {
+                    // Get the cell index
+                    const auto index = std::make_tuple(tx, ty, tz);
 
-                // Get the cell index
-                const auto index = this->grid_key_unpack(key);
+                    // Get the current cell index value
+                    const block_id atlas = get_block(index);
+                    if (atlas != block_id::EMPTY)
+                    {
+                        // Get the cell center point
+                        const min::vec3<float> p = grid_cell_center(index);
 
-                // Get the edge in each dimension
-                const size_t edge = this->_grid_scale - 1;
-                const auto edges = std::make_tuple(edge, edge, edge);
-
-                // Convert atlas to a float
-                const float float_atlas = static_cast<float>(atlas);
-
-                // Mesh the cell
-                this->_mesher.generate_chunk_faces(this->_chunks[chunk_key], p, index, edges, get_block, float_atlas);
+                        // Generate cell faces
+                        _mesher.generate_chunk_faces(p, index, edges, get_block, static_cast<float>(atlas));
+                    }
+                }
             }
-        };
+        }
+
+        // Generate mesh
+        _mesher.generate_chunk(_chunks[chunk_key]);
 
         // Flag that the chunk needs to be updated
         _chunk_update[chunk_key] = true;
-
-        // Get cubic function properties
-        const min::vec3<float> start = chunk_start(chunk_key);
-        const min::vec3<unsigned> length(_chunk_size, _chunk_size, _chunk_size);
-        const min::vec3<int> offset(1, 1, 1);
-
-        // Run the function
-        cubic_grid(start, length, offset, f);
     }
     inline void chunk_warm(const size_t key)
     {
+#ifdef MGL_GS_RENDER
         _chunks[key].vertex.reserve(_chunk_cells);
-        _chunks[key].index.reserve(_chunk_cells);
+#else
+        const size_t size6 = _chunk_cells * 6;
+        _chunks[key].vertex.reserve(size6);
+        _chunks[key].uv.reserve(size6);
+        _chunks[key].normal.reserve(size6);
+#endif
     }
     inline unsigned geometry_add(const min::vec3<float> &start, const min::vec3<unsigned> &length,
                                  const min::vec3<int> &offset, const block_id atlas_id)
@@ -1074,9 +1094,8 @@ class cgrid
     }
     inline void preview_atlas(min::mesh<float, uint32_t> &mesh, const min::vec3<int> &offset, const min::vec3<unsigned> &length, const block_id atlas) const
     {
-        // Clear mesh contents
-        mesh.vertex.clear();
-        mesh.index.clear();
+        // Clear the mesher
+        _mesher.clear();
 
         // Convert atlas to a float
         const float float_atlas = static_cast<float>(atlas);
@@ -1085,7 +1104,7 @@ class cgrid
         const auto edges = std::make_tuple(length.x() - 1, length.y() - 1, length.z() - 1);
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &mesh, &offset, &edges, float_atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
+        const auto f = [this, &offset, &edges, float_atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
             // Add data to mesh for each cell
             const min::vec3<float> p = grid_cell(key);
 
@@ -1093,7 +1112,7 @@ class cgrid
             const auto index = std::make_tuple(i, j, k);
 
             // Generate the rotated chunk face
-            _mesher.generate_place_faces_rotated(mesh, p, offset, index, edges, float_atlas);
+            _mesher.generate_place_faces_rotated(p, offset, index, edges, float_atlas);
         };
 
         // Store start point => (0,0,0),
@@ -1103,12 +1122,14 @@ class cgrid
 
         // Run the function
         cubic_grid(start, length, offset, f);
+
+        // Generate mesh
+        _mesher.generate_preview(mesh);
     }
     inline void preview_swatch(min::mesh<float, uint32_t> &mesh, const swatch &sw) const
     {
-        // Clear mesh contents
-        mesh.vertex.clear();
-        mesh.index.clear();
+        // Clear the mesher
+        _mesher.clear();
 
         // Calculate max edges
         const min::vec3<unsigned> &length = sw.get_length();
@@ -1124,8 +1145,8 @@ class cgrid
         };
 
         // Create cubic function, for each cell in cubic space
-        const auto f = [this, &sw, &mesh, &edges, &get_block](const size_t i, const size_t j, const size_t k, const size_t key) {
-            // Add data to mesh for each cell
+        const auto f = [this, &sw, &edges, &get_block](const size_t i, const size_t j, const size_t k, const size_t key) {
+            // Add data to mesher for each cell
             const min::vec3<float> p = this->grid_cell(key);
 
             // Pack the current index
@@ -1135,7 +1156,7 @@ class cgrid
             const float float_atlas = static_cast<float>(get_block(index));
 
             // Mesh the cell
-            this->_mesher.generate_chunk_faces_rotated(mesh, p, sw.get_offset(), index, edges, get_block, float_atlas);
+            this->_mesher.generate_chunk_faces_rotated(p, sw.get_offset(), index, edges, get_block, float_atlas);
         };
 
         // Store start point => (0,0,0),
@@ -1145,6 +1166,9 @@ class cgrid
 
         // Run the function
         cubic_grid(start, sw.get_length(), sw.get_offset(), f);
+
+        // Generate mesh
+        _mesher.generate_preview(mesh);
     }
     inline bool ray_trace_last_key(const min::ray<float, min::vec3> &r, const size_t length, min::vec3<float> &point, size_t &key, block_id &value) const
     {

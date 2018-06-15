@@ -24,6 +24,8 @@ Verify a bin directory exists before compiling with the makefile.
 - 'make debug' - builds game with debug symbols and 01 optimization
 - 'make tests' - builds only tests targeting 'native'
 - 'make clean' - cleans up all generated output files
+- 'make install' - builds and installs the game to /opt/bds
+- 'make uninstall' - uninstalls the game from /opt/bds
 
 These build targets have been tested for compilation on Arch Linux x64 and Windows 7 x86/x86-x64 platforms.
 
@@ -37,6 +39,25 @@ Additional dependencies that are required and not distributed in this package in
 - 'opengl3.3+' - all platforms
 - 'mingw32'/'mingw64' - for win32 only
 - 'X11' - for linux only
+
+### Makefile install target
+By default, the makefile will install the game in the /opt/bds directory. You can override this location with the $(DESTDIR) variable in the makefile.
+You can run this makefile target with the following command.
+- `make install`
+
+With OpenGL 4.3 and geometry shader optimizations.
+- `make MGL_GS_RENDER=true MGL_VB43=true install`
+
+Customizing the install location.
+- `make DESTDIR=/opt/custom MGL_GS_RENDER=true MGL_VB43=true install`
+
+The install target will create a bash script with $(DESTDIR) captured inside of it. This bash script is called bds.game and will be symlinked into /usr/bin. This allows you to run the game from any directory, since the script will always internally switch to the correct directory to run the game. This is important because the game assumes it will be run in the root folder, and otherwise will not be able to locate the data files.
+
+### Makefile uninstall target
+By default, the makefile will uninstall the game from the /opt/bds directory. You can override this location with the $(DESTDIR) variable in the makefile.
+Be extremely careful using this, the uninstall target will not check if the directory is valid. It will simply remove files from this directory after prompting the user to confirm deletion of files and directories. 
+
+**USE THIS TARGET AT YOUR OWN RISK OF DELETING IMPORTANT FILES**
 
 ### Optional build options
 
@@ -81,25 +102,6 @@ This mode allows faster vertex_buffer.bind_buffer() switching because it uses Op
 - C:\cygwin\lib\gcc\x86_64-w64-mingw32\5.4.0\include;
 - C:\cygwin\usr\x86_64-w64-mingw32\sys-root\mingw\include;
 - C:\cygwin\usr\x86_64-w64-mingw32\sys-root\mingw\bin;
-
-### Makefile install target
-By default, the makefile will install the game in the /opt/bds directory. You can override this location with the $(DESTDIR) variable in the makefile.
-You can run this makefile target with the following command.
-- `make install`
-
-With OpenGL 4.3 and geometry shader optimizations.
-- `make MGL_GS_RENDER=true MGL_VB43=true install`
-
-Customizing the install location.
-- `make DESTDIR=/opt/custom MGL_GS_RENDER=true MGL_VB43=true install`
-
-The install target will create a bash script with $(DESTDIR) captured inside of it. This bash script is called bds.game and will be symlinked into /usr/bin. This allows you to run the game from any directory, since the script will always internally switch to the correct directory to run the game. This is important because the game assumes it will be run in the root folder, and otherwise will not be able to locate the data files.
-
-### Makefile uninstall target
-By default, the makefile will uninstall the game from the /opt/bds directory. You can override this location with the $(DESTDIR) variable in the makefile.
-Be extremely careful using this, the uninstall target will not check if the directory is valid. It will simply remove files from this directory after prompting the user to confirm deletion of files and directories. 
-
-**USE THIS TARGET AT YOUR OWN RISK OF DELETING IMPORTANT FILES**
 
 ### Run flags
 
@@ -155,8 +157,8 @@ The '-hardcore' flag changes the game mode between normal and hardcore difficult
 7. Keys [1-8]: quick item hotbar, use item, place block, equip weapon
 8. Left mouse: use skill (edit mode / power suite mode)
 9. Right mouse and hold: target and track block
-10. [SPACE] jump, can double jump after level 3
-11. [SHIFT] dash, dashs in the forward direction after level 3
+10. [SPACE] jump, can double jump after dynamism unlock
+11. [SHIFT] dash, dashs in the forward direction after dynamism unlock
 12. Key [F1]: toggle debug text
 13. Key [F2]: toggle wireframe mode
 14. Key [F3]: music up
