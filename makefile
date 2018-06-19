@@ -21,13 +21,15 @@ ifeq ($(OS),Windows_NT)
     endif
 
 	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll
-	STATIC = -static -static-libgcc -static-libstdc++ 
+	STATIC = -static -static-libgcc -static-libstdc++
 else
 	DEST_PATH = /opt/bds
 	MGL_PATH = /usr/include/mgl
 	LINKER = -lX11 -lGL -lfreetype -pthread -lopenal -lvorbisfile
 	STATIC = -static-libgcc -static-libstdc++
 endif
+
+DESKTOP_PATH = /usr/share/applications
 
 # Override if MGL_DESTDIR specified
 ifdef MGL_DESTDIR
@@ -78,11 +80,11 @@ build64: tests64
 	g++ $(LIB_SOURCES) $(BUILD64) $(GAME)  $(LINKER) 2> "game.txt"
 debug:
 	g++ $(LIB_SOURCES) $(DEBUG) $(GAME) $(LINKER) 2> "game.txt"
-tests:	
+tests:
 	g++ $(LIB_SOURCES) $(TEST_SOURCES)  $(NATIVE) $(TEST) $(LINKER) 2> "test.txt"
-tests32:	
+tests32:
 	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD32) $(TEST) $(LINKER) 2> "test.txt"
-tests64:	
+tests64:
 	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD64) $(TEST) $(LINKER) 2> "test.txt"
 install: build
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)\'$(DEST_PATH)\'$(R) $(NC)\n"
@@ -93,6 +95,9 @@ install: build
 	printf '%s\n' '#!/bin/bash' 'cd $(DEST_PATH)' 'bin/game "$$@"' > $(DEST_PATH)/bds.game
 	chmod -R 755 $(DEST_PATH)
 	ln -fs $(DEST_PATH)/bds.game /usr/bin/bds.game
+	@if [ -d $(DESKTOP_PATH) ] && [ ! -z "$(wildcard $(DESKTOP_PATH)/*.desktop)" ]; then\
+		cp -f bds.desktop $(DESKTOP_PATH)/bds.desktop;\
+	fi
 uninstall:
 	printf "$(R)Uninstalling $(Y)Beyond Dying Skies$(R) from $(G)\'$(DEST_PATH)\'$(R) $(NC)\n"
 	rm -rI $(DEST_PATH)
