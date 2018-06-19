@@ -21,6 +21,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/callback.h>
 #include <game/controls.h>
 #include <game/events.h>
+#include <game/keymap.h>
 #include <game/options.h>
 #include <game/particle.h>
 #include <game/sound.h>
@@ -62,6 +63,8 @@ class bds
     game::ui_overlay _ui;
     game::controls _controls;
     game::title _title;
+    game::key_map _keymap;
+    min::window::key_type _last_key;
     std::pair<uint_fast16_t, uint_fast16_t> _cursor;
     double _fps;
     double _idle;
@@ -113,11 +116,96 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.267");
+        _ui.text().set_debug_version("VERSION: 0.1.271");
 
         // Set the game mode
         const bool hardcore = _world.get_load_state().is_hardcore();
         _ui.text().set_debug_game_mode((hardcore) ? "HARDCORE MODE" : "NORMAL MODE");
+    }
+    game::menu_call menu_control_call()
+    {
+        return [this]() -> void {
+            // Switch to extended menu mode
+            this->_ui.set_menu_extend(true);
+            this->_ui.switch_mode_menu();
+
+            // Get access to the keyboard
+            auto &keyboard = this->_win.get_keyboard();
+
+            // Get the active keys
+            const auto &keys = keyboard.get_active_keys();
+
+            // Get the menu from ui
+            game::ui_menu &menu = this->_ui.get_menu();
+
+            // Iterate through the keys
+            size_t i = 0;
+            for (const auto &k : keys)
+            {
+                // Get the key code
+                const min::window::key_type key = k.first;
+
+                // Set the button string
+                menu.set_string(i, &this->_keymap.get_string(key));
+
+                // Create callback and set it
+                const auto f = [this, key]() -> void {
+                    this->_last_key = key;
+                    this->_win.get_keyboard().register_override_keyup(bds::menu_override, (void *)this);
+                };
+                menu.set_callback(i++, f);
+            }
+
+            // Set the menu back button
+            menu.set_string_back(31);
+            menu.set_callback(31, this->menu_reset_call());
+        };
+    }
+    static void menu_override(void *const ptr, const min::window::key_type key)
+    {
+        // Get the game object
+        bds *const game = reinterpret_cast<bds *const>(ptr);
+
+        // Debounce this override
+        game->_win.get_keyboard().register_override_keyup(nullptr, nullptr);
+
+        // Remap the keyboard key
+        if (game->_win.get_keyboard().swap(game->_last_key, key))
+        {
+            // Update the changes in the menu
+            game->menu_control_call()();
+        }
+    }
+    game::menu_call menu_quit_call()
+    {
+        return [this]() -> void {
+            // Save
+            this->save();
+
+            // Quit game
+            this->_win.set_shutdown();
+
+            // Alert that we received the call back
+            std::cout << "controls: Shutdown called by user" << std::endl;
+        };
+    }
+    game::menu_call menu_reset_call()
+    {
+        // Create reset callback
+        return [this]() -> void {
+            // Switch to menu mode
+            this->_ui.set_menu_extend(false);
+            this->_ui.switch_mode_menu();
+
+            // Get the menu
+            game::ui_menu &menu = this->_ui.get_menu();
+
+            // Reset the menu
+            menu.reset();
+
+            // Set default callbacks
+            this->register_menu_callbacks();
+        };
     }
     game::menu_call menu_resume_call()
     {
@@ -136,25 +224,13 @@ class bds
             this->_title.set_show_title(true);
         };
     }
-    game::menu_call menu_quit_call()
-    {
-        return [this]() -> void {
-            // Save
-            this->save();
-
-            // Quit game
-            this->_win.set_shutdown();
-
-            // Alert that we received the call back
-            std::cout << "controls: Shutdown called by user" << std::endl;
-        };
-    }
     void register_menu_callbacks()
     {
         game::ui_menu &menu = _ui.get_menu();
         menu.set_callback(0, menu_resume_call());
         menu.set_callback(1, menu_title_call());
         menu.set_callback(2, menu_quit_call());
+        menu.set_callback(3, menu_control_call());
     }
     void save()
     {
@@ -353,9 +429,6 @@ class bds
 
         // Load gpu information
         load_gpu_info();
-
-        // Register menu callbacks
-        register_menu_callbacks();
     }
     void blink_console_message()
     {
@@ -457,6 +530,9 @@ class bds
             // Play intro message
             _ui.set_alert_intro();
         }
+
+        // Register menu callbacks
+        register_menu_callbacks();
     }
     void title_screen_enable()
     {

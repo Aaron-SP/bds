@@ -30,22 +30,57 @@ namespace game
 class ui_menu
 {
   private:
-    static constexpr size_t _size = ui_bg_assets::max_menu_size();
+    static constexpr size_t _size = ui_bg_assets::max_menu_ext_size();
     const std::string _back;
-    const std::string _quit;
     const std::string _title;
+    const std::string _quit;
+    const std::string _controls;
     const std::string _empty;
+    const std::string _menu_back;
     std::array<const std::string *, _size> _menu;
     std::array<menu_call, _size> _callback;
+    bool _extended;
     bool _dirty;
 
   public:
     ui_menu()
-        : _back("Back to Game"), _quit("Save and Exit Game"), _title("Return to Title"), _empty(),
-          _menu{&_back, &_title, &_quit, &_empty, &_empty}, _callback{}, _dirty(true) {}
+        : _back("Back to Game"), _title("Return to Title"), _quit("Save and Exit Game"), _controls("Controls"), _empty(), _menu_back("Back"),
+          _menu{}, _callback{}, _extended(false), _dirty(true)
+    {
+        // Set all menu string pointers to empty
+        const size_t size = _size;
+        for (size_t i = 0; i < size; i++)
+        {
+            _menu[i] = &_empty;
+        }
+
+        // Set the default menu strings
+        _menu[0] = &_back;
+        _menu[1] = &_title;
+        _menu[2] = &_quit;
+        _menu[3] = &_controls;
+        _menu[4] = &_empty;
+    }
 
     inline void reset()
     {
+        // Reset all strings and callbacks
+        const size_t size = _size;
+        for (size_t i = 0; i < size; i++)
+        {
+            _menu[i] = &_empty;
+            _callback[i] = nullptr;
+        }
+
+        // Set the default menu strings
+        _menu[0] = &_back;
+        _menu[1] = &_title;
+        _menu[2] = &_quit;
+        _menu[3] = &_controls;
+        _menu[4] = &_empty;
+
+        // Set dirty flag
+        _extended = false;
         _dirty = true;
     }
     inline bool callback(const size_t index)
@@ -66,23 +101,54 @@ class ui_menu
     {
         _dirty = false;
     }
-    inline bool is_dirty() const
-    {
-        return _dirty;
-    }
     inline const std::array<const std::string *, _size> &get_strings() const
     {
         return _menu;
     }
-    inline min::vec2<float> position(const uint_fast16_t center_w, const size_t index) const
+    inline bool is_dirty() const
     {
-        return ui_bg_assets::menu_text_position(center_w, index);
+        return _dirty;
+    }
+    inline bool is_extended() const
+    {
+        return _extended;
+    }
+    inline min::vec2<float> position_text(const uint_fast16_t center_w, const size_t index) const
+    {
+        if (_extended)
+        {
+            // Get row and col
+            const unsigned row = index / 4;
+            const unsigned col = index & 3;
+            return ui_bg_assets::menu_ext_text_position(center_w, row, col);
+        }
+        else
+        {
+            return ui_bg_assets::menu_base_text_position(center_w, index);
+        }
     }
     inline void set_callback(const size_t index, const menu_call &f)
     {
         _callback[index] = f;
     }
-    inline static constexpr size_t size()
+    inline void set_extended(const bool flag)
+    {
+        _extended = flag;
+        _dirty = true;
+    }
+    inline void set_string(const size_t index, const std::string *str)
+    {
+        _menu[index] = str;
+    }
+    inline void set_string_back(const size_t index)
+    {
+        _menu[index] = &_menu_back;
+    }
+    inline void set_string_empty(const size_t index)
+    {
+        _menu[index] = &_empty;
+    }
+    inline static constexpr size_t max_size()
     {
         return _size;
     }

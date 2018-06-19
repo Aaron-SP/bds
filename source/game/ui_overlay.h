@@ -31,6 +31,7 @@ namespace game
 class ui_overlay
 {
   private:
+    ui_menu _menu;
     ui_text _text;
     ui_bg _bg;
     int _order;
@@ -56,7 +57,7 @@ class ui_overlay
     inline bool is_extendable() const
     {
         const ui_mode mode = _bg.get_ui_state().get_mode();
-        return mode == ui_mode::BASE || mode == ui_mode::EXTEND;
+        return mode == ui_mode::INV || mode == ui_mode::INV_EXT;
     }
     inline void set_ui_alert(const std::string &str, const float time, const int order)
     {
@@ -79,8 +80,8 @@ class ui_overlay
 
   public:
     ui_overlay(const uniforms &uniforms, inventory &inv, stats &stat, const uint_fast16_t width, const uint_fast16_t height)
-        : _text(width, height),
-          _bg(uniforms, inv, stat, _text.get_bg_text(), width, height),
+        : _text(_menu, width, height),
+          _bg(uniforms, inv, stat, _text.get_bg_text(), _menu, width, height),
           _order(-1),
           _action_fail("Can't use or craft that item!"),
           _ast("Incoming asteroids, take cover!"),
@@ -102,6 +103,7 @@ class ui_overlay
 
     inline void reset()
     {
+        _menu.reset();
         _text.reset();
         _bg.reset();
         _order = -1;
@@ -213,11 +215,11 @@ class ui_overlay
     }
     inline ui_menu &get_menu()
     {
-        return _bg.get_menu();
+        return _menu;
     }
     inline const ui_menu &get_menu() const
     {
-        return _bg.get_menu();
+        return _menu;
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
@@ -234,7 +236,7 @@ class ui_overlay
     inline bool is_extended() const
     {
         const ui_mode mode = _bg.get_ui_state().get_mode();
-        return mode == ui_mode::EXTEND;
+        return mode == ui_mode::INV_EXT;
     }
     inline bool is_focused() const
     {
@@ -396,9 +398,9 @@ class ui_overlay
     {
         _bg.set_oxygen(oxygen);
     }
-    inline void set_splash_dead()
+    inline void set_menu_extend(const bool flag)
     {
-        _bg.set_splash_dead();
+        _menu.set_extended(flag);
     }
     inline void set_minimized(const bool flag)
     {
@@ -416,6 +418,10 @@ class ui_overlay
         // Set text screen dimensions
         _text.set_screen(p, width, height);
     }
+    inline void set_splash_dead()
+    {
+        _bg.set_splash_dead();
+    }
     inline void stream_low_health()
     {
         add_stream_text(_health);
@@ -430,7 +436,7 @@ class ui_overlay
         _bg.reset_cursor();
 
         // Switch to base mode
-        _bg.switch_mode(ui_mode::BASE);
+        _bg.switch_mode(ui_mode::INV);
 
         // Turn off menu
         _text.set_draw_menu(false);
@@ -441,7 +447,14 @@ class ui_overlay
         _bg.set_splash_pause();
 
         // Switch to menu mode
-        _bg.switch_mode(ui_mode::MENU);
+        if (_menu.is_extended())
+        {
+            _bg.switch_mode(ui_mode::MENU_EXT);
+        }
+        else
+        {
+            _bg.switch_mode(ui_mode::MENU);
+        }
 
         // Enable drawing menu
         _text.set_draw_menu(true);
@@ -452,7 +465,7 @@ class ui_overlay
         _bg.reset_cursor();
 
         // Switch to base mode
-        _bg.switch_mode(ui_mode::BASE);
+        _bg.switch_mode(ui_mode::INV);
 
         // Turn off menu
         _text.set_draw_menu(false);
@@ -510,14 +523,13 @@ class ui_overlay
         }
 
         // If menu needs updating
-        ui_menu &menu = _bg.get_menu();
-        if (menu.is_dirty())
+        if (_menu.is_dirty())
         {
             // Update menu text
-            _text.set_menu(menu);
+            _text.set_menu();
 
             // Flag debouncer
-            menu.clean();
+            _menu.clean();
         }
 
         // Update the drone timer

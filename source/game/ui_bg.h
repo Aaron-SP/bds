@@ -125,11 +125,21 @@ class ui_bg
     inline void draw_opaque_menu() const
     {
         // Get the start of the opaque ui
-        const size_t start = _assets.menu_start();
+        const size_t start = _assets.menu_base_start();
         set_start_index(start);
 
         // Draw base ui elements
-        const size_t size = _assets.menu_size();
+        const size_t size = _assets.menu_base_size();
+        _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
+    }
+    inline void draw_opaque_menu_ext() const
+    {
+        // Get the start of the opaque ui
+        const size_t start = _assets.menu_ext_start();
+        set_start_index(start);
+
+        // Draw base ui elements
+        const size_t size = _assets.menu_ext_size();
         _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
     }
     inline void draw_title() const
@@ -153,8 +163,7 @@ class ui_bg
     }
     inline void draw_transparent_ui() const
     {
-        const ui_mode mode = _state.get_mode();
-        if (mode != ui_mode::MENU)
+        if (!_state.is_menu_mode())
         {
             // Get the start of the transparent ui
             const size_t trans_start = _assets.transparent_start();
@@ -340,14 +349,14 @@ class ui_bg
     }
 
   public:
-    ui_bg(const uniforms &uniforms, inventory &inv, stats &stat, min::text_buffer &text, const uint_fast16_t width, const uint_fast16_t height)
+    ui_bg(const uniforms &uniforms, inventory &inv, stats &stat, min::text_buffer &text, ui_menu &menu, const uint_fast16_t width, const uint_fast16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)),
           _mesh_id(load_base_rect()), _title_id(load_title_texture()), _ui_id(load_ui_texture()),
           _focus(false), _state(inv.begin_key()), _assets(width, height), _text(&text),
           _tree(screen_box(width, height)),
-          _control_inv(_assets, inv, stat, text, _tree, _shapes), _control_menu(_assets, _tree, _shapes)
+          _control_inv(_assets, inv, stat, text, _tree, _shapes), _control_menu(_assets, menu, _tree, _shapes)
     {
         // Format string stream
         _stream.precision(3);
@@ -406,7 +415,7 @@ class ui_bg
     }
     inline bool click_down()
     {
-        if (_state.get_mode() == ui_mode::EXTEND)
+        if (_state.get_mode() == ui_mode::INV_EXT)
         {
             return _control_inv.click_down(_state);
         }
@@ -419,7 +428,7 @@ class ui_bg
     }
     inline void click_up()
     {
-        if (_state.get_mode() == ui_mode::EXTEND)
+        if (_state.get_mode() == ui_mode::INV_EXT)
         {
             _control_inv.click_up(_state);
         }
@@ -442,7 +451,7 @@ class ui_bg
             // Draw title
             draw_title();
         }
-        else if (_state.get_mode() == ui_mode::EXTEND)
+        else if (_state.get_mode() == ui_mode::INV_EXT)
         {
             // Bind the VAO and program
             bind();
@@ -459,7 +468,7 @@ class ui_bg
                 draw_focus_ui();
             }
         }
-        else if (_state.get_mode() == ui_mode::BASE)
+        else if (_state.get_mode() == ui_mode::INV)
         {
             // Bind the VAO and program
             bind();
@@ -476,7 +485,7 @@ class ui_bg
                 draw_focus_ui();
             }
         }
-        else if (_state.get_mode() == ui_mode::MENU)
+        else if (_state.is_menu_mode())
         {
             // Bind the VAO and program
             bind();
@@ -484,8 +493,15 @@ class ui_bg
             // Bind the ui texture for drawing
             _tbuffer.bind(_ui_id, 0);
 
-            // Draw only base ui
-            draw_opaque_menu();
+            // Draw menu ui
+            if (_state.get_mode() == ui_mode::MENU_EXT)
+            {
+                draw_opaque_menu_ext();
+            }
+            else
+            {
+                draw_opaque_menu();
+            }
 
             // Draw focus UI
             if (_focus)
@@ -522,21 +538,13 @@ class ui_bg
     inline bool drop()
     {
         // If UI is extended
-        if (_state.get_mode() == ui_mode::EXTEND)
+        if (_state.get_mode() == ui_mode::INV_EXT)
         {
             return _control_inv.drop(_state);
         }
 
         // Didn't drop anything
         return false;
-    }
-    inline ui_menu &get_menu()
-    {
-        return _control_menu.get_menu();
-    }
-    inline const ui_menu &get_menu() const
-    {
-        return _control_menu.get_menu();
     }
     inline const std::vector<min::mat3<float>> &get_scale() const
     {
@@ -552,7 +560,7 @@ class ui_bg
     }
     inline bool is_draw_tooltips() const
     {
-        const bool extended = _state.get_mode() == ui_mode::EXTEND;
+        const bool extended = _state.get_mode() == ui_mode::INV_EXT;
         const bool hovering = _state.is_hovering_not_button();
 
         return extended && hovering;
@@ -717,11 +725,11 @@ class ui_bg
         // Load tree inventory boxes
         if (_state.is_inv_mode())
         {
-            _control_inv.load_tree(_stream, width, height);
+            _control_inv.load_tree(_state, _stream, width, height);
         }
         else if (_state.is_menu_mode())
         {
-            _control_menu.load_tree(_stream, width, height);
+            _control_menu.load_tree(_state, _stream, width, height);
         }
     }
     inline void switch_mode(const ui_mode mode)
@@ -737,12 +745,12 @@ class ui_bg
         {
             _assets.load_health_overlay();
             _control_inv.position_ui(_state);
-            _control_inv.load_tree(_stream, width, height);
+            _control_inv.load_tree(_state, _stream, width, height);
         }
         else if (_state.is_menu_mode())
         {
             _control_menu.position_ui(_state);
-            _control_menu.load_tree(_stream, width, height);
+            _control_menu.load_tree(_state, _stream, width, height);
         }
         else if (_state.is_title_mode())
         {

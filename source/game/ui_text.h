@@ -67,7 +67,7 @@ class ui_text
     static constexpr size_t _debug = _alert + 1;
     static constexpr size_t _stream = _debug + 14;
     static constexpr size_t _menu = _stream + _max_stream;
-    static constexpr size_t _text_end = _menu + ui_menu::size();
+    static constexpr size_t _text_end = _menu + ui_menu::max_size();
 
     static constexpr size_t _hover = 0;
     static constexpr size_t _info_end = _hover + 4;
@@ -91,6 +91,7 @@ class ui_text
     const GLint _index_location;
 
     // Buffer for holding text
+    const ui_menu *const _ui_menu;
     min::text_buffer _text;
     min::text_buffer _text_bg;
     min::text_buffer _text_info;
@@ -176,7 +177,7 @@ class ui_text
         {
             // Update stream text location
             const size_t index = i - _menu;
-            const min::vec2<float> p = ui_bg_assets::menu_text_position(w2, index);
+            const min::vec2<float> p = _ui_menu->position_text(w2, index);
             _text.set_text_center(i, p.x(), p.y());
         }
 
@@ -280,10 +281,11 @@ class ui_text
     }
 
   public:
-    ui_text(const uint_fast16_t width, const uint_fast16_t height)
+    ui_text(const ui_menu &menu, const uint_fast16_t width, const uint_fast16_t height)
         : _vertex(memory_map::memory.get_file("data/shader/text.vertex"), GL_VERTEX_SHADER),
           _fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index()),
+          _ui_menu(&menu),
           _text("data/fonts/open_sans.ttf", _text_font_size, 2),
           _text_bg("data/fonts/open_sans.ttf", _inv_font_size),
           _text_info("data/fonts/open_sans.ttf", _info_font_size),
@@ -729,10 +731,10 @@ class ui_text
         // Upload changes
         _text_info.upload();
     }
-    inline void set_menu(const ui_menu &menu)
+    inline void set_menu()
     {
         // Get the menu strings
-        const auto &str_arr = menu.get_strings();
+        const auto &str_arr = _ui_menu->get_strings();
 
         // Get the screen dimensions
         const std::pair<uint_fast16_t, uint_fast16_t> size = _text.get_screen_size();
@@ -743,7 +745,7 @@ class ui_text
         {
             // Get the center width
             const size_t index = i - _menu;
-            const min::vec2<float> p = menu.position(w2, index);
+            const min::vec2<float> p = _ui_menu->position_text(w2, index);
             _text.set_text_center(i, *str_arr[index], p.x(), p.y());
         }
     }

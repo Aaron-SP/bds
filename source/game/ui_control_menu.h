@@ -39,24 +39,41 @@ class ui_control_menu
     {
         return 0;
     }
-    inline static constexpr size_t end_menu()
+    inline static constexpr size_t end_menu_base()
     {
-        return begin_menu() + ui_bg_assets::max_menu_size();
+        return begin_menu() + ui_bg_assets::max_menu_base_size();
+    }
+    inline static constexpr size_t end_menu_ext()
+    {
+        return begin_menu() + ui_bg_assets::max_menu_ext_size();
     }
     typedef min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_tree;
     ui_bg_assets *const _assets;
-    ui_menu _menu;
+    ui_menu *const _menu;
     ui_tree *const _tree;
     std::vector<min::aabbox<float, min::vec2>> *const _shapes;
     bool _minimized;
+    const min::vec2<float> _bg_scale;
+    const min::vec2<float> _fg_scale;
+    const min::vec2<float> _bg_ext_scale;
+    const min::vec2<float> _fg_ext_scale;
 
-    inline min::vec2<float> pos_menu(const ui_id ui) const
+    inline min::vec2<float> pos_base_menu(const ui_id ui) const
     {
         // Get row and col
-        const size_t row = ui.index() - begin_menu();
+        const unsigned row = ui.index() - begin_menu();
 
         // Calculate ui element position
-        return _assets->menu_position(row);
+        return _assets->menu_base_position(row);
+    }
+    inline min::vec2<float> pos_ext_menu(const ui_id ui) const
+    {
+        // Get row and col
+        const unsigned row = ui.index() / 4;
+        const unsigned col = ui.index() & 3;
+
+        // Calculate ui element position
+        return _assets->menu_ext_position(row, col);
     }
     inline void select_click(const ui_state &state)
     {
@@ -65,7 +82,14 @@ class ui_control_menu
         {
             // Update menu bg color
             const ui_id click = state.get_click();
-            _assets->load_bg_menu_light_blue(click.bg_menu_index(), pos_menu(click));
+            if (state.get_mode() == ui_mode::MENU)
+            {
+                _assets->load_bg_menu_light_blue(click.bg_menu_base_index(), _bg_scale, pos_base_menu(click));
+            }
+            else
+            {
+                _assets->load_bg_menu_light_blue(click.bg_menu_ext_index(), _bg_ext_scale, pos_ext_menu(click));
+            }
         }
     }
     inline void select_hover(const ui_state &state)
@@ -75,18 +99,43 @@ class ui_control_menu
         {
             // Update menu bg color
             const ui_id hover = state.get_hover();
-            _assets->load_bg_menu_yellow(hover.bg_menu_index(), pos_menu(hover));
+            if (state.get_mode() == ui_mode::MENU)
+            {
+                _assets->load_bg_menu_yellow(hover.bg_menu_base_index(), _bg_scale, pos_base_menu(hover));
+            }
+            else
+            {
+                _assets->load_bg_menu_yellow(hover.bg_menu_ext_index(), _bg_ext_scale, pos_ext_menu(hover));
+            }
         }
     }
     inline void unselect_click(const ui_state &state)
     {
         const ui_id click = state.get_click();
-        _assets->load_bg_menu_black(click.bg_menu_index(), pos_menu(click));
+        if (state.is_hover_click())
+        {
+            select_hover(state);
+        }
+        else if (state.get_mode() == ui_mode::MENU)
+        {
+            _assets->load_bg_menu_black(click.bg_menu_base_index(), _bg_scale, pos_base_menu(click));
+        }
+        else
+        {
+            _assets->load_bg_menu_black(click.bg_menu_ext_index(), _bg_ext_scale, pos_ext_menu(click));
+        }
     }
     inline void unselect_hover(const ui_state &state)
     {
         const ui_id hover = state.get_hover();
-        _assets->load_bg_menu_black(hover.bg_menu_index(), pos_menu(hover));
+        if (state.get_mode() == ui_mode::MENU)
+        {
+            _assets->load_bg_menu_black(hover.bg_menu_base_index(), _bg_scale, pos_base_menu(hover));
+        }
+        else
+        {
+            _assets->load_bg_menu_black(hover.bg_menu_ext_index(), _bg_ext_scale, pos_ext_menu(hover));
+        }
     }
     inline bool set_click_down(ui_state &state, const ui_id ui)
     {
@@ -100,7 +149,7 @@ class ui_control_menu
         select_click(state);
 
         // A click happened
-        return _menu.callback(ui.index());
+        return _menu->callback(ui.index());
     }
     inline void set_hover_down(ui_state &state, const ui_id ui)
     {
@@ -124,14 +173,13 @@ class ui_control_menu
     }
 
   public:
-    ui_control_menu(ui_bg_assets &assets, ui_tree &tree, std::vector<min::aabbox<float, min::vec2>> &shapes)
-        : _assets(&assets), _tree(&tree), _shapes(&shapes), _minimized(false) {}
+    ui_control_menu(ui_bg_assets &assets, ui_menu &menu, ui_tree &tree, std::vector<min::aabbox<float, min::vec2>> &shapes)
+        : _assets(&assets), _menu(&menu), _tree(&tree), _shapes(&shapes), _minimized(false),
+          _bg_scale(_s_bg_menu_x, _s_bg_menu_y), _fg_scale(_s_fg_menu_x, _s_fg_menu_y),
+          _bg_ext_scale(_s_bg_menu_ext_x, _s_bg_menu_y), _fg_ext_scale(_s_fg_menu_ext_x, _s_fg_menu_y) {}
 
     inline void reset()
     {
-        // Reset menu
-        _menu.reset();
-
         // Reset minimized flag
         _minimized = false;
     }
@@ -166,34 +214,49 @@ class ui_control_menu
             state.set_clicking(false);
         }
     }
-    inline ui_menu &get_menu()
-    {
-        return _menu;
-    }
-    inline const ui_menu &get_menu() const
-    {
-        return _menu;
-    }
-    inline void load_tree(std::ostringstream &stream, const uint_fast16_t width, const uint_fast16_t height)
+    inline void load_tree(const ui_state &state, std::ostringstream &stream, const uint_fast16_t width, const uint_fast16_t height)
     {
         // Clear the shapes buffer
         _shapes->clear();
 
-        // Get start and end of menu
-        const size_t bm = begin_menu();
-        const size_t em = end_menu();
-
-        // Store rows
-        for (size_t i = bm; i < em; i++)
+        // Select which menu mode to switch to
+        if (state.get_mode() == ui_mode::MENU)
         {
-            // Create ui_id
-            const ui_id ui(i);
+            // Get start and end of menu
+            const size_t bm = begin_menu();
+            const size_t em = end_menu_base();
 
-            // Get ui position
-            const min::vec2<float> p = pos_menu(ui);
+            // Store rows
+            for (size_t i = bm; i < em; i++)
+            {
+                // Create ui_id
+                const ui_id ui(i);
 
-            // Add shape to buffer
-            _shapes->push_back(_assets->menu_box(p));
+                // Get ui position
+                const min::vec2<float> p = pos_base_menu(ui);
+
+                // Add shape to buffer
+                _shapes->push_back(_assets->menu_base_box(p));
+            }
+        }
+        else
+        {
+            // Get start and end of menu
+            const size_t bm = begin_menu();
+            const size_t em = end_menu_ext();
+
+            // Store rows
+            for (size_t i = bm; i < em; i++)
+            {
+                // Create ui_id
+                const ui_id ui(i);
+
+                // Get ui position
+                const min::vec2<float> p = pos_ext_menu(ui);
+
+                // Add shape to buffer
+                _shapes->push_back(_assets->menu_ext_box(p));
+            }
         }
 
         // Calculate the tree depth, 2^5 = 32 was 24
@@ -265,26 +328,57 @@ class ui_control_menu
     }
     inline void position_ui(const ui_state &state)
     {
-        // Get start and end of menu
-        const size_t bm = begin_menu();
-        const size_t em = end_menu();
-
-        // Load the pause menu
-        _assets->load_splash_pause();
-
-        // Update all menu icons
-        for (size_t i = bm; i < em; i++)
+        // Select which menu mode to switch to
+        if (state.get_mode() == ui_mode::MENU)
         {
-            // Create ui_id
-            const ui_id ui(i);
+            // Get start and end of menu
+            const size_t bm = begin_menu();
+            const size_t em = end_menu_base();
 
-            // Calculate icon position
-            const min::vec2<float> p = pos_menu(ui);
+            // Load the pause menu
+            _assets->load_splash_pause();
 
-            // Update the black bg icon
-            _assets->load_bg_menu_black(ui.bg_menu_index(), p);
-            _assets->load_fg_menu_grey(ui.fg_menu_index(), p);
+            // Update all menu icons
+            for (size_t i = bm; i < em; i++)
+            {
+                // Create ui_id
+                const ui_id ui(i);
+
+                // Calculate icon position
+                const min::vec2<float> p = pos_base_menu(ui);
+
+                // Update the black bg icon
+                _assets->load_bg_menu_black(ui.bg_menu_base_index(), _bg_scale, p);
+                _assets->load_fg_menu_grey(ui.fg_menu_base_index(), _fg_scale, p);
+            }
         }
+        else
+        {
+            // Get start and end of menu
+            const size_t bm = begin_menu();
+            const size_t em = end_menu_ext();
+
+            // Load the pause menu
+            _assets->load_splash_pause();
+
+            // Update all menu icons
+            for (size_t i = bm; i < em; i++)
+            {
+                // Create ui_id
+                const ui_id ui(i);
+
+                // Calculate icon position
+                const min::vec2<float> p = pos_ext_menu(ui);
+
+                // Update the black bg icon
+                _assets->load_bg_menu_black(ui.bg_menu_ext_index(), _bg_ext_scale, p);
+                _assets->load_fg_menu_grey(ui.fg_menu_ext_index(), _fg_ext_scale, p);
+            }
+        }
+    }
+    inline void set_extended(const bool flag)
+    {
+        _menu->set_extended(flag);
     }
     inline void set_key_down(ui_state &state, const size_t index) {}
     inline void set_key_down_fail(const ui_state &state, const size_t index) {}

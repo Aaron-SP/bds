@@ -264,9 +264,13 @@ class ui_bg_assets
     {
         return 1;
     }
-    inline static constexpr size_t max_menu_size()
+    inline static constexpr size_t max_menu_base_size()
     {
         return 5;
+    }
+    inline static constexpr size_t max_menu_ext_size()
+    {
+        return 32;
     }
     inline static constexpr size_t max_cube_size()
     {
@@ -317,7 +321,12 @@ class ui_bg_assets
         // 9
         return max_transparent_size() + max_ui_size();
     }
-    inline static constexpr size_t menu_start()
+    inline static constexpr size_t menu_base_start()
+    {
+        // 10
+        return max_transparent_size() + max_ui_size() + max_menu_splash_size();
+    }
+    inline static constexpr size_t menu_ext_start()
     {
         // 10
         return max_transparent_size() + max_ui_size() + max_menu_splash_size();
@@ -348,9 +357,13 @@ class ui_bg_assets
     {
         return max_menu_splash_size();
     }
-    inline static constexpr size_t menu_size()
+    inline static constexpr size_t menu_base_size()
     {
-        return max_menu_size() * 2;
+        return max_menu_base_size() * 2;
+    }
+    inline static constexpr size_t menu_ext_size()
+    {
+        return max_menu_ext_size() * 2;
     }
     inline static constexpr size_t focus_size()
     {
@@ -377,16 +390,19 @@ class ui_bg_assets
           _draw_console(false), _draw_splash(0)
 
     {
-        // Base ui elements, 5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 6 + 2 + 1
-        // Menu ui elements, 5 + 4 + 1 + 5 + 5 + [        empty          ] + 6 + 2 + 1
+        // Base ui elements,    5 + 4 + 16 + 16 + 24 + 24 + 1 + 9 + 9 + 6 + 2 + 1
+        // Menu ui elements,    5 + 4 + 1 + 5  + 5  + [  88x empty  ] + 6 + 2 + 1
+        // Ex Menu ui elements, 5 + 4 + 1 + 32 + 32 + [  34x empty  ] + 6 + 2 + 1
         static_assert(transparent_start() == 0, "Invalid transparent_start");
         static_assert(transparent_size() == 5, "Invalid transparent_size");
         static_assert(opaque_start() == 5, "Invalid opaque_start");
         static_assert(opaque_base_size() == 36, "Invalid opaque_base_size");
         static_assert(menu_splash_start() == 9, "Invalid menu_splash_start");
         static_assert(menu_splash_size() == 1, "Invalid menu_splash_size");
-        static_assert(menu_start() == 10, "Invalid menu_start");
-        static_assert(menu_size() == 10, "Invalid menu_size");
+        static_assert(menu_base_start() == 10, "Invalid menu_start");
+        static_assert(menu_base_size() == 10, "Invalid menu_size");
+        static_assert(menu_ext_start() == 10, "Invalid menu_start");
+        static_assert(menu_ext_size() == 64, "Invalid menu_size");
         static_assert(opaque_ext_size() == 109, "Invalid opaque_ext_size");
         static_assert(focus_start() == 5 + 109, "Invalid focus_start");
         static_assert(focus_size() == 1, "Invalid focus_size");
@@ -458,10 +474,18 @@ class ui_bg_assets
         // Return the inv_box
         return min::aabbox<float, min::vec2>(p - half, p + half);
     }
-    inline static min::aabbox<float, min::vec2> menu_box(const min::vec2<float> &p)
+    inline static min::aabbox<float, min::vec2> menu_base_box(const min::vec2<float> &p)
     {
         // Create a box from the screen
         const min::vec2<float> half(_s_bg_menu_x_2, _s_bg_menu_y_2);
+
+        // Return the inv_box
+        return min::aabbox<float, min::vec2>(p - half, p + half);
+    }
+    inline static min::aabbox<float, min::vec2> menu_ext_box(const min::vec2<float> &p)
+    {
+        // Create a box from the screen
+        const min::vec2<float> half(_s_bg_menu_ext_x_2, _s_bg_menu_y_2);
 
         // Return the inv_box
         return min::aabbox<float, min::vec2>(p - half, p + half);
@@ -731,60 +755,48 @@ class ui_bg_assets
         // Load rect at position
         set_rect_reset(menu_splash_start(), p, scale, pause_coord);
     }
-    inline void load_bg_menu_black(const ui_id id, const min::vec2<float> &p)
+    inline void load_bg_menu_black(const ui_id id, const min::vec2<float> &scale, const min::vec2<float> &p)
     {
-        const min::vec2<float> scale(_s_bg_menu_x, _s_bg_menu_y);
-
         // Offset texture to prevent blurring edges
         const min::vec4<float> black_coord(_x_black_trim_uv, _y_black_trim_uv, _s_uv_trim, _s_uv_trim);
 
         // Load rect at position
         set_rect(id.id(), p, scale, black_coord);
     }
-    inline void load_bg_menu_grey(const ui_id id, const min::vec2<float> &p)
+    inline void load_bg_menu_grey(const ui_id id, const min::vec2<float> &scale, const min::vec2<float> &p)
     {
-        const min::vec2<float> scale(_s_bg_menu_x, _s_bg_menu_y);
-
         // Offset texture to prevent blurring edges
         const min::vec4<float> grey_coord(_x_grey_trim_uv, _y_grey_trim_uv, _s_uv_trim, _s_uv_trim);
 
         // Load rect at position
         set_rect(id.id(), p, scale, grey_coord);
     }
-    inline void load_bg_menu_light_blue(const ui_id id, const min::vec2<float> &p)
+    inline void load_bg_menu_light_blue(const ui_id id, const min::vec2<float> &scale, const min::vec2<float> &p)
     {
-        const min::vec2<float> scale(_s_bg_menu_x, _s_bg_menu_y);
-
         // Offset texture to prevent blurring edges
         const min::vec4<float> blue_coord(_x_light_blue_trim_uv, _y_light_blue_trim_uv, _s_uv_trim, _s_uv_trim);
 
         // Load rect at position
         set_rect(id.id(), p, scale, blue_coord);
     }
-    inline void load_bg_menu_yellow(const ui_id id, const min::vec2<float> &p)
+    inline void load_bg_menu_yellow(const ui_id id, const min::vec2<float> &scale, const min::vec2<float> &p)
     {
-        const min::vec2<float> scale(_s_bg_menu_x, _s_bg_menu_y);
-
         // Offset texture to prevent blurring edges
         const min::vec4<float> yellow_coord(_x_yellow_trim_uv, _y_yellow_trim_uv, _s_uv_trim, _s_uv_trim);
 
         // Load rect at position
         set_rect(id.id(), p, scale, yellow_coord);
     }
-    inline void load_fg_menu_black(const ui_id id, const min::vec2<float> &p)
+    inline void load_fg_menu_black(const ui_id id, const min::vec2<float> &scale, const min::vec2<float> &p)
     {
-        const min::vec2<float> scale(_s_fg_menu_x, _s_fg_menu_y);
-
         // Offset texture to prevent blurring edges
         const min::vec4<float> black_coord(_x_black_trim_uv, _y_black_trim_uv, _s_uv_trim, _s_uv_trim);
 
         // Load rect at position
         set_rect(id.id(), p, scale, black_coord);
     }
-    inline void load_fg_menu_grey(const ui_id id, const min::vec2<float> &p)
+    inline void load_fg_menu_grey(const ui_id id, const min::vec2<float> &scale, const min::vec2<float> &p)
     {
-        const min::vec2<float> scale(_s_fg_menu_x, _s_fg_menu_y);
-
         // Offset texture to prevent blurring edges
         const min::vec4<float> grey_coord(_x_grey_trim_uv, _y_grey_trim_uv, _s_uv_trim, _s_uv_trim);
 
@@ -1054,20 +1066,38 @@ class ui_bg_assets
         // Return toolbar position
         return min::vec2<float>(x, y);
     }
-    inline min::vec2<float> menu_position(const size_t row)
+    inline min::vec2<float> menu_base_position(const unsigned row)
     {
         // Calculate offset from center for this toolbar element
         const float x = (_center_w + _menu_dx);
-        const float y = _menu_dy - (row * _menu_space);
+        const float y = _menu_dy - (row * _menu_y_space);
 
         // Return toolbar position
         return min::vec2<float>(x, y);
     }
-    static inline min::vec2<float> menu_text_position(const uint_fast16_t center_w, const size_t row)
+    inline min::vec2<float> menu_ext_position(const unsigned row, const unsigned col)
+    {
+        // Calculate offset from center for this toolbar element
+        const float x = (_center_w + _menu_ext_dx) + (col * _menu_ext_x_space);
+        const float y = _menu_dy - (row * _menu_y_space);
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
+    }
+    static inline min::vec2<float> menu_base_text_position(const uint_fast16_t center_w, const unsigned row)
     {
         // Calculate offset from center for this toolbar element
         const float x = (center_w + _menu_dx);
-        const float y = _menu_text_dy - (row * _menu_space);
+        const float y = _menu_text_dy - (row * _menu_y_space);
+
+        // Return toolbar position
+        return min::vec2<float>(x, y);
+    }
+    static inline min::vec2<float> menu_ext_text_position(const uint_fast16_t center_w, const unsigned row, const unsigned col)
+    {
+        // Calculate offset from center for this toolbar element
+        const float x = (center_w + _menu_ext_dx) + (col * _menu_ext_x_space);
+        const float y = _menu_text_dy - (row * _menu_y_space);
 
         // Return toolbar position
         return min::vec2<float>(x, y);

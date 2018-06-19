@@ -216,7 +216,7 @@ class controls
         // Register callback function KEYQ
         keyboard.register_keydown(min::window::key_code::KEYQ, controls::drop_item, (void *)this);
     }
-    static void toggle_text(void *ptr, double step)
+    static void toggle_text(void *const ptr, double step)
     {
         // Get the state pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -225,7 +225,7 @@ class controls
         // Enable / disable drawing debug text
         ui->toggle_debug_text();
     }
-    static void toggle_wireframe(void *ptr, double step)
+    static void toggle_wireframe(void *const ptr, double step)
     {
         // Get the state pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -234,7 +234,7 @@ class controls
         // Enable / disable drawing wireframe
         state->toggle_wireframe();
     }
-    static void music_down(void *ptr, double step)
+    static void music_down(void *const ptr, double step)
     {
         // Get the sound pointer
         sound *const sound = reinterpret_cast<game::sound *>(ptr);
@@ -242,7 +242,7 @@ class controls
         // Decrease the music gain
         sound->bg_gain_down();
     }
-    static void music_up(void *ptr, double step)
+    static void music_up(void *const ptr, double step)
     {
         // Get the sound pointer
         sound *const sound = reinterpret_cast<game::sound *>(ptr);
@@ -250,7 +250,7 @@ class controls
         // Increase the music gain
         sound->bg_gain_up();
     }
-    static void toggle_pause(void *ptr, double step)
+    static void toggle_pause(void *const ptr, double step)
     {
         // Get the state, window and ui pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -285,7 +285,7 @@ class controls
         // Center cursor in middle of window
         win->set_cursor(win->get_width() / 2, win->get_height() / 2);
     }
-    static void forward(void *ptr, double step)
+    static void forward(void *const ptr, double step)
     {
         // Get the state, camera, world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -304,7 +304,7 @@ class controls
         const min::vec3<float> &direction = camera->get_forward();
         world->get_player().move(direction);
     }
-    static void left(void *ptr, double step)
+    static void left(void *const ptr, double step)
     {
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -323,7 +323,7 @@ class controls
         const min::vec3<float> &right = camera->get_frustum().get_right();
         world->get_player().move(right * -1.0);
     }
-    static void right(void *ptr, double step)
+    static void right(void *const ptr, double step)
     {
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -342,7 +342,7 @@ class controls
         const min::vec3<float> &right = camera->get_frustum().get_right();
         world->get_player().move(right);
     }
-    static void back(void *ptr, double step)
+    static void back(void *const ptr, double step)
     {
         // Get the camera and world pointers
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -525,55 +525,55 @@ class controls
             _ui->set_key_down_fail(index);
         }
     }
-    static void key1_down(void *ptr, double step)
+    static void key1_down(void *const ptr, double step)
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         control->key_down(0);
     }
-    static void key2_down(void *ptr, double step)
+    static void key2_down(void *const ptr, double step)
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         control->key_down(1);
     }
-    static void key3_down(void *ptr, double step)
+    static void key3_down(void *const ptr, double step)
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         control->key_down(2);
     }
-    static void key4_down(void *ptr, double step)
+    static void key4_down(void *const ptr, double step)
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         control->key_down(3);
     }
-    static void key5_down(void *ptr, double step)
+    static void key5_down(void *const ptr, double step)
     {
         // Get the skills pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         control->key_down(4);
     }
-    static void key6_down(void *ptr, double step)
+    static void key6_down(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         control->key_down(5);
     }
-    static void key7_down(void *ptr, double step)
+    static void key7_down(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         control->key_down(6);
     }
-    static void key8_down(void *ptr, double step)
+    static void key8_down(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
         control->key_down(7);
     }
-    static void key1_up(void *ptr, double step)
+    static void key1_up(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -582,7 +582,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
         ui->set_key_up(0);
     }
-    static void key2_up(void *ptr, double step)
+    static void key2_up(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -591,7 +591,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
         ui->set_key_up(1);
     }
-    static void key3_up(void *ptr, double step)
+    static void key3_up(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -600,7 +600,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
         ui->set_key_up(2);
     }
-    static void key4_up(void *ptr, double step)
+    static void key4_up(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -609,7 +609,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
         ui->set_key_up(3);
     }
-    static void key5_up(void *ptr, double step)
+    static void key5_up(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -618,7 +618,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
         ui->set_key_up(4);
     }
-    static void key6_up(void *ptr, double step)
+    static void key6_up(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -627,7 +627,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
         ui->set_key_up(5);
     }
-    static void key7_up(void *ptr, double step)
+    static void key7_up(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -636,7 +636,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
         ui->set_key_up(6);
     }
-    static void key8_up(void *ptr, double step)
+    static void key8_up(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -645,7 +645,7 @@ class controls
         ui_overlay *const ui = control->get_ui();
         ui->set_key_up(7);
     }
-    static void add_x(void *ptr, double step)
+    static void add_x(void *const ptr, double step)
     {
         // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -663,7 +663,7 @@ class controls
         // Increase x scale
         world->set_scale_x(1);
     }
-    static void add_y(void *ptr, double step)
+    static void add_y(void *const ptr, double step)
     {
         // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -681,7 +681,7 @@ class controls
         // Increase x scale
         world->set_scale_y(1);
     }
-    static void add_z(void *ptr, double step)
+    static void add_z(void *const ptr, double step)
     {
         // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -699,7 +699,7 @@ class controls
         // Increase x scale
         world->set_scale_z(1);
     }
-    static void reset(void *ptr, double step)
+    static void reset(void *const ptr, double step)
     {
         // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -717,7 +717,7 @@ class controls
         // Reset scale
         world->reset_scale();
     }
-    static void select(void *ptr, double step)
+    static void select(void *const ptr, double step)
     {
         // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -751,7 +751,7 @@ class controls
             }
         }
     }
-    static void ui_extend(void *ptr, double step)
+    static void ui_extend(void *const ptr, double step)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -776,7 +776,7 @@ class controls
             win->display_cursor(input);
         }
     }
-    static void shift_down(void *ptr, double step)
+    static void shift_down(void *const ptr, double step)
     {
         // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -802,7 +802,7 @@ class controls
             world->get_player().dash();
         }
     }
-    static void shift_up(void *ptr, double step)
+    static void shift_up(void *const ptr, double step)
     {
         // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -823,7 +823,7 @@ class controls
             ui->set_multiplier(1);
         }
     }
-    static void drop_item(void *ptr, double step)
+    static void drop_item(void *const ptr, double step)
     {
         // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -841,7 +841,7 @@ class controls
         // Drop item if hovering
         ui->drop();
     }
-    static void left_click_down(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
+    static void left_click_down(void *const ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -1066,7 +1066,7 @@ class controls
             }
         }
     }
-    static void left_click_up(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
+    static void left_click_up(void *const ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -1426,7 +1426,7 @@ class controls
             }
         }
     }
-    static void right_click_down(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
+    static void right_click_down(void *const ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Cast to control pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -1477,7 +1477,7 @@ class controls
         const target &t = play.get_target();
         state->set_target(t.get_position());
     }
-    static void right_click_up(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
+    static void right_click_up(void *const ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Get the state and ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -1488,7 +1488,7 @@ class controls
         state->set_tracking(false);
         ui->set_draw_focus(false);
     }
-    static void jump(void *ptr, double step)
+    static void jump(void *const ptr, double step)
     {
         // Get the state pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
@@ -1506,7 +1506,7 @@ class controls
         // Make player jump
         world->get_player().jump();
     }
-    static void on_resize(void *ptr, const uint_fast16_t width, const uint_fast16_t height)
+    static void on_resize(void *const ptr, const uint_fast16_t width, const uint_fast16_t height)
     {
         // Get the ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);

@@ -277,13 +277,21 @@ class ui_id
     {
         return ui_id(_id + 49);
     }
-    inline ui_id bg_menu_index() const
+    inline ui_id bg_menu_base_index() const
     {
         return ui_id(_id + 10);
     }
-    inline ui_id fg_menu_index() const
+    inline ui_id fg_menu_base_index() const
     {
         return ui_id(_id + 15);
+    }
+    inline ui_id bg_menu_ext_index() const
+    {
+        return ui_id(_id + 10);
+    }
+    inline ui_id fg_menu_ext_index() const
+    {
+        return ui_id(_id + 42);
     }
     inline ui_id bg_cube_index() const
     {

@@ -26,9 +26,10 @@ namespace game
 enum class ui_mode : int_fast8_t
 {
     TITLE = 0,
-    BASE = 1,
-    EXTEND = 2,
-    MENU = 3
+    INV = 1,
+    INV_EXT = 2,
+    MENU = 3,
+    MENU_EXT = 4
 };
 
 class ui_state
@@ -107,11 +108,11 @@ class ui_state
     }
     inline bool is_inv_mode() const
     {
-        return _mode == ui_mode::BASE || _mode == ui_mode::EXTEND;
+        return _mode == ui_mode::INV || _mode == ui_mode::INV_EXT;
     }
     inline bool is_menu_mode() const
     {
-        return _mode == ui_mode::MENU;
+        return _mode == ui_mode::MENU || _mode == ui_mode::MENU_EXT;
     }
     inline bool is_selecting() const
     {

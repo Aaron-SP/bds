@@ -549,11 +549,11 @@ class ui_control_inv
     inline size_t bg_text_size(const ui_state &state) const
     {
         // If in extended state
-        if (state.get_mode() == ui_mode::EXTEND)
+        if (state.get_mode() == ui_mode::INV_EXT)
         {
             return _text->size();
         }
-        else if (state.get_mode() == ui_mode::BASE)
+        else if (state.get_mode() == ui_mode::INV)
         {
             // If in base state
             return _inv->end_key();
@@ -611,7 +611,7 @@ class ui_control_inv
         // Return ui info
         return ui_info(name, info, it);
     }
-    inline void load_tree(std::ostringstream &stream, const uint_fast16_t width, const uint_fast16_t height)
+    inline void load_tree(const ui_state &state, std::ostringstream &stream, const uint_fast16_t width, const uint_fast16_t height)
     {
         // Clear the shapes buffer
         _shapes->clear();
@@ -772,7 +772,7 @@ class ui_control_inv
     inline std::pair<bool, ui_id> overlap(ui_state &state, const min::vec2<float> &p)
     {
         // Is the inventory open?
-        if (state.get_mode() == ui_mode::EXTEND && !_minimized)
+        if (state.get_mode() == ui_mode::INV_EXT && !_minimized)
         {
             // Bad point
             if (!_tree->inside(p))
@@ -1006,11 +1006,11 @@ class ui_control_inv
         const ui_mode mode = state.get_mode();
         switch (mode)
         {
-        case ui_mode::BASE:
-            state.set_mode(ui_mode::EXTEND);
+        case ui_mode::INV:
+            state.set_mode(ui_mode::INV_EXT);
             break;
-        case ui_mode::EXTEND:
-            state.set_mode(ui_mode::BASE);
+        case ui_mode::INV_EXT:
+            state.set_mode(ui_mode::INV);
 
             // Deselect UI if in base state
             unselect_click(state);
