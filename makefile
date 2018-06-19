@@ -89,6 +89,7 @@ install: build
 	mkdir -p $(DEST_PATH)/bin
 	cp -v bin/game $(DEST_PATH)/bin
 	cp -vr data $(DEST_PATH)
+	cp -v favicon.ico $(DEST_PATH)
 	printf '%s\n' '#!/bin/bash' 'cd $(DEST_PATH)' 'bin/game "$$@"' > $(DEST_PATH)/bds.game
 	chmod -R 755 $(DEST_PATH)
 	ln -fs $(DEST_PATH)/bds.game /usr/bin/bds.game

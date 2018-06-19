@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Name=Beyond Dying Skies
+Comment=Beyond Dying Skies is a FOSS, FPS-RPG 3D game for GNU/Linux operating systems.
+Exec=/opt/bds/bin/game
+Path=/opt/bds
+Icon=/opt/bds/favicon.ico
+Terminal=false
+Type=Application
+Categories=Game
