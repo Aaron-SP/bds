@@ -85,7 +85,7 @@ class load_state
             std::cout << "load_state: spawn out of bounds: resetting spawn point" << std::endl;
 
             // Erase previous state files
-            erase_file("bin/state");
+            erase_file("save/state");
 
             // Set a valid spawn
             _state.position = _default_spawn;
@@ -114,7 +114,7 @@ class load_state
         std::vector<uint8_t> stream;
 
         // Load data into stream from file
-        load_file("bin/state", stream);
+        load_file("save/state", stream);
 
         // If load failed dont try to parse stream data
         if (stream.size() != 0)
@@ -133,8 +133,8 @@ class load_state
                 std::cout << "Resizing the grid: deleting old save caches" << std::endl;
 
                 // Erase previous state files
-                game::erase_file("bin/state");
-                game::erase_file("bin/world.bmesh");
+                game::erase_file("save/state");
+                game::erase_file("save/world.bmesh");
 
                 // Early return
                 return;
@@ -414,7 +414,7 @@ class load_state
         }
 
         // Write data to file
-        save_file("bin/state", stream);
+        save_file("save/state", stream);
     }
     inline void set_state(const min::vec3<float> &p, const min::camera<float> &camera, const inventory &inv, const stats &stat, const static_instance &si)
     {

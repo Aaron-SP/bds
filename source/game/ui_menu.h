@@ -37,7 +37,8 @@ class ui_menu
     const std::string _controls;
     const std::string _empty;
     const std::string _menu_back;
-    std::array<const std::string *, _size> _menu;
+    std::array<const std::string *, _size> _prefix;
+    std::array<const std::string *, _size> _str;
     std::array<menu_call, _size> _callback;
     bool _extended;
     bool _dirty;
@@ -45,21 +46,22 @@ class ui_menu
   public:
     ui_menu()
         : _back("Back to Game"), _title("Return to Title"), _quit("Save and Exit Game"), _controls("Controls"), _empty(), _menu_back("Back"),
-          _menu{}, _callback{}, _extended(false), _dirty(true)
+          _prefix{}, _str{}, _callback{}, _extended(false), _dirty(true)
     {
         // Set all menu string pointers to empty
         const size_t size = _size;
         for (size_t i = 0; i < size; i++)
         {
-            _menu[i] = &_empty;
+            _prefix[i] = &_empty;
+            _str[i] = &_empty;
         }
 
         // Set the default menu strings
-        _menu[0] = &_back;
-        _menu[1] = &_title;
-        _menu[2] = &_quit;
-        _menu[3] = &_controls;
-        _menu[4] = &_empty;
+        _str[0] = &_back;
+        _str[1] = &_title;
+        _str[2] = &_quit;
+        _str[3] = &_controls;
+        _str[4] = &_empty;
     }
 
     inline void reset()
@@ -68,16 +70,17 @@ class ui_menu
         const size_t size = _size;
         for (size_t i = 0; i < size; i++)
         {
-            _menu[i] = &_empty;
+            _prefix[i] = &_empty;
+            _str[i] = &_empty;
             _callback[i] = nullptr;
         }
 
         // Set the default menu strings
-        _menu[0] = &_back;
-        _menu[1] = &_title;
-        _menu[2] = &_quit;
-        _menu[3] = &_controls;
-        _menu[4] = &_empty;
+        _str[0] = &_back;
+        _str[1] = &_title;
+        _str[2] = &_quit;
+        _str[3] = &_controls;
+        _str[4] = &_empty;
 
         // Set dirty flag
         _extended = false;
@@ -101,9 +104,13 @@ class ui_menu
     {
         _dirty = false;
     }
+    inline const std::array<const std::string *, _size> &get_prefixs() const
+    {
+        return _prefix;
+    }
     inline const std::array<const std::string *, _size> &get_strings() const
     {
-        return _menu;
+        return _str;
     }
     inline bool is_dirty() const
     {
@@ -113,13 +120,17 @@ class ui_menu
     {
         return _extended;
     }
+    inline void make_dirty()
+    {
+        _dirty = true;
+    }
     inline min::vec2<float> position_text(const uint_fast16_t center_w, const size_t index) const
     {
         if (_extended)
         {
             // Get row and col
-            const unsigned row = index / 4;
-            const unsigned col = index & 3;
+            const unsigned row = index & 7;
+            const unsigned col = index / 8;
             return ui_bg_assets::menu_ext_text_position(center_w, row, col);
         }
         else
@@ -136,17 +147,25 @@ class ui_menu
         _extended = flag;
         _dirty = true;
     }
+    inline void set_prefix(const size_t index, const std::string *str)
+    {
+        _prefix[index] = str;
+    }
+    inline void set_prefix_empty(const size_t index)
+    {
+        _prefix[index] = &_empty;
+    }
     inline void set_string(const size_t index, const std::string *str)
     {
-        _menu[index] = str;
+        _str[index] = str;
     }
     inline void set_string_back(const size_t index)
     {
-        _menu[index] = &_menu_back;
+        _str[index] = &_menu_back;
     }
     inline void set_string_empty(const size_t index)
     {
-        _menu[index] = &_empty;
+        _str[index] = &_empty;
     }
     inline static constexpr size_t max_size()
     {

@@ -26,6 +26,12 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
+enum class key_map_type
+{
+    QWERTY,
+    DVORAK
+};
+
 class options
 {
   private:
@@ -36,12 +42,18 @@ class options
     size_t _view;
     uint_fast16_t _width;
     uint_fast16_t _height;
+    key_map_type _map;
+    bool _persist;
     bool _resize;
 
   public:
-    options() : _chunk(8), _frames(60), _grid(64), _mode(2), _view(5), _width(1024), _height(768), _resize(true) {}
+    options()
+        : _chunk(8), _frames(60), _grid(64),
+          _mode(2), _view(5),
+          _width(1024), _height(768),
+          _map(key_map_type::QWERTY), _persist(true), _resize(true) {}
 
-    bool check_error() const
+    inline bool check_error() const
     {
         // Do some sanity checks on values
         if (_grid < 4)
@@ -68,67 +80,87 @@ class options
         // No errors
         return false;
     }
-    size_t chunk() const
+    inline size_t chunk() const
     {
         return _chunk;
     }
-    size_t frames() const
+    inline size_t frames() const
     {
         return _frames;
     }
-    size_t grid() const
+    inline size_t grid() const
     {
         return _grid;
     }
-    size_t view() const
+    inline size_t view() const
     {
         return _view;
     }
-    uint_fast16_t width() const
+    inline uint_fast16_t width() const
     {
         return _width;
     }
-    uint_fast16_t height() const
+    inline uint_fast16_t height() const
     {
         return _height;
     }
-    uint_fast8_t mode() const
+    inline bool is_key_map_dvorak() const
+    {
+        return _map == key_map_type::DVORAK;
+    }
+    inline bool is_key_map_persist() const
+    {
+        return _persist;
+    }
+    inline bool is_key_map_qwerty() const
+    {
+        return _map == key_map_type::QWERTY;
+    }
+    inline uint_fast8_t mode() const
     {
         return _mode;
     }
-    bool resize() const
+    inline bool resize() const
     {
         return _resize;
     }
-    void set_chunk(const size_t chunk)
+    inline void set_chunk(const size_t chunk)
     {
         _chunk = chunk;
     }
-    void set_frames(const size_t frames)
+    inline void set_frames(const size_t frames)
     {
         _frames = frames;
     }
-    void set_grid(const size_t grid)
+    inline void set_grid(const size_t grid)
     {
         _grid = grid;
     }
-    void set_mode(const uint_fast8_t mode)
+    inline void set_mode(const uint_fast8_t mode)
     {
         _mode = mode;
     }
-    void set_view(const size_t view)
+    inline void set_no_persist()
+    {
+        _persist = false;
+    }
+    inline void set_view(const size_t view)
     {
         _view = view;
     }
-    void set_width(const uint_fast16_t width)
+    inline void set_width(const uint_fast16_t width)
     {
         _width = width;
     }
-    void set_height(const uint_fast16_t height)
+    inline void set_height(const uint_fast16_t height)
     {
         _height = height;
     }
-    void set_resize(const bool flag)
+    inline void set_map(const key_map_type map)
+    {
+        _map = map;
+    }
+    inline void set_resize(const bool flag)
     {
         _resize = flag;
     }

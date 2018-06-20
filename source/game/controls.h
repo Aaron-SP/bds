@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __CONTROLS__
 
 #include <game/id.h>
+#include <game/keymap.h>
 #include <game/sound.h>
 #include <game/state.h>
 #include <game/ui_overlay.h>
@@ -36,19 +37,20 @@ class controls
 {
   private:
     static constexpr float _project_dist = 3.0;
-    min::window *_window;
-    min::camera<float> *_camera;
-    character *_character;
-    state *_state;
-    ui_overlay *_ui;
-    world *_world;
-    sound *_sound;
+    min::window *const _window;
+    min::camera<float> *const _camera;
+    character *const _character;
+    state *const _state;
+    ui_overlay *const _ui;
+    world *const _world;
+    sound *const _sound;
+    key_map *const _keymap;
 
   public:
     controls(min::window &window, min::camera<float> &camera, character &ch,
-             state &state, ui_overlay &ui, world &world, sound &sound)
+             state &state, ui_overlay &ui, world &world, sound &sound, key_map &km)
         : _window(&window), _camera(&camera), _character(&ch),
-          _state(&state), _ui(&ui), _world(&world), _sound(&sound) {}
+          _state(&state), _ui(&ui), _world(&world), _sound(&sound), _keymap(&km) {}
 
     min::camera<float> *get_camera()
     {
@@ -101,120 +103,76 @@ class controls
         _window->register_rclick_up(controls::right_click_up);
         _window->register_update(controls::on_resize);
 
+        // Assert for no overflow
+        if (_keymap->size() < 26)
+        {
+            throw std::runtime_error("controls: preventing overflow in register_control_callbacks");
+        }
+
         // Add FPS(WADS) keys to watch
-        keyboard.add(min::window::key_code::F1);
-        keyboard.add(min::window::key_code::F2);
-        keyboard.add(min::window::key_code::F3);
-        keyboard.add(min::window::key_code::F4);
-        keyboard.add(min::window::key_code::ESCAPE);
-        keyboard.add(min::window::key_code::KEYW);
-        keyboard.add(min::window::key_code::KEYS);
-        keyboard.add(min::window::key_code::KEYA);
-        keyboard.add(min::window::key_code::KEYD);
-        keyboard.add(min::window::key_code::KEYR);
-        keyboard.add(min::window::key_code::KEYE);
-        keyboard.add(min::window::key_code::KEYZ);
-        keyboard.add(min::window::key_code::KEYX);
-        keyboard.add(min::window::key_code::KEYC);
-        keyboard.add(min::window::key_code::KEY1);
-        keyboard.add(min::window::key_code::KEY2);
-        keyboard.add(min::window::key_code::KEY3);
-        keyboard.add(min::window::key_code::KEY4);
-        keyboard.add(min::window::key_code::KEY5);
-        keyboard.add(min::window::key_code::KEY6);
-        keyboard.add(min::window::key_code::KEY7);
-        keyboard.add(min::window::key_code::KEY8);
-        keyboard.add(min::window::key_code::SPACE);
-        keyboard.add(min::window::key_code::TAB);
-        keyboard.add(min::window::key_code::LSHIFT);
-        keyboard.add(min::window::key_code::KEYQ);
+        keyboard.add((*_keymap)[0]);
+        keyboard.add((*_keymap)[1]);
+        keyboard.add((*_keymap)[2]);
+        keyboard.add((*_keymap)[3]);
+        keyboard.add((*_keymap)[4]);
+        keyboard.add((*_keymap)[5]);
+        keyboard.add((*_keymap)[6]);
+        keyboard.add((*_keymap)[7]);
+        keyboard.add((*_keymap)[8]);
+        keyboard.add((*_keymap)[9]);
+        keyboard.add((*_keymap)[10]);
+        keyboard.add((*_keymap)[11]);
+        keyboard.add((*_keymap)[12]);
+        keyboard.add((*_keymap)[13]);
+        keyboard.add((*_keymap)[14]);
+        keyboard.add((*_keymap)[15]);
+        keyboard.add((*_keymap)[16]);
+        keyboard.add((*_keymap)[17]);
+        keyboard.add((*_keymap)[18]);
+        keyboard.add((*_keymap)[19]);
+        keyboard.add((*_keymap)[20]);
+        keyboard.add((*_keymap)[21]);
+        keyboard.add((*_keymap)[22]);
+        keyboard.add((*_keymap)[23]);
+        keyboard.add((*_keymap)[24]);
+        keyboard.add((*_keymap)[25]);
 
-        // Register callback function F1
-        keyboard.register_keydown(min::window::key_code::F1, controls::toggle_text, (void *)this);
-
-        // Register callback function F2
-        keyboard.register_keydown(min::window::key_code::F2, controls::toggle_wireframe, (void *)this);
-
-        // Register callback function F3
-        keyboard.register_keydown(min::window::key_code::F3, controls::music_down, (void *)_sound);
-
-        // Register callback function F4
-        keyboard.register_keydown(min::window::key_code::F4, controls::music_up, (void *)_sound);
-
-        // Register callback function ESCAPE
-        keyboard.register_keydown(min::window::key_code::ESCAPE, controls::toggle_pause, (void *)this);
-
-        // Register callback function W
-        keyboard.register_keydown_per_frame(min::window::key_code::KEYW, controls::forward, (void *)this);
-
-        // Register callback function S
-        keyboard.register_keydown_per_frame(min::window::key_code::KEYS, controls::back, (void *)this);
-
-        // Register callback function A
-        keyboard.register_keydown_per_frame(min::window::key_code::KEYA, controls::left, (void *)this);
-
-        // Register callback function D
-        keyboard.register_keydown_per_frame(min::window::key_code::KEYD, controls::right, (void *)this);
-
-        // Register callback function E
-        keyboard.register_keydown(min::window::key_code::KEYE, controls::select, (void *)this);
-
-        // Register callback function R
-        keyboard.register_keydown(min::window::key_code::KEYR, controls::reset, (void *)this);
-
-        // Register callback function Z
-        keyboard.register_keydown(min::window::key_code::KEYZ, controls::add_x, (void *)this);
-
-        // Register callback function X
-        keyboard.register_keydown(min::window::key_code::KEYX, controls::add_y, (void *)this);
-
-        // Register callback function C
-        keyboard.register_keydown(min::window::key_code::KEYC, controls::add_z, (void *)this);
-
-        // Register callback function KEY1 for switching texture
-        keyboard.register_keydown(min::window::key_code::KEY1, controls::key1_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::KEY1, controls::key1_up, (void *)this);
-
-        // Register callback function KEY2 for switching texture
-        keyboard.register_keydown(min::window::key_code::KEY2, controls::key2_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::KEY2, controls::key2_up, (void *)this);
-
-        // Register callback function KEY3 for switching texture
-        keyboard.register_keydown(min::window::key_code::KEY3, controls::key3_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::KEY3, controls::key3_up, (void *)this);
-
-        // Register callback function KEY4 for switching texture
-        keyboard.register_keydown(min::window::key_code::KEY4, controls::key4_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::KEY4, controls::key4_up, (void *)this);
-
-        // Register callback function KEY5 for switching texture
-        keyboard.register_keydown(min::window::key_code::KEY5, controls::key5_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::KEY5, controls::key5_up, (void *)this);
-
-        // Register callback function KEY6 for switching texture
-        keyboard.register_keydown(min::window::key_code::KEY6, controls::key6_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::KEY6, controls::key6_up, (void *)this);
-
-        // Register callback function KEY7 for switching texture
-        keyboard.register_keydown(min::window::key_code::KEY7, controls::key7_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::KEY7, controls::key7_up, (void *)this);
-
-        // Register callback function KEY8 for switching texture
-        keyboard.register_keydown(min::window::key_code::KEY8, controls::key8_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::KEY8, controls::key8_up, (void *)this);
-
-        // Register callback function SPACE
-        keyboard.register_keydown(min::window::key_code::SPACE, controls::jump, (void *)this);
-
-        // Register callback function TAB
-        keyboard.register_keydown(min::window::key_code::TAB, controls::ui_extend, (void *)this);
-
-        // Register callback function LSHIFT
-        keyboard.register_keydown(min::window::key_code::LSHIFT, controls::shift_down, (void *)this);
-        keyboard.register_keyup(min::window::key_code::LSHIFT, controls::shift_up, (void *)this);
-
-        // Register callback function KEYQ
-        keyboard.register_keydown(min::window::key_code::KEYQ, controls::drop_item, (void *)this);
+        // Register callback functions
+        keyboard.register_keydown_per_frame((*_keymap)[0], controls::forward, (void *)this);
+        keyboard.register_keydown_per_frame((*_keymap)[1], controls::back, (void *)this);
+        keyboard.register_keydown_per_frame((*_keymap)[2], controls::left, (void *)this);
+        keyboard.register_keydown_per_frame((*_keymap)[3], controls::right, (void *)this);
+        keyboard.register_keydown((*_keymap)[4], controls::reset, (void *)this);
+        keyboard.register_keydown((*_keymap)[5], controls::add_x, (void *)this);
+        keyboard.register_keydown((*_keymap)[6], controls::add_y, (void *)this);
+        keyboard.register_keydown((*_keymap)[7], controls::add_z, (void *)this);
+        keyboard.register_keydown((*_keymap)[8], controls::key1_down, (void *)this);
+        keyboard.register_keyup((*_keymap)[8], controls::key1_up, (void *)this);
+        keyboard.register_keydown((*_keymap)[9], controls::key2_down, (void *)this);
+        keyboard.register_keyup((*_keymap)[9], controls::key2_up, (void *)this);
+        keyboard.register_keydown((*_keymap)[10], controls::key3_down, (void *)this);
+        keyboard.register_keyup((*_keymap)[10], controls::key3_up, (void *)this);
+        keyboard.register_keydown((*_keymap)[11], controls::key4_down, (void *)this);
+        keyboard.register_keyup((*_keymap)[11], controls::key4_up, (void *)this);
+        keyboard.register_keydown((*_keymap)[12], controls::key5_down, (void *)this);
+        keyboard.register_keyup((*_keymap)[12], controls::key5_up, (void *)this);
+        keyboard.register_keydown((*_keymap)[13], controls::key6_down, (void *)this);
+        keyboard.register_keyup((*_keymap)[13], controls::key6_up, (void *)this);
+        keyboard.register_keydown((*_keymap)[14], controls::key7_down, (void *)this);
+        keyboard.register_keyup((*_keymap)[14], controls::key7_up, (void *)this);
+        keyboard.register_keydown((*_keymap)[15], controls::key8_down, (void *)this);
+        keyboard.register_keyup((*_keymap)[15], controls::key8_up, (void *)this);
+        keyboard.register_keydown((*_keymap)[16], controls::jump, (void *)this);
+        keyboard.register_keydown((*_keymap)[17], controls::shift_down, (void *)this);
+        keyboard.register_keyup((*_keymap)[17], controls::shift_up, (void *)this);
+        keyboard.register_keydown((*_keymap)[18], controls::ui_extend, (void *)this);
+        keyboard.register_keydown((*_keymap)[19], controls::toggle_text, (void *)this);
+        keyboard.register_keydown((*_keymap)[20], controls::toggle_wireframe, (void *)this);
+        keyboard.register_keydown((*_keymap)[21], controls::music_down, (void *)_sound);
+        keyboard.register_keydown((*_keymap)[22], controls::music_up, (void *)_sound);
+        keyboard.register_keydown((*_keymap)[23], controls::toggle_pause, (void *)this);
+        keyboard.register_keydown((*_keymap)[24], controls::select, (void *)this);
+        keyboard.register_keydown((*_keymap)[25], controls::drop_item, (void *)this);
     }
     static void toggle_text(void *const ptr, double step)
     {

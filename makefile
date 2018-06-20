@@ -92,19 +92,21 @@ tests32:
 tests64:
 	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD64) $(TEST) $(LINKER) 2> "test.txt"
 install: build
-	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)\'$(DEST_PATH)\'$(R) $(NC)\n"
+	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"
 	mkdir -p $(DEST_PATH)/bin
 	cp -v bin/game $(DEST_PATH)/bin
 	cp -vr data $(DEST_PATH)
 	cp -v favicon.ico $(DEST_PATH)
 	printf '%s\n' '#!/bin/bash' 'cd $(DEST_PATH)' 'bin/game "$$@"' > $(DEST_PATH)/bds.game
 	chmod -R 755 $(DEST_PATH)
+	mkdir -p $(DEST_PATH)/save
+	chmod -R 777 $(DEST_PATH)/save
 	ln -fs $(DEST_PATH)/bds.game /usr/bin/bds.game
 	@if [ -d $(DESKTOP_PATH) ] && [ ! -z "$(wildcard $(DESKTOP_PATH)/*.desktop)" ]; then\
 		cp -v bds.desktop $(DESKTOP_PATH)/bds.desktop;\
 	fi
 uninstall:
-	printf "$(R)Uninstalling $(Y)Beyond Dying Skies$(R) from $(G)\'$(DEST_PATH)\'$(R) $(NC)\n"
+	printf "$(R)Uninstalling $(Y)Beyond Dying Skies$(R) from $(G)'$(DEST_PATH)'$(R) $(NC)\n"
 	rm -rI $(DEST_PATH)
 	rm -i /usr/bin/bds.game
 
@@ -113,5 +115,6 @@ clean:
 	rm -f *.txt
 	rm -f bin/*
 clear:
-	rm -f bin/state
-	rm -f bin/world.bmesh
+	rm -f save/keymap
+	rm -f save/state
+	rm -f save/world.bmesh

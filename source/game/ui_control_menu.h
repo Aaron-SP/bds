@@ -69,8 +69,8 @@ class ui_control_menu
     inline min::vec2<float> pos_ext_menu(const ui_id ui) const
     {
         // Get row and col
-        const unsigned row = ui.index() / 4;
-        const unsigned col = ui.index() & 3;
+        const unsigned row = ui.index() & 7;
+        const unsigned col = ui.index() / 8;
 
         // Calculate ui element position
         return _assets->menu_ext_position(row, col);

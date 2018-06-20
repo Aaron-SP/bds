@@ -767,7 +767,7 @@ class cgrid
         std::vector<uint8_t> stream;
 
         // Load data into stream from file
-        load_file("bin/world.bmesh", stream);
+        load_file("save/world.bmesh", stream);
 
         // If load failed dont try to parse stream data
         if (stream.size() != 0)
@@ -1429,7 +1429,7 @@ class cgrid
         min::write_le_vector<block_id>(stream, _grid);
 
         // Write data to file
-        save_file("bin/world.bmesh", stream);
+        save_file("save/world.bmesh", stream);
     }
     inline void update_chunk(const size_t chunk_key)
     {

@@ -734,6 +734,7 @@ class ui_text
     inline void set_menu()
     {
         // Get the menu strings
+        const auto &prefix_arr = _ui_menu->get_prefixs();
         const auto &str_arr = _ui_menu->get_strings();
 
         // Get the screen dimensions
@@ -746,7 +747,20 @@ class ui_text
             // Get the center width
             const size_t index = i - _menu;
             const min::vec2<float> p = _ui_menu->position_text(w2, index);
-            _text.set_text_center(i, *str_arr[index], p.x(), p.y());
+
+            // Clear and reset the stream
+            clear_stream();
+
+            // Combine prefix and string if given a prefix
+            if (prefix_arr[index]->size() > 0)
+            {
+                _ss << *prefix_arr[index] << ": " << *str_arr[index];
+            }
+            else
+            {
+                _ss << *str_arr[index];
+            }
+            _text.set_text_center(i, _ss.str(), p.x(), p.y());
         }
     }
     inline void set_timer(const float time)

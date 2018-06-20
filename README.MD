@@ -130,6 +130,18 @@ The '-width' and '-height' flag changes the default window dimensions.
 The '-hardcore' flag changes the game mode between normal and hardcore difficulty. In hardcore mode, the player will lose all inventory upon death!
 - Example: 'bin/game -hardcore 1' will turn on hardcore mode.
 
+#### --no-persist flag
+The '--no-persist' flag ignores any saved key map layout.
+- Example: 'bin/game --no-persist' will default to qwerty key mapping.
+
+#### --qwerty flag
+The '--qwerty' flag changes the default key mapping to QWERTY key map layout.
+- Example: 'bin/game --qwerty --no-persist' will force qwerty key mapping.
+
+#### --dvorak flag
+The '--dvorak' flag changes the default key mapping to DVORAK key map layout.
+- Example: 'bin/game --dvorak --no-persist' will force dvorak key mapping.
+
 ### SCREENSHOTS!
 
 #### Title Screen

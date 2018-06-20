@@ -155,13 +155,16 @@ void run(const game::options &opt)
     }
 }
 
-void parse_uint(char *str, size_t &out)
+bool parse_uint(char *str, size_t &out)
 {
     // Try to parse string input
     try
     {
         // Get next value in string buffer
         out = std::stoi(str);
+
+        // Return a successful parse
+        return true;
     }
     catch (const std::exception &ex)
     {
@@ -169,6 +172,9 @@ void parse_uint(char *str, size_t &out)
         std::cout << "bds: couldn't parse input: '"
                   << str << "', expected integral type" << std::endl;
     }
+
+    // Bad parse
+    return false;
 }
 
 int main(int argc, char *argv[])
@@ -180,60 +186,94 @@ int main(int argc, char *argv[])
         size_t parse;
 
         // Try to parse commandline args
-        for (int i = 2; i < argc; i += 2)
+        for (int i = 1; i < argc; i++)
         {
             // Get input flag
-            std::string input(argv[i - 1]);
+            const std::string input(argv[i]);
 
-            // Check for fps flag
-            if (input.compare("-fps") == 0)
+            // Match string
+            if (input.compare("--qwerty") == 0)
             {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_frames(parse);
+                opt.set_map(game::key_map_type::QWERTY);
             }
-            else if (input.compare("-chunk") == 0)
+            else if (input.compare("--dvorak") == 0)
             {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_chunk(parse);
+                opt.set_map(game::key_map_type::DVORAK);
             }
-            else if (input.compare("-grid") == 0)
+            else if (input.compare("--no-persist") == 0)
             {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_grid(parse);
+                opt.set_no_persist();
             }
-            else if (input.compare("-view") == 0)
+            else if (i < (argc - 1))
             {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_view(parse);
-            }
-            else if (input.compare("-width") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_width(static_cast<uint_fast16_t>(parse));
-                opt.set_resize(false);
-            }
-            else if (input.compare("-height") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_height(static_cast<uint_fast16_t>(parse));
-                opt.set_resize(false);
-            }
-            else if (input.compare("-hardcore") == 0)
-            {
-                // Parse uint
-                parse_uint(argv[i], parse);
-                opt.set_mode(static_cast<uint_fast8_t>(parse));
+                if (input.compare("-fps") == 0)
+                {
+                    // Parse uint
+                    if (parse_uint(argv[++i], parse))
+                    {
+                        opt.set_frames(parse);
+                    }
+                }
+                else if (input.compare("-chunk") == 0)
+                {
+                    // Parse uint
+                    if (parse_uint(argv[++i], parse))
+                    {
+                        opt.set_chunk(parse);
+                    }
+                }
+                else if (input.compare("-grid") == 0)
+                {
+                    // Parse uint
+                    if (parse_uint(argv[++i], parse))
+                    {
+                        opt.set_grid(parse);
+                    }
+                }
+                else if (input.compare("-view") == 0)
+                {
+                    // Parse uint
+                    if (parse_uint(argv[++i], parse))
+                    {
+                        opt.set_view(parse);
+                    }
+                }
+                else if (input.compare("-width") == 0)
+                {
+                    // Parse uint
+                    if (parse_uint(argv[++i], parse))
+                    {
+                        opt.set_width(static_cast<uint_fast16_t>(parse));
+                        opt.set_resize(false);
+                    }
+                }
+                else if (input.compare("-height") == 0)
+                {
+                    // Parse uint
+                    if (parse_uint(argv[++i], parse))
+                    {
+                        opt.set_height(static_cast<uint_fast16_t>(parse));
+                        opt.set_resize(false);
+                    }
+                }
+                else if (input.compare("-hardcore") == 0)
+                {
+                    // Parse uint
+                    if (parse_uint(argv[++i], parse))
+                    {
+                        opt.set_mode(static_cast<uint_fast8_t>(parse));
+                    }
+                }
+                else
+                {
+                    std::cout << "bds: unknown flag '"
+                              << input << "'" << std::endl;
+                }
             }
             else
             {
-                std::cout << "bds: unknown flag '"
-                          << input << "'\"" << std::endl;
+                std::cout << "bds: not enough arguments passed for '"
+                          << input << "'" << std::endl;
             }
         }
 
