@@ -115,6 +115,6 @@ clean:
 	rm -f *.txt
 	rm -f bin/*
 clear:
-	rm -f save/keymap
-	rm -f save/state
-	rm -f save/world.bmesh
+	rm -f save/keymap.*
+	rm -f save/state.*
+	rm -f save/world.*

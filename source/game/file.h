@@ -26,11 +26,12 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 namespace game
 {
 
-void erase_file(const std::string &file_name)
+inline bool erase_file(const std::string &file_name)
 {
     // Erase file
     const int ret = std::remove(file_name.c_str());
-    if (ret != 0)
+    const bool saved = (ret == 0);
+    if (!saved)
     {
         std::cout << "file: could not erase file '" << file_name << "'" << std::endl;
     }
@@ -38,8 +39,24 @@ void erase_file(const std::string &file_name)
     {
         std::cout << "file: erased file '" << file_name << "'" << std::endl;
     }
+
+    return saved;
 }
-void load_file(const std::string &file_name, std::vector<uint8_t> &stream)
+inline bool erase_save(const size_t index)
+{
+    const bool k = erase_file("save/keymap." + std::to_string(index));
+    const bool s = erase_file("save/state." + std::to_string(index));
+    const bool w = erase_file("save/world." + std::to_string(index));
+
+    // Did we delete any saves?
+    return k || s || w;
+}
+inline bool exists_file(const std::string &file_name)
+{
+    std::ifstream f(file_name);
+    return f.good();
+}
+inline void load_file(const std::string &file_name, std::vector<uint8_t> &stream)
 {
     // read bytes from file
     std::ifstream file(file_name, std::ios::in | std::ios::binary | std::ios::ate);
@@ -63,7 +80,7 @@ void load_file(const std::string &file_name, std::vector<uint8_t> &stream)
         std::cout << "file: could not load file '" << file_name << "'" << std::endl;
     }
 }
-void save_file(const std::string &file_name, const std::vector<uint8_t> &stream)
+inline void save_file(const std::string &file_name, const std::vector<uint8_t> &stream)
 {
     // Save bytes to file
     std::ofstream file(file_name, std::ios::out | std::ios::binary);

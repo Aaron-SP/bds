@@ -39,6 +39,7 @@ class options
     size_t _frames;
     size_t _grid;
     uint_fast8_t _mode;
+    size_t _slot;
     size_t _view;
     uint_fast16_t _width;
     uint_fast16_t _height;
@@ -49,7 +50,7 @@ class options
   public:
     options()
         : _chunk(8), _frames(60), _grid(64),
-          _mode(2), _view(5),
+          _mode(2), _slot(0), _view(5),
           _width(1024), _height(768),
           _map(key_map_type::QWERTY), _persist(true), _resize(true) {}
 
@@ -87,6 +88,10 @@ class options
     inline size_t frames() const
     {
         return _frames;
+    }
+    inline size_t get_save_slot() const
+    {
+        return _slot;
     }
     inline size_t grid() const
     {
@@ -143,6 +148,10 @@ class options
     inline void set_no_persist()
     {
         _persist = false;
+    }
+    inline void set_save_slot(const size_t slot)
+    {
+        _slot = slot;
     }
     inline void set_view(const size_t view)
     {

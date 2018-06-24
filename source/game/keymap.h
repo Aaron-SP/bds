@@ -577,15 +577,15 @@ class key_map
             return _key[74];
         }
     }
-    inline void load()
+    inline void load(const size_t index)
     {
         // Load the key map
         if (_persist)
         {
-            load_key_map("save/keymap");
+            load_key_map("save/keymap." + std::to_string(index));
         }
     }
-    inline void save(const min::window &win)
+    inline void save(const size_t index, const min::window &win)
     {
         // Create output stream for saving keymap
         std::vector<uint8_t> stream;
@@ -629,7 +629,7 @@ class key_map
         }
 
         // Write data to file
-        save_file("save/keymap", stream);
+        save_file("save/keymap." + std::to_string(index), stream);
     }
     inline min::window::key_code operator[](const size_t i) const
     {

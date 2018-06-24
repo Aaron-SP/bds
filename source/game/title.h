@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __TITLE_CONTROLS__
 
 #include <game/events.h>
+#include <game/file.h>
 #include <game/keymap.h>
 #include <game/options.h>
 #include <game/particle.h>
@@ -78,50 +79,150 @@ class title
     {
         // Create resume callback
         return [this]() -> void {
-            // Start new game
-            this->_world->new_game(*this->_opt);
+            // Set the next level menu
+            game::ui_menu &menu = this->_ui->get_menu();
+            menu.reset_save_menu();
 
-            // Load the keymap
-            this->_keymap->load();
+            // Load next level callbacks
+            for (size_t i = 0; i < 5; i++)
+            {
+                if (!exists_file("save/state." + std::to_string(i)))
+                {
+                    const auto f = [this, i]() -> void {
+                        // Set the save slot
+                        this->_opt->set_save_slot(i);
 
-            // Reset the game
-            this->reset_game();
+                        // Start new game
+                        this->_world->new_game(*this->_opt);
 
-            // Advance to the game controller
-            this->set_show_title(false);
+                        // Load the keymap
+                        this->_keymap->load(i);
 
-            // Disable user input
-            this->_state->set_user_input(false);
+                        // Reset the game
+                        this->reset_game();
+
+                        // Advance to the game controller
+                        this->set_show_title(false);
+
+                        // Disable user input
+                        this->_state->set_user_input(false);
+                    };
+
+                    // Set the save callback
+                    menu.set_string_empty_save(i);
+                    menu.set_callback(i, f);
+                }
+            }
         };
     }
     game::menu_call menu_load_game_call()
     {
         // Create resume callback
         return [this]() -> void {
-            // Load the world
-            this->_world->load(*this->_opt);
+            // Set the next level menu
+            game::ui_menu &menu = this->_ui->get_menu();
+            menu.reset_save_menu();
 
-            // Load the keymap
-            this->_keymap->load();
+            // Load next level callbacks
+            for (size_t i = 0; i < 5; i++)
+            {
+                if (exists_file("save/state." + std::to_string(i)))
+                {
+                    const auto f = [this, i]() -> void {
+                        // Set the save slot
+                        this->_opt->set_save_slot(i);
 
-            // Reset the game
-            this->reset_game();
+                        // Load the world
+                        this->_world->load(*this->_opt);
 
-            // Advance to the game controller
-            this->set_show_title(false);
+                        // Load the keymap
+                        this->_keymap->load(i);
 
-            // Disable user input
-            this->_state->set_user_input(false);
+                        // Reset the game
+                        this->reset_game();
+
+                        // Advance to the game controller
+                        this->set_show_title(false);
+
+                        // Disable user input
+                        this->_state->set_user_input(false);
+                    };
+
+                    // Set the save callback
+                    menu.set_callback(i, f);
+                }
+                else
+                {
+                    menu.set_string_empty_save(i);
+
+                    // Reset the menu
+                    const auto f = [this]() -> void {
+                        this->reset_menu();
+                    };
+
+                    // Set the save callback
+                    menu.set_callback(i, f);
+                }
+            }
+        };
+    }
+    game::menu_call menu_delete_game_call()
+    {
+        // Create resume callback
+        return [this]() -> void {
+            // Set the next level menu
+            game::ui_menu &menu = this->_ui->get_menu();
+            menu.reset_save_menu();
+
+            // Load next level callbacks
+            for (size_t i = 0; i < 5; i++)
+            {
+                if (exists_file("save/state." + std::to_string(i)))
+                {
+                    const auto f = [this, i]() -> void {
+                        // If deleted save
+                        if (erase_save(i))
+                        {
+                            game::ui_menu &menu = this->_ui->get_menu();
+                            menu.set_string_empty_save(i);
+
+                            // Reset the menu
+                            const auto f = [this]() -> void {
+                                this->reset_menu();
+                            };
+
+                            // Set the save callback
+                            menu.set_callback(i, f);
+                            menu.make_dirty();
+                        }
+                    };
+
+                    // Set the save callback
+                    menu.set_callback(i, f);
+                }
+                else
+                {
+                    menu.set_string_empty_save(i);
+
+                    // Reset the menu
+                    const auto f = [this]() -> void {
+                        this->reset_menu();
+                    };
+
+                    // Set the save callback
+                    menu.set_callback(i, f);
+                }
+            }
         };
     }
     game::menu_call menu_quit_game_call()
     {
         return [this]() -> void {
             // Save the world
-            this->_world->save(_state->get_camera());
+            this->_world->save(*this->_opt, this->_state->get_camera());
 
             // Save the keymap
-            this->_keymap->save(*_win);
+            this->_keymap->save(this->_opt->get_save_slot(), *this->_win);
 
             // Return to title
             this->set_show_title(false);
@@ -139,7 +240,8 @@ class title
         menu.reset_title_menu();
         menu.set_callback(0, menu_new_game_call());
         menu.set_callback(1, menu_load_game_call());
-        menu.set_callback(2, menu_quit_game_call());
+        menu.set_callback(2, menu_delete_game_call());
+        menu.set_callback(3, menu_quit_game_call());
     }
     void reset_game()
     {
@@ -180,6 +282,17 @@ class title
         _win->register_rclick_down(nullptr);
         _win->register_rclick_up(nullptr);
         _win->register_update(title::on_resize);
+
+        // Add keys to watch
+        keyboard.add((*_keymap)[23]);
+
+        // Register callback functions
+        keyboard.register_keydown((*_keymap)[23], title::escape_menu, (void *)this);
+    }
+    static void escape_menu(void *const ptr, double step)
+    {
+        title *const title = reinterpret_cast<game::title *>(ptr);
+        title->reset_menu();
     }
     static void left_click_down(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
     {

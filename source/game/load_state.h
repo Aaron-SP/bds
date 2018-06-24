@@ -108,13 +108,105 @@ class load_state
         const size_t chest_size = static_instance::max_chests();
         _state.chest.reserve(chest_size);
     }
-    inline void state_load_file()
+
+  public:
+    load_state(const options &opt)
+        : _grid_size(static_cast<uint32_t>(opt.grid())),
+          _default_spawn(0.0, _grid_size * 0.75, 0.0),
+          _default_look(1.0, _grid_size * 0.75, 0.0),
+          _default_up(0.0, 1.0, 0.0),
+          _top(0.0, _grid_size - 1.0, 0.0),
+          _game_mode(opt.mode()),
+          _new_game(true),
+          _state(_default_spawn, _default_look, _default_up)
+    {
+        // Check for integer overflow
+        if (opt.grid() > std::numeric_limits<uint32_t>::max())
+        {
+            throw std::runtime_error("load_state: integer overflow detected, aborting");
+        }
+
+        // Reserve memory
+        reserve_memory();
+
+        // Check that we loaded a valid point
+        check_inside();
+    }
+    inline const min::vec3<float> &get_default_spawn() const
+    {
+        return _default_spawn;
+    }
+    inline const min::vec3<float> &get_default_look() const
+    {
+        return _default_look;
+    }
+    inline const min::vec3<float> &get_default_up() const
+    {
+        return _default_up;
+    }
+    inline const min::vec3<float> &get_top() const
+    {
+        return _top;
+    }
+    inline bool is_hardcore() const
+    {
+        return _game_mode == 1;
+    }
+    inline bool is_new_game() const
+    {
+        return _new_game;
+    }
+    inline const min::vec3<float> &get_position() const
+    {
+        return _state.position;
+    }
+    inline const min::vec3<float> &get_look_at() const
+    {
+        return _state.look;
+    }
+    inline const min::vec3<float> &get_up() const
+    {
+        return _state.up;
+    }
+    inline const std::vector<item> &get_inventory() const
+    {
+        return _state.inventory;
+    }
+    inline const std::array<uint_fast16_t, stats::stat_str_size()> &get_stats() const
+    {
+        return _state.stat;
+    }
+    inline uint_fast16_t get_stat_points() const
+    {
+        return _state.stat_points;
+    }
+    inline float get_energy() const
+    {
+        return _state.energy;
+    }
+    inline float get_exp() const
+    {
+        return _state.exp;
+    }
+    inline float get_health() const
+    {
+        return _state.health;
+    }
+    inline float get_oxygen() const
+    {
+        return _state.oxygen;
+    }
+    inline const std::vector<min::vec3<float>> &get_chests() const
+    {
+        return _state.chest;
+    }
+    inline void load(const size_t index)
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
 
         // Load data into stream from file
-        load_file("save/state", stream);
+        load_file("save/state." + std::to_string(index), stream);
 
         // If load failed dont try to parse stream data
         if (stream.size() != 0)
@@ -244,103 +336,7 @@ class load_state
             }
         }
     }
-
-  public:
-    load_state(const options &opt)
-        : _grid_size(static_cast<uint32_t>(opt.grid())),
-          _default_spawn(0.0, _grid_size * 0.75, 0.0),
-          _default_look(1.0, _grid_size * 0.75, 0.0),
-          _default_up(0.0, 1.0, 0.0),
-          _top(0.0, _grid_size - 1.0, 0.0),
-          _game_mode(opt.mode()),
-          _new_game(true),
-          _state(_default_spawn, _default_look, _default_up)
-    {
-        // Check for integer overflow
-        if (opt.grid() > std::numeric_limits<uint32_t>::max())
-        {
-            throw std::runtime_error("load_state: integer overflow detected, aborting");
-        }
-
-        // Reserve memory
-        reserve_memory();
-
-        // Check that we loaded a valid point
-        check_inside();
-    }
-    inline const min::vec3<float> &get_default_spawn() const
-    {
-        return _default_spawn;
-    }
-    inline const min::vec3<float> &get_default_look() const
-    {
-        return _default_look;
-    }
-    inline const min::vec3<float> &get_default_up() const
-    {
-        return _default_up;
-    }
-    inline const min::vec3<float> &get_top() const
-    {
-        return _top;
-    }
-    inline bool is_hardcore() const
-    {
-        return _game_mode == 1;
-    }
-    inline bool is_new_game() const
-    {
-        return _new_game;
-    }
-    inline const min::vec3<float> &get_position() const
-    {
-        return _state.position;
-    }
-    inline const min::vec3<float> &get_look_at() const
-    {
-        return _state.look;
-    }
-    inline const min::vec3<float> &get_up() const
-    {
-        return _state.up;
-    }
-    inline const std::vector<item> &get_inventory() const
-    {
-        return _state.inventory;
-    }
-    inline const std::array<uint_fast16_t, stats::stat_str_size()> &get_stats() const
-    {
-        return _state.stat;
-    }
-    inline uint_fast16_t get_stat_points() const
-    {
-        return _state.stat_points;
-    }
-    inline float get_energy() const
-    {
-        return _state.energy;
-    }
-    inline float get_exp() const
-    {
-        return _state.exp;
-    }
-    inline float get_health() const
-    {
-        return _state.health;
-    }
-    inline float get_oxygen() const
-    {
-        return _state.oxygen;
-    }
-    inline const std::vector<min::vec3<float>> &get_chests() const
-    {
-        return _state.chest;
-    }
-    inline void load()
-    {
-        state_load_file();
-    }
-    inline void save_state()
+    inline void save_state(const size_t index)
     {
         // Create output stream for saving world
         std::vector<uint8_t> stream;
@@ -410,7 +406,7 @@ class load_state
         }
 
         // Write data to file
-        save_file("save/state", stream);
+        save_file("save/state." + std::to_string(index), stream);
     }
     inline void set_state(const min::vec3<float> &p, const min::camera<float> &camera, const inventory &inv, const stats &stat, const static_instance &si)
     {

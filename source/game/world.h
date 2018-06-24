@@ -952,10 +952,15 @@ class world
     {
         // Reset the load state
         _state = load_state(opt);
-        _state.load();
+
+        // Get the save slot
+        const size_t save_index = opt.get_save_slot();
+
+        // Load the state
+        _state.load(save_index);
 
         // Load the grid
-        _grid.load();
+        _grid.load(save_index);
     }
     inline void new_game(const options &opt)
     {
@@ -1279,16 +1284,19 @@ class world
             _preview_offset = _cached_offset;
         }
     }
-    inline void save(const min::camera<float> &cam)
+    inline void save(const options &opt, const min::camera<float> &cam)
     {
         // Set the state
         _state.set_state(_player.position(), cam, _player.get_inventory(), _player.get_stats(), _instance);
 
+        // Get the save slot
+        const size_t save_index = opt.get_save_slot();
+
         // Save the state
-        _state.save_state();
+        _state.save_state(save_index);
 
         // Save the world state
-        _grid.save();
+        _grid.save(save_index);
     }
     template <typename R>
     inline size_t scatter_ray(const min::vec3<unsigned> &scale, const float size, const R &ray_call)

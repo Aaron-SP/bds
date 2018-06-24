@@ -773,46 +773,50 @@ class cgrid
         // Keepp looking for a path
         return false;
     }
-    inline void world_load(const bool flag)
+    inline void world_create()
     {
-        // If load failed dont try to parse stream data
-        if (flag)
+        // Else generate world
+        generate_world();
+
+        // Reserve and update all chunks
+        const size_t chunks = _chunks.size();
+        for (size_t i = 0; i < chunks; i++)
         {
-            // Create output stream for loading world
-            std::vector<uint8_t> stream;
+            chunk_warm(i);
+            chunk_update(i);
+        }
+    }
+    inline void world_load(const size_t index)
+    {
+        // Create output stream for loading world
+        std::vector<uint8_t> stream;
 
-            // Load data into stream from file
-            load_file("save/world.bmesh", stream);
+        // Load data into stream from file
+        load_file("save/world." + std::to_string(index), stream);
 
-            // If load failed dont try to parse stream data
-            if (stream.size() != 0)
+        // If load failed dont try to parse stream data
+        if (stream.size() != 0)
+        {
+            // Load grid with file
+            size_t next = 0;
+            const std::vector<block_id> grid = min::read_le_vector<block_id>(stream, next);
+
+            // Check that grid load correctly
+            const size_t cubic_size = _grid_scale * _grid_scale * _grid_scale;
+            if (grid.size() == cubic_size)
             {
-                // Load grid with file
-                size_t next = 0;
-                const std::vector<block_id> grid = min::read_le_vector<block_id>(stream, next);
-
-                // Check that grid load correctly
-                const size_t cubic_size = _grid_scale * _grid_scale * _grid_scale;
-                if (grid.size() == cubic_size)
-                {
-                    // Copy grid from file
-                    _grid = grid;
-                }
-                else
-                {
-                    // Grid is wrong dimensions so regenerate world
-                    generate_world();
-                }
+                // Copy grid from file
+                _grid = grid;
             }
             else
             {
-                // No file found
+                // Grid is wrong dimensions so regenerate world
                 generate_world();
             }
         }
         else
         {
-            // Else generate world
+            // No file found
             generate_world();
         }
 
@@ -867,13 +871,13 @@ class cgrid
         // Reserve memory
         reserve_memory();
     }
-    inline void load()
+    inline void load(const size_t index)
     {
         // Reset the grid
         reset();
 
         // Load the world
-        world_load(true);
+        world_load(index);
     }
     inline void new_game()
     {
@@ -881,7 +885,7 @@ class cgrid
         reset();
 
         // Load the world
-        world_load(false);
+        world_create();
     }
     static inline min::aabbox<float, min::vec3> grid_box(const min::vec3<float> &p)
     {
@@ -1436,7 +1440,7 @@ class cgrid
     {
         return _chunk_update[chunk_key];
     }
-    inline void save()
+    inline void save(const size_t index)
     {
         // Create output stream for saving world
         std::vector<uint8_t> stream;
@@ -1448,7 +1452,7 @@ class cgrid
         min::write_le_vector<block_id>(stream, _grid);
 
         // Write data to file
-        save_file("save/world.bmesh", stream);
+        save_file("save/world." + std::to_string(index), stream);
     }
     inline void update_chunk(const size_t chunk_key)
     {

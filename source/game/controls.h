@@ -223,10 +223,10 @@ class controls
     void save()
     {
         // Save the world
-        _world->save(_state->get_camera());
+        _world->save(*_opt, _state->get_camera());
 
         // Save the keymap
-        _keymap->save(*_win);
+        _keymap->save(_opt->get_save_slot(), *_win);
     }
 
   public:
