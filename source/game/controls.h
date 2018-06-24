@@ -22,6 +22,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/keymap.h>
 #include <game/sound.h>
 #include <game/state.h>
+#include <game/title.h>
 #include <game/ui_overlay.h>
 #include <game/world.h>
 #include <iostream>
@@ -37,20 +38,16 @@ class controls
 {
   private:
     static constexpr float _project_dist = 3.0;
-    min::window *const _window;
-    min::camera<float> *const _camera;
-    character *const _character;
-    state *const _state;
-    ui_overlay *const _ui;
-    world *const _world;
+    min::window *const _win;
     sound *const _sound;
+    character *const _character;
+    world *const _world;
+    state *const _state;
+    min::camera<float> *const _camera;
+    ui_overlay *const _ui;
     key_map *const _keymap;
-
-  public:
-    controls(min::window &window, min::camera<float> &camera, character &ch,
-             state &state, ui_overlay &ui, world &world, sound &sound, key_map &km)
-        : _window(&window), _camera(&camera), _character(&ch),
-          _state(&state), _ui(&ui), _world(&world), _sound(&sound), _keymap(&km) {}
+    title *const _title;
+    size_t _last_key_index;
 
     min::camera<float> *get_camera()
     {
@@ -78,8 +75,162 @@ class controls
     }
     min::window *get_window()
     {
-        return _window;
+        return _win;
     }
+    game::menu_call menu_return_call()
+    {
+        // Create resume callback
+        return [this]() -> void {
+            this->toggle_pause(static_cast<void *>(this), 0.0);
+        };
+    }
+    game::menu_call menu_quit_game_call()
+    {
+        return [this]() -> void {
+            // Save
+            this->save();
+
+            // Quit game
+            this->_win->set_shutdown();
+
+            // Alert that we received the call back
+            std::cout << "controls: Shutdown called by user" << std::endl;
+        };
+    }
+    game::menu_call menu_go_to_title_call()
+    {
+        return [this]() -> void {
+            // Save
+            this->save();
+
+            // Return to title
+            this->_title->set_show_title(true);
+        };
+    }
+    game::menu_call menu_key_control_call()
+    {
+        return [this]() -> void {
+            // Switch to extended menu mode
+            this->_ui->set_menu_extend(true);
+            this->_ui->switch_mode_menu();
+
+            // Get access to the keyboard
+            auto &keyboard = this->_win->get_keyboard();
+
+            // Get the active keys
+            const std::vector<min::window::key_type> &keys = keyboard.get_active_keys();
+
+            // Get the menu from ui
+            game::ui_menu &menu = this->_ui->get_menu();
+
+            // Iterate through the keys
+            const size_t max_size = menu.max_size();
+            const size_t size = std::min(max_size, keys.size());
+            for (size_t i = 0; i < size; i++)
+            {
+                // Set the button string
+                menu.set_prefix(i, &this->_keymap->get_prefix_string(i));
+                menu.set_string(i, &this->_keymap->get_key_string(keys[i]));
+
+                // Create callback and set it
+                const auto f = [this, i]() -> void {
+                    this->_last_key_index = i;
+                    this->_win->get_keyboard().register_override_keyup(controls::menu_key_override, (void *)this);
+                };
+                menu.set_callback(i, f);
+            }
+
+            // Clear out the rest of the buttons
+            for (size_t i = size; i < max_size - 1; i++)
+            {
+                // Set the button string
+                menu.set_prefix_empty(i);
+                menu.set_string_empty(i);
+                menu.set_callback(i, nullptr);
+            }
+
+            // Set the menu back button
+            menu.set_prefix_empty(31);
+            menu.set_string_back(31);
+            menu.set_callback(31, this->menu_reset_game_call());
+
+            // Register menu updates
+            menu.make_dirty();
+        };
+    }
+    static void menu_key_override(void *const ptr, const min::window::key_type to_key)
+    {
+        // Get the control object
+        controls *const control = reinterpret_cast<controls *>(ptr);
+
+        // Get access to the keyboard
+        auto &keyboard = control->_win->get_keyboard();
+
+        // Debounce this override
+        keyboard.register_override_keyup(nullptr, nullptr);
+
+        // Get the active keys
+        const std::vector<min::window::key_type> &keys = keyboard.get_active_keys();
+
+        // Get the last key index
+        const size_t index = control->_last_key_index;
+
+        // Remap the keyboard key
+        if (keyboard.swap(keys[index], to_key))
+        {
+            // Get the menu from ui
+            game::ui_menu &menu = control->_ui->get_menu();
+
+            // Update the key string
+            menu.set_string(index, &control->_keymap->get_key_string(to_key));
+
+            // Register menu updates
+            menu.make_dirty();
+        }
+    }
+    game::menu_call menu_reset_game_call()
+    {
+        // Create reset callback
+        return [this]() -> void {
+            // Switch to menu mode
+            this->_ui->set_menu_extend(false);
+            this->_ui->switch_mode_menu();
+
+            // Get the menu
+            game::ui_menu &menu = this->_ui->get_menu();
+
+            // Reset the menu
+            menu.reset_game_menu();
+
+            // Set default callbacks
+            this->reset_menu();
+        };
+    }
+    void reset_menu()
+    {
+        game::ui_menu &menu = _ui->get_menu();
+        menu.reset_game_menu();
+        menu.set_callback(0, menu_return_call());
+        menu.set_callback(1, menu_go_to_title_call());
+        menu.set_callback(2, menu_quit_game_call());
+        menu.set_callback(3, menu_key_control_call());
+    }
+    void save()
+    {
+        // Save the world
+        _world->save(_state->get_camera());
+
+        // Save the keymap
+        _keymap->save(*_win);
+    }
+
+  public:
+    controls(min::window &window, sound &sound, character &ch, world &world,
+             state &state, ui_overlay &ui, key_map &km, title &title)
+        : _win(&window), _sound(&sound), _character(&ch), _world(&world),
+          _state(&state), _camera(&state.get_camera()), _ui(&ui),
+          _keymap(&km), _title(&title), _last_key_index(0) {}
+
     void register_control_callbacks()
     {
         // Get the player skill beam string
@@ -90,18 +241,18 @@ class controls
         _ui->set_console_string(inv.get_name(inv.get_key(0).id()));
 
         // Get access to the keyboard
-        auto &keyboard = _window->get_keyboard();
+        auto &keyboard = _win->get_keyboard();
 
         // Clear any keys mapped to keyboard
         keyboard.clear();
 
         // Register data and function callbacks
-        _window->register_data((void *)this);
-        _window->register_lclick_down(controls::left_click_down);
-        _window->register_lclick_up(controls::left_click_up);
-        _window->register_rclick_down(controls::right_click_down);
-        _window->register_rclick_up(controls::right_click_up);
-        _window->register_update(controls::on_resize);
+        _win->register_data((void *)this);
+        _win->register_lclick_down(controls::left_click_down);
+        _win->register_lclick_up(controls::left_click_up);
+        _win->register_rclick_down(controls::right_click_down);
+        _win->register_rclick_up(controls::right_click_up);
+        _win->register_update(controls::on_resize);
 
         // Assert for no overflow
         if (_keymap->size() < 26)
@@ -1511,12 +1662,34 @@ class controls
             ui_extend((void *)this, 0.0);
         }
     }
+    void enable(game::options &opt)
+    {
+        // Register window callbacks
+        register_control_callbacks();
+
+        // Stop drawing title in UI
+        _ui->switch_mode_base();
+        _ui->set_draw_text_ui(true);
+
+        // Turn off cursor
+        _win->display_cursor(false);
+
+        // If this is a new game
+        if (_world->get_load_state().is_new_game())
+        {
+            // Play intro message
+            _ui->set_alert_intro();
+        }
+
+        // Reset menu
+        reset_menu();
+    }
     void respawn()
     {
         // Simulate a key down to change equipment
         key_down(0);
     }
-    inline void shoot_beam()
+    void shoot_beam()
     {
         // Get player, skill and stats
         player &play = _world->get_player();

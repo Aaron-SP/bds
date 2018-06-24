@@ -25,7 +25,7 @@ namespace game
 
 enum class ui_mode : int_fast8_t
 {
-    TITLE = 0,
+    NONE = 0,
     INV = 1,
     INV_EXT = 2,
     MENU = 3,
@@ -42,13 +42,14 @@ class ui_state
     ui_id _hover;
     bool _selecting;
     ui_id _select;
+    bool _title;
 
   public:
     ui_state(const ui_id select)
-        : _mode(ui_mode::TITLE),
+        : _mode(ui_mode::NONE),
           _clicking(false), _click(0),
           _hovering(false), _hover(0),
-          _selecting(false), _select(select) {}
+          _selecting(false), _select(select), _title(true) {}
 
     inline ui_id get_click() const
     {
@@ -128,7 +129,7 @@ class ui_state
     }
     inline bool is_title_mode() const
     {
-        return _mode == ui_mode::TITLE;
+        return _title;
     }
     inline void set_click(const ui_id id)
     {
@@ -165,6 +166,10 @@ class ui_state
     inline void set_selecting(const bool flag)
     {
         _selecting = flag;
+    }
+    inline void set_title_mode(const bool flag)
+    {
+        _title = flag;
     }
 };
 }

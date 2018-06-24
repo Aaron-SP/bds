@@ -103,7 +103,6 @@ class ui_overlay
 
     inline void reset()
     {
-        _menu.reset();
         _text.reset();
         _bg.reset();
         _order = -1;
@@ -241,6 +240,10 @@ class ui_overlay
     inline bool is_focused() const
     {
         return _bg.is_focused();
+    }
+    inline bool is_title_mode() const
+    {
+        return _bg.get_ui_state().is_title_mode();
     }
     inline bool overlap(const min::vec2<float> &p)
     {
@@ -422,6 +425,10 @@ class ui_overlay
     {
         _bg.set_splash_dead();
     }
+    inline void set_title_mode(const bool flag)
+    {
+        _bg.get_ui_state().set_title_mode(flag);
+    }
     inline void stream_low_health()
     {
         add_stream_text(_health);
@@ -505,8 +512,15 @@ class ui_overlay
                        const double idle, const size_t chunks, const size_t insts,
                        const std::string &target, const float time, const float dt)
     {
-        // Update bg
-        _bg.update();
+        // If menu needs updating
+        if (_menu.is_dirty())
+        {
+            // Update menu text
+            _text.set_menu();
+
+            // Flag debouncer
+            _menu.clean();
+        }
 
         // Update all text and upload it
         if (_text.is_draw_debug())
@@ -520,16 +534,6 @@ class ui_overlay
             _text.set_debug_chunks(chunks);
             _text.set_debug_insts(insts);
             _text.set_debug_target(target);
-        }
-
-        // If menu needs updating
-        if (_menu.is_dirty())
-        {
-            // Update menu text
-            _text.set_menu();
-
-            // Flag debouncer
-            _menu.clean();
         }
 
         // Update the drone timer
@@ -557,6 +561,27 @@ class ui_overlay
                 _order = -1;
             }
         }
+
+        // Update bg
+        _bg.update();
+    }
+    inline void update_title()
+    {
+        // If menu needs updating
+        if (_menu.is_dirty())
+        {
+            // Update menu text
+            _text.set_menu();
+
+            // Flag debouncer
+            _menu.clean();
+
+            // Upload the changed text
+            _text.upload();
+        }
+
+        // Update bg
+        _bg.update();
     }
 };
 }

@@ -27,7 +27,8 @@ void show_title(bds &game, min::loop_sync &sync, const size_t frames)
     game.play_music();
 
     // Draw the title screen before playing
-    while (game.is_show_title())
+    bool running = game.is_show_title();
+    while (running)
     {
         for (size_t i = 0; i < frames; i++)
         {
@@ -37,11 +38,21 @@ void show_title(bds &game, min::loop_sync &sync, const size_t frames)
             // Clear the background color
             game.clear_background();
 
-            // Draw the model
-            game.draw_title(frame_time);
+            // Update the title screen
+            game.update_title(frame_time);
+
+            // Draw the title screen
+            game.draw_title();
 
             // Update the window after draw command
             game.update_window();
+
+            // Break out if not running
+            running = game.is_show_title();
+            if (!running)
+            {
+                break;
+            }
 
             // Calculate needed delay to hit target
             frame_time = sync.sync();
@@ -72,7 +83,8 @@ void show_game(bds &game, min::loop_sync &sync, const size_t frames)
     double frame_time = 0.0;
 
     // User can close game or return to title
-    while (!game.is_closed() && !game.is_show_title())
+    bool running = !game.is_closed() && !game.is_show_title();
+    while (running)
     {
         for (size_t i = 0; i < frames; i++)
         {
@@ -93,6 +105,13 @@ void show_game(bds &game, min::loop_sync &sync, const size_t frames)
 
             // Update the window after draw command
             game.update_window();
+
+            // Break out if not running
+            running = !game.is_closed() && !game.is_show_title();
+            if (!running)
+            {
+                break;
+            }
 
             // Calculate needed delay to hit target
             frame_time = sync.sync();

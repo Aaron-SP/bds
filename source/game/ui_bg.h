@@ -173,7 +173,7 @@ class ui_bg
             const size_t size = _assets.transparent_size();
             _vb.draw_many(GL_TRIANGLES, _mesh_id, size);
         }
-        else
+        else if (!_state.is_title_mode())
         {
             // Get the start of the splash menu ui
             const size_t menu_splash_start = _assets.menu_splash_start();
@@ -451,7 +451,8 @@ class ui_bg
             // Draw title
             draw_title();
         }
-        else if (_state.get_mode() == ui_mode::INV_EXT)
+
+        if (_state.get_mode() == ui_mode::INV_EXT)
         {
             // Bind the VAO and program
             bind();
@@ -740,6 +741,12 @@ class ui_bg
         const uint_fast16_t width = _assets.get_width();
         const uint_fast16_t height = _assets.get_height();
 
+        // Load title screen
+        if (_state.is_title_mode())
+        {
+            _assets.load_title_overlay();
+        }
+
         // Load health overlay
         if (_state.is_inv_mode())
         {
@@ -751,10 +758,6 @@ class ui_bg
         {
             _control_menu.position_ui(_state);
             _control_menu.load_tree(_state, _stream, width, height);
-        }
-        else if (_state.is_title_mode())
-        {
-            _assets.load_title_overlay();
         }
     }
     inline void toggle_draw_console()
@@ -780,7 +783,11 @@ class ui_bg
     {
         return _control_inv.get_ui_info(_state);
     }
-    inline ui_state get_ui_state() const
+    inline const ui_state &get_ui_state() const
+    {
+        return _state;
+    }
+    inline ui_state &get_ui_state()
     {
         return _state;
     }

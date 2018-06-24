@@ -31,12 +31,13 @@ class ui_menu
 {
   private:
     static constexpr size_t _size = ui_bg_assets::max_menu_ext_size();
+    const std::string _start;
     const std::string _back;
     const std::string _title;
     const std::string _quit;
     const std::string _controls;
-    const std::string _empty;
     const std::string _menu_back;
+    const std::string _empty;
     std::array<const std::string *, _size> _prefix;
     std::array<const std::string *, _size> _str;
     std::array<menu_call, _size> _callback;
@@ -45,8 +46,9 @@ class ui_menu
 
   public:
     ui_menu()
-        : _back("Back to Game"), _title("Return to Title"), _quit("Save and Exit Game"), _controls("Controls"), _empty(), _menu_back("Back"),
-          _prefix{}, _str{}, _callback{}, _extended(false), _dirty(true)
+        : _start("Start Game"), _back("Back to Game"), _title("Return to Title"),
+          _quit("Save and Exit Game"), _controls("Controls"), _menu_back("Back"),
+          _empty(), _prefix{}, _str{}, _callback{}, _extended(false), _dirty(true)
     {
         // Set all menu string pointers to empty
         const size_t size = _size;
@@ -55,16 +57,9 @@ class ui_menu
             _prefix[i] = &_empty;
             _str[i] = &_empty;
         }
-
-        // Set the default menu strings
-        _str[0] = &_back;
-        _str[1] = &_title;
-        _str[2] = &_quit;
-        _str[3] = &_controls;
-        _str[4] = &_empty;
     }
 
-    inline void reset()
+    inline void reset_game_menu()
     {
         // Reset all strings and callbacks
         const size_t size = _size;
@@ -81,6 +76,25 @@ class ui_menu
         _str[2] = &_quit;
         _str[3] = &_controls;
         _str[4] = &_empty;
+
+        // Set dirty flag
+        _extended = false;
+        _dirty = true;
+    }
+    inline void reset_title_menu()
+    {
+        // Reset all strings and callbacks
+        const size_t size = _size;
+        for (size_t i = 0; i < size; i++)
+        {
+            _prefix[i] = &_empty;
+            _str[i] = &_empty;
+            _callback[i] = nullptr;
+        }
+
+        // Set the default menu strings
+        _str[0] = &_start;
+        _str[1] = &_quit;
 
         // Set dirty flag
         _extended = false;

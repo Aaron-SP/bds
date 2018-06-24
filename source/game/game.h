@@ -62,9 +62,8 @@ class bds
     game::events _events;
     game::ui_overlay _ui;
     game::key_map _keymap;
-    game::controls _controls;
     game::title _title;
-    size_t _last_key_index;
+    game::controls _controls;
     std::pair<uint_fast16_t, uint_fast16_t> _cursor;
     double _fps;
     double _idle;
@@ -116,156 +115,11 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.271");
+        _ui.text().set_debug_version("VERSION: 0.1.273");
 
         // Set the game mode
         const bool hardcore = _world.get_load_state().is_hardcore();
         _ui.text().set_debug_game_mode((hardcore) ? "HARDCORE MODE" : "NORMAL MODE");
-    }
-    game::menu_call menu_control_call()
-    {
-        return [this]() -> void {
-            // Switch to extended menu mode
-            this->_ui.set_menu_extend(true);
-            this->_ui.switch_mode_menu();
-
-            // Get access to the keyboard
-            auto &keyboard = this->_win.get_keyboard();
-
-            // Get the active keys
-            const std::vector<min::window::key_type> &keys = keyboard.get_active_keys();
-
-            // Get the menu from ui
-            game::ui_menu &menu = this->_ui.get_menu();
-
-            // Iterate through the keys
-            const size_t max_size = menu.max_size();
-            const size_t size = std::min(max_size, keys.size());
-            for (size_t i = 0; i < size; i++)
-            {
-                // Set the button string
-                menu.set_prefix(i, &this->_keymap.get_prefix_string(i));
-                menu.set_string(i, &this->_keymap.get_key_string(keys[i]));
-
-                // Create callback and set it
-                const auto f = [this, i]() -> void {
-                    this->_last_key_index = i;
-                    this->_win.get_keyboard().register_override_keyup(bds::menu_override, (void *)this);
-                };
-                menu.set_callback(i, f);
-            }
-
-            // Clear out the rest of the buttons
-            for (size_t i = size; i < max_size - 1; i++)
-            {
-                // Set the button string
-                menu.set_prefix_empty(i);
-                menu.set_string_empty(i);
-                menu.set_callback(i, nullptr);
-            }
-
-            // Set the menu back button
-            menu.set_prefix_empty(31);
-            menu.set_string_back(31);
-            menu.set_callback(31, this->menu_reset_call());
-
-            // Register menu updates
-            menu.make_dirty();
-        };
-    }
-    static void menu_override(void *const ptr, const min::window::key_type to_key)
-    {
-        // Get the game object
-        bds *const game = reinterpret_cast<bds *const>(ptr);
-
-        // Get access to the keyboard
-        auto &keyboard = game->_win.get_keyboard();
-
-        // Debounce this override
-        keyboard.register_override_keyup(nullptr, nullptr);
-
-        // Get the active keys
-        const std::vector<min::window::key_type> &keys = keyboard.get_active_keys();
-
-        // Get the last key index
-        const size_t index = game->_last_key_index;
-
-        // Remap the keyboard key
-        if (keyboard.swap(keys[index], to_key))
-        {
-            // Get the menu from ui
-            game::ui_menu &menu = game->_ui.get_menu();
-
-            // Update the key string
-            menu.set_string(index, &game->_keymap.get_key_string(to_key));
-
-            // Register menu updates
-            menu.make_dirty();
-        }
-    }
-    game::menu_call menu_quit_call()
-    {
-        return [this]() -> void {
-            // Save
-            this->save();
-
-            // Quit game
-            this->_win.set_shutdown();
-
-            // Alert that we received the call back
-            std::cout << "controls: Shutdown called by user" << std::endl;
-        };
-    }
-    game::menu_call menu_reset_call()
-    {
-        // Create reset callback
-        return [this]() -> void {
-            // Switch to menu mode
-            this->_ui.set_menu_extend(false);
-            this->_ui.switch_mode_menu();
-
-            // Get the menu
-            game::ui_menu &menu = this->_ui.get_menu();
-
-            // Reset the menu
-            menu.reset();
-
-            // Set default callbacks
-            this->register_menu_callbacks();
-        };
-    }
-    game::menu_call menu_resume_call()
-    {
-        // Create resume callback
-        return [this]() -> void {
-            this->_controls.toggle_pause(static_cast<void *>(&_controls), 0.0);
-        };
-    }
-    game::menu_call menu_title_call()
-    {
-        return [this]() -> void {
-            // Save
-            this->save();
-
-            // Return to title
-            this->_title.set_show_title(true);
-        };
-    }
-    void register_menu_callbacks()
-    {
-        game::ui_menu &menu = _ui.get_menu();
-        menu.set_callback(0, menu_resume_call());
-        menu.set_callback(1, menu_title_call());
-        menu.set_callback(2, menu_quit_call());
-        menu.set_callback(3, menu_control_call());
-    }
-    void save()
-    {
-        // Save the world
-        _world.save(_state.get_camera());
-
-        // Save the keymap
-        _keymap.save(_win);
     }
     void update_alerts()
     {
@@ -445,9 +299,9 @@ class bds
           _state(opt, _world.get_load_state()),
           _ui(_uniforms, _world.get_player().get_inventory(), _world.get_player().get_stats(), _win.get_width(), _win.get_height()),
           _keymap(opt),
-          _controls(_win, _state.get_camera(), _character, _state, _ui, _world, _sound, _keymap),
-          _title(_state.get_camera(), _ui, _win),
-          _last_key_index(0), _fps(0.0), _idle(0.0)
+          _title(_win, _sound, _character, _world, _state, _ui, _keymap),
+          _controls(_win, _sound, _character, _world, _state, _ui, _keymap, _title),
+          _fps(0.0), _idle(0.0)
     {
         // Set depth and cull settings
         min::settings::initialize();
@@ -510,13 +364,8 @@ class bds
         // Draw the tooltip ui
         _ui.draw_tooltips();
     }
-    void draw_title(const float dt)
+    void draw_title()
     {
-        min::camera<float> &camera = _state.get_camera();
-
-        // Update all uniforms
-        update_uniforms(camera, false);
-
         // Draw the ui
         _ui.draw_opaque();
         _ui.draw_transparent();
@@ -543,61 +392,25 @@ class bds
     }
     void title_screen_disable()
     {
-        // Register window callbacks
-        _controls.register_control_callbacks();
-
-        // Stop drawing title in UI
-        _ui.switch_mode_base();
-        _ui.set_draw_text_ui(true);
-
-        // Turn off cursor
-        _win.display_cursor(false);
+        // Enable control mode
+        _controls.enable(_opt);
 
         // Update the mouse cursor to center
         center_cursor();
-
-        // If this is a new game
-        if (_world.get_load_state().is_new_game())
-        {
-            // Play intro message
-            _ui.set_alert_intro();
-        }
-
-        // Register menu callbacks
-        register_menu_callbacks();
     }
     void title_screen_enable()
     {
-        // Register window callbacks
-        _title.register_control_callbacks();
-
-        // Set the current window width and height
-        const uint_fast16_t w = _win.get_width();
-        const uint_fast16_t h = _win.get_height();
-        _opt.set_width(w);
-        _opt.set_height(h);
-
         // Reset the game state
         _particles.reset();
-        _sound.reset();
-        _character.reset();
-        _world.reset(_opt);
-        _state = game::state(_opt, _world.get_load_state());
         _events = game::events();
-        _ui.reset();
+        _title.enable(_opt);
 
-        // Get the screen dimensions
-        const uint_fast16_t w2 = w / 2;
-        const uint_fast16_t h2 = h / 2;
-        _ui.set_screen(min::vec2<float>(w2, h2), w, h);
-
-        // Center cursor
-        center_cursor();
+        // Reset loop variables
         _fps = 0.0;
         _idle = 0.0;
 
-        // Turn off cursor
-        _win.display_cursor(true);
+        // Center cursor
+        center_cursor();
     }
     void update(const float dt)
     {
@@ -689,6 +502,30 @@ class bds
 
         // Update all uniforms
         update_uniforms(camera, update);
+    }
+    void update_title(const float dt)
+    {
+        min::camera<float> &camera = _state.get_camera();
+
+        // Process UI if user input
+        if (_state.get_user_input())
+        {
+            // Get the cursor coordinates
+            const auto c = _win.get_cursor();
+
+            // Flip the Y value to match screen coordinates
+            const uint_fast16_t height = _win.get_height() - c.second;
+            _ui.overlap(min::vec2<float>(c.first, height));
+        }
+
+        // Update the UI class
+        _ui.update_title();
+
+        // Update the sound listener properties
+        _sound.update(camera, min::vec3<float>(), dt);
+
+        // Update all uniforms
+        update_uniforms(camera, false);
     }
     void update_keyboard(const float dt)
     {
