@@ -945,26 +945,28 @@ class world
         // Set the collision elasticity of the physics simulation
         _simulation.set_elasticity(0.1);
 
-        // Set collision callbacks
-        set_collision_callbacks();
-
         // Reserve space for used vectors
         reserve_memory(opt.view());
-
-        // Update chunks
-        update_all_chunks();
-
-        // Load chests
-        load_chests();
     }
-    inline void reset(const options &opt)
+    inline void load(const options &opt)
+    {
+        // Reset the load state
+        _state = load_state(opt);
+        _state.load();
+
+        // Load the grid
+        _grid.load();
+    }
+    inline void new_game(const options &opt)
     {
         // Reset the load state
         _state = load_state(opt);
 
-        // Reload grid
-        _grid.reset();
-
+        // Load the grid
+        _grid.new_game();
+    }
+    inline void reset(const options &opt)
+    {
         // Reset to default
         _cached_offset = min::vec3<int>(1, 1, 1);
         _preview_offset = min::vec3<int>(1, 1, 1);
@@ -991,11 +993,11 @@ class world
         // Set collision callbacks
         set_collision_callbacks();
 
-        // Update chunks
-        update_all_chunks();
-
         // Load chests
         load_chests();
+
+        // Update chunks
+        update_all_chunks();
     }
     inline void add_block(const min::ray<float, min::vec3> &r)
     {

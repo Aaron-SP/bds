@@ -79,6 +79,10 @@ class thread
     {
         return _gen;
     }
+    inline void seed(const size_t seed)
+    {
+        _gen.seed(seed);
+    }
     inline void set_sleep(const bool flag)
     {
         _sleep = flag;
@@ -264,6 +268,16 @@ class thread_pool
 
         // Notify threads
         notify();
+    }
+    inline void seed(const size_t seed)
+    {
+        for (size_t i = 0; i < _thread_count - 1; i++)
+        {
+            // Seed the generator
+            _threads[i].seed(seed);
+        }
+
+        _gen.seed(seed);
     }
     inline void sleep()
     {

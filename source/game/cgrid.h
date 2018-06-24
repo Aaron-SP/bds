@@ -589,6 +589,18 @@ class cgrid
         _sort_chunk.reserve(27);
         _view_chunks.reserve(27);
     }
+    inline void reset()
+    {
+        // Clear out all vectors
+        _visit.clear();
+        _neighbors.clear();
+        _path.clear();
+        _stack.clear();
+        _chunk_update.clear();
+        _chunk_update_keys.clear();
+        _sort_chunk.clear();
+        _view_chunks.clear();
+    }
     inline void search(const min::vec3<float> &start, const min::vec3<float> &stop)
     {
         // Get grid keys
@@ -761,31 +773,40 @@ class cgrid
         // Keepp looking for a path
         return false;
     }
-    inline void world_load()
+    inline void world_load(const bool flag)
     {
-        // Create output stream for loading world
-        std::vector<uint8_t> stream;
-
-        // Load data into stream from file
-        load_file("save/world.bmesh", stream);
-
         // If load failed dont try to parse stream data
-        if (stream.size() != 0)
+        if (flag)
         {
-            // Load grid with file
-            size_t next = 0;
-            const std::vector<block_id> grid = min::read_le_vector<block_id>(stream, next);
+            // Create output stream for loading world
+            std::vector<uint8_t> stream;
 
-            // Check that grid load correctly
-            const size_t cubic_size = _grid_scale * _grid_scale * _grid_scale;
-            if (grid.size() == cubic_size)
+            // Load data into stream from file
+            load_file("save/world.bmesh", stream);
+
+            // If load failed dont try to parse stream data
+            if (stream.size() != 0)
             {
-                // Copy grid from file
-                _grid = grid;
+                // Load grid with file
+                size_t next = 0;
+                const std::vector<block_id> grid = min::read_le_vector<block_id>(stream, next);
+
+                // Check that grid load correctly
+                const size_t cubic_size = _grid_scale * _grid_scale * _grid_scale;
+                if (grid.size() == cubic_size)
+                {
+                    // Copy grid from file
+                    _grid = grid;
+                }
+                else
+                {
+                    // Grid is wrong dimensions so regenerate world
+                    generate_world();
+                }
             }
             else
             {
-                // Grid is wrong dimensions so regenerate world
+                // No file found
                 generate_world();
             }
         }
@@ -843,26 +864,24 @@ class cgrid
             throw std::runtime_error("cgrid: view_chunk_size can't be greater than " + std::to_string(_chunk_scale * 2 + 1));
         }
 
-        // Add starting blocks to simulation
-        world_load();
-
         // Reserve memory
         reserve_memory();
     }
-    inline void reset()
+    inline void load()
     {
-        // Clear out all vectors
-        _visit.clear();
-        _neighbors.clear();
-        _path.clear();
-        _stack.clear();
-        _chunk_update.clear();
-        _chunk_update_keys.clear();
-        _sort_chunk.clear();
-        _view_chunks.clear();
+        // Reset the grid
+        reset();
 
-        // Reload the world
-        world_load();
+        // Load the world
+        world_load(true);
+    }
+    inline void new_game()
+    {
+        // Reset the grid
+        reset();
+
+        // Load the world
+        world_load(false);
     }
     static inline min::aabbox<float, min::vec3> grid_box(const min::vec3<float> &p)
     {

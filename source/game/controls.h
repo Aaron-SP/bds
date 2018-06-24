@@ -38,6 +38,7 @@ class controls
 {
   private:
     static constexpr float _project_dist = 3.0;
+    options *const _opt;
     min::window *const _win;
     sound *const _sound;
     character *const _character;
@@ -56,6 +57,10 @@ class controls
     character *get_character()
     {
         return _character;
+    }
+    options *get_options()
+    {
+        return _opt;
     }
     sound *get_sound()
     {
@@ -84,6 +89,16 @@ class controls
             this->toggle_pause(static_cast<void *>(this), 0.0);
         };
     }
+    game::menu_call menu_go_to_title_call()
+    {
+        return [this]() -> void {
+            // Save
+            this->save();
+
+            // Return to title
+            this->_title->set_show_title(true);
+        };
+    }
     game::menu_call menu_quit_game_call()
     {
         return [this]() -> void {
@@ -95,16 +110,6 @@ class controls
 
             // Alert that we received the call back
             std::cout << "controls: Shutdown called by user" << std::endl;
-        };
-    }
-    game::menu_call menu_go_to_title_call()
-    {
-        return [this]() -> void {
-            // Save
-            this->save();
-
-            // Return to title
-            this->_title->set_show_title(true);
         };
     }
     game::menu_call menu_key_control_call()
@@ -225,9 +230,9 @@ class controls
     }
 
   public:
-    controls(min::window &window, sound &sound, character &ch, world &world,
+    controls(options &opt, min::window &window, sound &sound, character &ch, world &world,
              state &state, ui_overlay &ui, key_map &km, title &title)
-        : _win(&window), _sound(&sound), _character(&ch), _world(&world),
+        : _opt(&opt), _win(&window), _sound(&sound), _character(&ch), _world(&world),
           _state(&state), _camera(&state.get_camera()), _ui(&ui),
           _keymap(&km), _title(&title), _last_key_index(0) {}
 
@@ -1619,7 +1624,12 @@ class controls
     {
         // Get the ui pointer
         controls *const control = reinterpret_cast<controls *>(ptr);
+        options *const opt = control->get_options();
         ui_overlay *const ui = control->get_ui();
+
+        // Set the current window width and height
+        opt->set_width(width);
+        opt->set_height(height);
 
         // Ignore minimizing window
         if (width == 0 && height == 0)
@@ -1662,7 +1672,7 @@ class controls
             ui_extend((void *)this, 0.0);
         }
     }
-    void enable(game::options &opt)
+    void enable()
     {
         // Register window callbacks
         register_control_callbacks();

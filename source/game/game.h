@@ -115,7 +115,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.273");
+        _ui.text().set_debug_version("VERSION: 0.1.274");
 
         // Set the game mode
         const bool hardcore = _world.get_load_state().is_hardcore();
@@ -299,22 +299,16 @@ class bds
           _state(opt, _world.get_load_state()),
           _ui(_uniforms, _world.get_player().get_inventory(), _world.get_player().get_stats(), _win.get_width(), _win.get_height()),
           _keymap(opt),
-          _title(_win, _sound, _character, _world, _state, _ui, _keymap),
-          _controls(_win, _sound, _character, _world, _state, _ui, _keymap, _title),
+          _title(_opt, _particles, _win, _sound, _character, _world, _state, _events, _ui, _keymap),
+          _controls(_opt, _win, _sound, _character, _world, _state, _ui, _keymap, _title),
           _fps(0.0), _idle(0.0)
     {
         // Set depth and cull settings
         min::settings::initialize();
         min::settings::enable_gamma_correction();
 
-        // Update cursor position for tracking
-        center_cursor();
-
         // Delete the mem-file data
         game::memory_map::memory.clear();
-
-        // Load gpu information
-        load_gpu_info();
     }
     void blink_console_message()
     {
@@ -393,24 +387,25 @@ class bds
     void title_screen_disable()
     {
         // Enable control mode
-        _controls.enable(_opt);
+        _controls.enable();
 
-        // Update the mouse cursor to center
+        // Load gpu information
+        load_gpu_info();
+
+        // Center cursor
         center_cursor();
     }
     void title_screen_enable()
     {
         // Reset the game state
-        _particles.reset();
-        _events = game::events();
-        _title.enable(_opt);
+        _title.enable();
+
+        // Center cursor
+        center_cursor();
 
         // Reset loop variables
         _fps = 0.0;
         _idle = 0.0;
-
-        // Center cursor
-        center_cursor();
     }
     void update(const float dt)
     {

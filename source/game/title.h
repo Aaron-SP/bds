@@ -18,8 +18,10 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __TITLE_CONTROLS__
 #define __TITLE_CONTROLS__
 
+#include <game/events.h>
 #include <game/keymap.h>
 #include <game/options.h>
+#include <game/particle.h>
 #include <game/sound.h>
 #include <game/state.h>
 #include <game/title.h>
@@ -36,12 +38,15 @@ namespace game
 class title
 {
   private:
+    options *const _opt;
+    game::particle *const _particles;
     min::window *const _win;
     sound *const _sound;
     character *const _character;
     world *const _world;
     state *const _state;
     min::camera<float> *const _camera;
+    events *const _events;
     ui_overlay *const _ui;
     key_map *const _keymap;
 
@@ -49,9 +54,9 @@ class title
     {
         return _camera;
     }
-    character *get_character()
+    options *get_options()
     {
-        return _character;
+        return _opt;
     }
     sound *get_sound()
     {
@@ -65,18 +70,43 @@ class title
     {
         return _ui;
     }
-    world *get_world()
-    {
-        return _world;
-    }
     min::window *get_window()
     {
         return _win;
     }
-    game::menu_call menu_start_game_call()
+    game::menu_call menu_new_game_call()
     {
         // Create resume callback
         return [this]() -> void {
+            // Start new game
+            this->_world->new_game(*this->_opt);
+
+            // Load the keymap
+            this->_keymap->load();
+
+            // Reset the game
+            this->reset_game();
+
+            // Advance to the game controller
+            this->set_show_title(false);
+
+            // Disable user input
+            this->_state->set_user_input(false);
+        };
+    }
+    game::menu_call menu_load_game_call()
+    {
+        // Create resume callback
+        return [this]() -> void {
+            // Load the world
+            this->_world->load(*this->_opt);
+
+            // Load the keymap
+            this->_keymap->load();
+
+            // Reset the game
+            this->reset_game();
+
             // Advance to the game controller
             this->set_show_title(false);
 
@@ -87,8 +117,11 @@ class title
     game::menu_call menu_quit_game_call()
     {
         return [this]() -> void {
-            // Save
-            this->save();
+            // Save the world
+            this->_world->save(_state->get_camera());
+
+            // Save the keymap
+            this->_keymap->save(*_win);
 
             // Return to title
             this->set_show_title(false);
@@ -104,23 +137,25 @@ class title
     {
         game::ui_menu &menu = _ui->get_menu();
         menu.reset_title_menu();
-        menu.set_callback(0, menu_start_game_call());
-        menu.set_callback(1, menu_quit_game_call());
+        menu.set_callback(0, menu_new_game_call());
+        menu.set_callback(1, menu_load_game_call());
+        menu.set_callback(2, menu_quit_game_call());
     }
-    void save()
+    void reset_game()
     {
-        // Save the world
-        _world->save(_state->get_camera());
-
-        // Save the keymap
-        _keymap->save(*_win);
+        // Reset core game components
+        _particles->reset();
+        _character->reset();
+        _world->reset(*_opt);
+        *_state = game::state(*_opt, _world->get_load_state());
+        *_events = game::events();
     }
 
   public:
-    title(min::window &window, sound &sound, character &ch, world &world,
-          state &state, ui_overlay &ui, key_map &km)
-        : _win(&window), _sound(&sound), _character(&ch), _world(&world),
-          _state(&state), _camera(&state.get_camera()), _ui(&ui),
+    title(options &opt, particle &particles, min::window &window, sound &sound, character &ch, world &world,
+          state &state, game::events &events, ui_overlay &ui, key_map &km)
+        : _opt(&opt), _particles(&particles), _win(&window), _sound(&sound), _character(&ch), _world(&world),
+          _state(&state), _camera(&state.get_camera()), _events(&events), _ui(&ui),
           _keymap(&km)
     {
         // Register callbacks
@@ -149,10 +184,10 @@ class title
     static void left_click_down(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Cast to title pointer
-        title *const screen = reinterpret_cast<title *>(ptr);
-        state *const state = screen->get_state();
-        ui_overlay *const ui = screen->get_ui();
-        sound *const sound = screen->get_sound();
+        title *const title = reinterpret_cast<game::title *>(ptr);
+        state *const state = title->get_state();
+        ui_overlay *const ui = title->get_ui();
+        sound *const sound = title->get_sound();
 
         const bool input = state->get_user_input();
         if (input)
@@ -174,39 +209,32 @@ class title
             ui->switch_mode_menu();
 
             // Set the menu and update
-            screen->reset_menu();
+            title->reset_menu();
             ui->update_title();
         }
     }
     static void left_click_up(void *const ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
-        // Cast to title pointer
-        title *const screen = reinterpret_cast<title *>(ptr);
-
         // Get the ui pointer
-        ui_overlay *const ui = screen->get_ui();
+        title *const title = reinterpret_cast<game::title *>(ptr);
+        ui_overlay *const ui = title->get_ui();
 
         // Click up event
         ui->click_up();
     }
-    void enable(game::options &opt)
+    void enable()
     {
         // Register window callbacks
         register_control_callbacks();
 
-        // Set the current window width and height
-        const uint_fast16_t w = _win->get_width();
-        const uint_fast16_t h = _win->get_height();
-        opt.set_width(w);
-        opt.set_height(h);
-
+        // Reset the sound and ui
         _sound->reset();
-        _character->reset();
-        _world->reset(opt);
-        *_state = game::state(opt, _world->get_load_state());
+        _state->set_user_input(false);
         _ui->reset();
 
         // Get the screen dimensions
+        const uint_fast16_t w = _win->get_width();
+        const uint_fast16_t h = _win->get_height();
         const uint_fast16_t w2 = w / 2;
         const uint_fast16_t h2 = h / 2;
         _ui->set_screen(min::vec2<float>(w2, h2), w, h);
@@ -227,9 +255,14 @@ class title
         }
 
         // Cast to title pointer
-        title *const t = reinterpret_cast<title *>(ptr);
-        min::camera<float> *const camera = t->get_camera();
-        game::ui_overlay *const ui = t->get_ui();
+        title *const title = reinterpret_cast<game::title *>(ptr);
+        options *const opt = title->get_options();
+        min::camera<float> *const camera = title->get_camera();
+        game::ui_overlay *const ui = title->get_ui();
+
+        // Set the current window width and height
+        opt->set_width(width);
+        opt->set_height(height);
 
         // Get camera frustum
         auto &f = camera->get_frustum();

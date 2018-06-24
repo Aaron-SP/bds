@@ -243,11 +243,6 @@ class load_state
                 _state.chest.push_back(min::read_le_vec3<float>(stream, next));
             }
         }
-        else
-        {
-            // Default to normal mode
-            _game_mode = 0;
-        }
     }
 
   public:
@@ -269,9 +264,6 @@ class load_state
 
         // Reserve memory
         reserve_memory();
-
-        // Load state
-        state_load_file();
 
         // Check that we loaded a valid point
         check_inside();
@@ -343,6 +335,10 @@ class load_state
     inline const std::vector<min::vec3<float>> &get_chests() const
     {
         return _state.chest;
+    }
+    inline void load()
+    {
+        state_load_file();
     }
     inline void save_state()
     {

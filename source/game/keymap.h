@@ -38,6 +38,7 @@ class key_map
     std::vector<std::string> _key;
     std::vector<min::window::key_code> _key_code;
     std::vector<min::window::key_code> _keymap;
+    bool _persist;
 
     inline void load_prefix_strings()
     {
@@ -401,7 +402,8 @@ class key_map
     key_map(const options &opt)
         : _prefix(_max_prefix, "?"),
           _key(_max_keys), _key_code(_max_keys),
-          _keymap(_max_prefix, min::window::key_code::APOSTROPHE)
+          _keymap(_max_prefix, min::window::key_code::APOSTROPHE),
+          _persist(opt.is_key_map_persist())
     {
         // Load the key strings
         load_prefix_strings();
@@ -414,12 +416,6 @@ class key_map
 
         // Load default key map
         load_default_key_map(opt);
-
-        // Load the key map
-        if (opt.is_key_map_persist())
-        {
-            load_key_map("save/keymap");
-        }
     }
     inline const std::string &get_prefix_string(const size_t index) const
     {
@@ -579,6 +575,14 @@ class key_map
             return _key[73];
         default:
             return _key[74];
+        }
+    }
+    inline void load()
+    {
+        // Load the key map
+        if (_persist)
+        {
+            load_key_map("save/keymap");
         }
     }
     inline void save(const min::window &win)

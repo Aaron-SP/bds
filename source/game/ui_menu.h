@@ -32,6 +32,7 @@ class ui_menu
   private:
     static constexpr size_t _size = ui_bg_assets::max_menu_ext_size();
     const std::string _start;
+    const std::string _load;
     const std::string _back;
     const std::string _title;
     const std::string _quit;
@@ -46,7 +47,7 @@ class ui_menu
 
   public:
     ui_menu()
-        : _start("Start Game"), _back("Back to Game"), _title("Return to Title"),
+        : _start("New Game"), _load("Load Game"), _back("Back to Game"), _title("Return to Title"),
           _quit("Save and Exit Game"), _controls("Controls"), _menu_back("Back"),
           _empty(), _prefix{}, _str{}, _callback{}, _extended(false), _dirty(true)
     {
@@ -94,7 +95,8 @@ class ui_menu
 
         // Set the default menu strings
         _str[0] = &_start;
-        _str[1] = &_quit;
+        _str[1] = &_load;
+        _str[2] = &_quit;
 
         // Set dirty flag
         _extended = false;

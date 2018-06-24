@@ -193,8 +193,14 @@ class cgrid_generator
     }
     void generate_world(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size)
     {
+        // Reseed the generator
+        work_queue::worker.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+
         // Wake up the threads for processing
         work_queue::worker.wake();
+
+        // Clear out the old grid
+        clear_grid(_back);
 
         // Calculates perlin noise
         kernel::terrain_base base(scale, chunk_size, 0, scale / 2);
@@ -214,17 +220,20 @@ class cgrid_generator
     void generate_portal(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size,
                          const F &grid_key_unpack, const G &grid_cell_center)
     {
+        // Reseed the generator
+        work_queue::worker.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+
         // Wake up the threads for processing
         work_queue::worker.wake();
+
+        // Clear out the old grid
+        clear_grid(grid);
 
         // Choose between terrain generators
         std::uniform_int_distribution<int> choose(1, 3);
         const int type = choose(_gen);
         if (type == 1)
         {
-            // Clear out the old grid
-            clear_grid(grid);
-
             // Generate mandelbulb world using mandelbulb generator
             load_mandelbulb_sym(_gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
                 return grid_cell_center(i);
@@ -232,9 +241,6 @@ class cgrid_generator
         }
         if (type == 2)
         {
-            // Clear out the old grid
-            clear_grid(grid);
-
             // Generate mandelbulb world using mandelbulb generator
             load_mandelbulb_asym(_gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
                 return grid_cell_center(i);
@@ -242,9 +248,6 @@ class cgrid_generator
         }
         else
         {
-            // Clear out the old grid
-            clear_grid(grid);
-
             // Generate mandelbulb world using mandelbulb generator
             load_mandelbulb_exp(_gen).generate(work_queue::worker, grid, scale, [grid_cell_center](const size_t i) {
                 return grid_cell_center(i);
