@@ -91,7 +91,7 @@ tests32:
 	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD32) $(TEST) $(LINKER) 2> "test.txt"
 tests64:
 	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD64) $(TEST) $(LINKER) 2> "test.txt"
-install: build
+install:
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"
 	mkdir -p $(DEST_PATH)/bin
 	cp -v bin/game $(DEST_PATH)/bin

@@ -42,8 +42,11 @@ Additional dependencies that are required and not distributed in this package in
 
 ### Makefile install target
 By default, the makefile will install the game in the /opt/bds directory. You can override this location with the $(DESTDIR) variable in the makefile.
-You can run this makefile target with the following command.
+You can run this makefile target with the following commands. 
+- `make`
+    - Builds the game with whatever settings you want
 - `make install`
+    - Installs the game into the directory you choose
 
 With OpenGL 4.3 and geometry shader optimizations.
 - `make MGL_GS_RENDER=true MGL_VB43=true install`
