@@ -229,18 +229,6 @@ int main(int argc, char *argv[])
             {
                 opt.set_no_persist();
             }
-            else if (input.compare("--normal") == 0)
-            {
-                opt.set_game_mode(game::game_type::NORMAL);
-            }
-            else if (input.compare("--hardcore") == 0)
-            {
-                opt.set_game_mode(game::game_type::HARDCORE);
-            }
-            else if (input.compare("--creative") == 0)
-            {
-                opt.set_game_mode(game::game_type::CREATIVE);
-            }
             else if (i < (argc - 1))
             {
                 if (input.compare("-fps") == 0)

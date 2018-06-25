@@ -201,16 +201,9 @@ class cgrid
     template <typename F>
     inline void cubic_grid(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset, const F &f) const
     {
-        // Get world extents
-        const min::vec3<float> min = _world.get_min();
-        const min::vec3<float> max = _world.get_max();
-
-        // Begin at start position, clamp out of bound to world boundary
-        const min::vec3<float> bounded = min::vec3<float>(start).clamp(min, max);
-
         // Get the grid axis components
         const size_t end = _grid_scale;
-        const auto t = min::vec3<float>::grid_index(_world.get_min(), _cell_extent, bounded);
+        const auto t = get_grid_index_safe(start);
 
         // x axis: will prune points outside grid
         size_t tx = std::get<0>(t);
@@ -300,6 +293,10 @@ class cgrid
     {
         return min::vec3<float>::grid_key(t, _grid_scale);
     }
+    inline std::tuple<size_t, size_t, size_t> grid_key_unpack(const min::vec3<float> &p) const
+    {
+        return min::vec3<float>::grid_index(_world.get_min(), _cell_extent, p);
+    }
     inline std::tuple<size_t, size_t, size_t> grid_key_unpack(const size_t key) const
     {
         return min::vec3<float>::grid_index(key, _grid_scale);
@@ -362,7 +359,7 @@ class cgrid
         const min::vec3<float> start = min::vec3<float>(chunk_start(chunk_key)).clamp(_world.get_min(), _world.get_max());
 
         // Get the grid axis components
-        const auto t = min::vec3<float>::grid_index(_world.get_min(), _cell_extent, start);
+        const auto t = grid_key_unpack(start);
         const size_t xend = std::min(std::get<0>(t) + _chunk_size, _grid_scale);
         const size_t yend = std::min(std::get<1>(t) + _chunk_size, _grid_scale);
         const size_t zend = std::min(std::get<2>(t) + _chunk_size, _grid_scale);
@@ -529,10 +526,17 @@ class cgrid
         // Generate the cgrid data
         _generator.generate_portal(_grid, _grid_scale, _chunk_size, f, g);
     }
-    inline void generate_world()
+    inline void generate_world(const options &opt)
     {
-        // Generate the cgrid data
-        _generator.generate_world(_grid, _grid_scale, _chunk_size);
+        const game_type gt = opt.get_game_mode();
+        if (gt == game_type::CREATIVE)
+        {
+            _generator.generate_creative(_grid, _grid_scale, _chunk_size);
+        }
+        else
+        {
+            _generator.generate_normal(_grid, _grid_scale, _chunk_size);
+        }
     }
     inline float grid_center_square_dist(const size_t key, const min::vec3<float> &point) const
     {
@@ -771,10 +775,10 @@ class cgrid
         // Keepp looking for a path
         return false;
     }
-    inline void world_create()
+    inline void world_create(const options &opt)
     {
         // Else generate world
-        generate_world();
+        generate_world(opt);
 
         // Reserve and update all chunks
         const size_t chunks = _chunks.size();
@@ -784,13 +788,13 @@ class cgrid
             chunk_update(i);
         }
     }
-    inline void world_load(const size_t index)
+    inline void world_load(const options &opt)
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
 
         // Load data into stream from file
-        load_file("save/world." + std::to_string(index), stream);
+        load_file("save/world." + std::to_string(opt.get_save_slot()), stream);
 
         // If load failed dont try to parse stream data
         if (stream.size() != 0)
@@ -809,13 +813,13 @@ class cgrid
             else
             {
                 // Grid is wrong dimensions so regenerate world
-                generate_world();
+                generate_world(opt);
             }
         }
         else
         {
             // No file found
-            generate_world();
+            generate_world(opt);
         }
 
         // Reserve and update all chunks
@@ -875,15 +879,15 @@ class cgrid
         reset();
 
         // Load the world
-        world_load(opt.get_save_slot());
+        world_load(opt);
     }
-    inline void new_game()
+    inline void new_game(const options &opt)
     {
         // Reset the grid
         reset();
 
         // Load the world
-        world_create();
+        world_create(opt);
     }
     inline void save(const options &opt)
     {
@@ -1065,6 +1069,34 @@ class cgrid
         // Clear out chunk update keys
         _chunk_update_keys.clear();
     }
+    std::tuple<size_t, size_t, size_t> get_grid_index_unsafe(const min::vec3<float> &p) const
+    {
+        return grid_key_unpack(p);
+    }
+    std::tuple<size_t, size_t, size_t> get_grid_index_safe(const min::vec3<float> &p) const
+    {
+        // Get world extents
+        const min::vec3<float> min = _world.get_min();
+        const min::vec3<float> max = _world.get_max();
+
+        // Clamp out of bound to world boundary
+        const min::vec3<float> bounded = min::vec3<float>(p).clamp(min, max);
+
+        // Return grid index
+        return grid_key_unpack(bounded);
+    }
+    inline size_t get_block_key(const std::tuple<size_t, size_t, size_t> &t)
+    {
+        return grid_key_pack(t);
+    }
+    inline block_id get_block_id(const size_t key) const
+    {
+        return _grid[key];
+    }
+    inline void set_block_id(const size_t key, const block_id value)
+    {
+        geometry_set_cell(key, value);
+    }
     inline min::mesh<float, uint32_t> &get_chunk(const size_t key)
     {
         return _chunks[key];
@@ -1084,6 +1116,10 @@ class cgrid
     inline const min::aabbox<float, min::vec3> &get_world()
     {
         return _world;
+    }
+    inline size_t grid_scale() const
+    {
+        return _grid_scale;
     }
     inline bool is_viewable(const min::camera<float> &cam, const min::aabbox<float, min::vec3> &box) const
     {

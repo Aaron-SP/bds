@@ -34,18 +34,22 @@ class ui_menu
     const std::string _start;
     const std::string _load;
     const std::string _delete;
-    const std::string _back;
-    const std::string _title;
-    const std::string _save_quit;
     const std::string _quit;
-    const std::string _controls;
-    const std::string _menu_back;
     const std::string _slot0;
     const std::string _slot1;
     const std::string _slot2;
     const std::string _slot3;
     const std::string _slot4;
     const std::string _empty_save;
+    const std::string _normal;
+    const std::string _hardcore;
+    const std::string _creative;
+    const std::string _back;
+    const std::string _title;
+    const std::string _save_quit;
+    const std::string _controls;
+    const std::string _menu_back;
+
     const std::string _empty;
     std::array<const std::string *, _size> _prefix;
     std::array<const std::string *, _size> _str;
@@ -55,10 +59,11 @@ class ui_menu
 
   public:
     ui_menu()
-        : _start("New Game"), _load("Load Game"), _delete("Delete Game"), _back("Back to Game"), _title("Return to Title"),
-          _save_quit("Save and Exit Game"), _quit("Exit Game"), _controls("Controls"), _menu_back("Back"),
-          _slot0("Slot 1"), _slot1("Slot 2"), _slot2("Slot 3"), _slot3("Slot 4"), _slot4("Slot 5"),
-          _empty_save("Empty"), _empty(),
+        : _start("New Game"), _load("Load Game"), _delete("Delete Game"), _quit("Exit Game"),
+          _slot0("Slot 1"), _slot1("Slot 2"), _slot2("Slot 3"), _slot3("Slot 4"), _slot4("Slot 5"), _empty_save("Empty"),
+          _normal("Normal"), _hardcore("Hardcore"), _creative("Creative"),
+          _back("Back to Game"), _title("Return to Title"), _save_quit("Save and Exit Game"), _controls("Controls"), _menu_back("Back"),
+          _empty(),
           _prefix{}, _str{}, _callback{}, _extended(false), _dirty(true)
     {
         // Set all menu string pointers to empty
@@ -69,8 +74,7 @@ class ui_menu
             _str[i] = &_empty;
         }
     }
-
-    inline void reset_game_menu()
+    inline void reset_menu()
     {
         // Reset all strings and callbacks
         const size_t size = _size;
@@ -80,8 +84,13 @@ class ui_menu
             _str[i] = &_empty;
             _callback[i] = nullptr;
         }
+    }
+    inline void reset_game_menu()
+    {
+        // Reset menu
+        reset_menu();
 
-        // Set the default menu strings
+        // Set the game menu strings
         _str[0] = &_back;
         _str[1] = &_title;
         _str[2] = &_save_quit;
@@ -92,18 +101,26 @@ class ui_menu
         _extended = false;
         _dirty = true;
     }
+    inline void reset_game_mode_menu()
+    {
+        // Reset menu
+        reset_menu();
+
+        // Set the game mode strings
+        _str[id_value(game_type::NORMAL)] = &_normal;
+        _str[id_value(game_type::HARDCORE)] = &_hardcore;
+        _str[id_value(game_type::CREATIVE)] = &_creative;
+
+        // Set dirty flag
+        _extended = false;
+        _dirty = true;
+    }
     inline void reset_save_menu()
     {
-        // Reset all strings and callbacks
-        const size_t size = _size;
-        for (size_t i = 0; i < size; i++)
-        {
-            _prefix[i] = &_empty;
-            _str[i] = &_empty;
-            _callback[i] = nullptr;
-        }
+        // Reset menu
+        reset_menu();
 
-        // Set the default menu strings
+        // Set the save slot menu strings
         _str[0] = &_slot0;
         _str[1] = &_slot1;
         _str[2] = &_slot2;
@@ -116,16 +133,10 @@ class ui_menu
     }
     inline void reset_title_menu()
     {
-        // Reset all strings and callbacks
-        const size_t size = _size;
-        for (size_t i = 0; i < size; i++)
-        {
-            _prefix[i] = &_empty;
-            _str[i] = &_empty;
-            _callback[i] = nullptr;
-        }
+        // Reset menu
+        reset_menu();
 
-        // Set the default menu strings
+        // Set the title menu strings
         _str[0] = &_start;
         _str[1] = &_load;
         _str[2] = &_delete;

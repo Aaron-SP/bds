@@ -27,7 +27,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/world.h>
 #include <iostream>
 #include <min/camera.h>
-#include <min/ray.h>
 #include <min/window.h>
 #include <stdexcept>
 
@@ -1263,14 +1262,8 @@ class controls
                 // If we consumed a resource
                 if (consumed)
                 {
-                    // Calculate new point to add
-                    const min::vec3<float> point = cam->project_point(_project_dist);
-
-                    // Create a ray from camera to destination
-                    const min::ray<float, min::vec3> r(cam->get_position(), point);
-
                     // Add block to world
-                    world->add_block(r);
+                    world->add_block();
 
                     // If we need to reset edit mode
                     const item &it = inv[select_index];

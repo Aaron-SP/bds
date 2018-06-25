@@ -129,18 +129,6 @@ The '-view' flag is an optional parameter for controlling how many chunks are vi
 The '-width' and '-height' flag changes the default window dimensions.
 - Example: 'bin/game -width 1600 -height 900' will create a window width of 1600 pixels and height of 900 pixels.
 
-#### --creative flag
-The '--creative' flag changes the game mode to creative mode.
-- Example: 'bin/game --creative' will turn on creative mode.
-
-#### --hardcore flag
-The '--hardcore' flag changes the game mode to hardcore mode. In hardcore mode, the player will lose all inventory upon death!
-- Example: 'bin/game --hardcore' will turn on hardcore mode.
-
-#### --normal flag
-The '--normal' flag changes the game mode back to normal mode.
-- Example: 'bin/game --normal' will switch back to normal mode.
-
 #### --no-persist flag
 The '--no-persist' flag ignores any saved key map layout.
 - Example: 'bin/game --no-persist' will default to qwerty key mapping.

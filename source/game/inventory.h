@@ -310,9 +310,13 @@ class inventory
         _inv_name[109] = "Sulfuric Acid";
         _inv_name[110] = "Bat Guano";
         _inv_name[111] = "Calcium Carbonate";
+        _inv_desc[111] = "Contains oxygen";
         _inv_name[112] = "Charcoal";
+        _inv_desc[112] = "High flame potential";
         _inv_name[113] = "Magnesium Carbonate";
+        _inv_desc[113] = "Contains oxygen";
         _inv_name[114] = "Potassium Nitrate";
+        _inv_desc[114] = "Fragile very explosive";
         _inv_name[115] = "Red Phosphorus";
         _inv_name[116] = "Rust";
         _inv_name[117] = "Salt";
@@ -335,7 +339,7 @@ class inventory
         _inv_name[127] = "Rusty Key";
         _inv_desc[127] = "It's old and rusty._Perhaps this opens_something!";
     }
-    item make_item(const item_id id, const uint_fast8_t count)
+    inline item make_item(const item_id id, const uint_fast8_t count)
     {
         // Make a standard item
         item it(id, count);
@@ -357,15 +361,18 @@ class inventory
         // Return standard item
         return it;
     }
-    item make_item(const item_id id, const uint_fast8_t count, const uint_fast8_t p_stat, const uint_fast8_t s_stat, const uint_fast8_t i_lvl)
+    inline item make_item(const item_id id, const uint_fast8_t count, const uint_fast8_t p_stat, const uint_fast8_t s_stat, const uint_fast8_t i_lvl)
     {
         // Return item
         return item(id, count, p_stat, s_stat, i_lvl);
     }
-    void set_store()
+    inline void set_inventory()
     {
-        _inv[begin_store()] = make_item(item_id::BEAM, 1, 5, 5, 5);
+        _inv[begin_key()] = make_item(item_id::BAR_FE, 1);
+        _inv[begin_key() + 1] = make_item(item_id::BAR_AU, 1);
+        _inv[begin_key() + 2] = make_item(item_id::BAR_SI, 1);
     }
+    inline void set_store() {}
     inline bool stack(const size_t one, const size_t two)
     {
         // Try to stack items if same type
@@ -412,8 +419,8 @@ class inventory
         // Reserve memory for update buffer
         _update.reserve(_max_slots);
 
-        // Create items in the store
-        set_store();
+        // Create items in the inventory
+        set_inventory();
     }
     inline const item &operator[](const size_t index) const
     {
@@ -898,67 +905,78 @@ class inventory
         const size_t lower = _craft[0].index();
         const size_t middle = _craft[1].index();
         const size_t higher = _craft[2].index();
-        uint_fast8_t low_count = 4 * mult;
-        uint_fast8_t mid_count = 4 * mult;
-        uint_fast8_t high_count = 4 * mult;
+        uint_fast8_t low_count = mult;
+        uint_fast8_t mid_count = mult;
+        uint_fast8_t high_count = mult;
+        uint_fast8_t low_count_4 = mult * 4;
+        uint_fast8_t mid_count_4 = mult * 4;
+        uint_fast8_t high_count_4 = mult * 4;
         uint_fast8_t up_count = mult;
 
         // How many items to craft
         uint_fast8_t add_count = mult;
 
         // Urea
-        if (consume3(lower, item_id::SHARD_B, low_count,
-                     middle, item_id::CAT_NH4, mid_count,
-                     higher, item_id::POWD_CHARCOAL, high_count))
+        if (consume3(lower, item_id::SHARD_B, low_count_4,
+                     middle, item_id::CAT_NH4, mid_count_4,
+                     higher, item_id::POWD_CHARCOAL, high_count_4))
         {
             return add(item_id::POWD_UREA, add_count);
         }
 
         // Battery
-        else if (consume3(lower, item_id::BAR_NA, low_count,
-                          middle, item_id::ACID_H2SO4, mid_count,
-                          higher, item_id::POWD_SALT, high_count))
+        else if (consume3(lower, item_id::BAR_NA, low_count_4,
+                          middle, item_id::ACID_H2SO4, mid_count_4,
+                          higher, item_id::POWD_SALT, high_count_4))
         {
             add_count = mult * 2;
             return add(item_id::CONS_BATTERY, add_count);
         }
 
+        // Beam
+        else if (consume3(lower, item_id::BAR_FE, low_count,
+                          middle, item_id::BAR_AU, mid_count,
+                          higher, item_id::BAR_SI, high_count))
+        {
+            return add(item_id::BEAM, add_count);
+        }
+
         // Auto beam
         else if (consume3(lower, item_id::BEAM, up_count,
-                          middle, item_id::BAR_CU, mid_count,
-                          higher, item_id::CONS_BATTERY, high_count))
+                          middle, item_id::BAR_CU, mid_count_4,
+                          higher, item_id::CONS_BATTERY, high_count_4))
         {
             return add(item_id::AUTO_BEAM, add_count);
         }
 
         // Charge beam
         else if (consume3(lower, item_id::BEAM, up_count,
-                          middle, item_id::BAR_AU, mid_count,
-                          higher, item_id::BAR_SI, high_count))
+                          middle, item_id::BAR_AU, mid_count_4,
+                          higher, item_id::BAR_SI, high_count_4))
         {
             return add(item_id::CHARGE, add_count);
         }
 
         // Grappling Hook
-        else if (consume3(lower, item_id::BAR_FE, low_count,
-                          middle, item_id::BAR_AU, mid_count,
-                          higher, item_id::POWD_RED_PHOS, high_count))
+        else if (consume3(lower, item_id::BAR_FE, low_count_4,
+                          middle, item_id::BAR_AU, mid_count_4,
+                          higher, item_id::POWD_RED_PHOS, high_count_4))
         {
             return add(item_id::GRAPPLE, add_count);
         }
 
         // Jet pack
-        else if (consume3(lower, item_id::BAR_FE, low_count,
-                          middle, item_id::POWD_KNO3, mid_count,
-                          higher, item_id::POWD_UREA, high_count))
+        else if (consume3(lower, item_id::BAR_FE, low_count_4,
+                          middle, item_id::POWD_KNO3, mid_count_4,
+                          higher, item_id::POWD_UREA, high_count_4))
         {
             return add(item_id::JET, add_count);
         }
 
         // Scatter beam
         else if (consume3(lower, item_id::BEAM, up_count,
-                          middle, item_id::BAR_FE, mid_count,
-                          higher, item_id::POWD_UREA, high_count))
+                          middle, item_id::BAR_FE, mid_count_4,
+                          higher, item_id::POWD_UREA, high_count_4))
         {
             return add(item_id::SCATTER, add_count);
         }

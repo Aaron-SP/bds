@@ -27,6 +27,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <kernel/mandelbulb_exp.h>
 #include <kernel/mandelbulb_sym.h>
 #include <kernel/terrain_base.h>
+#include <kernel/terrain_creative.h>
 #include <kernel/terrain_height.h>
 #include <min/serial.h>
 #include <min/strtoken.h>
@@ -191,7 +192,28 @@ class cgrid_generator
         // Convert cells to mesh in parallel
         work_queue::worker.run(std::cref(work), 0, grid.size());
     }
-    void generate_world(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size)
+    void generate_creative(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size)
+    {
+        // Reseed the generator
+        work_queue::worker.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+
+        // Wake up the threads for processing
+        work_queue::worker.wake();
+
+        // Clear out the old grid
+        clear_grid(_back);
+
+        // Calculates perlin noise
+        kernel::terrain_creative creative(scale);
+        creative.generate(work_queue::worker, _back);
+
+        // Copy data from back to front buffer
+        copy(grid);
+
+        // Put the threads back to sleep
+        work_queue::worker.sleep();
+    }
+    void generate_normal(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size)
     {
         // Reseed the generator
         work_queue::worker.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());

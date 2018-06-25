@@ -75,11 +75,68 @@ class title
     {
         return _win;
     }
+    void menu_empty_save(const size_t index)
+    {
+        // Set menu index to empty save
+        game::ui_menu &menu = _ui->get_menu();
+        menu.set_string_empty_save(index);
+
+        // Reset the menu
+        const auto f = [this]() -> void {
+            this->reset_menu();
+        };
+
+        // Set the save callback
+        menu.set_callback(index, f);
+    }
+    void menu_launch_game()
+    {
+        // Load the keymap
+        _keymap->load(_opt->get_save_slot());
+
+        // Reset the game
+        reset_game();
+
+        // Advance to the game controller
+        set_show_title(false);
+
+        // Disable user input
+        _state->set_user_input(false);
+    }
+    void menu_load_game(const size_t index)
+    {
+        // Set the save slot
+        _opt->set_save_slot(index);
+
+        // Load the world
+        _world->load(*_opt);
+
+        // Launch game
+        menu_launch_game();
+    }
+    void menu_new_game(const size_t index)
+    {
+        // Set the save slot
+        _opt->set_save_slot(index);
+    }
+    void menu_new_game_mode(const size_t game_mode)
+    {
+        // Convert index to game mode
+        const game_type mode = static_cast<game_type>(game_mode);
+
+        // Set the game mode
+        _opt->set_game_mode(mode);
+
+        // Load new game
+        _world->new_game(*_opt);
+
+        // Launch game
+        menu_launch_game();
+    }
     game::menu_call menu_new_game_call()
     {
-        // Create resume callback
+        // Set the next level menu
         return [this]() -> void {
-            // Set the next level menu
             game::ui_menu &menu = this->_ui->get_menu();
             menu.reset_save_menu();
 
@@ -89,23 +146,24 @@ class title
                 if (!exists_file("save/state." + std::to_string(i)))
                 {
                     const auto f = [this, i]() -> void {
-                        // Set the save slot
-                        this->_opt->set_save_slot(i);
+                        this->menu_new_game(i);
 
-                        // Start new game
-                        this->_world->new_game(*this->_opt);
+                        // Set the next level menu
+                        game::ui_menu &menu = this->_ui->get_menu();
+                        menu.reset_game_mode_menu();
 
-                        // Load the keymap
-                        this->_keymap->load(i);
+                        const size_t begin = id_value(game_type::NORMAL);
+                        const size_t end = id_value(game_type::CREATIVE) + 1;
+                        for (size_t j = begin; j < end; j++)
+                        {
+                            // Set game mode
+                            const auto g = [this, j]() -> void {
+                                this->menu_new_game_mode(j);
+                            };
 
-                        // Reset the game
-                        this->reset_game();
-
-                        // Advance to the game controller
-                        this->set_show_title(false);
-
-                        // Disable user input
-                        this->_state->set_user_input(false);
+                            // Set the mode callback
+                            this->_ui->get_menu().set_callback(j, g);
+                        }
                     };
 
                     // Set the save callback
@@ -129,23 +187,7 @@ class title
                 if (exists_file("save/state." + std::to_string(i)))
                 {
                     const auto f = [this, i]() -> void {
-                        // Set the save slot
-                        this->_opt->set_save_slot(i);
-
-                        // Load the world
-                        this->_world->load(*this->_opt);
-
-                        // Load the keymap
-                        this->_keymap->load(i);
-
-                        // Reset the game
-                        this->reset_game();
-
-                        // Advance to the game controller
-                        this->set_show_title(false);
-
-                        // Disable user input
-                        this->_state->set_user_input(false);
+                        this->menu_load_game(i);
                     };
 
                     // Set the save callback
@@ -153,15 +195,7 @@ class title
                 }
                 else
                 {
-                    menu.set_string_empty_save(i);
-
-                    // Reset the menu
-                    const auto f = [this]() -> void {
-                        this->reset_menu();
-                    };
-
-                    // Set the save callback
-                    menu.set_callback(i, f);
+                    this->menu_empty_save(i);
                 }
             }
         };
@@ -183,17 +217,8 @@ class title
                         // If deleted save
                         if (erase_save(i))
                         {
-                            game::ui_menu &menu = this->_ui->get_menu();
-                            menu.set_string_empty_save(i);
-
-                            // Reset the menu
-                            const auto f = [this]() -> void {
-                                this->reset_menu();
-                            };
-
-                            // Set the save callback
-                            menu.set_callback(i, f);
-                            menu.make_dirty();
+                            this->menu_empty_save(i);
+                            this->_ui->get_menu().make_dirty();
                         }
                     };
 
@@ -202,15 +227,7 @@ class title
                 }
                 else
                 {
-                    menu.set_string_empty_save(i);
-
-                    // Reset the menu
-                    const auto f = [this]() -> void {
-                        this->reset_menu();
-                    };
-
-                    // Set the save callback
-                    menu.set_callback(i, f);
+                    this->menu_empty_save(i);
                 }
             }
         };

@@ -21,6 +21,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <game/block_adder.h>
 #include <game/callback.h>
 #include <game/cgrid.h>
 #include <game/chests.h>
@@ -70,6 +71,7 @@ class world
 
     // Terrain stuff
     load_state _state;
+    block_adder _adder;
     cgrid _grid;
     terrain _terrain;
     particle *const _particles;
@@ -910,6 +912,7 @@ class world
   public:
     world(const options &opt, particle &particles, sound &s, const uniforms &uniforms)
         : _state(opt),
+          _adder(opt.grid()),
           _grid(opt.chunk(), opt.grid(), opt.view()),
           _terrain(uniforms, _grid.get_chunks(), opt.chunk()),
           _particles(&particles),
@@ -966,7 +969,7 @@ class world
         _state = load_state(opt);
 
         // Load the grid
-        _grid.new_game();
+        _grid.new_game(opt);
     }
     inline void reset(const options &opt)
     {
@@ -1002,12 +1005,16 @@ class world
         // Update chunks
         update_all_chunks();
     }
-    inline void add_block(const min::ray<float, min::vec3> &r)
+    inline void add_block()
     {
         // Add to grid
         if (_swatch_mode)
         {
             _grid.set_geometry(_swatch, _preview);
+        }
+        else if ((_scale.x() == 1) && (_scale.y() == 1) && (_scale.z() == 1))
+        {
+            _adder.add_block(_grid, _preview, _atlas_id);
         }
         else
         {
