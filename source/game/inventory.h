@@ -661,6 +661,7 @@ class inventory
         }
         else if (consume2(lower, item_id::POWD_CHARCOAL, low_count, higher, item_id::POWD_KNO3, high_count))
         {
+            add_count = 4 * mult;
             return add(item_id::GRENADE, add_count);
         }
         else if (consume2(lower, item_id::CAT_K, low_count, higher, item_id::AN_NO3, high_count))
@@ -817,17 +818,17 @@ class inventory
         }
         else if (consume2(lower, item_id::SHARD_G, low_count, higher, item_id::POWD_RUST, high_count))
         {
-            add_count = 8;
+            add_count = 8 * mult;
             return add(item_id::CONS_OXYGEN, add_count);
         }
         else if (consume2(lower, item_id::SHARD_G, low_count, higher, item_id::POWD_CAL_CARB, high_count))
         {
-            add_count = 8;
+            add_count = 8 * mult;
             return add(item_id::CONS_OXYGEN, add_count);
         }
         else if (consume2(lower, item_id::SHARD_G, low_count, higher, item_id::POWD_MAG_CARB, high_count))
         {
-            add_count = 8;
+            add_count = 8 * mult;
             return add(item_id::CONS_OXYGEN, add_count);
         }
 
@@ -876,7 +877,7 @@ class inventory
         // Missiles
         else if (consume2(lower, item_id::BAR_FE, low_count, higher, item_id::BAR_NA, high_count))
         {
-            uint_fast8_t add_count = 4 * mult;
+            add_count = 4 * mult;
             return add(item_id::MISSILE, add_count);
         }
         // Keys

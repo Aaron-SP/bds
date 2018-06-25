@@ -218,12 +218,6 @@ class title
     game::menu_call menu_quit_game_call()
     {
         return [this]() -> void {
-            // Save the world
-            this->_world->save(*this->_opt, this->_state->get_camera());
-
-            // Save the keymap
-            this->_keymap->save(this->_opt->get_save_slot(), *this->_win);
-
             // Return to title
             this->set_show_title(false);
 

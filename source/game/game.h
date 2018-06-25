@@ -115,7 +115,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.275");
+        _ui.text().set_debug_version("VERSION: 0.1.276");
 
         // Set the game mode
         const bool hardcore = _world.get_load_state().is_hardcore();

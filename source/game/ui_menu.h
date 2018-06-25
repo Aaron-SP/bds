@@ -36,6 +36,7 @@ class ui_menu
     const std::string _delete;
     const std::string _back;
     const std::string _title;
+    const std::string _save_quit;
     const std::string _quit;
     const std::string _controls;
     const std::string _menu_back;
@@ -55,7 +56,7 @@ class ui_menu
   public:
     ui_menu()
         : _start("New Game"), _load("Load Game"), _delete("Delete Game"), _back("Back to Game"), _title("Return to Title"),
-          _quit("Save and Exit Game"), _controls("Controls"), _menu_back("Back"),
+          _save_quit("Save and Exit Game"), _quit("Exit Game"), _controls("Controls"), _menu_back("Back"),
           _slot0("Slot 1"), _slot1("Slot 2"), _slot2("Slot 3"), _slot3("Slot 4"), _slot4("Slot 5"),
           _empty_save("Empty"), _empty(),
           _prefix{}, _str{}, _callback{}, _extended(false), _dirty(true)
@@ -83,7 +84,7 @@ class ui_menu
         // Set the default menu strings
         _str[0] = &_back;
         _str[1] = &_title;
-        _str[2] = &_quit;
+        _str[2] = &_save_quit;
         _str[3] = &_controls;
         _str[4] = &_empty;
 

@@ -314,7 +314,7 @@ class particle
           _miss(_miss_limit), _miss_old(0),
           _static(_static_limit), _static_old(0),
           _attract_index(-1),
-          _charge_time(-1)
+          _charge_time(-1.0)
     {
         // Load all missile particle systems
         for (size_t i = 0; i < _miss_limit; i++)

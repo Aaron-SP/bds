@@ -592,11 +592,9 @@ class cgrid
     inline void reset()
     {
         // Clear out all vectors
-        _visit.clear();
         _neighbors.clear();
         _path.clear();
         _stack.clear();
-        _chunk_update.clear();
         _chunk_update_keys.clear();
         _sort_chunk.clear();
         _view_chunks.clear();
