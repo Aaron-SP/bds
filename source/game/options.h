@@ -32,13 +32,25 @@ enum class key_map_type
     DVORAK
 };
 
+enum class game_type : uint_fast8_t
+{
+    NORMAL = 0,
+    HARDCORE = 1,
+    CREATIVE = 2
+};
+
+inline constexpr uint_fast8_t id_value(const game_type id)
+{
+    return static_cast<uint_fast8_t>(id);
+}
+
 class options
 {
   private:
     size_t _chunk;
     size_t _frames;
     size_t _grid;
-    uint_fast8_t _mode;
+    game_type _mode;
     size_t _slot;
     size_t _view;
     uint_fast16_t _width;
@@ -50,7 +62,7 @@ class options
   public:
     options()
         : _chunk(8), _frames(60), _grid(64),
-          _mode(2), _slot(0), _view(5),
+          _mode(game_type::NORMAL), _slot(0), _view(5),
           _width(1024), _height(768),
           _map(key_map_type::QWERTY), _persist(true), _resize(true) {}
 
@@ -72,11 +84,6 @@ class options
             std::cout << "bds: '-view' must be atleast 3" << std::endl;
             return true;
         }
-        else if (_mode > 2)
-        {
-            std::cout << "bds: '-hardcore' must be 0 or 1" << std::endl;
-            return true;
-        }
 
         // No errors
         return false;
@@ -88,6 +95,10 @@ class options
     inline size_t frames() const
     {
         return _frames;
+    }
+    inline game_type get_game_mode() const
+    {
+        return _mode;
     }
     inline size_t get_save_slot() const
     {
@@ -121,10 +132,6 @@ class options
     {
         return _map == key_map_type::QWERTY;
     }
-    inline uint_fast8_t mode() const
-    {
-        return _mode;
-    }
     inline bool resize() const
     {
         return _resize;
@@ -141,7 +148,7 @@ class options
     {
         _grid = grid;
     }
-    inline void set_mode(const uint_fast8_t mode)
+    inline void set_game_mode(const game_type mode)
     {
         _mode = mode;
     }

@@ -30,6 +30,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/id.h>
 #include <game/load_state.h>
 #include <game/missiles.h>
+#include <game/options.h>
 #include <game/particle.h>
 #include <game/player.h>
 #include <game/sky.h>
@@ -948,19 +949,16 @@ class world
         // Reserve space for used vectors
         reserve_memory(opt.view());
     }
-    inline void load(const options &opt)
+    inline void load(options &opt)
     {
         // Reset the load state
         _state = load_state(opt);
 
-        // Get the save slot
-        const size_t save_index = opt.get_save_slot();
-
         // Load the state
-        _state.load(save_index);
+        _state.load(opt);
 
         // Load the grid
-        _grid.load(save_index);
+        _grid.load(opt);
     }
     inline void new_game(const options &opt)
     {
@@ -1251,10 +1249,10 @@ class world
     {
         _player.get_inventory().random_item();
     }
-    inline void respawn()
+    inline void respawn(const options &opt)
     {
         // Respawn player
-        _player.respawn(_state);
+        _player.respawn(opt);
 
         // Spawn character position
         _player.set_position(ray_spawn(_state.get_default_spawn()));
@@ -1289,14 +1287,11 @@ class world
         // Set the state
         _state.set_state(_player.position(), cam, _player.get_inventory(), _player.get_stats(), _instance);
 
-        // Get the save slot
-        const size_t save_index = opt.get_save_slot();
-
         // Save the state
-        _state.save_state(save_index);
+        _state.save(opt);
 
         // Save the world state
-        _grid.save(save_index);
+        _grid.save(opt);
     }
     template <typename R>
     inline size_t scatter_ray(const min::vec3<unsigned> &scale, const float size, const R &ray_call)

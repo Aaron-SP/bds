@@ -76,6 +76,13 @@ void show_title(bds &game, min::loop_sync &sync, const size_t frames)
 
 void show_game(bds &game, min::loop_sync &sync, const size_t frames)
 {
+    // Break out if we close the game in title screen
+    bool running = !game.is_closed() && !game.is_show_title();
+    if (!running)
+    {
+        return;
+    }
+
     // Register the game callbacks
     game.title_screen_disable();
 
@@ -83,7 +90,6 @@ void show_game(bds &game, min::loop_sync &sync, const size_t frames)
     double frame_time = 0.0;
 
     // User can close game or return to title
-    bool running = !game.is_closed() && !game.is_show_title();
     while (running)
     {
         for (size_t i = 0; i < frames; i++)
@@ -223,6 +229,18 @@ int main(int argc, char *argv[])
             {
                 opt.set_no_persist();
             }
+            else if (input.compare("--normal") == 0)
+            {
+                opt.set_game_mode(game::game_type::NORMAL);
+            }
+            else if (input.compare("--hardcore") == 0)
+            {
+                opt.set_game_mode(game::game_type::HARDCORE);
+            }
+            else if (input.compare("--creative") == 0)
+            {
+                opt.set_game_mode(game::game_type::CREATIVE);
+            }
             else if (i < (argc - 1))
             {
                 if (input.compare("-fps") == 0)
@@ -273,14 +291,6 @@ int main(int argc, char *argv[])
                     {
                         opt.set_height(static_cast<uint_fast16_t>(parse));
                         opt.set_resize(false);
-                    }
-                }
-                else if (input.compare("-hardcore") == 0)
-                {
-                    // Parse uint
-                    if (parse_uint(argv[++i], parse))
-                    {
-                        opt.set_mode(static_cast<uint_fast8_t>(parse));
                     }
                 }
                 else

@@ -64,7 +64,6 @@ class load_state
     min::vec3<float> _default_look;
     min::vec3<float> _default_up;
     min::vec3<float> _top;
-    int_fast8_t _game_mode;
     bool _new_game;
     game_state _state;
 
@@ -116,7 +115,6 @@ class load_state
           _default_look(1.0, _grid_size * 0.75, 0.0),
           _default_up(0.0, 1.0, 0.0),
           _top(0.0, _grid_size - 1.0, 0.0),
-          _game_mode(opt.mode()),
           _new_game(true),
           _state(_default_spawn, _default_look, _default_up)
     {
@@ -147,10 +145,6 @@ class load_state
     inline const min::vec3<float> &get_top() const
     {
         return _top;
-    }
-    inline bool is_hardcore() const
-    {
-        return _game_mode == 1;
     }
     inline bool is_new_game() const
     {
@@ -200,13 +194,13 @@ class load_state
     {
         return _state.chest;
     }
-    inline void load(const size_t index)
+    inline void load(options &opt)
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
 
         // Load data into stream from file
-        load_file("save/state." + std::to_string(index), stream);
+        load_file("save/state." + std::to_string(opt.get_save_slot()), stream);
 
         // If load failed dont try to parse stream data
         if (stream.size() != 0)
@@ -233,24 +227,8 @@ class load_state
             }
 
             // Load the game mode
-            const int_fast8_t game_mode = min::read_le<uint8_t>(stream, next);
-            if (_game_mode == 2)
-            {
-                // Keep the loaded flag
-                _game_mode = game_mode;
-            }
-            else if (_game_mode != game_mode)
-            {
-                // Alert mode switch to user
-                if (_game_mode == 1)
-                {
-                    std::cout << "Switching game mode to HARDCORE!" << std::endl;
-                }
-                else
-                {
-                    std::cout << "Switching game mode to NORMAL!" << std::endl;
-                }
-            }
+            const game_type game_mode = static_cast<game_type>(min::read_le<uint8_t>(stream, next));
+            opt.set_game_mode(game_mode);
 
             // Read position from stream
             const float x = min::read_le<float>(stream, next);
@@ -292,10 +270,10 @@ class load_state
             for (size_t i = start; i < end; i++)
             {
                 const item_id id = static_cast<item_id>(min::read_le<uint8_t>(stream, next));
-                const int_fast8_t count = min::read_le<uint8_t>(stream, next);
-                const int_fast8_t prim = min::read_le<uint8_t>(stream, next);
-                const int_fast8_t sec = min::read_le<uint8_t>(stream, next);
-                const int_fast8_t level = min::read_le<uint8_t>(stream, next);
+                const uint_fast8_t count = min::read_le<uint8_t>(stream, next);
+                const uint_fast8_t prim = min::read_le<uint8_t>(stream, next);
+                const uint_fast8_t sec = min::read_le<uint8_t>(stream, next);
+                const uint_fast8_t level = min::read_le<uint8_t>(stream, next);
                 _state.inventory.emplace_back(id, count, prim, sec, level);
             }
 
@@ -336,7 +314,7 @@ class load_state
             }
         }
     }
-    inline void save_state(const size_t index)
+    inline void save(const options &opt)
     {
         // Create output stream for saving world
         std::vector<uint8_t> stream;
@@ -348,7 +326,7 @@ class load_state
         min::write_le<uint32_t>(stream, _grid_size);
 
         // Write the game mode into stream
-        min::write_le<uint8_t>(stream, _game_mode);
+        min::write_le<uint8_t>(stream, id_value(opt.get_game_mode()));
 
         // Write position into stream
         min::write_le<float>(stream, _state.position.x());
@@ -406,7 +384,7 @@ class load_state
         }
 
         // Write data to file
-        save_file("save/state." + std::to_string(index), stream);
+        save_file("save/state." + std::to_string(opt.get_save_slot()), stream);
     }
     inline void set_state(const min::vec3<float> &p, const min::camera<float> &camera, const inventory &inv, const stats &stat, const static_instance &si)
     {

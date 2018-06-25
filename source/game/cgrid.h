@@ -869,13 +869,13 @@ class cgrid
         // Reserve memory
         reserve_memory();
     }
-    inline void load(const size_t index)
+    inline void load(const options &opt)
     {
         // Reset the grid
         reset();
 
         // Load the world
-        world_load(index);
+        world_load(opt.get_save_slot());
     }
     inline void new_game()
     {
@@ -884,6 +884,20 @@ class cgrid
 
         // Load the world
         world_create();
+    }
+    inline void save(const options &opt)
+    {
+        // Create output stream for saving world
+        std::vector<uint8_t> stream;
+
+        // Reserve space for grid
+        stream.reserve(_grid.size() * sizeof(block_id));
+
+        // Write data into stream
+        min::write_le_vector<block_id>(stream, _grid);
+
+        // Write data to file
+        save_file("save/world." + std::to_string(opt.get_save_slot()), stream);
     }
     static inline min::aabbox<float, min::vec3> grid_box(const min::vec3<float> &p)
     {
@@ -1437,20 +1451,6 @@ class cgrid
     inline bool is_update_chunk(const size_t chunk_key) const
     {
         return _chunk_update[chunk_key];
-    }
-    inline void save(const size_t index)
-    {
-        // Create output stream for saving world
-        std::vector<uint8_t> stream;
-
-        // Reserve space for grid
-        stream.reserve(_grid.size() * sizeof(block_id));
-
-        // Write data into stream
-        min::write_le_vector<block_id>(stream, _grid);
-
-        // Write data to file
-        save_file("save/world." + std::to_string(index), stream);
     }
     inline void update_chunk(const size_t chunk_key)
     {

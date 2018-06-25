@@ -23,6 +23,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/id.h>
 #include <game/inventory.h>
 #include <game/load_state.h>
+#include <game/options.h>
 #include <game/skills.h>
 #include <game/sound.h>
 #include <game/stats.h>
@@ -611,10 +612,10 @@ class player
         _exploded = false;
         _explode_id = block_id::EMPTY;
     }
-    inline void respawn(const load_state &state)
+    inline void respawn(const options &opt)
     {
         // Reset inventory
-        _inv.respawn(state.is_hardcore());
+        _inv.respawn(opt.get_game_mode() == game_type::HARDCORE);
 
         // Reset explode settings
         reset_explode();

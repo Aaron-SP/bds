@@ -115,11 +115,27 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.276");
-
+        _ui.text().set_debug_version("VERSION: 0.1.278");
+    }
+    void load_game_mode()
+    {
         // Set the game mode
-        const bool hardcore = _world.get_load_state().is_hardcore();
-        _ui.text().set_debug_game_mode((hardcore) ? "HARDCORE MODE" : "NORMAL MODE");
+        const game::game_type gt = _opt.get_game_mode();
+        if (gt == game::game_type::NORMAL)
+        {
+            std::cout << "Loading game in NORMAL mode" << std::endl;
+            _ui.text().set_debug_game_mode("NORMAL MODE");
+        }
+        else if (gt == game::game_type::HARDCORE)
+        {
+            std::cout << "Loading game in HARDCORE mode" << std::endl;
+            _ui.text().set_debug_game_mode("HARDCORE MODE");
+        }
+        else if (gt == game::game_type::CREATIVE)
+        {
+            std::cout << "Loading game in CREATIVE mode" << std::endl;
+            _ui.text().set_debug_game_mode("CREATIVE MODE");
+        }
     }
     void update_alerts()
     {
@@ -153,7 +169,7 @@ class bds
         if (_state.is_respawn())
         {
             // Refresh the world exploded flag
-            _world.respawn();
+            _world.respawn(_opt);
 
             // Refresh state
             _state.respawn(_world.get_load_state());
@@ -309,6 +325,9 @@ class bds
 
         // Delete the mem-file data
         game::memory_map::memory.clear();
+
+        // Load GPU info
+        load_gpu_info();
     }
     void blink_console_message()
     {
@@ -390,7 +409,7 @@ class bds
         _controls.enable();
 
         // Load gpu information
-        load_gpu_info();
+        load_game_mode();
 
         // Center cursor
         center_cursor();
