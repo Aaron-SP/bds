@@ -81,23 +81,6 @@ inline void block_uv(std::vector<min::vec2<float>> &uv, size_t i)
     uv[i++] = min::vec2<float>(1.0, 0.0);
     uv[i++] = min::vec2<float>(1.0, 1.0);
 }
-static inline void block_uv_scale(std::vector<min::vec2<float>> &uv, const size_t index, const int_fast8_t atlas_id)
-{
-    // Calculate grid index
-    const size_t col = atlas_id % 8;
-    const size_t row = atlas_id / 8;
-    const float x_offset = 0.001 + 0.125 * col;
-    const float y_offset = 0.001 + (1.0 - 0.125 * (row + 1));
-
-    // Scale at uv's in place
-    const size_t end = index + 24;
-    for (size_t i = index; i < end; i++)
-    {
-        uv[i] *= 0.124;
-        uv[i].x(uv[i].x() + x_offset);
-        uv[i].y(uv[i].y() + y_offset);
-    }
-}
 inline void block_normal(std::vector<min::vec3<float>> &normal, size_t i)
 {
     normal[i++] = min::vec3<float>(0.0, -1.0, 0.0);

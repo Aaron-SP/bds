@@ -657,6 +657,7 @@ class inventory
         const size_t higher = _craft[1].index();
         uint_fast8_t low_count = mult;
         uint_fast8_t high_count = mult;
+        uint_fast8_t high_count_16 = mult * 16;
 
         // How many items to craft
         uint_fast8_t add_count = mult;
@@ -879,6 +880,52 @@ class inventory
         else if (consume2(lower, item_id::BLK_AG, low_count, higher, item_id::SHARD_R, high_count))
         {
             return add(item_id::BAR_SI, add_count);
+        }
+
+        // Purple shard recipes
+        else if (consume2(lower, item_id::AUTO_BEAM, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::AUTO_BEAM, add_count);
+        }
+        else if (consume2(lower, item_id::BEAM, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::BEAM, add_count);
+        }
+        else if (consume2(lower, item_id::CHARGE, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::CHARGE, add_count);
+        }
+        else if (consume2(lower, item_id::GRAPPLE, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::GRAPPLE, add_count);
+        }
+        else if (consume2(lower, item_id::GRENADE, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::GRENADE, add_count);
+        }
+        else if (consume2(lower, item_id::JET, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::JET, add_count);
+        }
+        else if (consume2(lower, item_id::MISSILE, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::MISSILE, add_count);
+        }
+        else if (consume2(lower, item_id::PORTAL, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::PORTAL, add_count);
+        }
+        else if (consume2(lower, item_id::SCAN, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::SCAN, add_count);
+        }
+        else if (consume2(lower, item_id::SCATTER, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::SCATTER, add_count);
+        }
+        else if (consume2(lower, item_id::SPEED, low_count, higher, item_id::SHARD_P, high_count_16))
+        {
+            return add(item_id::SPEED, add_count);
         }
 
         // Missiles

@@ -37,7 +37,12 @@ class block_adder
         {
             const auto above = std::make_tuple(std::get<0>(t), std::get<1>(t) + 1, std::get<2>(t));
             const size_t above_key = grid.get_block_key(above);
-            grid.set_block_id(above_key, atlas);
+
+            // Only set if empty
+            if (grid.get_block_id(above_key) == block_id::EMPTY)
+            {
+                grid.set_block_id(above_key, atlas);
+            }
         }
     }
     inline void interaction(
@@ -52,7 +57,32 @@ class block_adder
         // Lookup interaction
         switch (placed_atlas)
         {
-        // Placing wood
+            // Placing grass
+        case block_id::GRASS1:
+        case block_id::GRASS2:
+        {
+            switch (old_atlas)
+            {
+            case block_id::DIRT1:
+            {
+                const size_t placed_key = grid.get_block_key(placed);
+                grid.set_block_id(placed_key, old_atlas);
+                set_above(grid, old, placed_atlas);
+                break;
+            }
+            case block_id::DIRT2:
+            {
+                const size_t placed_key = grid.get_block_key(placed);
+                grid.set_block_id(placed_key, old_atlas);
+                set_above(grid, old, placed_atlas);
+                break;
+            }
+            default:
+                break;
+            }
+            break;
+        }
+        // Placing leaf
         case block_id::LEAF1:
         case block_id::LEAF2:
         case block_id::LEAF3:
@@ -65,7 +95,8 @@ class block_adder
             {
                 const size_t placed_key = grid.get_block_key(placed);
                 grid.set_block_id(placed_key, block_id::WOOD1);
-                set_above(grid, placed, placed_atlas);
+                set_above(grid, old, placed_atlas);
+                set_above(grid, placed, block_id::WOOD1);
                 break;
             }
             case block_id::DIRT2:
@@ -73,7 +104,8 @@ class block_adder
             {
                 const size_t placed_key = grid.get_block_key(placed);
                 grid.set_block_id(placed_key, block_id::WOOD2);
-                set_above(grid, placed, placed_atlas);
+                set_above(grid, old, placed_atlas);
+                set_above(grid, placed, block_id::WOOD2);
                 break;
             }
             case block_id::CLAY1:
