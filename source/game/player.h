@@ -509,8 +509,7 @@ class player
 
             // Get the current position and set y movement to zero
             const min::vec3<float> xz(_forward.x(), 0.0, _forward.z());
-            const min::vec3<float> zero;
-            const min::vec3<float> dxz = min::vec3<float>(xz).normalize_safe(zero);
+            const min::vec3<float> dxz = min::vec3<float>(xz).normalize();
 
             // Add force to the player body
             force(dxz * 3000.0);
@@ -578,8 +577,7 @@ class player
         {
             // Get the current position and set y movement to zero
             const min::vec3<float> xz(vel.x(), 0.0, vel.z());
-            const min::vec3<float> zero;
-            const min::vec3<float> dxz = min::vec3<float>(xz).normalize_safe(zero);
+            const min::vec3<float> dxz = min::vec3<float>(xz).normalize();
 
             // Add force to player body
             force(dxz * 30.0);

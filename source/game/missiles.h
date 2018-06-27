@@ -275,7 +275,7 @@ class missiles
             _inst->get_missile().update_position(inst_id, p);
 
             // Set particle position slightly behind the rocket opposing body velocity
-            const min::vec3<float> dir = min::vec3<float>(velocity(i)).normalize_safe(min::vec3<float>());
+            const min::vec3<float> dir = min::vec3<float>(velocity(i)).normalize();
             const min::vec3<float> offset = p - dir * 0.25;
             _part->set_miss_launch_position(part_id, offset);
 
