@@ -1207,7 +1207,7 @@ class cgrid
         const auto edges = std::tuple<size_t, size_t, size_t>(length.x() - 1, length.y() - 1, length.z() - 1);
 
         // Function to retrieve block value
-        const auto get_block = [this, &sw](const std::tuple<size_t, size_t, size_t> &t) -> block_id {
+        const auto get_block = [&sw](const std::tuple<size_t, size_t, size_t> &t) -> block_id {
             // Get the block atlas
             const block_id atlas = sw.get(std::get<0>(t), std::get<1>(t), std::get<2>(t));
 

@@ -561,7 +561,7 @@ class particle
         // Generate particles in a line
         size_t count = 0;
         const min::vec3<float> spacing = (_line_pos - cam_pos) * _inv_static_count;
-        const auto f = [this, &cam_pos, &count, &spacing, &stat](min::vec3<float> &position, min::vec3<float> &speed, const float accum, const float inv_mass) -> void {
+        const auto f = [&cam_pos, &count, &spacing, &stat](min::vec3<float> &position, min::vec3<float> &speed, const float accum, const float inv_mass) -> void {
             // Calculate particle density
             const float density = (3.75E-6 * count) + 0.00125;
 
@@ -597,7 +597,7 @@ class particle
 
         // Generate particles in a line
         size_t count = 0;
-        const auto f = [this, &cam, &cam_pos, &count, &stat](min::vec3<float> &position, min::vec3<float> &speed, const float accum, const float inv_mass) -> void {
+        const auto f = [&cam, &cam_pos, &count](min::vec3<float> &position, min::vec3<float> &speed, const float accum, const float inv_mass) -> void {
             // Spiral properties
             const float R = 0.5;
             const float t = accum * count * 0.05;
