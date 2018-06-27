@@ -7,6 +7,12 @@ This package is the source code distribution of the Beyond Dying Skies, hence ab
 A GNU makefile is available for compilation with GCC/MINGW for win32 platforms or GCC/X11 for linux platforms. 
 The makefile should work for both environments without modification. 
 
+### Main Project Site
+[Main Project Site](https://aaron-sp.github.io/index.html)
+
+### YouTube Channel!
+[![BDS Youtube](https://img.youtube.com/vi/kFtGP4A2ehM/0.jpg)](https://www.youtube.com/watch?v=kFtGP4A2ehM)
+
 ### PKGBUILD
 
 If you are running Arch Linux, I have created PKGBUILD's for this project located at https://github.com/Aaron-SP/pkgbuild/blob/master/bds/PKGBUILD.
@@ -145,17 +151,17 @@ The '--dvorak' flag changes the default key mapping to DVORAK key map layout.
 
 #### Title Screen
 
-![Alt text](pictures/intro.jpg)
+![Introduction](pictures/intro.jpg)
 
 #### Pre-Texture Update
 
-![Alt text](pictures/spawn.jpg)
+![Old Spawn World](pictures/spawn.jpg)
 
 #### Texture Update
-![Alt text](pictures/up1.jpg)
+![Texture Update](pictures/up1.jpg)
 
 #### Shader Update
-![Alt text](pictures/shaders.jpg)
+![Shader Update](pictures/shaders.jpg)
 
 ### PLAYER USAGE INSTRUCTIONS:
 
