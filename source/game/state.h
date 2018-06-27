@@ -122,7 +122,7 @@ class state
             // Flip direction
             d *= -1.0;
         }
-        d.normalize();
+        d.normalize_safe(min::vec3<float>::up());
 
         // Rotate in zx and y plane
         const min::quat<float> rotzx(y, fup);

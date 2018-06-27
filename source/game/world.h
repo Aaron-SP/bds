@@ -856,57 +856,61 @@ class world
     }
     inline void update_world_physics(const float dt)
     {
-        // Friction Coefficient
+        // Calculate number of physics steps
         const size_t steps = std::round(dt / _time_step);
-        const float friction = -10.0 / steps;
-        const float drop_friction = friction * 2.0;
-
-        // Get player position and player level
-        const min::vec3<float> &p = _player.position();
-        const uint_fast16_t player_level = _player.get_stats().level();
-
-        // Send drones after the player
-        _drones.set_destination(p);
-
-        // Solve all physics timesteps
-        for (size_t i = 0; i < steps; i++)
+        if (steps > 0)
         {
-            // Update the player on this frame
-            _player.update_frame(_grid, friction, explode_default_call());
+            // Friction Coefficient
+            const float friction = -10.0 / steps;
+            const float drop_friction = friction * 2.0;
 
-            // Update chests on this frame
-            _chests.update_frame();
+            // Get player position and player level
+            const min::vec3<float> &p = _player.position();
+            const uint_fast16_t player_level = _player.get_stats().level();
 
-            // Update drones on this frame
-            _drones.update_frame(_grid, player_level, drone_respawn_call(), explode_call(dmg_default_call(), sound_choose_call()));
+            // Send drones after the player
+            _drones.set_destination(p);
 
-            // Update drops on this frame
-            _drops.update_frame(_grid, drop_friction, explode_drop_call());
+            // Solve all physics timesteps
+            for (size_t i = 0; i < steps; i++)
+            {
+                // Update the player on this frame
+                _player.update_frame(_grid, friction, explode_default_call());
 
-            // Update explosives on this frame
-            _explosives.update_frame(_grid, explode_call(dmg_default_call(), sound_choose_call()));
+                // Update chests on this frame
+                _chests.update_frame();
 
-            // Update missiles on this frame
-            _missiles.update_frame(_grid, explode_call(dmg_default_call(), sound_choose_call()));
+                // Update drones on this frame
+                _drones.update_frame(_grid, player_level, drone_respawn_call(), explode_call(dmg_default_call(), sound_choose_call()));
 
-            // Solve all collisions
-            _simulation.solve(_time_step, _damping);
+                // Update drops on this frame
+                _drops.update_frame(_grid, drop_friction, explode_drop_call());
+
+                // Update explosives on this frame
+                _explosives.update_frame(_grid, explode_call(dmg_default_call(), sound_choose_call()));
+
+                // Update missiles on this frame
+                _missiles.update_frame(_grid, explode_call(dmg_default_call(), sound_choose_call()));
+
+                // Solve all collisions
+                _simulation.solve(_time_step, _damping);
+            }
+
+            // Update the chest positions
+            _chests.update();
+
+            // Update the drones positions
+            _drones.update(_grid, p, player_level, launch_missile_call());
+
+            // Update the drop positions
+            _drops.update(_grid, dt);
+
+            // Update the explosive positions
+            _explosives.update(_grid, dt);
+
+            // Update any missiles
+            _missiles.update(_grid);
         }
-
-        // Update the chest positions
-        _chests.update();
-
-        // Update the drones positions
-        _drones.update(_grid, p, player_level, launch_missile_call());
-
-        // Update the drop positions
-        _drops.update(_grid, dt);
-
-        // Update the explosive positions
-        _explosives.update(_grid, dt);
-
-        // Update any missiles
-        _missiles.update(_grid);
     }
 
   public:

@@ -115,7 +115,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.280");
+        _ui.text().set_debug_version("VERSION: 0.1.281");
     }
     void load_game_mode()
     {

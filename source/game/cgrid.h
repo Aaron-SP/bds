@@ -1172,7 +1172,7 @@ class cgrid
         const float float_atlas = static_cast<float>(atlas);
 
         // Calculate max edges
-        const auto edges = std::make_tuple(length.x() - 1, length.y() - 1, length.z() - 1);
+        const auto edges = std::tuple<size_t, size_t, size_t>(length.x() - 1, length.y() - 1, length.z() - 1);
 
         // Create cubic function, for each cell in cubic space
         const auto f = [this, &offset, &edges, float_atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
@@ -1204,7 +1204,7 @@ class cgrid
 
         // Calculate max edges
         const min::vec3<unsigned> &length = sw.get_length();
-        const auto edges = std::make_tuple(length.x() - 1, length.y() - 1, length.z() - 1);
+        const auto edges = std::tuple<size_t, size_t, size_t>(length.x() - 1, length.y() - 1, length.z() - 1);
 
         // Function to retrieve block value
         const auto get_block = [this, &sw](const std::tuple<size_t, size_t, size_t> &t) -> block_id {

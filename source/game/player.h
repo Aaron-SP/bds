@@ -378,7 +378,7 @@ class player
         _stats.damage(_stats.get_max_health() * dmg_frac);
 
         // Calculate collision direction towards player
-        const min::vec3<float> dir = (position() - p).normalize();
+        const min::vec3<float> dir = (position() - p).normalize_safe(min::vec3<float>::up());
 
         // Add a kick force
         force(dir * 1000.0);
