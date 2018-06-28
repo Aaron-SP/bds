@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __ITEM_BLOCK_ID__
 
 #include <cstdint>
+#include <cstdlib>
 
 namespace game
 {
