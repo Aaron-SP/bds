@@ -107,7 +107,7 @@ $(BIN_PCH):
 	g++ $(LIB_SOURCES) $(ARCH) $(HEAD) 2> "pch.txt"
 $(BIN_TEST):
 	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(ARCH) $(CPP) $(TEST) $(LINKER) 2> "test.txt"
-make game:
+make game: $(BIN_PCH)
 	g++ $(LIB_SOURCES) $(ARCH) $(CPP) $(GAME) 2> "game.txt"
 install:
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"
@@ -135,7 +135,6 @@ clean:
 	rm -f $(BIN_GAME)
 	rm -f $(BIN_GLEW)
 	rm -f $(BIN_TEST)
-	rm -f $(BIN_PCH)
 	rm -f $(BIN_PCH)
 clear:
 	rm -f save/keymap.*
