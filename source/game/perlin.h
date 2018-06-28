@@ -31,7 +31,7 @@ class perlin_noise
   private:
     std::array<uint_fast8_t, 512> _p;
 
-    void calc_random_hash_table()
+    inline void calc_random_hash_table()
     {
         std::uniform_int_distribution<uint_fast8_t> idist(0, 255);
         std::mt19937 gen(std::chrono::high_resolution_clock::now().time_since_epoch().count());

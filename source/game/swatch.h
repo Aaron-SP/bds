@@ -44,34 +44,34 @@ class swatch
 
   public:
     swatch() : _b(_size, block_id::EMPTY) {}
-    const min::vec3<unsigned> &get_length() const
+    inline const min::vec3<unsigned> &get_length() const
     {
         return _length;
     }
-    const min::vec3<int> &get_offset() const
+    inline const min::vec3<int> &get_offset() const
     {
         return _offset;
     }
-    block_id get(const size_t i, const size_t j, const size_t k) const
+    inline block_id get(const size_t i, const size_t j, const size_t k) const
     {
         return _b[grid_key_pack(std::make_tuple(i, j, k))];
     }
-    void reset()
+    inline void reset()
     {
         for (size_t i = 0; i < _size; i++)
         {
             _b[i] = block_id::EMPTY;
         }
     }
-    void set_length(const min::vec3<unsigned> &length)
+    inline void set_length(const min::vec3<unsigned> &length)
     {
         _length = length;
     }
-    void set_offset(const min::vec3<int> &offset)
+    inline void set_offset(const min::vec3<int> &offset)
     {
         _offset = offset;
     }
-    void set(const size_t i, const size_t j, const size_t k, const block_id atlas)
+    inline void set(const size_t i, const size_t j, const size_t k, const block_id atlas)
     {
         _b[grid_key_pack(std::make_tuple(i, j, k))] = atlas;
     }

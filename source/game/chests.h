@@ -47,7 +47,7 @@ class chest
     {
         _inst_id--;
     }
-    const min::vec3<float> &get_position() const
+    inline const min::vec3<float> &get_position() const
     {
         return _p;
     }

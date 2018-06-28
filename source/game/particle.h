@@ -45,11 +45,11 @@ class emitter
     {
         _time = -1;
     }
-    min::emitter_buffer<float, GL_FLOAT> &emit()
+    inline min::emitter_buffer<float, GL_FLOAT> &emit()
     {
         return _emit;
     }
-    const min::emitter_buffer<float, GL_FLOAT> &emit() const
+    inline const min::emitter_buffer<float, GL_FLOAT> &emit() const
     {
         return _emit;
     }
@@ -57,23 +57,23 @@ class emitter
     {
         return _in_view;
     }
-    void time_dec(const float dt)
+    inline void time_dec(const float dt)
     {
         _time -= dt;
     }
-    float time() const
+    inline float time() const
     {
         return _time;
     }
-    void set_time(const float time)
+    inline void set_time(const float time)
     {
         _time = time;
     }
-    const min::vec4<float> &ref() const
+    inline const min::vec4<float> &ref() const
     {
         return _ref;
     }
-    void set_ref(const min::vec3<float> &ref)
+    inline void set_ref(const min::vec3<float> &ref)
     {
         _ref.x(ref.x());
         _ref.y(ref.y());
@@ -83,7 +83,7 @@ class emitter
     {
         _in_view = flag;
     }
-    void w(const float w)
+    inline void w(const float w)
     {
         _ref.w(w);
     }
@@ -114,11 +114,11 @@ class static_emitter : public emitter
         // Set the particle system gravity
         this->_emit.set_gravity(min::vec3<float>(0.0, -10.0, 0.0));
     }
-    static_type get_type() const
+    inline static_type get_type() const
     {
         return _type;
     }
-    void set_type(const static_type type)
+    inline void set_type(const static_type type)
     {
         _type = type;
     }
@@ -621,7 +621,7 @@ class particle
         // Update the particle positions
         stat.emit().set(f, dt);
     }
-    void update(const min::camera<float> &cam, const float dt)
+    inline void update(const min::camera<float> &cam, const float dt)
     {
         // Unbind the last VAO to prevent scrambling buffers
         _static[0].emit().unbind();

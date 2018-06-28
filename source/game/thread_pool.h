@@ -302,7 +302,7 @@ class thread_pool
         // Wake up idle threads
         _more_data.notify_all();
     }
-    void run(const std::function<void(std::mt19937 &gen, const size_t)> &f, const size_t start, const size_t stop)
+    inline void run(const std::function<void(std::mt19937 &gen, const size_t)> &f, const size_t start, const size_t stop)
     {
         // Wait for all workers to sleep
         wait();

@@ -192,7 +192,7 @@ class cgrid_generator
         // Convert cells to mesh in parallel
         work_queue::worker.run(std::cref(work), 0, grid.size());
     }
-    void generate_creative(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size)
+    inline void generate_creative(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size)
     {
         // Reseed the generator
         work_queue::worker.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
@@ -213,7 +213,7 @@ class cgrid_generator
         // Put the threads back to sleep
         work_queue::worker.sleep();
     }
-    void generate_normal(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size)
+    inline void generate_normal(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size)
     {
         // Reseed the generator
         work_queue::worker.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());
@@ -239,8 +239,8 @@ class cgrid_generator
         work_queue::worker.sleep();
     }
     template <typename F, typename G>
-    void generate_portal(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size,
-                         const F &grid_key_unpack, const G &grid_cell_center)
+    inline void generate_portal(std::vector<block_id> &grid, const size_t scale, const size_t chunk_size,
+                                const F &grid_key_unpack, const G &grid_cell_center)
     {
         // Reseed the generator
         work_queue::worker.seed(std::chrono::high_resolution_clock::now().time_since_epoch().count());

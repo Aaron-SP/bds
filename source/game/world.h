@@ -399,8 +399,8 @@ class world
             _player.explode(dir, dp.first, dp.second, atlas);
         }
     }
-    bool explode_ray_body(min::body<float, min::vec3> &b, const min::ray<float, min::vec3> &r,
-                          const min::vec3<unsigned> &scale, const float size, const bool is_charge)
+    inline bool explode_ray_body(min::body<float, min::vec3> &b, const min::ray<float, min::vec3> &r,
+                                 const min::vec3<unsigned> &scale, const float size, const bool is_charge)
     {
         // Check if body isn't dead
         if (!b.is_dead())
@@ -447,9 +447,9 @@ class world
         return false;
     }
     template <typename R>
-    void explode_ray_block(const min::vec3<float> &p, const block_id atlas,
-                           const min::vec3<unsigned> &scale, const float size,
-                           const R &ray_call)
+    inline void explode_ray_block(const min::vec3<float> &p, const block_id atlas,
+                                  const min::vec3<unsigned> &scale, const float size,
+                                  const R &ray_call)
     {
         // Get character body
         min::body<float, min::vec3> &body = _simulation.get_body(_char_id);
@@ -471,8 +471,8 @@ class world
         }
     }
     template <typename R>
-    block_id explode_ray(const min::ray<float, min::vec3> &r, const target &t,
-                         const min::vec3<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
+    inline block_id explode_ray(const min::ray<float, min::vec3> &r, const target &t,
+                                const min::vec3<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
     {
         // Get the target id
         const target_id tid = t.get_id();
@@ -1039,7 +1039,7 @@ class world
 
         return true;
     }
-    void draw(const uniforms &uniforms) const
+    inline void draw(const uniforms &uniforms) const
     {
         // Draw the static instances
         _instance.draw(uniforms);
@@ -1061,7 +1061,7 @@ class world
         _sky.draw();
     }
     template <typename R>
-    block_id explode_ray(const min::vec3<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
+    inline block_id explode_ray(const min::vec3<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
     {
         return explode_ray(_player.ray(), _player.get_target(), scale, size, is_charge, ray_call);
     }
@@ -1487,7 +1487,7 @@ class world
     {
         _swatch_copy_place = !_swatch_copy_place;
     }
-    void update(min::camera<float> &cam, const bool track_target, const float dt)
+    inline void update(min::camera<float> &cam, const bool track_target, const float dt)
     {
         // Update the physics and AI in world
         update_world_physics(dt);

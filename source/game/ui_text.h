@@ -395,7 +395,7 @@ class ui_text
         _draw_timer = false;
         _draw_ui = false;
     }
-    void add_stream_float(const std::string &str, const float value)
+    inline void add_stream_float(const std::string &str, const float value)
     {
         // Clear and reset the stream
         clear_stream();
@@ -404,7 +404,7 @@ class ui_text
         _ss << str << value;
         add_stream_text(_ss.str());
     }
-    void add_stream_text(const std::string &str)
+    inline void add_stream_text(const std::string &str)
     {
         // Increment next stream text
         const size_t index = (_stream_old %= _max_stream)++;
@@ -425,7 +425,7 @@ class ui_text
         const uint_fast16_t w2 = size.first / 2;
         _text.set_text_center(text_index, w2, _stream_dy);
     }
-    void draw(const size_t bg_size) const
+    inline void draw(const size_t bg_size) const
     {
         // Bind text buffer
         _text.bind(0);
@@ -463,7 +463,7 @@ class ui_text
             _text_bg.draw(0, bg_size - 1);
         }
     }
-    void draw_tooltips() const
+    inline void draw_tooltips() const
     {
         if (_draw_hover)
         {

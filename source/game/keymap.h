@@ -421,7 +421,7 @@ class key_map
     {
         return _prefix[index];
     }
-    const std::string &get_key_string(const min::window::key_type key) const
+    inline const std::string &get_key_string(const min::window::key_type key) const
     {
         switch (key)
         {

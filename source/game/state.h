@@ -239,7 +239,7 @@ class state
     {
         return _user_input = !_user_input;
     }
-    void update(const min::vec3<float> &p, const std::pair<uint_fast16_t, uint_fast16_t> &c, const uint_fast16_t w, const uint_fast16_t h, const float speed, const float dt)
+    inline void update(const min::vec3<float> &p, const std::pair<uint_fast16_t, uint_fast16_t> &c, const uint_fast16_t w, const uint_fast16_t h, const float speed, const float dt)
     {
         // Calculate position to move camera to
         const min::vec3<float> move = p + min::vec3<float>(0.0, 0.5, 0.0);

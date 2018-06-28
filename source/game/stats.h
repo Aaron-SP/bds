@@ -266,7 +266,7 @@ class stats
             _low_oxygen = true;
         }
     }
-    void update_cache()
+    inline void update_cache()
     {
         // Are dynamics offline?
         const bool dynamics_above = get_dynamics_cost_frac() > 1.0;

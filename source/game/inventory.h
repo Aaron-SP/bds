@@ -41,15 +41,15 @@ class inventory
       public:
         craft_item() : _index(0), _item() {}
         craft_item(const size_t index, const item &it) : _index(index), _item(it) {}
-        const size_t index() const
+        inline const size_t index() const
         {
             return _index;
         }
-        const item &get_item() const
+        inline const item &get_item() const
         {
             return _item;
         }
-        bool operator<(const craft_item &other) const
+        inline bool operator<(const craft_item &other) const
         {
             return _item < other.get_item();
         }

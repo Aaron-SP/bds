@@ -51,31 +51,31 @@ class title
     ui_overlay *const _ui;
     key_map *const _keymap;
 
-    min::camera<float> *get_camera()
+    inline min::camera<float> *get_camera()
     {
         return _camera;
     }
-    options *get_options()
+    inline options *get_options()
     {
         return _opt;
     }
-    sound *get_sound()
+    inline sound *get_sound()
     {
         return _sound;
     }
-    state *get_state()
+    inline state *get_state()
     {
         return _state;
     }
-    ui_overlay *get_ui()
+    inline ui_overlay *get_ui()
     {
         return _ui;
     }
-    min::window *get_window()
+    inline min::window *get_window()
     {
         return _win;
     }
-    void menu_empty_save(const size_t index)
+    inline void menu_empty_save(const size_t index)
     {
         // Set menu index to empty save
         game::ui_menu &menu = _ui->get_menu();
@@ -89,7 +89,7 @@ class title
         // Set the save callback
         menu.set_callback(index, f);
     }
-    void menu_launch_game()
+    inline void menu_launch_game()
     {
         // Load the keymap
         _keymap->load(_opt->get_save_slot());
@@ -103,7 +103,7 @@ class title
         // Disable user input
         _state->set_user_input(false);
     }
-    void menu_load_game(const size_t index)
+    inline void menu_load_game(const size_t index)
     {
         // Set the save slot
         _opt->set_save_slot(index);
@@ -114,12 +114,12 @@ class title
         // Launch game
         menu_launch_game();
     }
-    void menu_new_game(const size_t index)
+    inline void menu_new_game(const size_t index)
     {
         // Set the save slot
         _opt->set_save_slot(index);
     }
-    void menu_new_game_mode(const size_t game_mode)
+    inline void menu_new_game_mode(const size_t game_mode)
     {
         // Convert index to game mode
         const game_type mode = static_cast<game_type>(game_mode);
@@ -133,7 +133,7 @@ class title
         // Launch game
         menu_launch_game();
     }
-    game::menu_call menu_new_game_call()
+    inline game::menu_call menu_new_game_call()
     {
         // Set the next level menu
         return [this]() -> void {
@@ -173,7 +173,7 @@ class title
             }
         };
     }
-    game::menu_call menu_load_game_call()
+    inline game::menu_call menu_load_game_call()
     {
         // Create resume callback
         return [this]() -> void {
@@ -200,7 +200,7 @@ class title
             }
         };
     }
-    game::menu_call menu_delete_game_call()
+    inline game::menu_call menu_delete_game_call()
     {
         // Create resume callback
         return [this]() -> void {
@@ -232,7 +232,7 @@ class title
             }
         };
     }
-    game::menu_call menu_quit_game_call()
+    inline game::menu_call menu_quit_game_call()
     {
         return [this]() -> void {
             // Return to title
@@ -245,7 +245,7 @@ class title
             std::cout << "controls: Shutdown called by user" << std::endl;
         };
     }
-    void reset_menu()
+    inline void reset_menu()
     {
         game::ui_menu &menu = _ui->get_menu();
         menu.reset_title_menu();
@@ -254,7 +254,7 @@ class title
         menu.set_callback(2, menu_delete_game_call());
         menu.set_callback(3, menu_quit_game_call());
     }
-    void reset_game()
+    inline void reset_game()
     {
         // Reset core game components
         _particles->reset();
@@ -274,7 +274,7 @@ class title
         // Register callbacks
         register_control_callbacks();
     }
-    void register_control_callbacks()
+    inline void register_control_callbacks()
     {
         // Enable the console and set default message
         _ui->enable_console();
@@ -300,12 +300,12 @@ class title
         // Register callback functions
         keyboard.register_keydown((*_keymap)[23], title::escape_menu, (void *)this);
     }
-    static void escape_menu(void *const ptr, double step)
+    inline static void escape_menu(void *const ptr, double step)
     {
         title *const title = reinterpret_cast<game::title *>(ptr);
         title->reset_menu();
     }
-    static void left_click_down(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
+    inline static void left_click_down(void *ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Cast to title pointer
         title *const title = reinterpret_cast<game::title *>(ptr);
@@ -337,7 +337,7 @@ class title
             ui->update_title();
         }
     }
-    static void left_click_up(void *const ptr, const uint_fast16_t x, const uint_fast16_t y)
+    inline static void left_click_up(void *const ptr, const uint_fast16_t x, const uint_fast16_t y)
     {
         // Get the ui pointer
         title *const title = reinterpret_cast<game::title *>(ptr);
@@ -346,7 +346,7 @@ class title
         // Click up event
         ui->click_up();
     }
-    void enable()
+    inline void enable()
     {
         // Register window callbacks
         register_control_callbacks();
@@ -366,11 +366,11 @@ class title
         // Turn off cursor
         _win->display_cursor(true);
     }
-    bool is_show_title() const
+    inline bool is_show_title() const
     {
         return _ui->is_title_mode();
     }
-    static void on_resize(void *ptr, const uint_fast16_t width, const uint_fast16_t height)
+    inline static void on_resize(void *ptr, const uint_fast16_t width, const uint_fast16_t height)
     {
         // Ignore minimizing window
         if (width == 0 && height == 0)
@@ -403,7 +403,7 @@ class title
         // Update the screen size for ui and text
         ui->set_screen(min::vec2<float>(w2, h2), width, height);
     }
-    void set_show_title(const bool flag)
+    inline void set_show_title(const bool flag)
     {
         _ui->set_title_mode(flag);
     }

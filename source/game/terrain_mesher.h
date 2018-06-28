@@ -149,7 +149,7 @@ class terrain_mesher
     {
         reserve_memory(chunk_size);
     }
-    void clear() const
+    inline void clear() const
     {
         _cells.clear();
     }

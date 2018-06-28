@@ -109,7 +109,7 @@ class ui_overlay
         _time = -1.0;
         _mult = 1;
     }
-    void add_stream_float(const std::string &str, const float value)
+    inline void add_stream_float(const std::string &str, const float value)
     {
         _text.add_stream_float(str, value);
     }

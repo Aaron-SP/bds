@@ -71,43 +71,43 @@ class target
     target()
         : _id(target_id::INVALID), _key(0), _value(static_cast<block_id>(-2)) {}
 
-    block_id &atlas()
+    inline block_id &atlas()
     {
         return _value.atlas;
     }
-    target_id get_id() const
+    inline target_id get_id() const
     {
         return _id;
     }
-    const min::vec3<float> &get_position() const
+    inline const min::vec3<float> &get_position() const
     {
         return _position;
     }
-    block_id get_atlas() const
+    inline block_id get_atlas() const
     {
         return _value.atlas;
     }
-    uint_fast16_t get_body_index() const
+    inline uint_fast16_t get_body_index() const
     {
         return _value.body_id;
     }
-    size_t &key()
+    inline size_t &key()
     {
         return _key;
     }
-    min::vec3<float> &position()
+    inline min::vec3<float> &position()
     {
         return _position;
     }
-    void set_body_index(const uint_fast16_t id)
+    inline void set_body_index(const uint_fast16_t id)
     {
         _value.body_id = id;
     }
-    void set_id(const target_id id)
+    inline void set_id(const target_id id)
     {
         _id = id;
     }
-    void set_position(const min::vec3<float> &p)
+    inline void set_position(const min::vec3<float> &p)
     {
         _position = p;
     }

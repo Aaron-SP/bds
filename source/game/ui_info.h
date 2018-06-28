@@ -36,23 +36,23 @@ class ui_info
     ui_info(const std::string &name, const std::string &info, const item it)
         : _name(&name), _info(&info), _item(it) {}
 
-    const std::string &get_name() const
+    inline const std::string &get_name() const
     {
         return *_name;
     }
-    const std::string &get_info() const
+    inline const std::string &get_info() const
     {
         return *_info;
     }
-    uint_fast8_t primary() const
+    inline uint_fast8_t primary() const
     {
         return _item.primary();
     }
-    uint_fast8_t secondary() const
+    inline uint_fast8_t secondary() const
     {
         return _item.secondary();
     }
-    item_type type() const
+    inline item_type type() const
     {
         return _item.type();
     }

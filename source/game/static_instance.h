@@ -497,7 +497,7 @@ class static_instance
         // Load instance model
         load_models();
     }
-    void draw(const game::uniforms &uniforms) const
+    inline void draw(const game::uniforms &uniforms) const
     {
         // Bind VAO
         _buffer.bind();
@@ -613,7 +613,7 @@ class static_instance
     {
         return _MISS_LIMIT;
     }
-    void update(const physics &sim, const cgrid &grid, const min::camera<float> &cam)
+    inline void update(const physics &sim, const cgrid &grid, const min::camera<float> &cam)
     {
         // Clear out the asset index buffer
         const size_t size = _assets.size();

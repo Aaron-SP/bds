@@ -243,7 +243,6 @@ class brownian_grow
             write[cell] = color_table(i % 24);
         }
     }
-
     inline void generate(game::thread_pool &pool, const std::vector<game::block_id> &read, std::vector<game::block_id> &write, const size_t years)
     {
         // Generate brownian tree

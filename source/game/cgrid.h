@@ -49,19 +49,19 @@ class view_chunk
     view_chunk(const size_t index, const size_t key, const min::aabbox<float, min::vec3> &box, const float dist)
         : _index(index), _key(key), _box(box), _dist(dist) {}
 
-    const min::aabbox<float, min::vec3> &get_box() const
+    inline const min::aabbox<float, min::vec3> &get_box() const
     {
         return _box;
     }
-    float get_dist() const
+    inline float get_dist() const
     {
         return _dist;
     }
-    size_t get_key() const
+    inline size_t get_key() const
     {
         return _key;
     }
-    size_t get_index() const
+    inline size_t get_index() const
     {
         return _index;
     }
@@ -1069,11 +1069,11 @@ class cgrid
         // Clear out chunk update keys
         _chunk_update_keys.clear();
     }
-    std::tuple<size_t, size_t, size_t> get_grid_index_unsafe(const min::vec3<float> &p) const
+    inline std::tuple<size_t, size_t, size_t> get_grid_index_unsafe(const min::vec3<float> &p) const
     {
         return grid_key_unpack(p);
     }
-    std::tuple<size_t, size_t, size_t> get_grid_index_safe(const min::vec3<float> &p) const
+    inline std::tuple<size_t, size_t, size_t> get_grid_index_safe(const min::vec3<float> &p) const
     {
         // Get world extents
         const min::vec3<float> min = _world.get_min();
@@ -1375,7 +1375,7 @@ class cgrid
             _chunk_update_keys.push_back(ckey);
         }
     }
-    unsigned set_geometry(const swatch &sw, const min::vec3<float> &start)
+    inline unsigned set_geometry(const swatch &sw, const min::vec3<float> &start)
     {
         // Modified geometry
         unsigned out = 0;
@@ -1398,8 +1398,8 @@ class cgrid
         return out;
     }
     template <typename SB>
-    unsigned set_geometry(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
-                          const block_id atlas_id, const SB &set_block_call)
+    inline unsigned set_geometry(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
+                                 const block_id atlas_id, const SB &set_block_call)
     {
         // Modified geometry
         unsigned out = 0;
@@ -1423,7 +1423,7 @@ class cgrid
         // Return the number of modified blocks
         return out;
     }
-    min::vec3<float> set_geometry_box_3x3(const min::vec3<float> &p, const block_id atlas)
+    inline min::vec3<float> set_geometry_box_3x3(const min::vec3<float> &p, const block_id atlas)
     {
         // Record all modified chunks and store them for updating
         _chunk_update_keys.reserve(18);

@@ -58,7 +58,7 @@ class sky
         uniforms.set_program_lights(_prog);
         uniforms.set_program_matrix(_prog);
     }
-    void draw() const
+    inline void draw() const
     {
         // Bind this texture for drawing
         _tbuffer.bind(_dds_id, 0);

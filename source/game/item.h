@@ -44,7 +44,7 @@ class item
         : _id(id_value(id)), _count(count),
           _prim(prim), _sec(sec), _level(level) {}
 
-    bool operator<(const item &other) const
+    inline bool operator<(const item &other) const
     {
         return _id < other._id;
     }
