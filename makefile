@@ -21,14 +21,12 @@ ifeq ($(OS),Windows_NT)
         MGL_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mgl
     endif
 
-	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll
-	STATIC = -static -static-libgcc -static-libstdc++
+	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll -static -static-libgcc -static-libstdc++
 else
 	DESKTOP_PATH = /usr/share/applications
 	DEST_PATH = /opt/bds
 	MGL_PATH = /usr/include/mgl
-	LINKER = -lX11 -lGL -lfreetype -pthread -lopenal -lvorbisfile
-	STATIC = -static-libgcc -static-libstdc++
+	LINKER = -lX11 -lGL -lfreetype -pthread -lopenal -lvorbisfile -static-libgcc -static-libstdc++
 endif
 
 # Override if MGL_DESTDIR specified
@@ -56,15 +54,37 @@ ifdef MGL_VB43
 	MGL_RENDER_VB = -DMGL_VB43
 endif
 
+CXXFLAGS = -s -std=c++14 -Wall -Winvalid-pch -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
+DEBUGFLAGS = -g -std=c++14 -Wall -O1
+
+# Set architecture
+ifeq ($(BUILD),debug)
+	ARCH = $(DEBUGFLAGS)
+else 
+ifeq ($(BUILD),arch32)
+	ARCH = $(CXXFLAGS) -m32
+else
+ifeq ($(BUILD),arch64)
+	ARCH = $(CXXFLAGS) -m64
+else
+	ARCH = $(CXXFLAGS) -march=native
+endif
+endif
+endif
+
+# Compile binaries
+BIN_EXEC = bin/game
+BIN_GAME = bin/game.o
+BIN_GLEW = bin/glew.o
+BIN_PCH = source/game/pch.h.gch
+BIN_TEST = bin/tests
+
 # Compile parameters
-CPP = -s -std=c++14 -Wall -O3 -fomit-frame-pointer -freciprocal-math -ffast-math $(STATIC) $(MGL_RENDER) $(MGL_RENDER_VB)
-DEBUG = -g -std=c++14 -Wall -O1 $(STATIC) $(MGL_RENDER) $(MGL_RENDER_VB)
-NATIVE =  $(CPP) -march=native
-BUILD32 = $(CPP) -m32
-BUILD64 = $(CPP) -m64
-EXTRA = -DGLEW_STATIC $(MGL_PATH)/platform/min/glew.cpp
-GAME =  $(EXTRA) source/game.cpp -o bin/game
-TEST =  $(EXTRA) test/test.cpp -o bin/tests
+CPP = -H $(MGL_RENDER) $(MGL_RENDER_VB)
+GAME = -DGLEW_STATIC -c source/game.cpp -o $(BIN_GAME)
+GLEW = -DGLEW_STATIC -c $(MGL_PATH)/platform/min/glew.cpp -o $(BIN_GLEW)
+HEAD = -DGLEW_STATIC source/game/pch.h
+TEST = test/test.cpp -o $(BIN_TEST)
 
 # Include directories
 LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_PATH)/platform -I$(MGL_PATH)/renderer -I$(MGL_PATH)/scene -I$(MGL_PATH)/sound -Isource $(FREETYPE2_INCLUDE)
@@ -77,20 +97,18 @@ Y=\033[1;33m
 NC=\033[0m
 
 # Default run target
-build: tests
-	g++ $(LIB_SOURCES) $(NATIVE)  $(GAME)  $(LINKER) 2> "game.txt"
-build32: tests32
-	g++ $(LIB_SOURCES) $(BUILD32) $(GAME)  $(LINKER) 2> "game.txt"
-build64: tests64
-	g++ $(LIB_SOURCES) $(BUILD64) $(GAME)  $(LINKER) 2> "game.txt"
-debug:
-	g++ $(LIB_SOURCES) $(DEBUG) $(GAME) $(LINKER) 2> "game.txt"
-tests:
-	g++ $(LIB_SOURCES) $(TEST_SOURCES)  $(NATIVE) $(TEST) $(LINKER) 2> "test.txt"
-tests32:
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD32) $(TEST) $(LINKER) 2> "test.txt"
-tests64:
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(BUILD64) $(TEST) $(LINKER) 2> "test.txt"
+$(BIN_EXEC): $(BIN_GLEW) $(BIN_GAME)
+	g++ $^ -o $@ $(LINKER)
+$(BIN_GAME): $(BIN_PCH) $(BIN_TEST)
+	g++ $(LIB_SOURCES) $(ARCH) $(CPP) $(GAME) 2> "game.txt"
+$(BIN_GLEW):
+	g++ $(LIB_SOURCES) $(ARCH) $(CPP) $(GLEW) 2> "glew.txt"
+$(BIN_PCH):
+	g++ $(LIB_SOURCES) $(ARCH) $(HEAD) 2> "pch.txt"
+$(BIN_TEST):
+	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(ARCH) $(CPP) $(TEST) $(LINKER) 2> "test.txt"
+make game:
+	g++ $(LIB_SOURCES) $(ARCH) $(CPP) $(GAME) 2> "game.txt"
 install:
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"
 	mkdir -p $(DEST_PATH)/bin
@@ -113,7 +131,12 @@ uninstall:
 # clean targets
 clean:
 	rm -f *.txt
-	rm -f bin/*
+	rm -f $(BIN_EXEC)
+	rm -f $(BIN_GAME)
+	rm -f $(BIN_GLEW)
+	rm -f $(BIN_TEST)
+	rm -f $(BIN_PCH)
+	rm -f $(BIN_PCH)
 clear:
 	rm -f save/keymap.*
 	rm -f save/state.*

@@ -23,13 +23,10 @@ Verify a bin directory exists before compiling with the makefile.
 - 'mkdir -p bin'
 
 ### The GNU makefile contains various build targets.
-- 'make' - builds game and tests targeting 'native'
-- 'make build' - builds game and targeting 'native'
-- 'make build32' - builds game and targeting 'x86'
-- 'make build64' - builds game and targeting 'x86-64'
-- 'make debug' - builds game with debug symbols and 01 optimization
-- 'make tests' - builds only tests targeting 'native'
+- 'make BUILD=[arch32|arch64|debug]' - builds game and tests targeting specified architecture
+    - If BUILD is not defined it will default to native architecture
 - 'make clean' - cleans up all generated output files
+- 'make clear' - clears save files created by the game
 - 'make install' - builds and installs the game to /opt/bds
 - 'make uninstall' - uninstalls the game from /opt/bds
 
@@ -183,7 +180,7 @@ The '--dvorak' flag changes the default key mapping to DVORAK key map layout.
 16. Key [ESCAPE]: pause the game
 
 ### Segmentation Fault: I crashed the game!
-If you crash the game, compile the game with debug settings with 'make debug' and run the game in GDB. 'gdb bin/game' should suffice. When GDB loads, type 'run' to launch the game inside the GDB debugger. When the game crashes/freezes, go to the GDB window and type 'where' and GDB should print a stacktrace using debug symbols. This GDB stacktrace allows developers to figure out the function that crashed the game and expedites the debug process, and hopefully will lead to getting those critical bugs fixed.
+If you crash the game, compile the game with debug settings with 'make BUILD=debug' and run the game in GDB. 'gdb bin/game' should suffice. When GDB loads, type 'run' to launch the game inside the GDB debugger. When the game crashes/freezes, go to the GDB window and type 'where' and GDB should print a stacktrace using debug symbols. This GDB stacktrace allows developers to figure out the function that crashed the game and expedites the debug process, and hopefully will lead to getting those critical bugs fixed.
 
 ### Optimization: Help! I am lagging!
 Lag usually comes in two forms, a CPU bottleneck or a GPU bottleneck. If you are CPU bottlenecked, expect most of your CPU time going to creating terrain memory buffers.

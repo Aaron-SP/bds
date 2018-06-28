@@ -16,6 +16,8 @@ You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <game/pch.h>
+
 #include <game/game.h>
 
 void show_title(bds &game, min::loop_sync &sync, const size_t frames)
