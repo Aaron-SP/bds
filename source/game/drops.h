@@ -18,7 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __DROPS__
 #define __DROPS__
 
-#include <game/callback.h>
+#include <game/def.h>
 #include <game/id.h>
 #include <game/static_instance.h>
 #include <min/aabbox.h>

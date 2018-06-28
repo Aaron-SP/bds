@@ -22,9 +22,9 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <cmath>
 #include <cstdint>
 #include <game/block_adder.h>
-#include <game/callback.h>
 #include <game/cgrid.h>
 #include <game/chests.h>
+#include <game/def.h>
 #include <game/drones.h>
 #include <game/drops.h>
 #include <game/explosive.h>

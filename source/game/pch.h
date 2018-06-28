@@ -68,3 +68,28 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+extern template class min::aabbox<float, min::vec2>;
+extern template class min::aabbox<float, min::vec3>;
+extern template class min::aabbox<float, min::vec4>;
+extern template class min::bezier_deriv<float, min::vec3>;
+extern template class min::body<float, min::vec3>;
+extern template class min::camera<float>;
+extern template class min::emitter_buffer<float, GL_FLOAT>;
+extern template class min::grid<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox>;
+extern template class min::frustum<float>;
+extern template class min::mat3<float>;
+extern template class min::mat4<float>;
+extern template class min::md5_model<float, uint32_t, min::vec4, min::aabbox>;
+extern template class min::mesh<float, uint32_t>;
+extern template class min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid>;
+extern template class min::quat<float>;
+extern template class min::ray<float, min::vec3>;
+extern template class min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox>;
+extern template class min::uniform_buffer<float>;
+extern template class min::vec2<float>;
+extern template class min::vec3<int>;
+extern template class min::vec3<float>;
+extern template class min::vec3<unsigned>;
+extern template class min::vec4<float>;
+extern template class min::vertex_buffer<float, uint32_t, min::skeletal_vertex, GL_FLOAT, GL_UNSIGNED_INT>;

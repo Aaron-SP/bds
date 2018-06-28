@@ -18,7 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __TERRAIN_MESHER__
 #define __TERRAIN_MESHER__
 
-#include <game/callback.h>
+#include <game/def.h>
 #include <game/geometry.h>
 #include <game/id.h>
 #include <game/work_queue.h>

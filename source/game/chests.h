@@ -18,7 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __CHESTS__
 #define __CHESTS__
 
-#include <game/callback.h>
+#include <game/def.h>
 #include <game/static_instance.h>
 #include <min/aabbox.h>
 #include <min/grid.h>

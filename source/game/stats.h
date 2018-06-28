@@ -21,7 +21,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <array>
 #include <cmath>
 #include <cstdint>
-#include <game/callback.h>
+#include <game/def.h>
 #include <game/item.h>
 #include <string>
 

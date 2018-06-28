@@ -18,8 +18,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __PLAYER__
 #define __PLAYER__
 
-#include <game/callback.h>
 #include <game/cgrid.h>
+#include <game/def.h>
 #include <game/id.h>
 #include <game/inventory.h>
 #include <game/load_state.h>

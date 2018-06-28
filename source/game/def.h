@@ -15,13 +15,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __CALLBACK__
-#define __CALLBACK__
+#ifndef __DEFINITIONS__
+#define __DEFINITIONS__
 
 #include <functional>
 #include <game/id.h>
+#include <min/aabbox.h>
 #include <min/grid.h>
 #include <min/physics_nt.h>
+#include <min/tree.h>
 #include <min/vec3.h>
 
 namespace game
@@ -29,6 +31,7 @@ namespace game
 
 // Physics typedef
 typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
+typedef min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_tree;
 
 // Collision constants
 static constexpr float _grav_mag = 10.0;

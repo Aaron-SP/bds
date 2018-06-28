@@ -18,7 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __MISSILES__
 #define __MISSILES__
 
-#include <game/callback.h>
+#include <game/def.h>
 #include <game/id.h>
 #include <game/particle.h>
 #include <game/sound.h>

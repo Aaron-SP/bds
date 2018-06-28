@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __UI_CONTROL_MENU__
 #define __UI_CONTROL_MENU__
 
+#include <game/def.h>
 #include <game/id.h>
 #include <game/ui_bg_assets.h>
 #include <game/ui_info.h>
@@ -47,7 +48,6 @@ class ui_control_menu
     {
         return begin_menu() + ui_bg_assets::max_menu_ext_size();
     }
-    typedef min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_tree;
     ui_bg_assets *const _assets;
     ui_menu *const _menu;
     ui_tree *const _tree;

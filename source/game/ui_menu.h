@@ -19,7 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __UI_MENU__
 
 #include <array>
-#include <game/callback.h>
+#include <game/def.h>
 #include <game/id.h>
 #include <game/ui_bg_assets.h>
 #include <string>

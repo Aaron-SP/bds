@@ -23,7 +23,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/aabbox.h>
 #include <min/camera.h>
 #include <min/mat4.h>
-#include <min/md5_anim.h>
 #include <min/md5_model.h>
 #include <min/program.h>
 #include <min/shader.h>

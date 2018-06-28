@@ -19,8 +19,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __CHUNK_GRID__
 
 #include <chrono>
-#include <game/callback.h>
 #include <game/cgrid_generator.h>
+#include <game/def.h>
 #include <game/file.h>
 #include <game/id.h>
 #include <game/swatch.h>

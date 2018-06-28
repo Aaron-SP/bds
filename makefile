@@ -59,15 +59,15 @@ DEBUGFLAGS = -g -std=c++14 -Wall -O1
 
 # Set architecture
 ifeq ($(BUILD),debug)
-	ARCH = $(DEBUGFLAGS)
+	FLAGS = $(DEBUGFLAGS)
 else 
 ifeq ($(BUILD),arch32)
-	ARCH = $(CXXFLAGS) -m32
+	FLAGS = $(CXXFLAGS) -m32
 else
 ifeq ($(BUILD),arch64)
-	ARCH = $(CXXFLAGS) -m64
+	FLAGS = $(CXXFLAGS) -m64
 else
-	ARCH = $(CXXFLAGS) -march=native
+	FLAGS = $(CXXFLAGS) -march=native
 endif
 endif
 endif
@@ -76,6 +76,7 @@ endif
 BIN_EXEC = bin/game
 BIN_GAME = bin/game.o
 BIN_GLEW = bin/glew.o
+BIN_MGL = bin/mgl.o
 BIN_PCH = source/game/pch.h.gch
 BIN_TEST = bin/tests
 
@@ -84,6 +85,8 @@ CPP = -H $(MGL_RENDER) $(MGL_RENDER_VB)
 GAME = -DGLEW_STATIC -c source/game.cpp -o $(BIN_GAME)
 GLEW = -DGLEW_STATIC -c $(MGL_PATH)/platform/min/glew.cpp -o $(BIN_GLEW)
 HEAD = -DGLEW_STATIC source/game/pch.h
+INLINE = -DGLEW_STATIC -DMGL_INLINE $(BIN_GLEW) source/game.cpp -o $(BIN_EXEC)
+MGL = -DGLEW_STATIC -c source/mgl.cpp -o $(BIN_MGL)
 TEST = test/test.cpp -o $(BIN_TEST)
 
 # Include directories
@@ -97,18 +100,22 @@ Y=\033[1;33m
 NC=\033[0m
 
 # Default run target
-$(BIN_EXEC): $(BIN_GLEW) $(BIN_GAME)
-	g++ $^ -o $@ $(LINKER)
+$(BIN_EXEC): $(BIN_GLEW) $(BIN_MGL) $(BIN_GAME)
+	g++ $(FLAGS) $^ -o $@ $(LINKER) 2> "exec.txt"
 $(BIN_GAME): $(BIN_PCH) $(BIN_TEST)
-	g++ $(LIB_SOURCES) $(ARCH) $(CPP) $(GAME) 2> "game.txt"
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GAME) 2> "game.txt"
 $(BIN_GLEW):
-	g++ $(LIB_SOURCES) $(ARCH) $(CPP) $(GLEW) 2> "glew.txt"
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GLEW) 2> "glew.txt"
+$(BIN_MGL):
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(MGL) 2> "mgl.txt"
 $(BIN_PCH):
-	g++ $(LIB_SOURCES) $(ARCH) $(HEAD) 2> "pch.txt"
+	g++ $(LIB_SOURCES) $(FLAGS) $(HEAD) 2> "pch.txt"
 $(BIN_TEST):
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(ARCH) $(CPP) $(TEST) $(LINKER) 2> "test.txt"
-make game: $(BIN_PCH)
-	g++ $(LIB_SOURCES) $(ARCH) $(CPP) $(GAME) 2> "game.txt"
+	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(FLAGS) $(CPP) $(TEST) $(LINKER) 2> "test.txt"
+game: $(BIN_PCH)
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GAME) 2> "game.txt"
+inline: $(BIN_GLEW)
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(INLINE) $(LINKER) 2> "game.txt"
 install:
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"
 	mkdir -p $(DEST_PATH)/bin
@@ -134,6 +141,7 @@ clean:
 	rm -f $(BIN_EXEC)
 	rm -f $(BIN_GAME)
 	rm -f $(BIN_GLEW)
+	rm -f $(BIN_MGL)
 	rm -f $(BIN_TEST)
 	rm -f $(BIN_PCH)
 clear:

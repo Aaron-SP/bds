@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __UI_CONTROL_INVENTORY__
 #define __UI_CONTROL_INVENTORY__
 
+#include <game/def.h>
 #include <game/id.h>
 #include <game/inventory.h>
 #include <game/stats.h>
@@ -39,7 +40,6 @@ class ui_control_inv
     static constexpr size_t _border = 6;
     static constexpr size_t _text_spacing = _inv_font_size + _border;
     static constexpr size_t _button_size = stats::stat_str_size() - 1;
-    typedef min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_tree;
     inline static constexpr size_t begin_button()
     {
         return 49;

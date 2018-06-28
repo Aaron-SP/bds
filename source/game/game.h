@@ -18,8 +18,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __GAME_HEADER__
 #define __GAME_HEADER__
 
-#include <game/callback.h>
 #include <game/controls.h>
+#include <game/def.h>
 #include <game/events.h>
 #include <game/keymap.h>
 #include <game/options.h>

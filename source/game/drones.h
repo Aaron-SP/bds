@@ -18,8 +18,8 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __DRONES__
 #define __DRONES__
 
-#include <game/callback.h>
 #include <game/cgrid.h>
+#include <game/def.h>
 #include <game/id.h>
 #include <game/path.h>
 #include <game/static_instance.h>
