@@ -33,6 +33,7 @@ template class min::quat<float>;
 template class min::ray<float, min::vec3>;
 template class min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox>;
 template class min::vec2<float>;
+template class min::vec3<int>;
 template class min::vec3<float>;
 template class min::vec3<unsigned>;
 template class min::vec4<float>;
