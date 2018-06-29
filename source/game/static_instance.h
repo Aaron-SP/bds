@@ -30,9 +30,9 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/physics_nt.h>
 #include <min/program.h>
 #include <min/shader.h>
+#include <min/sort.h>
 #include <min/static_vertex.h>
 #include <min/texture_buffer.h>
-#include <min/utility.h>
 #include <min/vec3.h>
 #include <min/vertex_buffer.h>
 #include <min/wavefront.h>

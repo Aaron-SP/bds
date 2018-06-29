@@ -31,7 +31,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/mesh.h>
 #include <min/ray.h>
 #include <min/serial.h>
-#include <min/utility.h>
+#include <min/sort.h>
 #include <stdexcept>
 
 namespace game

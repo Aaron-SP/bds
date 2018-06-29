@@ -37,11 +37,11 @@
 #include <min/physics_nt.h>
 #include <min/program.h>
 #include <min/ray.h>
-#include <min/sample.h>
 #include <min/serial.h>
 #include <min/settings.h>
 #include <min/shader.h>
 #include <min/skeletal_vertex.h>
+#include <min/sort.h>
 #include <min/sound_buffer.h>
 #include <min/static_vertex.h>
 #include <min/strtoken.h>
@@ -49,7 +49,6 @@
 #include <min/texture_buffer.h>
 #include <min/tree.h>
 #include <min/uniform_buffer.h>
-#include <min/utility.h>
 #include <min/vec2.h>
 #include <min/vec3.h>
 #include <min/vec4.h>

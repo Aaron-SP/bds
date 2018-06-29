@@ -65,33 +65,33 @@ ifdef DESTDIR
 endif
 
 # Compile flags
-CXXFLAGS = -s -H -std=c++14 -Wall -Winvalid-pch -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
-INLINEFLAGS = --param max-inline-insns-auto=100 --param early-inlining-insns=200
 DEBUGFLAGS = -g -std=c++14 -Wall -O1
+INLINEFLAGS = --param max-inline-insns-auto=100 --param early-inlining-insns=200
+RELEASEFLAGS = -s -H -std=c++14 -Wall -Winvalid-pch -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
 
 # Set architecture
 ifeq ($(BUILD),debug)
-	CPPFLAGS += $(DEBUGFLAGS)
+	CXXFLAGS += $(DEBUGFLAGS)
 else
 ifeq ($(BUILD),arch32)
-	CPPFLAGS += $(CXXFLAGS) -m32
+	CXXFLAGS += $(RELEASEFLAGS) -m32
 else
 ifeq ($(BUILD),arch64)
-	CPPFLAGS += $(CXXFLAGS) -m64
+	CXXFLAGS += $(RELEASEFLAGS) -m64
 else
-	CPPFLAGS += $(CXXFLAGS) -march=native
+	CXXFLAGS += $(RELEASEFLAGS) -march=native
 endif
 endif
 endif
 
 # Enable GS rendering
 ifdef MGL_GS_RENDER
-	CPPFLAGS += -DMGL_GS_RENDER
+	CXXFLAGS += -DMGL_GS_RENDER
 endif
 
 # Enable opengl43 features
 ifdef MGL_VB43
-	CPPFLAGS += -DMGL_VB43
+	CXXFLAGS += -DMGL_VB43
 endif
 
 # Build targets
@@ -115,28 +115,28 @@ NC=\033[0m
 # Default run target
 dynamic: $(BIN_MGL) $(BIN_GAME)
 $(BIN_GAME): $(OBJ_GLEW) $(OBJ_GAME)
-	g++ $(CPPFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
+	$(CXX) $(CXXFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
 static: $(OBJ_MGL) $(OBJ_GLEW) $(OBJ_GAME)
-	g++ $(CPPFLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
+	$(CXX) $(CXXFLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
 game: $(BIN_PCH)
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(GAME) 2> "game.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(GAME) 2> "game.txt"
 inline-dynamic: $(OBJ_GLEW)
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC) 2> "game.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC) 2> "game.txt"
 inline-static: $(OBJ_GLEW)
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC) 2> "game.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC) 2> "game.txt"
 $(BIN_MGL):
-	g++ -fPIC $(LIB_SOURCES) $(CPPFLAGS) $(MGL) 2> "mgl.txt"
-	g++ $(CPPFLAGS) $(MGL_SHARED) 2> "mgl.txt"
+	$(CXX) -fPIC $(LIB_SOURCES) $(CXXFLAGS) $(MGL) 2> "mgl.txt"
+	$(CXX) $(CXXFLAGS) $(MGL_SHARED) 2> "mgl.txt"
 $(BIN_PCH):
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(HEAD) 2> "pch.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(HEAD) 2> "pch.txt"
 $(BIN_TEST):
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(CPPFLAGS) $(TEST) $(DYNAMIC) 2> "test.txt"
+	$(CXX) $(LIB_SOURCES) $(TEST_SOURCES) $(CXXFLAGS) $(TEST) $(DYNAMIC) 2> "test.txt"
 $(OBJ_GAME): $(BIN_PCH) $(BIN_TEST)
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(GAME) 2> "game.o.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(GAME) 2> "game.o.txt"
 $(OBJ_GLEW):
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(GLEW) 2> "glew.o.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(GLEW) 2> "glew.o.txt"
 $(OBJ_MGL):
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(MGL) 2> "mgl.o.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(MGL) 2> "mgl.o.txt"
 
 install:
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"

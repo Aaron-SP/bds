@@ -20,7 +20,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <chrono>
 #include <game/character.h>
-#include <min/sample.h>
 
 namespace game
 {

@@ -35,7 +35,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/camera.h>
 #include <min/loop_sync.h>
 #include <min/settings.h>
-#include <min/utility.h>
 #include <min/window.h>
 #include <string>
 #include <utility>
@@ -115,7 +114,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.291");
+        _ui.text().set_debug_version("VERSION: 0.1.292");
     }
     void load_game_mode()
     {
