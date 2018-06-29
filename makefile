@@ -3,12 +3,19 @@
 # Query the freetype2 package config for the include directory
 FREETYPE2_INCLUDE = $(shell pkg-config freetype2 --cflags)
 
+# Compile binaries
+BIN_GAME = bin/game
+OBJ_GAME = bin/game.o
+OBJ_GLEW = bin/glew.o
+OBJ_MGL = bin/mgl.o
+BIN_PCH = source/game/pch.h.gch
+BIN_TEST = bin/tests
+
 # Linker parameters
 ifeq ($(OS),Windows_NT)
+	# 64 bit
 	DESKTOP_PATH = /usr/share/applications
 	DEST_PATH = /opt/bds
-
-	# 64 bit
 	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
         MGL_PATH = C:/cygwin64/usr/x86_64-w64-mingw32/sys-root/mingw/include/mgl
     endif
@@ -21,12 +28,25 @@ ifeq ($(OS),Windows_NT)
         MGL_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mgl
     endif
 
-	LINKER = -lopengl32 -lgdi32 -lmingw32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll -static -static-libgcc -static-libstdc++
+	# Link library settings
+	LINKER = -lgdi32 -lopengl32 -lmingw32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll
+	STATIC = $(LINKER) -static -static-libgcc -static-libstdc++ -Wl,--as-needed
+	DYNAMIC = -Wl,-Bdynamic $(LINKER) -Wl,--as-needed
+	BIN_MGL = bin/libmgl.dll
+	LINK_MGL = bin/libmgl_dll.a
+	MGL_SHARED = -fPIC -shared $(OBJ_MGL) -o $(BIN_MGL) -Wl,--out-implib,$(LINK_MGL)
 else
 	DESKTOP_PATH = /usr/share/applications
 	DEST_PATH = /opt/bds
 	MGL_PATH = /usr/include/mgl
-	LINKER = -lX11 -lGL -lfreetype -pthread -lopenal -lvorbisfile -static-libgcc -static-libstdc++
+
+	# Link library settings
+	LINKER = -lX11 -lGL -pthread -lfreetype -lopenal -lvorbisfile
+	STATIC = -Wl,-Bstatic $(LINKER) -static-libgcc -static-libstdc++ -Wl,--as-needed
+	DYNAMIC = -Wl,-Bdynamic $(LINKER) -Wl,--as-needed
+	BIN_MGL = bin/libmgl.so
+	LINK_MGL = $(BIN_MGL)
+	MGL_SHARED = -fPIC -shared $(OBJ_MGL) -o $(BIN_MGL)
 endif
 
 # Override if MGL_DESTDIR specified
@@ -72,21 +92,13 @@ endif
 endif
 endif
 
-# Compile binaries
-BIN_EXEC = bin/game
-BIN_GAME = bin/game.o
-BIN_GLEW = bin/glew.o
-BIN_MGL = bin/mgl.o
-BIN_PCH = source/game/pch.h.gch
-BIN_TEST = bin/tests
-
 # Compile parameters
 CPP = -H $(MGL_RENDER) $(MGL_RENDER_VB)
-GAME = -DGLEW_STATIC -c source/game.cpp -o $(BIN_GAME)
-GLEW = -DGLEW_STATIC -c $(MGL_PATH)/platform/min/glew.cpp -o $(BIN_GLEW)
+GAME = -DGLEW_STATIC -c source/game.cpp -o $(OBJ_GAME)
+GLEW = -DGLEW_STATIC -c $(MGL_PATH)/platform/min/glew.cpp -o $(OBJ_GLEW)
 HEAD = -DGLEW_STATIC source/game/pch.h
-INLINE = -DGLEW_STATIC -DMGL_INLINE $(BIN_GLEW) source/game.cpp -o $(BIN_EXEC)
-MGL = -DGLEW_STATIC -c source/mgl.cpp -o $(BIN_MGL)
+INLINE = -DGLEW_STATIC -DMGL_INLINE $(OBJ_GLEW) source/game.cpp -o $(BIN_GAME)
+MGL = -DGLEW_STATIC -c source/mgl.cpp -o $(OBJ_MGL)
 TEST = test/test.cpp -o $(BIN_TEST)
 
 # Include directories
@@ -100,22 +112,31 @@ Y=\033[1;33m
 NC=\033[0m
 
 # Default run target
-$(BIN_EXEC): $(BIN_GLEW) $(BIN_MGL) $(BIN_GAME)
-	g++ $(FLAGS) $^ -o $@ $(LINKER) 2> "exec.txt"
-$(BIN_GAME): $(BIN_PCH) $(BIN_TEST)
+dynamic: $(BIN_MGL) $(BIN_GAME)
+$(BIN_GAME): $(OBJ_GLEW) $(OBJ_GAME)
+	g++ $(FLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
+static: $(OBJ_MGL) $(OBJ_GLEW) $(OBJ_GAME)
+	g++ $(FLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
+game: $(BIN_PCH)
 	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GAME) 2> "game.txt"
-$(BIN_GLEW):
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GLEW) 2> "glew.txt"
+inline-dynamic: $(OBJ_GLEW)
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(INLINE) $(DYNAMIC) 2> "game.txt"
+inline-static: $(OBJ_GLEW)
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(INLINE) $(STATIC) 2> "game.txt"
 $(BIN_MGL):
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(MGL) 2> "mgl.txt"
+	g++ -fPIC $(LIB_SOURCES) $(FLAGS) $(CPP) $(MGL) 2> "mgl.txt"
+	g++ $(FLAGS) $(MGL_SHARED) 2> "mgl.txt"
 $(BIN_PCH):
 	g++ $(LIB_SOURCES) $(FLAGS) $(HEAD) 2> "pch.txt"
 $(BIN_TEST):
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(FLAGS) $(CPP) $(TEST) $(LINKER) 2> "test.txt"
-game: $(BIN_PCH)
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GAME) 2> "game.txt"
-inline: $(BIN_GLEW)
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(INLINE) $(LINKER) 2> "game.txt"
+	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(FLAGS) $(CPP) $(TEST) $(DYNAMIC) 2> "test.txt"
+$(OBJ_GAME): $(BIN_PCH) $(BIN_TEST)
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GAME) 2> "game.o.txt"
+$(OBJ_GLEW):
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GLEW) 2> "glew.o.txt"
+$(OBJ_MGL):
+	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(MGL) 2> "mgl.o.txt"
+
 install:
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"
 	mkdir -p $(DEST_PATH)/bin
@@ -138,10 +159,10 @@ uninstall:
 # clean targets
 clean:
 	rm -f *.txt
-	rm -f $(BIN_EXEC)
 	rm -f $(BIN_GAME)
-	rm -f $(BIN_GLEW)
-	rm -f $(BIN_MGL)
+	rm -f $(OBJ_GAME)
+	rm -f $(OBJ_GLEW)
+	rm -f $(BIN_MGL) $(LINK_MGL) $(OBJ_MGL)
 	rm -f $(BIN_TEST)
 	rm -f $(BIN_PCH)
 clear:
