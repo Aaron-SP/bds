@@ -8,7 +8,7 @@ BIN_GAME = bin/game
 OBJ_GAME = bin/game.o
 OBJ_GLEW = bin/glew.o
 OBJ_MGL = bin/mgl.o
-BIN_PCH = source/game/pch.h.gch
+BIN_PCH = source/game/pch.hpp.gch
 BIN_TEST = bin/tests
 
 # Linker parameters
@@ -65,21 +65,25 @@ ifdef DESTDIR
 endif
 
 # Compile flags
-DEBUGFLAGS = -g -std=c++14 -Wall -O1
+DEBUGFLAGS = -std=c++14 -Wall -O1
 INLINEFLAGS = --param max-inline-insns-auto=100 --param early-inlining-insns=200
-RELEASEFLAGS = -s -H -std=c++14 -Wall -Winvalid-pch -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
+RELEASEFLAGS = -std=c++14 -Wall -Winvalid-pch -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
 
 # Set architecture
 ifeq ($(BUILD),debug)
 	CXXFLAGS += $(DEBUGFLAGS)
+	SYMBOLS = -g
 else
 ifeq ($(BUILD),arch32)
 	CXXFLAGS += $(RELEASEFLAGS) -m32
+	SYMBOLS = -s
 else
 ifeq ($(BUILD),arch64)
 	CXXFLAGS += $(RELEASEFLAGS) -m64
+	SYMBOLS = -s
 else
 	CXXFLAGS += $(RELEASEFLAGS) -march=native
+	SYMBOLS = -s
 endif
 endif
 endif
@@ -97,7 +101,7 @@ endif
 # Build targets
 GAME = -DGLEW_STATIC -c source/game.cpp -o $(OBJ_GAME)
 GLEW = -DGLEW_STATIC -c $(MGL_PATH)/platform/min/glew.cpp -o $(OBJ_GLEW)
-HEAD = -DGLEW_STATIC source/game/pch.h
+HEAD = -DGLEW_STATIC source/game/pch.hpp
 INLINE = -DGLEW_STATIC -DMGL_INLINE $(OBJ_GLEW) source/game.cpp -o $(BIN_GAME)
 MGL = -c source/mgl.cpp -o $(OBJ_MGL)
 TEST = test/test.cpp -o $(BIN_TEST)
@@ -115,22 +119,22 @@ NC=\033[0m
 # Default run target
 dynamic: $(BIN_MGL) $(BIN_GAME)
 $(BIN_GAME): $(OBJ_GLEW) $(OBJ_GAME)
-	$(CXX) $(CXXFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
+	$(CXX) $(SYMBOLS) $(CXXFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
 static: $(OBJ_MGL) $(OBJ_GLEW) $(OBJ_GAME)
-	$(CXX) $(CXXFLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
+	$(CXX) $(SYMBOLS) $(CXXFLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
 game: $(BIN_PCH)
-	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(GAME) 2> "game.txt"
+	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(GAME) 2> "game.txt"
 inline-dynamic: $(OBJ_GLEW)
-	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC) 2> "game.txt"
+	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC) 2> "game.txt"
 inline-static: $(OBJ_GLEW)
-	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC) 2> "game.txt"
+	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC) 2> "game.txt"
 $(BIN_MGL):
 	$(CXX) -fPIC $(LIB_SOURCES) $(CXXFLAGS) $(MGL) 2> "mgl.txt"
-	$(CXX) $(CXXFLAGS) $(MGL_SHARED) 2> "mgl.txt"
+	$(CXX) $(SYMBOLS) $(CXXFLAGS) $(MGL_SHARED) 2> "mgl.txt"
 $(BIN_PCH):
 	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(HEAD) 2> "pch.txt"
 $(BIN_TEST):
-	$(CXX) $(LIB_SOURCES) $(TEST_SOURCES) $(CXXFLAGS) $(TEST) $(DYNAMIC) 2> "test.txt"
+	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(TEST_SOURCES) $(CXXFLAGS) $(TEST) $(DYNAMIC) 2> "test.txt"
 $(OBJ_GAME): $(BIN_PCH) $(BIN_TEST)
 	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(GAME) 2> "game.o.txt"
 $(OBJ_GLEW):

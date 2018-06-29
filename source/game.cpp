@@ -17,7 +17,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef MGL_INLINE
-#include <game/pch.h>
+#include <game/pch.hpp>
 #endif
 
 #include <game/game.h>

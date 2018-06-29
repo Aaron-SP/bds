@@ -1,4 +1,4 @@
 *.txt
 .vscode/
 bds_data/
-source/game/pch.h.gch
+source/game/pch.hpp.gch
