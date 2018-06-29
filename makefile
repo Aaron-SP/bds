@@ -29,9 +29,9 @@ ifeq ($(OS),Windows_NT)
     endif
 
 	# Link library settings
-	LINKER = -lgdi32 -lopengl32 -lmingw32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll
-	STATIC = $(LINKER) -static -static-libgcc -static-libstdc++ -Wl,--as-needed
-	DYNAMIC = -Wl,-Bdynamic $(LINKER) -Wl,--as-needed
+	LINKER = -lgdi32 -lopengl32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll
+	STATIC = $(LINKER) -static -lmingw32 -static-libgcc -static-libstdc++ -Wl,--as-needed
+	DYNAMIC = -Wl,-Bdynamic $(LINKER) -lmingw32 -Wl,--as-needed
 	BIN_MGL = bin/libmgl.dll
 	LINK_MGL = bin/libmgl_dll.a
 	MGL_SHARED = -fPIC -shared $(OBJ_MGL) -o $(BIN_MGL) -Wl,--out-implib,$(LINK_MGL)
@@ -41,9 +41,9 @@ else
 	MGL_PATH = /usr/include/mgl
 
 	# Link library settings
-	LINKER = -lX11 -lGL -pthread -lfreetype -lopenal -lvorbisfile
-	STATIC = -Wl,-Bstatic $(LINKER) -static-libgcc -static-libstdc++ -Wl,--as-needed
-	DYNAMIC = -Wl,-Bdynamic $(LINKER) -Wl,--as-needed
+	LINKER = -lX11 -lGL -lfreetype -lopenal -lvorbisfile
+	STATIC = $(LINKER) -Wl,-Bstatic -pthread -static-libgcc -static-libstdc++ -Wl,--as-needed
+	DYNAMIC = -Wl,-Bdynamic $(LINKER) -pthread -Wl,--as-needed
 	BIN_MGL = bin/libmgl.so
 	LINK_MGL = $(BIN_MGL)
 	MGL_SHARED = -fPIC -shared $(OBJ_MGL) -o $(BIN_MGL)
@@ -64,41 +64,42 @@ ifdef DESTDIR
 	DEST_PATH = $(DESTDIR)/bds
 endif
 
-# Enable GS rendering
-ifdef MGL_GS_RENDER
-	MGL_RENDER = -DMGL_GS_RENDER
-endif
-
-# Enable opengl43 features
-ifdef MGL_VB43
-	MGL_RENDER_VB = -DMGL_VB43
-endif
-
-CXXFLAGS = -s -std=c++14 -Wall -Winvalid-pch -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
+# Compile flags
+CXXFLAGS = -s -H -std=c++14 -Wall -Winvalid-pch -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
+INLINEFLAGS = --param max-inline-insns-auto=100 --param early-inlining-insns=200
 DEBUGFLAGS = -g -std=c++14 -Wall -O1
 
 # Set architecture
 ifeq ($(BUILD),debug)
-	FLAGS = $(DEBUGFLAGS)
-else 
+	CPPFLAGS += $(DEBUGFLAGS)
+else
 ifeq ($(BUILD),arch32)
-	FLAGS = $(CXXFLAGS) -m32
+	CPPFLAGS += $(CXXFLAGS) -m32
 else
 ifeq ($(BUILD),arch64)
-	FLAGS = $(CXXFLAGS) -m64
+	CPPFLAGS += $(CXXFLAGS) -m64
 else
-	FLAGS = $(CXXFLAGS) -march=native
+	CPPFLAGS += $(CXXFLAGS) -march=native
 endif
 endif
 endif
 
-# Compile parameters
-CPP = -H $(MGL_RENDER) $(MGL_RENDER_VB)
+# Enable GS rendering
+ifdef MGL_GS_RENDER
+	CPPFLAGS += -DMGL_GS_RENDER
+endif
+
+# Enable opengl43 features
+ifdef MGL_VB43
+	CPPFLAGS += -DMGL_VB43
+endif
+
+# Build targets
 GAME = -DGLEW_STATIC -c source/game.cpp -o $(OBJ_GAME)
 GLEW = -DGLEW_STATIC -c $(MGL_PATH)/platform/min/glew.cpp -o $(OBJ_GLEW)
 HEAD = -DGLEW_STATIC source/game/pch.h
 INLINE = -DGLEW_STATIC -DMGL_INLINE $(OBJ_GLEW) source/game.cpp -o $(BIN_GAME)
-MGL = -DGLEW_STATIC -c source/mgl.cpp -o $(OBJ_MGL)
+MGL = -c source/mgl.cpp -o $(OBJ_MGL)
 TEST = test/test.cpp -o $(BIN_TEST)
 
 # Include directories
@@ -114,28 +115,28 @@ NC=\033[0m
 # Default run target
 dynamic: $(BIN_MGL) $(BIN_GAME)
 $(BIN_GAME): $(OBJ_GLEW) $(OBJ_GAME)
-	g++ $(FLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
+	g++ $(CPPFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
 static: $(OBJ_MGL) $(OBJ_GLEW) $(OBJ_GAME)
-	g++ $(FLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
+	g++ $(CPPFLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
 game: $(BIN_PCH)
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GAME) 2> "game.txt"
+	g++ $(LIB_SOURCES) $(CPPFLAGS) $(GAME) 2> "game.txt"
 inline-dynamic: $(OBJ_GLEW)
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(INLINE) $(DYNAMIC) 2> "game.txt"
+	g++ $(LIB_SOURCES) $(CPPFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC) 2> "game.txt"
 inline-static: $(OBJ_GLEW)
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(INLINE) $(STATIC) 2> "game.txt"
+	g++ $(LIB_SOURCES) $(CPPFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC) 2> "game.txt"
 $(BIN_MGL):
-	g++ -fPIC $(LIB_SOURCES) $(FLAGS) $(CPP) $(MGL) 2> "mgl.txt"
-	g++ $(FLAGS) $(MGL_SHARED) 2> "mgl.txt"
+	g++ -fPIC $(LIB_SOURCES) $(CPPFLAGS) $(MGL) 2> "mgl.txt"
+	g++ $(CPPFLAGS) $(MGL_SHARED) 2> "mgl.txt"
 $(BIN_PCH):
-	g++ $(LIB_SOURCES) $(FLAGS) $(HEAD) 2> "pch.txt"
+	g++ $(LIB_SOURCES) $(CPPFLAGS) $(HEAD) 2> "pch.txt"
 $(BIN_TEST):
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(FLAGS) $(CPP) $(TEST) $(DYNAMIC) 2> "test.txt"
+	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(CPPFLAGS) $(TEST) $(DYNAMIC) 2> "test.txt"
 $(OBJ_GAME): $(BIN_PCH) $(BIN_TEST)
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GAME) 2> "game.o.txt"
+	g++ $(LIB_SOURCES) $(CPPFLAGS) $(GAME) 2> "game.o.txt"
 $(OBJ_GLEW):
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(GLEW) 2> "glew.o.txt"
+	g++ $(LIB_SOURCES) $(CPPFLAGS) $(GLEW) 2> "glew.o.txt"
 $(OBJ_MGL):
-	g++ $(LIB_SOURCES) $(FLAGS) $(CPP) $(MGL) 2> "mgl.o.txt"
+	g++ $(LIB_SOURCES) $(CPPFLAGS) $(MGL) 2> "mgl.o.txt"
 
 install:
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"

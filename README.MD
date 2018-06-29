@@ -23,12 +23,17 @@ Verify a bin directory exists before compiling with the makefile.
 - 'mkdir -p bin'
 
 ### The GNU makefile contains various build targets.
-- 'make BUILD=[arch32|arch64|debug]' - builds game and tests targeting specified architecture
-    - If BUILD is not defined it will default to native architecture
+- 'make' - builds with dynamic MGL library with dynamic linking
+- 'make static' - builds with sources statically with static linking
+- 'make inline-dynamic' - builds with inline sources with dynamic linking
+- 'make inline-static' - builds with inline sources with static linking
 - 'make clean' - cleans up all generated output files
 - 'make clear' - clears save files created by the game
 - 'make install' - builds and installs the game to /opt/bds
 - 'make uninstall' - uninstalls the game from /opt/bds
+- 'make BUILD=[arch32|arch64|debug]'
+    - BUILD specifies the compilation architecture, 32-bit, 64-bit, or debug.
+    - If BUILD is not defined it will default to native architecture
 
 These build targets have been tested for compilation on Arch Linux x64 and Windows 7 x86/x86-x64 platforms.
 
