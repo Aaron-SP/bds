@@ -115,28 +115,28 @@ NC=\033[0m
 # Default run target
 dynamic: $(BIN_MGL) $(BIN_GAME)
 $(BIN_GAME): $(OBJ_GLEW) $(OBJ_GAME)
-	g++ $(CPPFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
+	$(CXX) $(CPPFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
 static: $(OBJ_MGL) $(OBJ_GLEW) $(OBJ_GAME)
-	g++ $(CPPFLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
+	$(CXX) $(CPPFLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
 game: $(BIN_PCH)
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(GAME) 2> "game.txt"
+	$(CXX) $(LIB_SOURCES) $(CPPFLAGS) $(GAME) 2> "game.txt"
 inline-dynamic: $(OBJ_GLEW)
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC) 2> "game.txt"
+	$(CXX) $(LIB_SOURCES) $(CPPFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC) 2> "game.txt"
 inline-static: $(OBJ_GLEW)
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC) 2> "game.txt"
+	$(CXX) $(LIB_SOURCES) $(CPPFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC) 2> "game.txt"
 $(BIN_MGL):
-	g++ -fPIC $(LIB_SOURCES) $(CPPFLAGS) $(MGL) 2> "mgl.txt"
-	g++ $(CPPFLAGS) $(MGL_SHARED) 2> "mgl.txt"
+	$(CXX) -fPIC $(LIB_SOURCES) $(CPPFLAGS) $(MGL) 2> "mgl.txt"
+	$(CXX) $(CPPFLAGS) $(MGL_SHARED) 2> "mgl.txt"
 $(BIN_PCH):
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(HEAD) 2> "pch.txt"
+	$(CXX) $(LIB_SOURCES) $(CPPFLAGS) $(HEAD) 2> "pch.txt"
 $(BIN_TEST):
-	g++ $(LIB_SOURCES) $(TEST_SOURCES) $(CPPFLAGS) $(TEST) $(DYNAMIC) 2> "test.txt"
+	$(CXX) $(LIB_SOURCES) $(TEST_SOURCES) $(CPPFLAGS) $(TEST) $(DYNAMIC) 2> "test.txt"
 $(OBJ_GAME): $(BIN_PCH) $(BIN_TEST)
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(GAME) 2> "game.o.txt"
+	$(CXX) $(LIB_SOURCES) $(CPPFLAGS) $(GAME) 2> "game.o.txt"
 $(OBJ_GLEW):
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(GLEW) 2> "glew.o.txt"
+	$(CXX) $(LIB_SOURCES) $(CPPFLAGS) $(GLEW) 2> "glew.o.txt"
 $(OBJ_MGL):
-	g++ $(LIB_SOURCES) $(CPPFLAGS) $(MGL) 2> "mgl.o.txt"
+	$(CXX) $(LIB_SOURCES) $(CPPFLAGS) $(MGL) 2> "mgl.o.txt"
 
 install:
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"
