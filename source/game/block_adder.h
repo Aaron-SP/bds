@@ -20,6 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/cgrid.h>
 #include <game/id.h>
+#include <min/tri.h>
 #include <min/vec3.h>
 
 namespace game
@@ -271,8 +272,8 @@ class block_adder
         };
 
         // Place the block
-        const min::vec3<unsigned> scale(1, 1, 1);
-        const min::vec3<int> preview_offset(1, 1, 1);
+        const min::tri<unsigned> scale(1, 1, 1);
+        const min::tri<int> preview_offset(1, 1, 1);
         grid.set_geometry(bounded, scale, preview_offset, placed_atlas, f);
 
         // Assumes bounded is in the grid

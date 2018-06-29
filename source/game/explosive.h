@@ -24,6 +24,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/aabbox.h>
 #include <min/grid.h>
 #include <min/physics_nt.h>
+#include <min/tri.h>
 #include <min/vec3.h>
 #include <vector>
 
@@ -66,7 +67,7 @@ class explosives
     static_instance *const _inst;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     std::vector<explosive> _ex;
-    const min::vec3<unsigned> _scale;
+    const min::tri<unsigned> _scale;
     float _angle;
     coll_call _f;
     const std::string _str;
@@ -145,7 +146,7 @@ class explosives
     {
         remove(index);
     }
-    inline const min::vec3<unsigned> &get_scale() const
+    inline const min::tri<unsigned> &get_scale() const
     {
         return _scale;
     }

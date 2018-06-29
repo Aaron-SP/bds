@@ -43,6 +43,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/camera.h>
 #include <min/grid.h>
 #include <min/physics_nt.h>
+#include <min/tri.h>
 #include <random>
 #include <stdexcept>
 #include <utility>
@@ -79,17 +80,17 @@ class world
     std::vector<size_t> _view_chunk_index;
 
     // Physics stuff
-    const min::vec3<unsigned> _ex_radius;
+    const min::tri<unsigned> _ex_radius;
     const min::vec3<float> _gravity;
     physics _simulation;
     size_t _char_id;
 
     // Terrain control stuff
     min::mesh<float, uint32_t> _terr_mesh;
-    min::vec3<int> _cached_offset;
-    min::vec3<int> _preview_offset;
+    min::tri<int> _cached_offset;
+    min::tri<int> _preview_offset;
     min::vec3<float> _preview;
-    min::vec3<unsigned> _scale;
+    min::tri<unsigned> _scale;
     bool _edit_mode;
     block_id _atlas_id;
     swatch _swatch;
@@ -208,7 +209,7 @@ class world
     {
         // On collision explode callback
         return [this, d, s](const min::vec3<float> &p,
-                            const min::vec3<unsigned> &scale,
+                            const min::tri<unsigned> &scale,
                             const block_id atlas) {
             // Calculate direction
             const min::vec3<float> dir = this->direction(this->_player.position(), p);
@@ -237,9 +238,9 @@ class world
     }
 
     // Private methods
-    inline unsigned block_remove(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
+    inline unsigned block_remove(const min::vec3<float> &p, const min::tri<unsigned> &scale)
     {
-        const min::vec3<int> offset(1, 1, 1);
+        const min::tri<int> offset(1, 1, 1);
 
         // Dummy callback
         const auto f = [](const min::vec3<float> &, const block_id) -> void {
@@ -248,7 +249,7 @@ class world
         // Offset remove radius for geometry removal
         return _grid.set_geometry(_grid.snap(center_radius(p, scale)), scale, offset, block_id::EMPTY, f);
     }
-    static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::vec3<unsigned> &scale)
+    static inline min::vec3<float> center_radius(const min::vec3<float> &p, const min::tri<unsigned> &scale)
     {
         const min::vec3<float> offset(scale.x() / 2, scale.y() / 2, scale.z() / 2);
         const min::vec3<float> center = p - offset;
@@ -295,7 +296,7 @@ class world
             return this->spawn_event();
         };
     }
-    inline void drone_damage(const size_t drone_index, const min::vec3<unsigned> &scale, const min::vec3<float> &dir, const float size, const float damage)
+    inline void drone_damage(const size_t drone_index, const min::tri<unsigned> &scale, const min::vec3<float> &dir, const float size, const float damage)
     {
         // Cache the drone position, no reference here
         const min::vec3<float> p = _drones.position(drone_index);
@@ -318,7 +319,7 @@ class world
             const block_id atlas = block_id::SODIUM;
 
             // Do explode animation for sodium
-            min::vec3<unsigned> ex_scale(3, 5, 3);
+            min::tri<unsigned> ex_scale(3, 5, 3);
             explode(p, flip, ex_scale, atlas, size, f, dmg_drone_call(), sound_choose_call());
 
             // Drop block
@@ -351,7 +352,7 @@ class world
     }
     template <typename D, typename S>
     inline void explode_block(
-        const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
+        const min::vec3<float> &p, const min::vec3<float> &dir, const min::tri<unsigned> &scale,
         const block_id atlas, const float size, const D &d, const S &s)
     {
         // On remove callback
@@ -364,14 +365,14 @@ class world
     }
     template <typename F, typename D, typename S>
     inline void explode(
-        const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<unsigned> &scale,
+        const min::vec3<float> &p, const min::vec3<float> &dir, const min::tri<unsigned> &scale,
         const block_id atlas, const float size, const F &f, const D &d, const S &s)
     {
         // Offset explosion radius for geometry removal
         const min::vec3<float> center = center_radius(p, scale);
 
         // If we removed geometry do explode animation
-        const min::vec3<int> offset(1, 1, 1);
+        const min::tri<int> offset(1, 1, 1);
         _grid.set_geometry(center, scale, offset, block_id::EMPTY, f);
 
         // Calculate explosion speed
@@ -400,7 +401,7 @@ class world
         }
     }
     inline bool explode_ray_body(min::body<float, min::vec3> &b, const min::ray<float, min::vec3> &r,
-                                 const min::vec3<unsigned> &scale, const float size, const bool is_charge)
+                                 const min::tri<unsigned> &scale, const float size, const bool is_charge)
     {
         // Check if body isn't dead
         if (!b.is_dead())
@@ -448,7 +449,7 @@ class world
     }
     template <typename R>
     inline void explode_ray_block(const min::vec3<float> &p, const block_id atlas,
-                                  const min::vec3<unsigned> &scale, const float size,
+                                  const min::tri<unsigned> &scale, const float size,
                                   const R &ray_call)
     {
         // Get character body
@@ -472,7 +473,7 @@ class world
     }
     template <typename R>
     inline block_id explode_ray(const min::ray<float, min::vec3> &r, const target &t,
-                                const min::vec3<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
+                                const min::tri<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
     {
         // Get the target id
         const target_id tid = t.get_id();
@@ -541,7 +542,7 @@ class world
             _terrain.upload_preview(_terr_mesh);
         }
     }
-    inline std::tuple<bool, float, float> in_range_explode(const min::vec3<float> &p1, const min::vec3<float> &p2, const min::vec3<unsigned> &scale) const
+    inline std::tuple<bool, float, float> in_range_explode(const min::vec3<float> &p1, const min::vec3<float> &p2, const min::tri<unsigned> &scale) const
     {
         // Calculate the size of the explosion
         const float ex_squared_radius = scale.dot(scale);
@@ -978,9 +979,9 @@ class world
     inline void reset(const options &opt)
     {
         // Reset to default
-        _cached_offset = min::vec3<int>(1, 1, 1);
-        _preview_offset = min::vec3<int>(1, 1, 1);
-        _scale = min::vec3<unsigned>(1, 1, 1);
+        _cached_offset = min::tri<int>(1, 1, 1);
+        _preview_offset = min::tri<int>(1, 1, 1);
+        _scale = min::tri<unsigned>(1, 1, 1);
         _edit_mode = false;
         _atlas_id = block_id::EMPTY;
         _swatch_cost = 0;
@@ -1061,7 +1062,7 @@ class world
         _sky.draw();
     }
     template <typename R>
-    inline block_id explode_ray(const min::vec3<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
+    inline block_id explode_ray(const min::tri<unsigned> &scale, const float size, const bool is_charge, const R &ray_call)
     {
         return explode_ray(_player.ray(), _player.get_target(), scale, size, is_charge, ray_call);
     }
@@ -1274,7 +1275,7 @@ class world
     inline void reset_scale()
     {
         // Reset the scale and the cached offset
-        _scale = min::vec3<unsigned>(1, 1, 1);
+        _scale = min::tri<unsigned>(1, 1, 1);
 
         // Reset the swatch contents
         if (_swatch_mode)
@@ -1305,7 +1306,7 @@ class world
         _grid.save(opt);
     }
     template <typename R>
-    inline size_t scatter_ray(const min::vec3<unsigned> &scale, const float size, const R &ray_call)
+    inline size_t scatter_ray(const min::tri<unsigned> &scale, const float size, const R &ray_call)
     {
         size_t count = 0;
 

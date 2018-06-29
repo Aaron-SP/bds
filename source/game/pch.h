@@ -48,6 +48,7 @@
 #include <min/text_buffer.h>
 #include <min/texture_buffer.h>
 #include <min/tree.h>
+#include <min/tri.h>
 #include <min/uniform_buffer.h>
 #include <min/vec2.h>
 #include <min/vec3.h>
@@ -84,8 +85,8 @@ extern template class min::physics<float, uint_fast16_t, uint_fast32_t, min::vec
 extern template class min::quat<float>;
 extern template class min::ray<float, min::vec3>;
 extern template class min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox>;
+extern template class min::tri<int>;
+extern template class min::tri<unsigned>;
 extern template class min::vec2<float>;
-extern template class min::vec3<int>;
 extern template class min::vec3<float>;
-extern template class min::vec3<unsigned>;
 extern template class min::vec4<float>;

@@ -32,6 +32,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/ray.h>
 #include <min/serial.h>
 #include <min/sort.h>
+#include <min/tri.h>
 #include <stdexcept>
 
 namespace game
@@ -157,7 +158,7 @@ class cgrid
         }
     }
     template <typename F>
-    inline void cubic(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset, const F &f) const
+    inline void cubic(const min::vec3<float> &start, const min::tri<unsigned> &length, const min::tri<int> &offset, const F &f) const
     {
         // Begin at start position
         min::vec3<float> p = start;
@@ -199,7 +200,7 @@ class cgrid
         }
     }
     template <typename F>
-    inline void cubic_grid(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset, const F &f) const
+    inline void cubic_grid(const min::vec3<float> &start, const min::tri<unsigned> &length, const min::tri<int> &offset, const F &f) const
     {
         // Get the grid axis components
         const size_t end = _grid_scale;
@@ -410,8 +411,8 @@ class cgrid
         _chunks[key].normal.reserve(size6);
 #endif
     }
-    inline unsigned geometry_add(const min::vec3<float> &start, const min::vec3<unsigned> &length,
-                                 const min::vec3<int> &offset, const block_id atlas_id)
+    inline unsigned geometry_add(const min::vec3<float> &start, const min::tri<unsigned> &length,
+                                 const min::tri<int> &offset, const block_id atlas_id)
     {
         unsigned out = 0;
 
@@ -434,7 +435,7 @@ class cgrid
         // Return count
         return out;
     }
-    inline unsigned geometry_copy_swatch(const swatch &sw, const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset)
+    inline unsigned geometry_copy_swatch(const swatch &sw, const min::vec3<float> &start, const min::tri<unsigned> &length, const min::tri<int> &offset)
     {
         unsigned out = 0;
 
@@ -465,7 +466,7 @@ class cgrid
         return out;
     }
     template <typename SB>
-    inline unsigned geometry_remove(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
+    inline unsigned geometry_remove(const min::vec3<float> &start, const min::tri<unsigned> &length, const min::tri<int> &offset,
                                     const block_id atlas_id, const SB &set_block_call)
     {
         unsigned out = 0;
@@ -1136,7 +1137,7 @@ class cgrid
 
         return false;
     }
-    inline unsigned load_swatch(swatch &sw, const min::vec3<float> &start, const min::vec3<int> &offset, const min::vec3<unsigned> &length) const
+    inline unsigned load_swatch(swatch &sw, const min::vec3<float> &start, const min::tri<int> &offset, const min::tri<unsigned> &length) const
     {
         // Swatch cost
         unsigned out = 0;
@@ -1163,7 +1164,7 @@ class cgrid
         // Return the swatch cost
         return out;
     }
-    inline void preview_atlas(min::mesh<float, uint32_t> &mesh, const min::vec3<int> &offset, const min::vec3<unsigned> &length, const block_id atlas) const
+    inline void preview_atlas(min::mesh<float, uint32_t> &mesh, const min::tri<int> &offset, const min::tri<unsigned> &length, const block_id atlas) const
     {
         // Clear the mesher
         _mesher.clear();
@@ -1203,7 +1204,7 @@ class cgrid
         _mesher.clear();
 
         // Calculate max edges
-        const min::vec3<unsigned> &length = sw.get_length();
+        const min::tri<unsigned> &length = sw.get_length();
         const auto edges = std::tuple<size_t, size_t, size_t>(length.x() - 1, length.y() - 1, length.z() - 1);
 
         // Function to retrieve block value
@@ -1381,8 +1382,8 @@ class cgrid
         unsigned out = 0;
 
         // Get cubic function properties
-        const min::vec3<unsigned> &length = sw.get_length();
-        const min::vec3<int> &offset = sw.get_offset();
+        const min::tri<unsigned> &length = sw.get_length();
+        const min::tri<int> &offset = sw.get_offset();
 
         // Record all modified chunks and store them for updating
         _chunk_update_keys.reserve(length.x() * length.y() * length.z());
@@ -1398,7 +1399,7 @@ class cgrid
         return out;
     }
     template <typename SB>
-    inline unsigned set_geometry(const min::vec3<float> &start, const min::vec3<unsigned> &length, const min::vec3<int> &offset,
+    inline unsigned set_geometry(const min::vec3<float> &start, const min::tri<unsigned> &length, const min::tri<int> &offset,
                                  const block_id atlas_id, const SB &set_block_call)
     {
         // Modified geometry
@@ -1436,8 +1437,8 @@ class cgrid
 
         // Create enclosed cube 3x3
         min::vec3<float> start(nx, ny, nz);
-        min::vec3<unsigned> length(3, 3, 3);
-        const min::vec3<int> offset(1, 1, 1);
+        min::tri<unsigned> length(3, 3, 3);
+        const min::tri<int> offset(1, 1, 1);
 
         // Dummy callback
         const auto f = [](const min::vec3<float> &, const block_id) -> void {
@@ -1517,8 +1518,8 @@ class cgrid
 
         // Get cubic chunk start point
         const min::vec3<float> start = center - min::vec3<float>(half_width, half_width, half_width);
-        const min::vec3<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
-        const min::vec3<int> offset(_chunk_size, _chunk_size, _chunk_size);
+        const min::tri<unsigned> length(_view_chunk_size, _view_chunk_size, _view_chunk_size);
+        const min::tri<int> offset(_chunk_size, _chunk_size, _chunk_size);
 
         // Calculate a weighted center to favor chunks in front of viewer
         const min::vec3<float> weight_center = cam.project_point(_chunk_size / 2);

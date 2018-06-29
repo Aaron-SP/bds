@@ -27,6 +27,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/world.h>
 #include <iostream>
 #include <min/camera.h>
+#include <min/tri.h>
 #include <min/window.h>
 #include <stdexcept>
 
@@ -1302,7 +1303,7 @@ class controls
                 else if (skill.is_charged())
                 {
                     // Fire a charged explosion ray
-                    const min::vec3<unsigned> radius(3, 3, 3);
+                    const min::tri<unsigned> radius(3, 3, 3);
                     const block_id hit = world->explode_ray(radius, 100.0, true, play_ex);
                     if (hit == block_id::EMPTY)
                     {
@@ -1499,7 +1500,7 @@ class controls
                         };
 
                         // Shot scatter
-                        const min::vec3<unsigned> radius(1, 1, 1);
+                        const min::tri<unsigned> radius(1, 1, 1);
                         const size_t hits = world->scatter_ray(radius, 20.0, f);
                         if (hits == 0)
                         {
@@ -1704,7 +1705,7 @@ class controls
         };
 
         // Fire an explosion ray
-        const min::vec3<unsigned> radius(1, 1, 1);
+        const min::tri<unsigned> radius(1, 1, 1);
         const block_id hit = _world->explode_ray(radius, 20.0, false, f);
         if (hit == block_id::EMPTY)
         {

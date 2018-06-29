@@ -23,6 +23,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/id.h>
 #include <game/work_queue.h>
 #include <min/mesh.h>
+#include <min/tri.h>
 #include <min/vec3.h>
 #include <numeric>
 #include <stdexcept>
@@ -227,7 +228,7 @@ class terrain_mesher
         }
     }
     inline void generate_place_faces_rotated(
-        const min::vec3<float> &p, const min::vec3<int> &offset,
+        const min::vec3<float> &p, const min::tri<int> &offset,
         const std::tuple<size_t, size_t, size_t> &index,
         const std::tuple<size_t, size_t, size_t> &edge, const float float_atlas) const
     {
@@ -273,7 +274,7 @@ class terrain_mesher
     }
     template <typename GB>
     inline void generate_chunk_faces_rotated(
-        const min::vec3<float> &p, const min::vec3<int> &offset,
+        const min::vec3<float> &p, const min::tri<int> &offset,
         const std::tuple<size_t, size_t, size_t> &index,
         const std::tuple<size_t, size_t, size_t> &edge, const GB &get_block, const float float_atlas) const
     {

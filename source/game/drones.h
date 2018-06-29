@@ -26,6 +26,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/aabbox.h>
 #include <min/grid.h>
 #include <min/physics_nt.h>
+#include <min/tri.h>
 #include <min/vec3.h>
 #include <vector>
 
@@ -447,7 +448,7 @@ class drones
                 if (splash || tunnel)
                 {
                     // Blow up geometry around drone
-                    const min::vec3<unsigned> scale(3, 3, 3);
+                    const min::tri<unsigned> scale(3, 3, 3);
 
                     // First collision, _col_cells must have a size if hit
                     ex_scale_call(p, scale, _col_cells[0].second);

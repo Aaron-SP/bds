@@ -25,6 +25,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/static_instance.h>
 #include <min/grid.h>
 #include <min/physics_nt.h>
+#include <min/tri.h>
 #include <min/vec3.h>
 #include <vector>
 
@@ -74,7 +75,7 @@ class missiles
     sound *const _sound;
     std::vector<std::pair<min::aabbox<float, min::vec3>, block_id>> _col_cells;
     std::vector<missile> _miss;
-    const min::vec3<unsigned> _scale;
+    const min::tri<unsigned> _scale;
     coll_call _f;
     const std::string _str;
 
@@ -161,7 +162,7 @@ class missiles
         // Blow up the missile
         remove(index);
     }
-    inline const min::vec3<unsigned> &get_scale() const
+    inline const min::tri<unsigned> &get_scale() const
     {
         return _scale;
     }

@@ -12,6 +12,7 @@
 #include <min/quat.h>
 #include <min/ray.h>
 #include <min/tree.h>
+#include <min/tri.h>
 #include <min/vec2.h>
 #include <min/vec3.h>
 #include <min/vec4.h>
@@ -32,8 +33,8 @@ template class min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min:
 template class min::quat<float>;
 template class min::ray<float, min::vec3>;
 template class min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox>;
+template class min::tri<int>;
+template class min::tri<unsigned>;
 template class min::vec2<float>;
-template class min::vec3<int>;
 template class min::vec3<float>;
-template class min::vec3<unsigned>;
 template class min::vec4<float>;

@@ -20,6 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <array>
 #include <game/id.h>
+#include <min/tri.h>
 
 namespace game
 {
@@ -30,8 +31,8 @@ class swatch
     static constexpr size_t _scale = 6;
     static constexpr size_t _size = _scale * _scale * _scale;
     std::vector<block_id> _b;
-    min::vec3<unsigned> _length;
-    min::vec3<int> _offset;
+    min::tri<unsigned> _length;
+    min::tri<int> _offset;
 
     inline size_t grid_key_pack(const std::tuple<size_t, size_t, size_t> &t) const
     {
@@ -44,11 +45,11 @@ class swatch
 
   public:
     swatch() : _b(_size, block_id::EMPTY) {}
-    inline const min::vec3<unsigned> &get_length() const
+    inline const min::tri<unsigned> &get_length() const
     {
         return _length;
     }
-    inline const min::vec3<int> &get_offset() const
+    inline const min::tri<int> &get_offset() const
     {
         return _offset;
     }
@@ -63,11 +64,11 @@ class swatch
             _b[i] = block_id::EMPTY;
         }
     }
-    inline void set_length(const min::vec3<unsigned> &length)
+    inline void set_length(const min::tri<unsigned> &length)
     {
         _length = length;
     }
-    inline void set_offset(const min::vec3<int> &offset)
+    inline void set_offset(const min::tri<int> &offset)
     {
         _offset = offset;
     }
