@@ -30,7 +30,7 @@ class terrain_creative
   private:
     const size_t _scale;
 
-    inline size_t key(const std::tuple<size_t, size_t, size_t> &index) const
+    inline size_t key(const min::tri<size_t> &index) const
     {
         return min::vec3<float>::grid_key(index, _scale);
     }
@@ -61,7 +61,7 @@ class terrain_creative
                     if (x && y && z)
                     {
                         // Calculate key index
-                        const size_t index = key(std::make_tuple(i, j, k));
+                        const size_t index = key(min::tri<size_t>(i, j, k));
 
                         // Roll a random block
                         switch (group(gen))

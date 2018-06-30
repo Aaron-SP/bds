@@ -157,20 +157,20 @@ class terrain_mesher
     template <typename GB>
     inline void generate_chunk_faces(
         const min::vec3<float> &p,
-        const std::tuple<size_t, size_t, size_t> &index,
-        const std::tuple<size_t, size_t, size_t> &edge, const GB &get_block, const float float_atlas) const
+        const min::tri<size_t> &index,
+        const min::tri<size_t> &edge, const GB &get_block, const float float_atlas) const
     {
-        const size_t ix = std::get<0>(index);
-        const size_t iy = std::get<1>(index);
-        const size_t iz = std::get<2>(index);
+        const size_t ix = index.x();
+        const size_t iy = index.y();
+        const size_t iz = index.z();
 
         // Generate X Faces
         const bool on_edge_nx = ix == 0;
-        const bool on_edge_px = ix == std::get<0>(edge);
+        const bool on_edge_px = ix == edge.x();
         if (!on_edge_nx)
         {
             // Unsafely check if cell is within the grid
-            const block_id x1 = get_block(std::make_tuple(ix - 1, iy, iz));
+            const block_id x1 = get_block(min::tri<size_t>(ix - 1, iy, iz));
             if (x1 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 0.1));
@@ -178,7 +178,7 @@ class terrain_mesher
         }
         if (!on_edge_px)
         {
-            const block_id x2 = get_block(std::make_tuple(ix + 1, iy, iz));
+            const block_id x2 = get_block(min::tri<size_t>(ix + 1, iy, iz));
             if (x2 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 255.1));
@@ -187,11 +187,11 @@ class terrain_mesher
 
         // Generate Y Faces
         const bool on_edge_ny = iy == 0;
-        const bool on_edge_py = iy == std::get<1>(edge);
+        const bool on_edge_py = iy == edge.y();
         if (!on_edge_ny)
         {
             // Unsafely check if cell is within the grid
-            const block_id y1 = get_block(std::make_tuple(ix, iy - 1, iz));
+            const block_id y1 = get_block(min::tri<size_t>(ix, iy - 1, iz));
             if (y1 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 510.1));
@@ -199,7 +199,7 @@ class terrain_mesher
         }
         if (!on_edge_py)
         {
-            const block_id y2 = get_block(std::make_tuple(ix, iy + 1, iz));
+            const block_id y2 = get_block(min::tri<size_t>(ix, iy + 1, iz));
             if (y2 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 765.1));
@@ -208,11 +208,11 @@ class terrain_mesher
 
         // Generate Z Faces
         const bool on_edge_nz = iz == 0;
-        const bool on_edge_pz = iz == std::get<2>(edge);
+        const bool on_edge_pz = iz == edge.z();
         if (!on_edge_nz)
         {
             // Unsafely check if cell is within the grid
-            const block_id z1 = get_block(std::make_tuple(ix, iy, iz - 1));
+            const block_id z1 = get_block(min::tri<size_t>(ix, iy, iz - 1));
             if (z1 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1020.1));
@@ -220,7 +220,7 @@ class terrain_mesher
         }
         if (!on_edge_pz)
         {
-            const block_id z2 = get_block(std::make_tuple(ix, iy, iz + 1));
+            const block_id z2 = get_block(min::tri<size_t>(ix, iy, iz + 1));
             if (z2 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1275.1));
@@ -229,16 +229,16 @@ class terrain_mesher
     }
     inline void generate_place_faces_rotated(
         const min::vec3<float> &p, const min::tri<int> &offset,
-        const std::tuple<size_t, size_t, size_t> &index,
-        const std::tuple<size_t, size_t, size_t> &edge, const float float_atlas) const
+        const min::tri<size_t> &index,
+        const min::tri<size_t> &edge, const float float_atlas) const
     {
-        const size_t ix = std::get<0>(index);
-        const size_t iy = std::get<1>(index);
-        const size_t iz = std::get<2>(index);
+        const size_t ix = index.x();
+        const size_t iy = index.y();
+        const size_t iz = index.z();
 
         // Generate X faces on edges accounting for offset rotation
         const bool on_edge_nx = ix == 0;
-        const bool on_edge_px = ix == std::get<0>(edge);
+        const bool on_edge_px = ix == edge.x();
         if ((on_edge_nx && offset.x() > 0) || (on_edge_px && offset.x() < 0))
         {
             _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 0.1));
@@ -250,7 +250,7 @@ class terrain_mesher
 
         // Generate Y faces on edges accounting for offset rotation
         const bool on_edge_ny = iy == 0;
-        const bool on_edge_py = iy == std::get<1>(edge);
+        const bool on_edge_py = iy == edge.y();
         if ((on_edge_ny && offset.y() > 0) || (on_edge_py && offset.y() < 0))
         {
             _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 510.1));
@@ -262,7 +262,7 @@ class terrain_mesher
 
         // Generate Z faces on edges accounting for offset rotation
         const bool on_edge_nz = iz == 0;
-        const bool on_edge_pz = iz == std::get<2>(edge);
+        const bool on_edge_pz = iz == edge.z();
         if ((on_edge_nz && offset.z() > 0) || (on_edge_pz && offset.z() < 0))
         {
             _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1020.1));
@@ -275,20 +275,20 @@ class terrain_mesher
     template <typename GB>
     inline void generate_chunk_faces_rotated(
         const min::vec3<float> &p, const min::tri<int> &offset,
-        const std::tuple<size_t, size_t, size_t> &index,
-        const std::tuple<size_t, size_t, size_t> &edge, const GB &get_block, const float float_atlas) const
+        const min::tri<size_t> &index,
+        const min::tri<size_t> &edge, const GB &get_block, const float float_atlas) const
     {
-        const size_t ix = std::get<0>(index);
-        const size_t iy = std::get<1>(index);
-        const size_t iz = std::get<2>(index);
+        const size_t ix = index.x();
+        const size_t iy = index.y();
+        const size_t iz = index.z();
 
         // Generate X Faces
         const bool on_edge_nx = ix == 0;
-        const bool on_edge_px = ix == std::get<0>(edge);
+        const bool on_edge_px = ix == edge.x();
         if (!on_edge_nx && !on_edge_px)
         {
             // Unsafely check if cell is within the grid
-            const block_id x1 = get_block(std::make_tuple(ix - 1, iy, iz));
+            const block_id x1 = get_block(min::tri<size_t>(ix - 1, iy, iz));
             if (x1 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 0.1));
@@ -300,7 +300,7 @@ class terrain_mesher
         }
         if (!on_edge_nx && !on_edge_px)
         {
-            const block_id x2 = get_block(std::make_tuple(ix + 1, iy, iz));
+            const block_id x2 = get_block(min::tri<size_t>(ix + 1, iy, iz));
             if (x2 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 255.1));
@@ -313,11 +313,11 @@ class terrain_mesher
 
         // Generate Y Faces
         const bool on_edge_ny = iy == 0;
-        const bool on_edge_py = iy == std::get<1>(edge);
+        const bool on_edge_py = iy == edge.y();
         if (!on_edge_ny && !on_edge_py)
         {
             // Unsafely check if cell is within the grid
-            const block_id y1 = get_block(std::make_tuple(ix, iy - 1, iz));
+            const block_id y1 = get_block(min::tri<size_t>(ix, iy - 1, iz));
             if (y1 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 510.1));
@@ -329,7 +329,7 @@ class terrain_mesher
         }
         if (!on_edge_ny && !on_edge_py)
         {
-            const block_id y2 = get_block(std::make_tuple(ix, iy + 1, iz));
+            const block_id y2 = get_block(min::tri<size_t>(ix, iy + 1, iz));
             if (y2 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 765.1));
@@ -342,11 +342,11 @@ class terrain_mesher
 
         // Generate Z Faces
         const bool on_edge_nz = iz == 0;
-        const bool on_edge_pz = iz == std::get<2>(edge);
+        const bool on_edge_pz = iz == edge.z();
         if (!on_edge_nz && !on_edge_pz)
         {
             // Unsafely check if cell is within the grid
-            const block_id z1 = get_block(std::make_tuple(ix, iy, iz - 1));
+            const block_id z1 = get_block(min::tri<size_t>(ix, iy, iz - 1));
             if (z1 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1020.1));
@@ -358,7 +358,7 @@ class terrain_mesher
         }
         if (!on_edge_nz && !on_edge_pz)
         {
-            const block_id z2 = get_block(std::make_tuple(ix, iy, iz + 1));
+            const block_id z2 = get_block(min::tri<size_t>(ix, iy, iz + 1));
             if (z2 == block_id::EMPTY)
             {
                 _cells.push_back(min::vec4<float>(p.x(), p.y(), p.z(), float_atlas + 1275.1));

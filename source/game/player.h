@@ -227,10 +227,8 @@ class player
         // If we collided with a block and we are not falling, signal landing
         if (landed && !_falling)
         {
-            _land_count++;
-
             // If we have just landed
-            if (_land_count == 1)
+            if (_land_count++ == 0)
             {
                 // Reset the jump count
                 _jump_count = 0;
@@ -742,8 +740,26 @@ class player
         // Warp character to new position
         body().set_position(p);
     }
+    inline void update_pre_frame(const float friction)
+    {
+        // Proces damage and explode cooldowns
+        if (_damage_cd > 0)
+        {
+            _damage_cd--;
+        }
+        if (_explode_cd > 0)
+        {
+            _explode_cd--;
+        }
+
+        // Update the player position
+        update_position(friction);
+
+        // Update the player stats
+        update_stats();
+    }
     template <typename E>
-    inline void update_frame(const cgrid &grid, const float friction, const E &ex_call)
+    inline void update_post_frame(const cgrid &grid, const E &ex_call)
     {
         // Check if player is still in the grid
         const min::vec3<float> &p = position();
@@ -811,24 +827,8 @@ class player
             }
         }
 
-        // Proces damage and explode cooldowns
-        if (_damage_cd > 0)
-        {
-            _damage_cd--;
-        }
-        if (_explode_cd > 0)
-        {
-            _explode_cd--;
-        }
-
         // Update the landed state
         update_land(landed);
-
-        // Update the player position
-        update_position(friction);
-
-        // Update the player stats
-        update_stats();
     }
     inline void update(min::camera<float> &cam)
     {

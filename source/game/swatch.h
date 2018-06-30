@@ -34,11 +34,11 @@ class swatch
     min::tri<unsigned> _length;
     min::tri<int> _offset;
 
-    inline size_t grid_key_pack(const std::tuple<size_t, size_t, size_t> &t) const
+    inline size_t grid_key_pack(const min::tri<size_t> &index) const
     {
-        return min::vec3<float>::grid_key(t, _scale);
+        return min::vec3<float>::grid_key(index, _scale);
     }
-    inline std::tuple<size_t, size_t, size_t> grid_key_unpack(const size_t key) const
+    inline min::tri<size_t> grid_key_unpack(const size_t key) const
     {
         return min::vec3<float>::grid_index(key, _scale);
     }
@@ -55,7 +55,7 @@ class swatch
     }
     inline block_id get(const size_t i, const size_t j, const size_t k) const
     {
-        return _b[grid_key_pack(std::make_tuple(i, j, k))];
+        return _b[grid_key_pack(min::tri<size_t>(i, j, k))];
     }
     inline void reset()
     {
@@ -74,7 +74,7 @@ class swatch
     }
     inline void set(const size_t i, const size_t j, const size_t k, const block_id atlas)
     {
-        _b[grid_key_pack(std::make_tuple(i, j, k))] = atlas;
+        _b[grid_key_pack(min::tri<size_t>(i, j, k))] = atlas;
     }
 };
 }

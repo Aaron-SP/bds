@@ -33,13 +33,13 @@ class brownian_grow
     const size_t _scale;
     const size_t _seed;
     const size_t _radius;
-    std::vector<std::tuple<size_t, size_t, size_t>> _points;
+    std::vector<min::tri<size_t>> _points;
 
     inline static size_t add(const size_t x, const int dx)
     {
         return static_cast<size_t>(static_cast<int>(x) + dx);
     }
-    inline size_t key(const std::tuple<size_t, size_t, size_t> &index) const
+    inline size_t key(const min::tri<size_t> &index) const
     {
         return min::vec3<float>::grid_key(index, _scale);
     }
@@ -102,22 +102,22 @@ class brownian_grow
             return 8;
         }
     }
-    inline bool random_walk(const std::vector<game::block_id> &read, std::tuple<size_t, size_t, size_t> &walker, const uint_fast8_t dir, game::block_id &value) const
+    inline bool random_walk(const std::vector<game::block_id> &read, min::tri<size_t> &walker, const uint_fast8_t dir, game::block_id &value) const
     {
         // Copy walker position
-        std::tuple<size_t, size_t, size_t> next = walker;
+        min::tri<size_t> next = walker;
 
         // Reflect walker if on edge
         bool edge = false;
-        if (on_edge(std::get<0>(next)))
+        if (on_edge(next.x()))
         {
             edge = true;
         }
-        else if (on_edge(std::get<1>(next)))
+        else if (on_edge(next.y()))
         {
             edge = true;
         }
-        else if (on_edge(std::get<2>(next)))
+        else if (on_edge(next.z()))
         {
             edge = true;
         }
@@ -128,22 +128,22 @@ class brownian_grow
             switch (dir)
             {
             case 0:
-                std::get<0>(next)--;
+                next.x()--;
                 break;
             case 1:
-                std::get<0>(next)++;
+                next.x()++;
                 break;
             case 2:
-                std::get<1>(next)--;
+                next.y()--;
                 break;
             case 3:
-                std::get<1>(next)++;
+                next.y()++;
                 break;
             case 4:
-                std::get<2>(next)--;
+                next.z()--;
                 break;
             case 5:
-                std::get<2>(next)++;
+                next.z()++;
                 break;
             }
         }
@@ -174,10 +174,10 @@ class brownian_grow
             for (size_t j = 0; j < _seed; j++)
             {
                 // Spawn walker at random offset from seed location
-                const size_t x = add(std::get<0>(_points[j]), gdist(gen));
-                const size_t y = add(std::get<1>(_points[j]), gdist(gen));
-                const size_t z = add(std::get<2>(_points[j]), gdist(gen));
-                auto walker = std::make_tuple(x, y, z);
+                const size_t x = add(_points[j].x(), gdist(gen));
+                const size_t y = add(_points[j].y(), gdist(gen));
+                const size_t z = add(_points[j].z(), gdist(gen));
+                auto walker = min::tri<size_t>(x, y, z);
 
                 // Evolve simulation for years
                 for (size_t k = 0; k < years; k++)
@@ -196,10 +196,10 @@ class brownian_grow
                         write[cell] = color_table(value);
 
                         // Respawn walker
-                        const size_t x1 = add(std::get<0>(_points[j]), gdist(gen));
-                        const size_t y1 = add(std::get<1>(_points[j]), gdist(gen));
-                        const size_t z1 = add(std::get<2>(_points[j]), gdist(gen));
-                        walker = std::make_tuple(x1, y1, z1);
+                        const size_t x1 = add(_points[j].x(), gdist(gen));
+                        const size_t y1 = add(_points[j].y(), gdist(gen));
+                        const size_t z1 = add(_points[j].z(), gdist(gen));
+                        walker = min::tri<size_t>(x1, y1, z1);
                     }
                 }
             }
@@ -234,7 +234,7 @@ class brownian_grow
         for (size_t i = 0; i < _seed; i++)
         {
             // Calculate random cell in the grid and write value
-            _points[i] = std::make_tuple(gdist(gen), gdist(gen), gdist(gen));
+            _points[i] = min::tri<size_t>(gdist(gen), gdist(gen), gdist(gen));
 
             // Calculate grid cell
             const size_t cell = key(_points[i]);

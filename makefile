@@ -145,10 +145,13 @@ $(OBJ_MGL):
 install:
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"
 	mkdir -p $(DEST_PATH)/bin
-	cp -v bin/game $(DEST_PATH)/bin
+	cp -v $(BIN_GAME) $(DEST_PATH)/bin
+	@if [ -e $(BIN_MGL) ]; then\
+		cp -v $(BIN_MGL) $(DEST_PATH)/bin;\
+	fi
 	cp -vr data $(DEST_PATH)
 	cp -v favicon.ico $(DEST_PATH)
-	printf '%s\n' '#!/bin/bash' 'cd $(DEST_PATH)' 'bin/game "$$@"' > $(DEST_PATH)/bds.game
+	printf '%s\n' '#!/bin/bash' 'cd $(DEST_PATH)' '$(BIN_GAME) "$$@"' > $(DEST_PATH)/bds.game
 	chmod -R 755 $(DEST_PATH)
 	mkdir -p $(DEST_PATH)/save
 	chmod -R 777 $(DEST_PATH)/save

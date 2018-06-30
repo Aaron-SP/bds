@@ -35,7 +35,7 @@ class terrain_base
     const size_t _stop;
     perlin_noise _noise;
 
-    inline size_t key(const std::tuple<size_t, size_t, size_t> &index) const
+    inline size_t key(const min::tri<size_t> &index) const
     {
         return min::vec3<float>::grid_key(index, _scale);
     }
@@ -77,7 +77,7 @@ class terrain_base
                 for (size_t k = 0; k < _scale; k++)
                 {
                     // Calculate key index
-                    const size_t index = key(std::make_tuple(i, j, k));
+                    const size_t index = key(min::tri<size_t>(i, j, k));
 
                     // If on edge, write as STONE2
                     if (on_edge(i) || on_edge(j) || on_edge(k))

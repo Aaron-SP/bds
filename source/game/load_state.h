@@ -228,6 +228,17 @@ class load_state
 
             // Load the game mode
             const game_type game_mode = static_cast<game_type>(min::read_le<uint8_t>(stream, next));
+
+            // Check game mode is a known value
+            switch (game_mode)
+            {
+            case game_type::NORMAL:
+            case game_type::HARDCORE:
+            case game_type::CREATIVE:
+                break;
+            default:
+                throw std::runtime_error("load_state: unknown game mode");
+            }
             opt.set_game_mode(game_mode);
 
             // Read position from stream

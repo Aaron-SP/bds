@@ -875,8 +875,8 @@ class world
             // Solve all physics timesteps
             for (size_t i = 0; i < steps; i++)
             {
-                // Update the player on this frame
-                _player.update_frame(_grid, friction, explode_default_call());
+                // Update the player before frame
+                _player.update_pre_frame(friction);
 
                 // Update chests on this frame
                 _chests.update_frame();
@@ -895,6 +895,9 @@ class world
 
                 // Solve all collisions
                 _simulation.solve(_time_step, _damping);
+
+                // Update the player after frame
+                _player.update_post_frame(_grid, explode_default_call());
             }
 
             // Update the chest positions

@@ -31,12 +31,12 @@ class block_adder
   private:
     const size_t _edge;
 
-    inline void set_above(cgrid &grid, const std::tuple<size_t, size_t, size_t> &t, const block_id atlas) const
+    inline void set_above(cgrid &grid, const min::tri<size_t> &index, const block_id atlas) const
     {
-        const bool on_edge_py = (std::get<1>(t) == _edge);
+        const bool on_edge_py = (index.y() == _edge);
         if (!on_edge_py)
         {
-            const auto above = std::make_tuple(std::get<0>(t), std::get<1>(t) + 1, std::get<2>(t));
+            const auto above = min::tri<size_t>(index.x(), index.y() + 1, index.z());
             const size_t above_key = grid.get_block_key(above);
 
             // Only set if empty
@@ -48,8 +48,8 @@ class block_adder
     }
     inline void interaction(
         cgrid &grid,
-        const std::tuple<size_t, size_t, size_t> &placed, const block_id placed_atlas,
-        const std::tuple<size_t, size_t, size_t> &old) const
+        const min::tri<size_t> &placed, const block_id placed_atlas,
+        const min::tri<size_t> &old) const
     {
         // Get the neighbor block ID
         const size_t old_key = grid.get_block_key(old);
@@ -217,23 +217,23 @@ class block_adder
             break;
         }
     }
-    inline void neighbor_interaction(cgrid &grid, const std::tuple<size_t, size_t, size_t> &placed, const block_id placed_atlas) const
+    inline void neighbor_interaction(cgrid &grid, const min::tri<size_t> &placed, const block_id placed_atlas) const
     {
         // Extract the placed point index
-        const size_t x = std::get<0>(placed);
-        const size_t y = std::get<1>(placed);
-        const size_t z = std::get<2>(placed);
+        const size_t x = placed.x();
+        const size_t y = placed.y();
+        const size_t z = placed.z();
 
         // Look at X neighbors
         const bool on_edge_nx = (x == 0);
         const bool on_edge_px = (x == _edge);
         if (!on_edge_nx)
         {
-            interaction(grid, placed, placed_atlas, std::make_tuple(x - 1, y, z));
+            interaction(grid, placed, placed_atlas, min::tri<size_t>(x - 1, y, z));
         }
         if (!on_edge_px)
         {
-            interaction(grid, placed, placed_atlas, std::make_tuple(x + 1, y, z));
+            interaction(grid, placed, placed_atlas, min::tri<size_t>(x + 1, y, z));
         }
 
         // Look at Y neighbors
@@ -241,11 +241,11 @@ class block_adder
         const bool on_edge_py = (y == _edge);
         if (!on_edge_ny)
         {
-            interaction(grid, placed, placed_atlas, std::make_tuple(x, y - 1, z));
+            interaction(grid, placed, placed_atlas, min::tri<size_t>(x, y - 1, z));
         }
         if (!on_edge_py)
         {
-            interaction(grid, placed, placed_atlas, std::make_tuple(x, y + 1, z));
+            interaction(grid, placed, placed_atlas, min::tri<size_t>(x, y + 1, z));
         }
 
         // Look at Z neighbors
@@ -253,11 +253,11 @@ class block_adder
         const bool on_edge_pz = (z == _edge);
         if (!on_edge_nz)
         {
-            interaction(grid, placed, placed_atlas, std::make_tuple(x, y, z - 1));
+            interaction(grid, placed, placed_atlas, min::tri<size_t>(x, y, z - 1));
         }
         if (!on_edge_pz)
         {
-            interaction(grid, placed, placed_atlas, std::make_tuple(x, y, z + 1));
+            interaction(grid, placed, placed_atlas, min::tri<size_t>(x, y, z + 1));
         }
     }
 
@@ -277,10 +277,10 @@ class block_adder
         grid.set_geometry(bounded, scale, preview_offset, placed_atlas, f);
 
         // Assumes bounded is in the grid
-        const std::tuple<size_t, size_t, size_t> t = grid.get_grid_index_unsafe(bounded);
+        const min::tri<size_t> index = grid.get_grid_index_unsafe(bounded);
 
         // Do block interaction
-        neighbor_interaction(grid, t, placed_atlas);
+        neighbor_interaction(grid, index, placed_atlas);
     }
 };
 }

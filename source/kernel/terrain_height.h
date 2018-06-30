@@ -33,7 +33,7 @@ class terrain_height
     const size_t _start;
     const size_t _stop;
 
-    inline size_t key(const std::tuple<size_t, size_t, size_t> &index) const
+    inline size_t key(const min::tri<size_t> &index) const
     {
         return min::vec3<float>::grid_key(index, _scale);
     }
@@ -72,19 +72,19 @@ class terrain_height
                 // Sand section
                 for (size_t j = _start; j < mid; j++)
                 {
-                    const size_t write_key = key(std::make_tuple(i, j, k));
+                    const size_t write_key = key(min::tri<size_t>(i, j, k));
                     write[write_key] = static_cast<game::block_id>(sand(gen));
                 }
 
                 // Soil section
                 for (size_t j = mid; j < end; j++)
                 {
-                    const size_t write_key = key(std::make_tuple(i, j, k));
+                    const size_t write_key = key(min::tri<size_t>(i, j, k));
                     write[write_key] = static_cast<game::block_id>(soil(gen));
                 }
 
                 // Grass surface
-                const size_t write_key = key(std::make_tuple(i, end, k));
+                const size_t write_key = key(min::tri<size_t>(i, end, k));
                 write[write_key] = static_cast<game::block_id>(grass(gen));
             }
         };
@@ -107,7 +107,7 @@ class terrain_height
             const size_t y = _start + static_cast<size_t>(std::round(map.get(x, z)));
 
             // Create plants in empty cells on top of height map
-            const size_t write_key = key(std::make_tuple(x, y, z));
+            const size_t write_key = key(min::tri<size_t>(x, y, z));
             if (write[write_key] == game::block_id::EMPTY)
             {
                 write[write_key] = static_cast<game::block_id>(plant(gen));
@@ -145,7 +145,7 @@ class terrain_height
             const int_fast8_t wood_type = wood(gen);
             for (size_t y = tree_base; y < tree_top; y++)
             {
-                const size_t write_key = key(std::make_tuple(x, y, z));
+                const size_t write_key = key(min::tri<size_t>(x, y, z));
                 write[write_key] = static_cast<game::block_id>(wood_type);
             }
 
@@ -168,7 +168,7 @@ class terrain_height
                     const size_t z_end = z_start + (5 - dz);
                     for (size_t z = z_start + dz; z < z_end; z++)
                     {
-                        const size_t write_key = key(std::make_tuple(x, y, z));
+                        const size_t write_key = key(min::tri<size_t>(x, y, z));
                         write[write_key] = static_cast<game::block_id>(leaf_type);
                     }
                 }

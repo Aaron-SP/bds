@@ -204,22 +204,22 @@ class cgrid
     {
         // Get the grid axis components
         const size_t end = _grid_scale;
-        const auto t = get_grid_index_safe(start);
+        const auto index = get_grid_index_safe(start);
 
         // x axis: will prune points outside grid
-        size_t tx = std::get<0>(t);
+        size_t tx = index.x();
         for (size_t i = 0; i < length.x() && tx < end; i++, tx += offset.x())
         {
             // y axis: will prune points outside grid
-            size_t ty = std::get<1>(t);
+            size_t ty = index.y();
             for (size_t j = 0; j < length.y() && ty < end; j++, ty += offset.y())
             {
                 // z axis: will prune points outside grid
-                size_t tz = std::get<2>(t);
+                size_t tz = index.z();
                 for (size_t k = 0; k < length.z() && tz < end; k++, tz += offset.z())
                 {
                     // Do function for cubic space
-                    f(i, j, k, grid_key_pack(std::make_tuple(tx, ty, tz)));
+                    f(i, j, k, grid_key_pack(min::tri<size_t>(tx, ty, tz)));
                 }
             }
         }
@@ -233,7 +233,7 @@ class cgrid
         // return the box
         return min::aabbox<float, min::vec3>(min, max);
     }
-    inline std::tuple<size_t, size_t, size_t> chunk_key_unpack(const size_t key) const
+    inline min::tri<size_t> chunk_key_unpack(const size_t key) const
     {
         return min::vec3<float>::grid_index(key, _chunk_scale);
     }
@@ -259,12 +259,12 @@ class cgrid
     }
     inline min::vec3<float> chunk_center(const size_t key) const
     {
-        const std::tuple<size_t, size_t, size_t> comp = chunk_key_unpack(key);
+        const min::tri<size_t> index = chunk_key_unpack(key);
 
         // Adjust to middle of chunk
-        const float col = std::get<0>(comp) + 0.5;
-        const float row = std::get<1>(comp) + 0.5;
-        const float hei = std::get<2>(comp) + 0.5;
+        const float col = index.x() + 0.5;
+        const float row = index.y() + 0.5;
+        const float hei = index.z() + 0.5;
 
         // Calculate the center of the chunk in world space
         const float x = col * _chunk_size + _world.get_min().x();
@@ -276,12 +276,12 @@ class cgrid
     }
     inline min::vec3<float> chunk_start(const size_t key) const
     {
-        const std::tuple<size_t, size_t, size_t> comp = chunk_key_unpack(key);
+        const min::tri<size_t> index = chunk_key_unpack(key);
 
         // Unpack tuple
-        const size_t col = std::get<0>(comp);
-        const size_t row = std::get<1>(comp);
-        const size_t hei = std::get<2>(comp);
+        const size_t col = index.x();
+        const size_t row = index.y();
+        const size_t hei = index.z();
 
         // Calculate the bottom left corner of chunk in world space
         const float x = col * _chunk_size + _world.get_min().x() + 0.5;
@@ -290,15 +290,15 @@ class cgrid
 
         return min::vec3<float>(x, y, z);
     }
-    inline size_t grid_key_pack(const std::tuple<size_t, size_t, size_t> &t) const
+    inline size_t grid_key_pack(const min::tri<size_t> &index) const
     {
-        return min::vec3<float>::grid_key(t, _grid_scale);
+        return min::vec3<float>::grid_key(index, _grid_scale);
     }
-    inline std::tuple<size_t, size_t, size_t> grid_key_unpack(const min::vec3<float> &p) const
+    inline min::tri<size_t> grid_key_unpack(const min::vec3<float> &p) const
     {
         return min::vec3<float>::grid_index(_world.get_min(), _cell_extent, p);
     }
-    inline std::tuple<size_t, size_t, size_t> grid_key_unpack(const size_t key) const
+    inline min::tri<size_t> grid_key_unpack(const size_t key) const
     {
         return min::vec3<float>::grid_index(key, _grid_scale);
     }
@@ -321,12 +321,12 @@ class cgrid
 
         return grid_key_unsafe(point);
     }
-    inline min::vec3<float> grid_cell(const std::tuple<size_t, size_t, size_t> &comp) const
+    inline min::vec3<float> grid_cell(const min::tri<size_t> &index) const
     {
         // Unpack tuple
-        const size_t col = std::get<0>(comp);
-        const size_t row = std::get<1>(comp);
-        const size_t hei = std::get<2>(comp);
+        const size_t col = index.x();
+        const size_t row = index.y();
+        const size_t hei = index.z();
 
         // Calculate the bottom left corner of the box cell
         const float x = col + _world.get_min().x();
@@ -343,9 +343,9 @@ class cgrid
     {
         return grid_cell(key) + 0.5;
     }
-    inline min::vec3<float> grid_cell_center(const std::tuple<size_t, size_t, size_t> &comp) const
+    inline min::vec3<float> grid_cell_center(const min::tri<size_t> &index) const
     {
-        return grid_cell(comp) + 0.5;
+        return grid_cell(index) + 0.5;
     }
     inline void chunk_update(const size_t chunk_key)
     {
@@ -354,31 +354,31 @@ class cgrid
 
         // Get the last valid cell on each grid dimension
         const size_t edge = _grid_scale - 1;
-        const auto edges = std::make_tuple(edge, edge, edge);
+        const auto edges = min::tri<size_t>(edge, edge, edge);
 
         // Begin at start position, clamp out of bound to world boundary
         const min::vec3<float> start = min::vec3<float>(chunk_start(chunk_key)).clamp(_world.get_min(), _world.get_max());
 
         // Get the grid axis components
-        const auto t = grid_key_unpack(start);
-        const size_t xend = std::min(std::get<0>(t) + _chunk_size, _grid_scale);
-        const size_t yend = std::min(std::get<1>(t) + _chunk_size, _grid_scale);
-        const size_t zend = std::min(std::get<2>(t) + _chunk_size, _grid_scale);
+        const auto index = grid_key_unpack(start);
+        const size_t xend = std::min(index.x() + _chunk_size, _grid_scale);
+        const size_t yend = std::min(index.y() + _chunk_size, _grid_scale);
+        const size_t zend = std::min(index.z() + _chunk_size, _grid_scale);
 
         // Function to retrieve block value
-        const auto get_block = [this](const std::tuple<size_t, size_t, size_t> &t) -> block_id {
-            return _grid[this->grid_key_pack(t)];
+        const auto get_block = [this](const min::tri<size_t> &index) -> block_id {
+            return _grid[this->grid_key_pack(index)];
         };
 
         // Iterate through the chunk
-        for (size_t tx = std::get<0>(t); tx < xend; tx++)
+        for (size_t tx = index.x(); tx < xend; tx++)
         {
-            for (size_t ty = std::get<1>(t); ty < yend; ty++)
+            for (size_t ty = index.y(); ty < yend; ty++)
             {
-                for (size_t tz = std::get<2>(t); tz < zend; tz++)
+                for (size_t tz = index.z(); tz < zend; tz++)
                 {
                     // Get the cell index
-                    const auto index = std::make_tuple(tx, ty, tz);
+                    const auto index = min::tri<size_t>(tx, ty, tz);
 
                     // Get the current cell index value
                     const block_id atlas = get_block(index);
@@ -515,8 +515,8 @@ class cgrid
     inline void generate_portal()
     {
         // Function for finding grid key index
-        const auto f = [this](const std::tuple<size_t, size_t, size_t> &t) -> size_t {
-            return grid_key_pack(t);
+        const auto f = [this](const min::tri<size_t> &index) -> size_t {
+            return grid_key_pack(index);
         };
 
         // Function for finding grid center
@@ -655,56 +655,56 @@ class cgrid
             }
         }
     }
-    inline void search_neighbors(const std::tuple<size_t, size_t, size_t> &comp, const min::vec3<float> &stop)
+    inline void search_neighbors(const min::tri<size_t> &index, const min::vec3<float> &stop)
     {
         // Clear neighbors buffer
         _neighbors.clear();
 
         // Unpack start_key to components
-        const size_t x = std::get<0>(comp);
-        const size_t y = std::get<1>(comp);
-        const size_t z = std::get<2>(comp);
+        const size_t x = index.x();
+        const size_t y = index.y();
+        const size_t z = index.z();
 
         // Check against lower x grid dimensions
         const size_t edge = _grid_scale - 1;
         if (x != 0)
         {
-            const size_t nxk = min::vec3<float>::grid_key(std::make_tuple(x - 1, y, z), _grid_scale);
+            const size_t nxk = min::vec3<float>::grid_key(min::tri<size_t>(x - 1, y, z), _grid_scale);
             _neighbors.push_back({nxk, grid_center_square_dist(nxk, stop)});
         }
 
         // Check against upper x grid dimensions
         if (x != edge)
         {
-            const size_t pxk = min::vec3<float>::grid_key(std::make_tuple(x + 1, y, z), _grid_scale);
+            const size_t pxk = min::vec3<float>::grid_key(min::tri<size_t>(x + 1, y, z), _grid_scale);
             _neighbors.push_back({pxk, grid_center_square_dist(pxk, stop)});
         }
 
         // Check against lower y grid dimensions
         if (y != 0)
         {
-            const size_t nyk = min::vec3<float>::grid_key(std::make_tuple(x, y - 1, z), _grid_scale);
+            const size_t nyk = min::vec3<float>::grid_key(min::tri<size_t>(x, y - 1, z), _grid_scale);
             _neighbors.push_back({nyk, grid_center_square_dist(nyk, stop)});
         }
 
         // Check against upper y grid dimensions
         if (y != edge)
         {
-            const size_t pyk = min::vec3<float>::grid_key(std::make_tuple(x, y + 1, z), _grid_scale);
+            const size_t pyk = min::vec3<float>::grid_key(min::tri<size_t>(x, y + 1, z), _grid_scale);
             _neighbors.push_back({pyk, grid_center_square_dist(pyk, stop)});
         }
 
         // Check against lower z grid dimensions
         if (z != 0)
         {
-            const size_t nzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z - 1), _grid_scale);
+            const size_t nzk = min::vec3<float>::grid_key(min::tri<size_t>(x, y, z - 1), _grid_scale);
             _neighbors.push_back({nzk, grid_center_square_dist(nzk, stop)});
         }
 
         // Check against upper z grid dimensions
         if (z != edge)
         {
-            const size_t pzk = min::vec3<float>::grid_key(std::make_tuple(x, y, z + 1), _grid_scale);
+            const size_t pzk = min::vec3<float>::grid_key(min::tri<size_t>(x, y, z + 1), _grid_scale);
             _neighbors.push_back({pzk, grid_center_square_dist(pzk, stop)});
         }
 
@@ -746,10 +746,10 @@ class cgrid
             _visit[key] = 0;
 
             // Search along the gradient until we hit a wall
-            const std::tuple<size_t, size_t, size_t> comp = grid_key_unpack(key);
+            const min::tri<size_t> index = grid_key_unpack(key);
 
             // Search all neighboring cells
-            search_neighbors(comp, stop);
+            search_neighbors(index, stop);
 
             for (const auto &n : _neighbors)
             {
@@ -1070,11 +1070,11 @@ class cgrid
         // Clear out chunk update keys
         _chunk_update_keys.clear();
     }
-    inline std::tuple<size_t, size_t, size_t> get_grid_index_unsafe(const min::vec3<float> &p) const
+    inline min::tri<size_t> get_grid_index_unsafe(const min::vec3<float> &p) const
     {
         return grid_key_unpack(p);
     }
-    inline std::tuple<size_t, size_t, size_t> get_grid_index_safe(const min::vec3<float> &p) const
+    inline min::tri<size_t> get_grid_index_safe(const min::vec3<float> &p) const
     {
         // Get world extents
         const min::vec3<float> min = _world.get_min();
@@ -1086,9 +1086,9 @@ class cgrid
         // Return grid index
         return grid_key_unpack(bounded);
     }
-    inline size_t get_block_key(const std::tuple<size_t, size_t, size_t> &t)
+    inline size_t get_block_key(const min::tri<size_t> &index)
     {
-        return grid_key_pack(t);
+        return grid_key_pack(index);
     }
     inline block_id get_block_id(const size_t key) const
     {
@@ -1173,7 +1173,7 @@ class cgrid
         const float float_atlas = static_cast<float>(atlas);
 
         // Calculate max edges
-        const auto edges = std::tuple<size_t, size_t, size_t>(length.x() - 1, length.y() - 1, length.z() - 1);
+        const auto edges = min::tri<size_t>(length.x() - 1, length.y() - 1, length.z() - 1);
 
         // Create cubic function, for each cell in cubic space
         const auto f = [this, &offset, &edges, float_atlas](const size_t i, const size_t j, const size_t k, const size_t key) {
@@ -1181,7 +1181,7 @@ class cgrid
             const min::vec3<float> p = grid_cell(key);
 
             // Pack the current index
-            const auto index = std::make_tuple(i, j, k);
+            const auto index = min::tri<size_t>(i, j, k);
 
             // Generate the rotated chunk face
             _mesher.generate_place_faces_rotated(p, offset, index, edges, float_atlas);
@@ -1205,12 +1205,12 @@ class cgrid
 
         // Calculate max edges
         const min::tri<unsigned> &length = sw.get_length();
-        const auto edges = std::tuple<size_t, size_t, size_t>(length.x() - 1, length.y() - 1, length.z() - 1);
+        const auto edges = min::tri<size_t>(length.x() - 1, length.y() - 1, length.z() - 1);
 
         // Function to retrieve block value
-        const auto get_block = [&sw](const std::tuple<size_t, size_t, size_t> &t) -> block_id {
+        const auto get_block = [&sw](const min::tri<size_t> &index) -> block_id {
             // Get the block atlas
-            const block_id atlas = sw.get(std::get<0>(t), std::get<1>(t), std::get<2>(t));
+            const block_id atlas = sw.get(index.x(), index.y(), index.z());
 
             // If it's empty return purple crystals
             return (atlas == block_id::EMPTY) ? block_id::CRYSTAL_P : atlas;
@@ -1222,7 +1222,7 @@ class cgrid
             const min::vec3<float> p = this->grid_cell(key);
 
             // Pack the current index
-            const auto index = std::make_tuple(i, j, k);
+            const auto index = min::tri<size_t>(i, j, k);
 
             // Convert atlas to a float
             const float float_atlas = static_cast<float>(get_block(index));
@@ -1315,9 +1315,9 @@ class cgrid
     {
         // Find out if we are on a chunk boundary
         const auto g = grid_key_unpack(key);
-        const size_t gx = std::get<0>(g);
-        const size_t gy = std::get<1>(g);
-        const size_t gz = std::get<2>(g);
+        const size_t gx = g.x();
+        const size_t gy = g.y();
+        const size_t gz = g.z();
 
         // Relative grid components in chunk
         const size_t rgx = gx % _chunk_size;
