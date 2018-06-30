@@ -57,10 +57,12 @@ You can run this makefile target with the following commands.
     - Installs the game into the directory you choose
 
 With OpenGL 4.3 and geometry shader optimizations.
-- `make MGL_GS_RENDER=true MGL_VB43=true install`
+- `make MGL_GS_RENDER=true MGL_VB43=true`
+- `make install`
 
 Customizing the install location.
-- `make DESTDIR=/opt/custom MGL_GS_RENDER=true MGL_VB43=true install`
+- `make DESTDIR=/opt/custom MGL_GS_RENDER=true MGL_VB43=true`
+- `make install`
 
 The install target will create a bash script with $(DESTDIR) captured inside of it. This bash script is called bds.game and will be symlinked into /usr/bin. This allows you to run the game from any directory, since the script will always internally switch to the correct directory to run the game. This is important because the game assumes it will be run in the root folder, and otherwise will not be able to locate the data files.
 
