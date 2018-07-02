@@ -79,35 +79,63 @@ class stats
     item _equipped;
     float _sqrt_level;
 
+    inline float calc_state_scale(const float A0, const float k, const float x) const
+    {
+        return A0 * (1.0 - std::exp(-k * x * x));
+    }
     inline float calc_damage_mult() const
     {
-        const uint_fast8_t p = _equipped.primary();
-        return (1.0 + std::log10(power() * 4.0) * _sqrt_level * 0.1875) * std::log10(1 + p / 255.0) * _sqrt_level * 50.0;
+        constexpr float A = 20.0;
+        constexpr float B = 1.0;
+        constexpr float C = 75000.0;
+        const float x = power() + _equipped.primary();
+        const float k = B / C;
+        return 1.0 + calc_state_scale(A, k, x);
     }
     inline float calc_dynamics_consume() const
     {
-        const uint_fast8_t s = _equipped.secondary();
-        return (1.08 / std::log10(speed() * _sqrt_level + 1.0)) * (0.125 / std::log10(1.1 + s / 50.0));
+        constexpr float A = 1.9;
+        constexpr float B = 1.0;
+        constexpr float C = 1250.0;
+        const float x = dynamism() + _equipped.secondary();
+        const float k = B / C;
+        return 2.0 - calc_state_scale(A, k, x);
     }
     inline float calc_damage_reduc() const
     {
-        const uint_fast8_t p = _equipped.primary();
-        return std::log10(vital()) * _sqrt_level * std::log10(1 + p / 20.0) * 0.2;
+        constexpr float A = 0.95;
+        constexpr float B = 1.0;
+        constexpr float C = 5000.0;
+        const float x = tenacity() + _equipped.primary();
+        const float k = B / C;
+        return calc_state_scale(A, k, x);
     }
     inline float calc_cooldown_reduc() const
     {
-        const uint_fast8_t s = _equipped.secondary();
-        return std::log10(cooldown()) * _sqrt_level * std::log10(1.1 + s / 50.0) * 0.3;
+        constexpr float A = 0.9;
+        constexpr float B = 1.0;
+        constexpr float C = 2500.0;
+        const float x = cooldown() + _equipped.secondary();
+        const float k = B / C;
+        return calc_state_scale(A, k, x);
     }
     inline float calc_health_regen() const
     {
-        const uint_fast8_t s = _equipped.secondary();
-        return (_health_regen + std::log10(regen() * 2.0)) * (_sqrt_level * _per_second) * std::log10(1.1 + s / 50.0) * 8.0;
+        constexpr float A = 40.0 * _per_second;
+        constexpr float B = 1.0;
+        constexpr float C = 2500.0;
+        const float x = regen() + _equipped.secondary();
+        const float k = B / C;
+        return 0.01 + calc_state_scale(A, k, x);
     }
     inline float calc_energy_regen() const
     {
-        const uint_fast8_t s = _equipped.secondary();
-        return (_energy_regen + std::log10(regen() * 3.0)) * (_sqrt_level * _per_second) * std::log10(1.1 + s / 50.0) * 8.0;
+        constexpr float A = 20.0 * _per_second;
+        constexpr float B = 1.0;
+        constexpr float C = 2500.0;
+        const float x = regen() + _equipped.secondary();
+        const float k = B / C;
+        return 0.01 + calc_state_scale(A, k, x);
     }
     inline float calc_health_consume() const
     {
@@ -119,7 +147,7 @@ class stats
     }
     inline float calc_max_health() const
     {
-        return std::log10(vital()) * (_sqrt_level * 100.0);
+        return std::log10(tenacity()) * (_sqrt_level * 100.0);
     }
     inline float calc_max_energy() const
     {
@@ -356,7 +384,7 @@ class stats
         switch (index)
         {
         case 0:
-            return _attr[index];
+            return _attr[index] * 100.0;
         case 1:
             return _attr[index] * 100.0;
         case 2:
@@ -803,11 +831,11 @@ class stats
     {
         return _stat[0];
     }
-    inline uint_fast16_t speed() const
+    inline uint_fast16_t dynamism() const
     {
         return _stat[1];
     }
-    inline uint_fast16_t vital() const
+    inline uint_fast16_t tenacity() const
     {
         return _stat[2];
     }
@@ -815,7 +843,7 @@ class stats
     {
         return _stat[3];
     }
-    inline uint_fast16_t range() const
+    inline uint_fast16_t vision() const
     {
         return _stat[4];
     }
@@ -855,7 +883,7 @@ class stats
 };
 
 // Initialize public static string stats
-std::array<std::string, stats::attr_str_size()> stats::_attr_str = {"Damage Multiplier", "Dynamics Cost (%)", "Damage Reduction (%)", "Cooldown Reduction (%)", "Health Regen (/s)", "Energy Regen (/s)", "Max Health", "Max Energy"};
+std::array<std::string, stats::attr_str_size()> stats::_attr_str = {"Damage Boost (%)", "Dynamics Cost (%)", "Damage Reduction (%)", "Cooldown Reduction (%)", "Health Regen (/s)", "Energy Regen (/s)", "Max Health", "Max Energy"};
 std::array<std::string, stats::stat_str_size()> stats::_stat_str = {"Power", "Dynamism", "Tenacity", "Tranquility", "Vision", "Zeal", "Level"};
 }
 
