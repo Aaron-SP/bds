@@ -19,7 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __BROWNIAN_GROW__
 
 #include <game/id.h>
-#include <game/thread_pool.h>
+#include <min/thread_pool.h>
 #include <min/vec3.h>
 #include <tuple>
 #include <vector>
@@ -162,7 +162,7 @@ class brownian_grow
         // We hit a wall
         return true;
     }
-    inline void do_brownian(game::thread_pool &pool, const std::vector<game::block_id> &read, std::vector<game::block_id> &write, const size_t years) const
+    inline void do_brownian(min::thread_pool &pool, const std::vector<game::block_id> &read, std::vector<game::block_id> &write, const size_t years) const
     {
         // Create working function
         const auto work = [this, &read, &write, years](std::mt19937 &gen, const size_t i) {
@@ -243,7 +243,7 @@ class brownian_grow
             write[cell] = color_table(i % 24);
         }
     }
-    inline void generate(game::thread_pool &pool, const std::vector<game::block_id> &read, std::vector<game::block_id> &write, const size_t years)
+    inline void generate(min::thread_pool &pool, const std::vector<game::block_id> &read, std::vector<game::block_id> &write, const size_t years)
     {
         // Generate brownian tree
         do_brownian(pool, read, write, years);

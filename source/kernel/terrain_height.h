@@ -18,9 +18,9 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __TERRAIN_HEIGHT__
 #define __TERRAIN_HEIGHT__
 
-#include <game/height_map.h>
 #include <game/id.h>
-#include <game/thread_pool.h>
+#include <min/height_map.h>
+#include <min/thread_pool.h>
 #include <min/vec3.h>
 
 namespace kernel
@@ -46,7 +46,7 @@ class terrain_height
 
         return false;
     }
-    inline void terrain(game::thread_pool &pool, std::vector<game::block_id> &write, const game::height_map<float, float> &map) const
+    inline void terrain(min::thread_pool &pool, std::vector<game::block_id> &write, const min::height_map<float> &map) const
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
@@ -92,7 +92,7 @@ class terrain_height
         // Run height map in parallel
         pool.run(std::cref(work), 0, _scale);
     }
-    inline void plants(game::thread_pool &pool, std::vector<game::block_id> &write, const game::height_map<float, float> &map, const size_t size) const
+    inline void plants(min::thread_pool &pool, std::vector<game::block_id> &write, const min::height_map<float> &map, const size_t size) const
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
@@ -117,7 +117,7 @@ class terrain_height
         // Run height map in parallel
         pool.run(std::cref(work), 0, size);
     }
-    inline void trees(game::thread_pool &pool, std::vector<game::block_id> &write, const game::height_map<float, float> &map, const size_t size) const
+    inline void trees(min::thread_pool &pool, std::vector<game::block_id> &write, const min::height_map<float> &map, const size_t size) const
     {
         // Parallelize on X axis
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
@@ -183,11 +183,12 @@ class terrain_height
     terrain_height(const size_t scale, const size_t start, const size_t stop)
         : _scale(scale), _start(start), _stop(stop) {}
 
-    inline void generate(game::thread_pool &pool, std::mt19937 &gen, std::vector<game::block_id> &write) const
+    inline void generate(min::thread_pool &pool, std::mt19937 &gen, std::vector<game::block_id> &write) const
     {
         // Generate height map
         const size_t level = std::ceil(std::log2(_scale));
-        const game::height_map<float, float> map(level, 4.0, 8.0);
+        min::height_map<float> map(level, 4.0, 8.0);
+        map.gauss_blur_5x5();
 
         // Generate terrain
         terrain(pool, write, map);

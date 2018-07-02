@@ -107,7 +107,7 @@ MGL = -c source/mgl.cpp -o $(OBJ_MGL)
 TEST = test/test.cpp -o $(BIN_TEST)
 
 # Include directories
-LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_PATH)/platform -I$(MGL_PATH)/renderer -I$(MGL_PATH)/scene -I$(MGL_PATH)/sound -Isource $(FREETYPE2_INCLUDE)
+LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_PATH)/platform -I$(MGL_PATH)/renderer -I$(MGL_PATH)/scene -I$(MGL_PATH)/sound -I$(MGL_PATH)/util -Isource $(FREETYPE2_INCLUDE)
 TEST_SOURCES = -Itest
 
 # Printing colors

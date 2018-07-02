@@ -19,7 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __MANDELBULB_EXP__
 
 #include <game/id.h>
-#include <game/thread_pool.h>
+#include <min/thread_pool.h>
 #include <min/vec3.h>
 
 namespace kernel
@@ -134,7 +134,7 @@ class mandelbulb_exp
         std::cout << "D: " << _d << std::endl;
     }
     template <typename F>
-    inline void generate(game::thread_pool &pool, std::vector<game::block_id> &grid, const size_t gsize, const F &f)
+    inline void generate(min::thread_pool &pool, std::vector<game::block_id> &grid, const size_t gsize, const F &f)
     {
         // Create working function
         const auto work = [this, &grid, gsize, &f](std::mt19937 &gen, const size_t i) {

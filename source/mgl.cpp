@@ -4,6 +4,7 @@
 #include <min/cubic.h>
 #include <min/frustum.h>
 #include <min/grid.h>
+#include <min/height_map.h>
 #include <min/mat3.h>
 #include <min/mat4.h>
 #include <min/md5_model.h>
@@ -25,6 +26,7 @@ template class min::body<float, min::vec3>;
 template class min::camera<float>;
 template class min::grid<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox>;
 template class min::frustum<float>;
+template class min::height_map<float>;
 template class min::mat3<float>;
 template class min::mat4<float>;
 template class min::md5_model<float, uint32_t, min::vec4, min::aabbox>;

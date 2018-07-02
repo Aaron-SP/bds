@@ -18,7 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __TEST_THREAD_POOL__
 #define __TEST_THREAD_POOL__
 
-#include <game/thread_pool.h>
+#include <min/thread_pool.h>
 #include <stdexcept>
 #include <test.h>
 
@@ -27,7 +27,7 @@ bool test_thread_pool()
     bool out = true;
 
     // Create a threadpool for doing work in parallel
-    game::thread_pool pool;
+    min::thread_pool pool;
 
     // Work items
     std::vector<int> items = {0, 1, 2, 3, 4, 5, 6, 7};

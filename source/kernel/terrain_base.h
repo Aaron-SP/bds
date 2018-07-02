@@ -20,7 +20,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/id.h>
 #include <game/perlin.h>
-#include <game/thread_pool.h>
+#include <min/thread_pool.h>
 #include <min/vec3.h>
 
 namespace kernel
@@ -64,7 +64,7 @@ class terrain_base
     terrain_base(const size_t scale, const size_t chunk_size, const size_t start, const size_t stop)
         : _scale(scale), _chunk_size(chunk_size), _start(start), _stop(stop) {}
 
-    inline void generate(game::thread_pool &pool, std::vector<game::block_id> &write) const
+    inline void generate(min::thread_pool &pool, std::vector<game::block_id> &write) const
     {
         // Create working function
         const auto work = [this, &write](std::mt19937 &gen, const size_t i) {

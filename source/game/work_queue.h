@@ -18,7 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __WORK_QUEUE__
 #define __WORK_QUEUE__
 
-#include <game/thread_pool.h>
+#include <min/thread_pool.h>
 namespace game
 {
 
@@ -26,10 +26,10 @@ namespace game
 class work_queue
 {
   public:
-    static thread_pool worker;
+    static min::thread_pool worker;
 };
 
-thread_pool work_queue::worker;
+min::thread_pool work_queue::worker;
 }
 
 #endif
