@@ -349,7 +349,8 @@ class cgrid
     }
     inline void chunk_update(const size_t chunk_key)
     {
-        // Clear the mesher
+        // Clear the mesh and mesher
+        _chunks[chunk_key].clear();
         _mesher.clear();
 
         // Get the last valid cell on each grid dimension
