@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __PARTICLE__
 #define __PARTICLE__
 
+#include <chrono>
 #include <game/memory_map.h>
 #include <game/uniforms.h>
 #include <min/camera.h>
@@ -25,6 +26,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/emitter_buffer.h>
 #include <min/mat4.h>
 #include <min/texture_buffer.h>
+#include <random>
 #include <stdexcept>
 
 namespace game
@@ -142,6 +144,7 @@ class particle
     const GLuint _dds_id;
 
     // Particle stuff
+    std::mt19937 _gen;
     min::emitter_buffer<float, GL_FLOAT> _emit;
     std::vector<miss_emitter> _miss;
     size_t _miss_old;
@@ -240,33 +243,6 @@ class particle
             }
         }
     }
-    inline void load_emit(const min::vec3<float> &p, const min::vec3<float> &speed, const min::vec3<float> &wind)
-    {
-        // Update the start position
-        _emit.set_position(p);
-
-        // Set speed direction
-        _emit.set_speed(speed);
-
-        // Reset the wind vector
-        _emit.set_wind(wind);
-
-        // Reset the particle animation
-        _emit.reset();
-    }
-    inline void load_miss(const size_t index, const min::vec3<float> &p, const min::vec3<float> &wind)
-    {
-        min::emitter_buffer<float, GL_FLOAT> &emit = _miss[index].emit();
-
-        // Update the start position
-        emit.set_position(p);
-
-        // Reset the wind vector
-        emit.set_wind(wind);
-
-        // Reset the particle animation
-        emit.reset();
-    }
     inline GLuint load_textures()
     {
         // Load textures
@@ -310,6 +286,7 @@ class particle
           _prog(_vertex, _fragment),
           _index_location(load_program_index(uniforms)),
           _dds_id(load_textures()),
+          _gen(std::chrono::high_resolution_clock::now().time_since_epoch().count()),
           _emit(min::vec3<float>(), 200, 5, 0.0625, 0.125, 0.5),
           _miss(_miss_limit), _miss_old(0),
           _static(_static_limit), _static_old(0),
@@ -420,8 +397,17 @@ class particle
         // Set the charge particle size
         _charge_ref.w(size);
 
-        // Load into emit buffer
-        load_emit(gun_position(cam), cam.get_forward(), min::vec3<float>(0.0, 0.0, 0.0));
+        // Update the start position
+        _emit.set_position(gun_position(cam));
+
+        // Set speed direction
+        _emit.set_speed(cam.get_forward());
+
+        // Reset the wind vector
+        _emit.set_wind(min::vec3<float>(0.0, 0.0, 0.0));
+
+        // Reset the particle animation
+        _emit.reset(_gen);
 
         // Recreate the attractor
         if (_attract_index == -1)
@@ -431,14 +417,24 @@ class particle
     }
     inline void load_miss_launch(const size_t index, const min::vec3<float> &p, const min::vec3<float> &wind, const float time, const float size)
     {
+        // Get the missile emitter
+        miss_emitter &miss = _miss[index];
+
         // Add time to the clock
-        _miss[index].set_time(time);
+        miss.set_time(time);
 
         // Set the launch particle size
-        _miss[index].w(size);
+        miss.w(size);
 
-        // Load into emit buffer
-        load_miss(index, p, wind);
+        // Update the start position
+        min::emitter_buffer<float, GL_FLOAT> &emit = miss.emit();
+        emit.set_position(p);
+
+        // Reset the wind vector
+        emit.set_wind(wind);
+
+        // Reset the particle animation
+        emit.reset(_gen);
     }
     inline void load_static_explode(const min::vec3<float> &p, const min::vec3<float> &direction, const float time, const float size)
     {
@@ -463,13 +459,14 @@ class particle
         stat.w(size);
 
         // Update the start position
-        stat.emit().set_position(p);
+        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        emit.set_position(p);
 
         // Set speed direction
-        stat.emit().set_speed(direction);
+        emit.set_speed(direction);
 
         // Reset the static buffer
-        stat.emit().reset();
+        emit.reset(_gen);
 
         // Increment counter
         (++_static_old) %= _static_limit;
@@ -483,7 +480,8 @@ class particle
         stat.set_time(time);
 
         // Clear the accum
-        stat.emit().reset_accum();
+        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        emit.reset_accum();
 
         // Set static particle type
         stat.set_type(static_type::line);
@@ -506,7 +504,8 @@ class particle
         stat.set_time(time);
 
         // Clear the accum
-        stat.emit().reset_accum();
+        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        emit.reset_accum();
 
         // Set static particle type
         stat.set_type(static_type::portal);
@@ -535,14 +534,15 @@ class particle
         static_emitter &stat = _static[index];
 
         // Set the view flag
-        const min::vec3<float> &p = stat.emit().get_position();
+        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        const min::vec3<float> &p = emit.get_position();
         stat.set_view(frust.point_inside(p));
 
         // Remove some of the time
         stat.time_dec(dt);
 
         // Update the particle positions
-        stat.emit().step(dt);
+        emit.step(_gen, dt);
     }
     inline void update_static_line(const size_t index, const min::camera<float> &cam, const float dt)
     {
@@ -561,12 +561,13 @@ class particle
         // Generate particles in a line
         size_t count = 0;
         const min::vec3<float> spacing = (_line_pos - cam_pos) * _inv_static_count;
-        const auto f = [&cam_pos, &count, &spacing, &stat](min::vec3<float> &position, min::vec3<float> &speed, const float accum, const float inv_mass) -> void {
+        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        const auto f = [this, &cam_pos, &count, &spacing, &emit](min::vec3<float> &position, min::vec3<float> &speed, const float accum, const float inv_mass) -> void {
             // Calculate particle density
             const float density = (3.75E-6 * count) + 0.00125;
 
             // Calculate offset
-            const min::vec3<float> offset = (spacing * count) + (stat.emit().random() * density);
+            const min::vec3<float> offset = (spacing * count) + (emit.random(this->_gen) * density);
 
             // Update each particle at position
             position = cam_pos + offset;
@@ -579,7 +580,7 @@ class particle
         stat.set_ref(cam_pos);
 
         // Update the particle positions
-        stat.emit().set(f, dt);
+        emit.set(_gen, f, dt);
     }
     inline void update_static_portal(const size_t index, const min::camera<float> &cam, const float dt)
     {
@@ -619,7 +620,8 @@ class particle
         stat.set_ref(cam_pos);
 
         // Update the particle positions
-        stat.emit().set(f, dt);
+        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        emit.set(_gen, f, dt);
     }
     inline void update(const min::camera<float> &cam, const float dt)
     {
@@ -649,7 +651,7 @@ class particle
             set_charge_ref(cam_pos - cam_dir * 0.25);
 
             // Update the particle positions
-            _emit.step(dt);
+            _emit.step(_gen, dt);
         }
 
         // Get the camera frustum
@@ -659,17 +661,21 @@ class particle
         for (size_t i = 0; i < _miss_limit; i++)
         {
             // Update missile
-            if (_miss[i].time() > 0.0)
+            miss_emitter &miss = _miss[i];
+            if (miss.time() > 0.0)
             {
+                // Get the emitter
+                min::emitter_buffer<float, GL_FLOAT> &emit = miss.emit();
+
                 // Set the view flag
-                const min::vec3<float> &p = _miss[i].emit().get_position();
-                _miss[i].set_view(frust.point_inside(p));
+                const min::vec3<float> &p = emit.get_position();
+                miss.set_view(frust.point_inside(p));
 
                 // Remove some of the time
-                _miss[i].time_dec(dt);
+                miss.time_dec(dt);
 
                 // Update the particle positions
-                _miss[i].emit().step(dt);
+                emit.step(_gen, dt);
             }
         }
 
@@ -677,10 +683,11 @@ class particle
         for (size_t i = 0; i < _static_limit; i++)
         {
             // If this emitter is being animated
-            if (_static[i].time() > 0.0)
+            static_emitter &stat = _static[i];
+            if (stat.time() > 0.0)
             {
                 // Update explode
-                const static_type type = _static[i].get_type();
+                const static_type type = stat.get_type();
                 switch (type)
                 {
                 case static_type::explode:
