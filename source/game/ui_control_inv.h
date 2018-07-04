@@ -1010,13 +1010,14 @@ class ui_control_inv
             state.set_mode(ui_mode::INV_EXT);
             break;
         case ui_mode::INV_EXT:
-            state.set_mode(ui_mode::INV);
-
             // Deselect UI if in base state
             unselect_click(state);
             state.set_clicking(false);
             unselect_hover(state);
             state.set_hovering(false);
+
+            // Transition mode
+            state.set_mode(ui_mode::INV);
             break;
         default:
             break;

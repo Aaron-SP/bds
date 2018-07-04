@@ -921,7 +921,7 @@ class world
     world(const options &opt, particle &particles, sound &s, const uniforms &uniforms)
         : _state(opt),
           _adder(opt.grid()),
-          _grid(opt.chunk(), opt.grid(), opt.view()),
+          _grid(opt),
           _terrain(uniforms, _grid.get_chunks(), opt.chunk()),
           _particles(&particles),
           _sound(&s),
@@ -965,11 +965,17 @@ class world
         // Reset the load state
         _state = load_state(opt);
 
-        // Load the state
-        _state.load(opt);
-
-        // Load the grid
-        _grid.load(opt);
+        // Try to load state from options
+        if (!_state.load(opt))
+        {
+            // New grid if failure
+            _grid.new_game(opt);
+        }
+        else
+        {
+            // Load saved grid
+            _grid.load(opt);
+        }
     }
     inline void new_game(const options &opt)
     {

@@ -194,20 +194,24 @@ class load_state
     {
         return _state.chest;
     }
-    inline void load(options &opt)
+    inline bool load(options &opt)
     {
         // Create output stream for loading world
         std::vector<uint8_t> stream;
 
+        // Get the save slot
+        const size_t slot = opt.get_save_slot();
+
+        // Create file strings
+        const std::string state = std::string("save/state.") + std::to_string(slot);
+        const std::string world = std::string("save/world.") + std::to_string(slot);
+
         // Load data into stream from file
-        load_file("save/state." + std::to_string(opt.get_save_slot()), stream);
+        load_file(state, stream);
 
         // If load failed dont try to parse stream data
         if (stream.size() != 0)
         {
-            // Flag that this is not a new game
-            _new_game = false;
-
             // Character position
             size_t next = 0;
 
@@ -216,15 +220,19 @@ class load_state
             if (grid_size != _grid_size)
             {
                 // Warn user that grid sizes not compatible
-                std::cout << "Resizing the grid: deleting old save caches" << std::endl;
+                std::cout << "Resizing the grid from " << grid_size << " to " << _grid_size << std::endl;
+                std::cout << "Deleting save files for compatibility" << std::endl;
 
-                // Erase previous state files
-                game::erase_file("save/state");
-                game::erase_file("save/world.bmesh");
+                // Erase previous save files
+                game::erase_file(state);
+                game::erase_file(world);
 
-                // Early return
-                return;
+                // Did not load the state
+                return false;
             }
+
+            // Flag that this is not a new game
+            _new_game = false;
 
             // Load the game mode
             const game_type game_mode = static_cast<game_type>(min::read_le<uint8_t>(stream, next));
@@ -324,6 +332,9 @@ class load_state
                 _state.chest.push_back(min::read_le_vec3<float>(stream, next));
             }
         }
+
+        // We loaded the state
+        return true;
     }
     inline void save(const options &opt)
     {

@@ -23,6 +23,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/def.h>
 #include <game/file.h>
 #include <game/id.h>
+#include <game/options.h>
 #include <game/swatch.h>
 #include <game/terrain_mesher.h>
 #include <min/aabbox.h>
@@ -78,8 +79,8 @@ class cgrid
     std::vector<std::pair<size_t, float>> _neighbors;
     std::vector<size_t> _path;
     std::vector<size_t> _stack;
-    const size_t _chunk_cells;
     const size_t _chunk_size;
+    const size_t _chunk_cells;
     const size_t _chunk_scale;
     std::vector<min::mesh<float, uint32_t>> _chunks;
     std::vector<bool> _chunk_update;
@@ -837,25 +838,25 @@ class cgrid
     constexpr static float _player_dx = 0.45;
     constexpr static float _player_dy = 0.95;
     constexpr static float _player_dz = 0.45;
-    cgrid(const size_t chunk_size, const size_t grid_scale, const size_t view_chunk_size)
-        : _grid_scale(grid_scale * 2),
+    cgrid(const options &opt)
+        : _grid_scale(opt.grid() * 2),
           _grid(_grid_scale * _grid_scale * _grid_scale, block_id::EMPTY),
           _visit(_grid.size(), -1),
-          _chunk_cells(chunk_size * chunk_size * chunk_size),
-          _chunk_size(chunk_size),
+          _chunk_size(opt.chunk()),
+          _chunk_cells(_chunk_size * _chunk_size * _chunk_size),
           _chunk_scale(_grid_scale / _chunk_size),
           _chunks(_chunk_scale * _chunk_scale * _chunk_scale, min::mesh<float, uint32_t>("chunk")),
           _chunk_update(_chunks.size(), true),
           _recent_chunk(0),
-          _view_chunk_size(view_chunk_size),
+          _view_chunk_size(opt.view()),
           _view_half_width(_view_chunk_size / 2),
           _view_dist(calculate_view_distance()),
-          _world(calculate_world_size(grid_scale)),
+          _world(calculate_world_size(opt.grid())),
           _cell_extent(1.0, 1.0, 1.0),
-          _generator(_grid), _mesher(chunk_size)
+          _generator(_grid), _mesher(_chunk_size)
     {
         // Check chunk size
-        if (grid_scale % chunk_size != 0)
+        if (_grid_scale % _chunk_size != 0)
         {
             throw std::runtime_error("cgrid: chunk_size must evenly divide grid_scale");
         }
@@ -863,7 +864,7 @@ class cgrid
         // Check view size
         if (_view_chunk_size % 2 == 0 || _view_chunk_size == 1)
         {
-            // View chunk_size is not symmetric or greater than one
+            // View chunk size is not symmetric or greater than one
             throw std::runtime_error("cgrid: view_chunk_size must be an odd number of cells, greater than one");
         }
         else if (_view_half_width >= _chunk_scale)

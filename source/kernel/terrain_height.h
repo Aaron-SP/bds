@@ -193,12 +193,19 @@ class terrain_height
         // Generate terrain
         terrain(pool, write, map);
 
+        // Default scale
+        const float area_scale = (_scale * _scale) / (128.0 * 128.0);
+
         // Generate trees
-        std::uniform_int_distribution<size_t> tree_dist(250, 1000);
+        const size_t tree_low = std::ceil(area_scale * 256.0);
+        const size_t tree_high = std::ceil(area_scale * 1024.0);
+        std::uniform_int_distribution<size_t> tree_dist(tree_low, tree_high);
         trees(pool, write, map, tree_dist(gen));
 
         // Generate plants
-        std::uniform_int_distribution<size_t> plant_dist(50, 150);
+        const size_t plant_low = std::ceil(area_scale * 64.0);
+        const size_t plant_high = std::ceil(area_scale * 128.0);
+        std::uniform_int_distribution<size_t> plant_dist(plant_low, plant_high);
         plants(pool, write, map, plant_dist(gen));
     }
 };
