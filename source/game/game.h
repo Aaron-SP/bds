@@ -114,7 +114,7 @@ class bds
         _ui.text().set_debug_title("Beyond Dying Skies: Official Demo");
         _ui.text().set_debug_vendor(vendor);
         _ui.text().set_debug_renderer(render);
-        _ui.text().set_debug_version("VERSION: 0.1.302");
+        _ui.text().set_debug_version("VERSION: 0.1.303");
     }
     void load_game_mode()
     {
@@ -327,6 +327,9 @@ class bds
 
         // Load GPU info
         load_gpu_info();
+
+        // Show the window
+        _win.show();
     }
     void blink_console_message()
     {

@@ -168,7 +168,7 @@ class cgrid_generator
     {
         // Load the portal files
         _asym = memory_map::memory.get_file("data/portals/man_asym.portal").to_string();
-        _asym_lines = min::read_lines(_asym, 1001);
+        _asym_lines = min::read_lines(_asym, 1000);
         _exp = memory_map::memory.get_file("data/portals/man_exp.portal").to_string();
         _exp_lines = min::read_lines(_exp, 738);
         _sym = memory_map::memory.get_file("data/portals/man_sym.portal").to_string();
