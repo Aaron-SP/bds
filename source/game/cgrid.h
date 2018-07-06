@@ -559,7 +559,7 @@ class cgrid
     inline bool ray_trace(const min::ray<float, min::vec3> &r, const size_t length, size_t &prev_key, size_t &key, block_id &value) const
     {
         // Calculate the ray trajectory for tracing in grid
-        auto grid_ray = min::vec3<float>::grid_ray(_cell_extent, r.get_origin(), r.get_direction(), r.get_inverse());
+        auto grid_ray = min::vec3<float>::grid_ray(_world.get_min(), _cell_extent, r.get_origin(), r.get_direction(), r.get_inverse());
 
         // Calculate start point in grid index format
         auto index = min::vec3<float>::grid_index(_world.get_min(), _cell_extent, r.get_origin());
