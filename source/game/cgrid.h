@@ -87,7 +87,6 @@ class cgrid
     std::vector<size_t> _chunk_update_keys;
     std::vector<size_t> _sort_chunk;
     std::vector<view_chunk> _view_chunks;
-    mutable std::vector<size_t> _overlap;
     size_t _recent_chunk;
     min::vec3<float> _recent_p;
     const size_t _view_chunk_size;
@@ -138,14 +137,14 @@ class cgrid
                                 const min::aabbox<float, min::vec3> &box, const min::vec3<float> &center) const
     {
         // Get all overlapping cells
-        min::vec3<float>::grid_overlap(_overlap, _world.get_min(), _cell_extent, _grid_scale, box.get_min(), box.get_max());
+        const auto overlap = min::vec3<float>::grid_overlap(_world.get_min(), _cell_extent, _grid_scale, box.get_min(), box.get_max());
 
         // Create boxes of all overlapping cells
-        const size_t size = _overlap.size();
+        const size_t size = overlap.size();
         for (size_t i = 0; i < size; i++)
         {
             // Get the cell key
-            const size_t key = _overlap[i];
+            const size_t key = overlap[i];
 
             // Check if valid and if the cell is not empty
             if (_grid[key] != block_id::EMPTY)
