@@ -65,9 +65,10 @@ ifdef DESTDIR
 endif
 
 # Compile flags
-DEBUGFLAGS = -std=c++14 -Wall -O1
+WARNFLAGS = -Wall -Wextra -pedantic -Winvalid-pch -Wno-unused-parameter 
+DEBUGFLAGS = -std=c++14 $(WARNFLAGS) -O1
 INLINEFLAGS = --param max-inline-insns-auto=100 --param early-inlining-insns=200
-RELEASEFLAGS = -std=c++14 -Wall -Winvalid-pch -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
+RELEASEFLAGS = -std=c++14 $(WARNFLAGS) -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
 
 # Set architecture
 ifeq ($(BUILD),debug)

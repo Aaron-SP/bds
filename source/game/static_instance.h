@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __STATIC_INSTANCE__
 
 #include <game/cgrid.h>
+#include <game/def.h>
 #include <game/geometry.h>
 #include <game/id.h>
 #include <game/memory_map.h>
@@ -252,7 +253,6 @@ class static_asset
 class static_instance
 {
   private:
-    typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid> physics;
     static constexpr size_t _CHEST_LIMIT = 10;
     static constexpr size_t _DRONE_LIMIT = 10;
     static constexpr size_t _DROP_LIMIT = 50;

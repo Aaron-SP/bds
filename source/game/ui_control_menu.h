@@ -26,7 +26,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/ui_state.h>
 #include <min/aabbox.h>
 #include <min/text_buffer.h>
-#include <min/tree.h>
 #include <min/vec2.h>
 #include <utility>
 

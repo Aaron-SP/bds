@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef _UI_BACKGROUND__
 #define _UI_BACKGROUND__
 
+#include <game/def.h>
 #include <game/id.h>
 #include <game/inventory.h>
 #include <game/memory_map.h>
@@ -35,7 +36,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/shader.h>
 #include <min/text_buffer.h>
 #include <min/texture_buffer.h>
-#include <min/tree.h>
 #include <min/vec2.h>
 #include <min/vertex_buffer.h>
 #include <sstream>
@@ -47,8 +47,6 @@ namespace game
 class ui_bg
 {
   private:
-    typedef min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_tree;
-
     // OpenGL stuff
     min::shader _vertex;
     min::shader _fragment;
