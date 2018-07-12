@@ -25,7 +25,6 @@
 #include <min/cubic.h>
 #include <min/dds.h>
 #include <min/emitter_buffer.h>
-#include <min/grid.h>
 #include <min/height_map.h>
 #include <min/intersect.h>
 #include <min/loop_sync.h>
@@ -76,14 +75,14 @@ extern template class min::aabbox<float, min::vec4>;
 extern template class min::bezier_deriv<float, min::vec3>;
 extern template class min::body<float, min::vec3>;
 extern template class min::camera<float>;
-extern template class min::grid<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox>;
+extern template class min::tree<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox>;
 extern template class min::frustum<float>;
 extern template class min::height_map<float>;
 extern template class min::mat3<float>;
 extern template class min::mat4<float>;
 extern template class min::md5_model<float, uint32_t, min::vec4, min::aabbox>;
 extern template class min::mesh<float, uint32_t>;
-extern template class min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::grid>;
+extern template class min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox, min::aabbox, min::tree>;
 extern template class min::quat<float>;
 extern template class min::ray<float, min::vec3>;
 extern template class min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox>;

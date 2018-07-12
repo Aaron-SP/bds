@@ -41,7 +41,7 @@ class inventory
       public:
         craft_item() : _index(0), _item() {}
         craft_item(const size_t index, const item &it) : _index(index), _item(it) {}
-        inline const size_t index() const
+        inline size_t index() const
         {
             return _index;
         }

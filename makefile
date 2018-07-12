@@ -6,7 +6,6 @@ FREETYPE2_INCLUDE = $(shell pkg-config freetype2 --cflags)
 # Compile binaries
 BIN_GAME = bin/game
 OBJ_GAME = bin/game.o
-OBJ_GLEW = bin/glew.o
 OBJ_MGL = bin/mgl.o
 BIN_PCH = source/game/pch.hpp.gch
 BIN_TEST = bin/tests
@@ -29,7 +28,7 @@ ifeq ($(OS),Windows_NT)
     endif
 
 	# Link library settings
-	LINKER = -lgdi32 -lopengl32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll
+	LINKER = -lgdi32 -lopengl32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll -lglew32.dll
 	STATIC = $(LINKER) -static -lmingw32 -static-libgcc -static-libstdc++ -Wl,--as-needed
 	DYNAMIC = -Wl,-Bdynamic $(LINKER) -lmingw32 -Wl,--as-needed
 	BIN_MGL = bin/libmgl.dll
@@ -41,7 +40,7 @@ else
 	MGL_PATH = /usr/include/mgl
 
 	# Link library settings
-	LINKER = -lX11 -lGL -lfreetype -lopenal -lvorbisfile
+	LINKER = -lX11 -lGL -lfreetype -lopenal -lvorbisfile -lglew32
 	STATIC = $(LINKER) -Wl,-Bstatic -pthread -static-libgcc -static-libstdc++ -Wl,--as-needed
 	DYNAMIC = -Wl,-Bdynamic $(LINKER) -pthread -Wl,--as-needed
 	BIN_MGL = bin/libmgl.so
@@ -100,10 +99,9 @@ ifdef MGL_VB43
 endif
 
 # Build targets
-GAME = -DGLEW_STATIC -c source/game.cpp -o $(OBJ_GAME)
-GLEW = -DGLEW_STATIC -c $(MGL_PATH)/platform/min/glew.cpp -o $(OBJ_GLEW)
-HEAD = -DGLEW_STATIC source/game/pch.hpp
-INLINE = -DGLEW_STATIC -DMGL_INLINE $(OBJ_GLEW) source/game.cpp -o $(BIN_GAME)
+GAME = -c source/game.cpp -o $(OBJ_GAME)
+HEAD = source/game/pch.hpp
+INLINE = -DMGL_INLINE -c source/game.cpp -o $(BIN_GAME)
 MGL = -c source/mgl.cpp -o $(OBJ_MGL)
 TEST = test/test.cpp -o $(BIN_TEST)
 
@@ -119,15 +117,15 @@ NC=\033[0m
 
 # Default run target
 dynamic: $(BIN_MGL) $(BIN_GAME)
-$(BIN_GAME): $(OBJ_GLEW) $(OBJ_GAME)
+$(BIN_GAME): $(OBJ_GAME)
 	$(CXX) $(SYMBOLS) $(CXXFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
-static: $(OBJ_MGL) $(OBJ_GLEW) $(OBJ_GAME)
+static: $(OBJ_MGL) $(OBJ_GAME)
 	$(CXX) $(SYMBOLS) $(CXXFLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
 game: $(BIN_PCH)
 	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(GAME) 2> "game.txt"
-inline-dynamic: $(OBJ_GLEW)
+inline-dynamic:
 	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC) 2> "game.txt"
-inline-static: $(OBJ_GLEW)
+inline-static:
 	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC) 2> "game.txt"
 $(BIN_MGL):
 	$(CXX) -fPIC $(LIB_SOURCES) $(CXXFLAGS) $(MGL) 2> "mgl.txt"
@@ -138,8 +136,6 @@ $(BIN_TEST):
 	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(TEST_SOURCES) $(CXXFLAGS) $(TEST) $(DYNAMIC) 2> "test.txt"
 $(OBJ_GAME): $(BIN_PCH) $(BIN_TEST)
 	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(GAME) 2> "game.o.txt"
-$(OBJ_GLEW):
-	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(GLEW) 2> "glew.o.txt"
 $(OBJ_MGL):
 	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(MGL) 2> "mgl.o.txt"
 
@@ -170,7 +166,6 @@ clean:
 	rm -f *.txt
 	rm -f $(BIN_GAME)
 	rm -f $(OBJ_GAME)
-	rm -f $(OBJ_GLEW)
 	rm -f $(BIN_MGL) $(LINK_MGL) $(OBJ_MGL)
 	rm -f $(BIN_TEST)
 	rm -f $(BIN_PCH)
