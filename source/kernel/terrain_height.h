@@ -187,7 +187,7 @@ class terrain_height
     {
         // Generate height map
         const size_t level = std::ceil(std::log2(_scale));
-        min::height_map<float> map(level, 4.0, 8.0);
+        min::height_map<float> map(gen, level, 4.0, 8.0);
         map.gauss_blur_5x5();
 
         // Generate terrain

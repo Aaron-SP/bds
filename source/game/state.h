@@ -79,7 +79,7 @@ class state
     {
         const min::vec3<float> &f = _camera.get_forward();
         const min::vec3<float> &fup = _camera.get_up();
-        const min::vec3<float> &fr = _camera.get_frustum().get_right();
+        const min::vec3<float> &fr = _camera.get_right();
 
         // Update the md5 model matrix
         const min::vec3<float> offset = _camera.get_position() + (f - fup + fr) * 0.5;

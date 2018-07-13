@@ -434,7 +434,7 @@ class controls
         world *const world = control->get_world();
 
         // Move the character
-        const min::vec3<float> &right = camera->get_frustum().get_right();
+        const min::vec3<float> &right = camera->get_right();
         world->get_player().move(right * -1.0);
     }
     inline static void right(void *const ptr, double step)
@@ -453,7 +453,7 @@ class controls
         world *const world = control->get_world();
 
         // Move the character
-        const min::vec3<float> &right = camera->get_frustum().get_right();
+        const min::vec3<float> &right = camera->get_right();
         world->get_player().move(right);
     }
     inline static void back(void *const ptr, double step)
