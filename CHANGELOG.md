@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.310] - 2018-07-14
+### Added
+- Ubuntu GLEW linker fix
+
+## [0.1.309] - 2018-07-14
+### Added
+- MGL alignment fixes
+
 ## [0.1.308] - 2018-07-13
 ### Added
 - Add CHANGELOG.md to the project
