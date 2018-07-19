@@ -162,7 +162,6 @@ uninstall:
 	rm -i $(DESTDIR)$(PREFIX)/bin/bds
 	rm -rI $(DATAPATH)
 	rm -i $(DESTDIR)$(APPLICATIONS)/bds.desktop
-	rm -rI $(SAVEPATH)
 savepath:
 	install -dv $(SAVEPATH)/save
 clean:

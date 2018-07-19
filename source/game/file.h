@@ -22,8 +22,15 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <vector>
 
+namespace game
+{
+
+class file
+{
+  private:
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
@@ -54,78 +61,144 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define SAVE_STATE "save/state."
 #define SAVE_WORLD "save/world."
 #endif
-
-namespace game
-{
-
-inline bool erase_file(const std::string &file_name)
-{
-    // Erase file
-    const int ret = std::remove(file_name.c_str());
-    const bool saved = (ret == 0);
-    if (!saved)
+#define HOME_KEYMAP "/.bds-game/save/keymap."
+#define HOME_STATE "/.bds-game/save/state."
+#define HOME_WORLD "/.bds-game/save/world."
+    static std::ostringstream _ss;
+    static inline void clear_stream()
     {
-        std::cout << "file: could not erase file '" << file_name << "'" << std::endl;
-    }
-    else
-    {
-        std::cout << "file: erased file '" << file_name << "'" << std::endl;
+        _ss.clear();
+        _ss.str(std::string());
     }
 
-    return saved;
-}
-inline bool erase_save(const size_t index)
-{
-    const bool k = erase_file(SAVE_KEYMAP + std::to_string(index));
-    const bool s = erase_file(SAVE_STATE + std::to_string(index));
-    const bool w = erase_file(SAVE_WORLD + std::to_string(index));
-
-    // Did we delete any saves?
-    return k || s || w;
-}
-inline bool exists_file(const std::string &file_name)
-{
-    std::ifstream f(file_name);
-    return f.good();
-}
-inline void load_file(const std::string &file_name, std::vector<uint8_t> &stream)
-{
-    // read bytes from file
-    std::ifstream file(file_name, std::ios::in | std::ios::binary | std::ios::ate);
-    if (file.is_open())
+  public:
+    static inline std::string get_keymap_file(const size_t save_slot)
     {
-        // Get the size of the file
-        std::streampos size = file.tellg();
-
-        // Reserve space for the bytes
-        stream.resize(size, 0);
-
-        // Adjust file pointer to beginning
-        file.seekg(0, std::ios::beg);
-
-        // Read bytes and close the file
-        file.read(reinterpret_cast<char *>(&stream[0]), size);
-        file.close();
+        clear_stream();
+        const char *home = std::getenv("HOME");
+        if (home == nullptr)
+        {
+            _ss << SAVE_KEYMAP;
+            _ss << save_slot;
+        }
+        else
+        {
+            _ss << home;
+            _ss << HOME_KEYMAP;
+            _ss << save_slot;
+        }
+        return _ss.str();
     }
-    else
+    static inline std::string get_state_file(const size_t save_slot)
     {
-        std::cout << "file: could not load file '" << file_name << "'" << std::endl;
+        clear_stream();
+        const char *home = std::getenv("HOME");
+        if (home == nullptr)
+        {
+            _ss << SAVE_STATE;
+            _ss << save_slot;
+        }
+        else
+        {
+            _ss << home;
+            _ss << HOME_STATE;
+            _ss << save_slot;
+        }
+        return _ss.str();
     }
-}
-inline void save_file(const std::string &file_name, const std::vector<uint8_t> &stream)
-{
-    // Save bytes to file
-    std::ofstream file(file_name, std::ios::out | std::ios::binary);
-    if (file.is_open())
+    static inline std::string get_world_file(const size_t save_slot)
     {
-        file.write(reinterpret_cast<const char *>(&stream[0]), stream.size());
-        file.close();
+        clear_stream();
+        const char *home = std::getenv("HOME");
+        if (home == nullptr)
+        {
+            _ss << SAVE_WORLD;
+            _ss << save_slot;
+        }
+        else
+        {
+            _ss << home;
+            _ss << HOME_WORLD;
+            _ss << save_slot;
+        }
+        return _ss.str();
     }
-    else
+    static inline bool erase_file(const std::string &file_name)
     {
-        std::cout << "file: could not save file '" << file_name << "'" << std::endl;
+        clear_stream();
+        const int ret = std::remove(file_name.c_str());
+        const bool saved = (ret == 0);
+        if (!saved)
+        {
+            std::cout << "file: could not erase file '" << file_name << "'" << std::endl;
+        }
+        else
+        {
+            std::cout << "file: erased file '" << file_name << "'" << std::endl;
+        }
+
+        return saved;
     }
-}
+    static inline bool erase_save(const size_t index)
+    {
+        const bool k = erase_file(get_keymap_file(index));
+        const bool s = erase_file(get_state_file(index));
+        const bool w = erase_file(get_world_file(index));
+
+        // Did we delete any saves?
+        return k || s || w;
+    }
+    static inline bool exists_file(const std::string &file_name)
+    {
+        std::ifstream f(file_name);
+        return f.good();
+    }
+    static inline void load_file(const std::string &file_name, std::vector<uint8_t> &stream)
+    {
+        // read bytes from file
+        std::ifstream file(file_name, std::ios::in | std::ios::binary | std::ios::ate);
+        if (file.is_open())
+        {
+            // Print diagnostic message
+            std::cout << "file: loading from " << file_name << std::endl;
+
+            // Get the size of the file
+            std::streampos size = file.tellg();
+
+            // Reserve space for the bytes
+            stream.resize(size, 0);
+
+            // Adjust file pointer to beginning
+            file.seekg(0, std::ios::beg);
+
+            // Read bytes and close the file
+            file.read(reinterpret_cast<char *>(&stream[0]), size);
+            file.close();
+        }
+        else
+        {
+            std::cout << "file: could not load file '" << file_name << "'" << std::endl;
+        }
+    }
+    static inline void save_file(const std::string &file_name, const std::vector<uint8_t> &stream)
+    {
+        // Save bytes to file
+        std::ofstream file(file_name, std::ios::out | std::ios::binary);
+        if (file.is_open())
+        {
+            // Print diagnostic message
+            std::cout << "file: saving to " << file_name << std::endl;
+
+            file.write(reinterpret_cast<const char *>(&stream[0]), stream.size());
+            file.close();
+        }
+        else
+        {
+            std::cout << "file: could not save file '" << file_name << "'" << std::endl;
+        }
+    }
+};
+std::ostringstream file::_ss;
 }
 
 #endif

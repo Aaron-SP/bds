@@ -582,7 +582,7 @@ class key_map
         // Load the key map
         if (_persist)
         {
-            load_key_map(SAVE_KEYMAP + std::to_string(index));
+            load_key_map(file::get_keymap_file(index));
         }
     }
     inline void save(const size_t index, const min::window &win)
@@ -629,7 +629,7 @@ class key_map
         }
 
         // Write data to file
-        save_file(SAVE_KEYMAP + std::to_string(index), stream);
+        file::save_file(file::get_keymap_file(index), stream);
     }
     inline min::window::key_code operator[](const size_t i) const
     {

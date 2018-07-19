@@ -67,7 +67,7 @@ class load_state
     bool _new_game;
     game_state _state;
 
-    inline void check_inside()
+    inline void check_inside(const options &opt)
     {
         // Compute the min and max dimension of grid
         const float min = _grid_size * -1.0;
@@ -84,7 +84,7 @@ class load_state
             std::cout << "load_state: spawn out of bounds: resetting spawn point" << std::endl;
 
             // Erase previous state files
-            erase_file(SAVE_STATE);
+            file::erase_file(file::get_state_file(opt.get_save_slot()));
 
             // Set a valid spawn
             _state.position = _default_spawn;
@@ -128,7 +128,7 @@ class load_state
         reserve_memory();
 
         // Check that we loaded a valid point
-        check_inside();
+        check_inside(opt);
     }
     inline const min::vec3<float> &get_default_spawn() const
     {
@@ -203,11 +203,11 @@ class load_state
         const size_t slot = opt.get_save_slot();
 
         // Create file strings
-        const std::string state = std::string(SAVE_STATE) + std::to_string(slot);
-        const std::string world = std::string(SAVE_WORLD) + std::to_string(slot);
+        const std::string state = file::get_state_file(slot);
+        const std::string world = file::get_world_file(slot);
 
         // Load data into stream from file
-        load_file(state, stream);
+        file::load_file(state, stream);
 
         // If load failed dont try to parse stream data
         if (stream.size() != 0)
@@ -224,8 +224,8 @@ class load_state
                 std::cout << "Deleting save files for compatibility" << std::endl;
 
                 // Erase previous save files
-                game::erase_file(state);
-                game::erase_file(world);
+                file::erase_file(state);
+                file::erase_file(world);
 
                 // Did not load the state
                 return false;
@@ -406,7 +406,7 @@ class load_state
         }
 
         // Write data to file
-        save_file(SAVE_STATE + std::to_string(opt.get_save_slot()), stream);
+        file::save_file(file::get_state_file(opt.get_save_slot()), stream);
     }
     inline void set_state(const min::vec3<float> &p, const min::camera<float> &camera, const inventory &inv, const stats &stat, const static_instance &si)
     {
