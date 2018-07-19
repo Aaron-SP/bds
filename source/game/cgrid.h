@@ -796,7 +796,7 @@ class cgrid
         std::vector<uint8_t> stream;
 
         // Load data into stream from file
-        load_file("save/world." + std::to_string(opt.get_save_slot()), stream);
+        load_file(SAVE_WORLD + std::to_string(opt.get_save_slot()), stream);
 
         // If load failed dont try to parse stream data
         if (stream.size() != 0)
@@ -903,7 +903,7 @@ class cgrid
         min::write_le_vector<block_id>(stream, _grid);
 
         // Write data to file
-        save_file("save/world." + std::to_string(opt.get_save_slot()), stream);
+        save_file(SAVE_WORLD + std::to_string(opt.get_save_slot()), stream);
     }
     static inline min::aabbox<float, min::vec3> grid_box(const min::vec3<float> &p)
     {

@@ -84,7 +84,7 @@ class load_state
             std::cout << "load_state: spawn out of bounds: resetting spawn point" << std::endl;
 
             // Erase previous state files
-            erase_file("save/state");
+            erase_file(SAVE_STATE);
 
             // Set a valid spawn
             _state.position = _default_spawn;
@@ -203,8 +203,8 @@ class load_state
         const size_t slot = opt.get_save_slot();
 
         // Create file strings
-        const std::string state = std::string("save/state.") + std::to_string(slot);
-        const std::string world = std::string("save/world.") + std::to_string(slot);
+        const std::string state = std::string(SAVE_STATE) + std::to_string(slot);
+        const std::string world = std::string(SAVE_WORLD) + std::to_string(slot);
 
         // Load data into stream from file
         load_file(state, stream);
@@ -406,7 +406,7 @@ class load_state
         }
 
         // Write data to file
-        save_file("save/state." + std::to_string(opt.get_save_slot()), stream);
+        save_file(SAVE_STATE + std::to_string(opt.get_save_slot()), stream);
     }
     inline void set_state(const min::vec3<float> &p, const min::camera<float> &camera, const inventory &inv, const stats &stat, const static_instance &si)
     {

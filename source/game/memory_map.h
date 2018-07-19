@@ -18,6 +18,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __MEMORY_MAP__
 #define __MEMORY_MAP__
 
+#include <game/file.h>
 #include <min/mem_chunk.h>
 namespace game
 {
@@ -30,7 +31,7 @@ class memory_map
 };
 
 // Load the memory mapped file
-min::mem_chunk memory_map::memory("data/data.sky");
+min::mem_chunk memory_map::memory(DATA_FILE);
 }
 
 #endif

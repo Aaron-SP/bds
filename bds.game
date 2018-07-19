@@ -1,7 +1,0 @@
-#!/bin/bash
-
-# Set working directory
-cd /opt/bds
-
-# Execute the game
-bin/game "$@"

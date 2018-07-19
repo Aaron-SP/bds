@@ -19,9 +19,41 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __FILE_UTILS__
 
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <vector>
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+#ifdef DATA_PATH
+#define DATA_FILE       \
+    TOSTRING(DATA_PATH) \
+    "/data.sky"
+#define DATA_FONTS      \
+    TOSTRING(DATA_PATH) \
+    "/fonts/"
+#else
+#define DATA_FILE "data/data.sky"
+#define DATA_FONTS "data/fonts/"
+#endif
+
+#ifdef SAVE_PATH
+#define SAVE_KEYMAP     \
+    TOSTRING(SAVE_PATH) \
+    "/save/keymap."
+#define SAVE_STATE      \
+    TOSTRING(SAVE_PATH) \
+    "/save/state."
+#define SAVE_WORLD      \
+    TOSTRING(SAVE_PATH) \
+    "/save/world."
+#else
+#define SAVE_KEYMAP "save/keymap."
+#define SAVE_STATE "save/state."
+#define SAVE_WORLD "save/world."
+#endif
 
 namespace game
 {
@@ -44,9 +76,9 @@ inline bool erase_file(const std::string &file_name)
 }
 inline bool erase_save(const size_t index)
 {
-    const bool k = erase_file("save/keymap." + std::to_string(index));
-    const bool s = erase_file("save/state." + std::to_string(index));
-    const bool w = erase_file("save/world." + std::to_string(index));
+    const bool k = erase_file(SAVE_KEYMAP + std::to_string(index));
+    const bool s = erase_file(SAVE_STATE + std::to_string(index));
+    const bool w = erase_file(SAVE_WORLD + std::to_string(index));
 
     // Did we delete any saves?
     return k || s || w;

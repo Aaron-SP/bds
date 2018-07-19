@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.1.311] - 2018-07-18
+### Added
+- Standardized makefile
+
 ## [0.1.310] - 2018-07-14
 ### Added
 - Ubuntu GLEW linker fix

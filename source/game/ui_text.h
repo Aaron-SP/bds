@@ -19,6 +19,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #define __UI_TEXT__
 
 #include <array>
+#include <game/file.h>
 #include <game/memory_map.h>
 #include <game/ui_bg_assets.h>
 #include <game/ui_config.h>
@@ -286,9 +287,9 @@ class ui_text
           _fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index()),
           _ui_menu(&menu),
-          _text("data/fonts/open_sans.ttf", _text_font_size, 2),
-          _text_bg("data/fonts/open_sans.ttf", _inv_font_size),
-          _text_info("data/fonts/open_sans.ttf", _info_font_size),
+          _text(DATA_FONTS "/open_sans.ttf", _text_font_size, 2),
+          _text_bg(DATA_FONTS "/open_sans.ttf", _inv_font_size),
+          _text_info(DATA_FONTS "/open_sans.ttf", _info_font_size),
           _main_batch(0), _stream_batch(0), _st{}, _stream_old(0),
           _draw_alert(false), _draw_console(false), _draw_debug(false),
           _draw_focus(false), _draw_hover(false), _draw_menu(false),

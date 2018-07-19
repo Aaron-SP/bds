@@ -13,19 +13,21 @@ BIN_TEST = bin/tests
 # Linker parameters
 ifeq ($(OS),Windows_NT)
 	# 64 bit
-	DESKTOP_PATH = /usr/share/applications
-	DEST_PATH = /opt/bds
+	APPLICATIONS ?= $(shell cygpath -m /usr/share/applications)
+	PREFIX ?= $(shell cygpath -m /usr/local)
 	ifeq ($(PROCESSOR_ARCHITEW6432),AMD64)
-        MGL_PATH = C:/cygwin64/usr/x86_64-w64-mingw32/sys-root/mingw/include/mgl
+        MGL_DESTDIR ?= $(shell cygpath -m /usr/x86_64-w64-mingw32/sys-root/mingw/include/mgl)
     endif
 
 	#64 bit
 	ifeq ($(PROCESSOR_ARCHITECTURE),AMD64)
-        MGL_PATH = C:/cygwin64/usr/x86_64-w64-mingw32/sys-root/mingw/include/mgl
+        MGL_DESTDIR ?= $(shell cygpath -m /usr/x86_64-w64-mingw32/sys-root/mingw/include/mgl)
     else
 	#32 bit
-        MGL_PATH = C:/cygwin/usr/i686-w64-mingw32/sys-root/mingw/include/mgl
+        MGL_DESTDIR ?= $(shell cygpath -m /usr/i686-w64-mingw32/sys-root/mingw/include/mgl)
     endif
+	DATAPATH ?= $(DESTDIR)$(PREFIX)/share/bds
+	SAVEPATH ?= $(shell cygpath -m $(HOME)/.bds-game)
 
 	# Link library settings
 	LINKER = -lgdi32 -lopengl32 -lfreetype.dll -lOpenAL32.dll -lvorbisfile.dll -lglew32.dll
@@ -35,9 +37,11 @@ ifeq ($(OS),Windows_NT)
 	LINK_MGL = bin/libmgl_dll.a
 	MGL_SHARED = -fPIC -shared $(OBJ_MGL) -o $(BIN_MGL) -Wl,--out-implib,$(LINK_MGL)
 else
-	DESKTOP_PATH = /usr/share/applications
-	DEST_PATH = /opt/bds
-	MGL_PATH = /usr/include/mgl
+	APPLICATIONS ?= /usr/share/applications
+	PREFIX ?= /usr/local
+	MGL_DESTDIR ?= /usr/include/mgl
+	DATAPATH ?= $(DESTDIR)$(PREFIX)/share/bds
+	SAVEPATH ?= $(HOME)/.bds-game
 
 	# Link library settings
 	LINKER = -lX11 -lGL -lfreetype -lopenal -lvorbisfile -lGLEW
@@ -46,21 +50,6 @@ else
 	BIN_MGL = bin/libmgl.so
 	LINK_MGL = $(BIN_MGL)
 	MGL_SHARED = -fPIC -shared $(OBJ_MGL) -o $(BIN_MGL)
-endif
-
-# Override if MGL_DESTDIR specified
-ifdef MGL_DESTDIR
-	MGL_PATH = $(MGL_DESTDIR)/mgl
-endif
-
-# Override if MGL_DESTDIR specified
-ifdef DESKTOPDIR
-	DESKTOP_PATH = $(DESKTOPDIR)
-endif
-
-# Override if DESTDIR specified
-ifdef DESTDIR
-	DEST_PATH = $(DESTDIR)/bds
 endif
 
 # Compile flags
@@ -98,15 +87,28 @@ ifdef MGL_VB43
 	CXXFLAGS += -DMGL_VB43
 endif
 
+ifndef DATALOCAL
+
+# Enable file save redirect
+ifdef DATAPATH
+	CXXFLAGS += -DDATA_PATH=$(DATAPATH)
+endif
+
+# Enable file save redirect
+ifdef SAVEPATH
+	CXXFLAGS += -DSAVE_PATH=$(SAVEPATH)
+endif
+endif
+
 # Build targets
 GAME = -c source/game.cpp -o $(OBJ_GAME)
 HEAD = source/game/pch.hpp
-INLINE = -DMGL_INLINE -c source/game.cpp -o $(BIN_GAME)
+INLINE = -DMGL_INLINE source/game.cpp -o $(BIN_GAME)
 MGL = -c source/mgl.cpp -o $(OBJ_MGL)
 TEST = test/test.cpp -o $(BIN_TEST)
 
 # Include directories
-LIB_SOURCES = -I$(MGL_PATH)/file -I$(MGL_PATH)/geom -I$(MGL_PATH)/math -I$(MGL_PATH)/platform -I$(MGL_PATH)/renderer -I$(MGL_PATH)/scene -I$(MGL_PATH)/sound -I$(MGL_PATH)/util -Isource $(FREETYPE2_INCLUDE)
+LIB_SOURCES = -I$(MGL_DESTDIR)/file -I$(MGL_DESTDIR)/geom -I$(MGL_DESTDIR)/math -I$(MGL_DESTDIR)/platform -I$(MGL_DESTDIR)/renderer -I$(MGL_DESTDIR)/scene -I$(MGL_DESTDIR)/sound -I$(MGL_DESTDIR)/util -Isource $(FREETYPE2_INCLUDE)
 TEST_SOURCES = -Itest
 
 # Printing colors
@@ -116,54 +118,54 @@ Y=\033[1;33m
 NC=\033[0m
 
 # Default run target
+all: tests inline-dynamic
+rebuild: $(BIN_PCH)
+	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(GAME)
 dynamic: $(BIN_MGL) $(BIN_GAME)
-$(BIN_GAME): $(OBJ_GAME)
-	$(CXX) $(SYMBOLS) $(CXXFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@ 2> "game.txt"
 static: $(OBJ_MGL) $(OBJ_GAME)
-	$(CXX) $(SYMBOLS) $(CXXFLAGS) $^ -o $(BIN_GAME) $(STATIC) 2> "game.txt"
-game: $(BIN_PCH)
-	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(GAME) 2> "game.txt"
+	$(CXX) $(SYMBOLS) $(CXXFLAGS) $^ -o $(BIN_GAME) $(STATIC)
 inline-dynamic:
-	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC) 2> "game.txt"
+	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(DYNAMIC)
 inline-static:
-	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC) 2> "game.txt"
+	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(CXXFLAGS) $(INLINEFLAGS) $(INLINE) $(STATIC)
+tests: $(BIN_TEST)
+$(BIN_GAME): $(OBJ_GAME)
+	$(CXX) $(SYMBOLS) $(CXXFLAGS) $^ -L. -l:$(LINK_MGL) $(DYNAMIC) -o $@
 $(BIN_MGL):
-	$(CXX) -fPIC $(LIB_SOURCES) $(CXXFLAGS) $(MGL) 2> "mgl.txt"
-	$(CXX) $(SYMBOLS) $(CXXFLAGS) $(MGL_SHARED) 2> "mgl.txt"
+	$(CXX) -fPIC $(LIB_SOURCES) $(CXXFLAGS) $(MGL)
+	$(CXX) $(SYMBOLS) $(CXXFLAGS) $(MGL_SHARED)
 $(BIN_PCH):
-	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(HEAD) 2> "pch.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(HEAD)
 $(BIN_TEST):
-	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(TEST_SOURCES) $(CXXFLAGS) $(TEST) $(DYNAMIC) 2> "test.txt"
+	$(CXX) $(SYMBOLS) $(LIB_SOURCES) $(TEST_SOURCES) $(CXXFLAGS) $(TEST) $(DYNAMIC)
 $(OBJ_GAME): $(BIN_PCH) $(BIN_TEST)
-	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(GAME) 2> "game.o.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(GAME)
 $(OBJ_MGL):
-	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(MGL) 2> "mgl.o.txt"
+	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(MGL)
 
 install:
-	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DEST_PATH)'$(R) $(NC)\n"
-	mkdir -p $(DEST_PATH)/bin
-	cp -v $(BIN_GAME) $(DEST_PATH)/bin
-	@if [ -e $(BIN_MGL) ]; then\
-		cp -v $(BIN_MGL) $(DEST_PATH)/bin;\
-	fi
-	cp -vr data $(DEST_PATH)
-	cp -v favicon.ico $(DEST_PATH)
-	printf '%s\n' '#!/bin/bash' 'cd $(DEST_PATH)' '$(BIN_GAME) "$$@"' > $(DEST_PATH)/bds.game
-	chmod -R 755 $(DEST_PATH)
-	mkdir -p $(DEST_PATH)/save
-	chmod -R 777 $(DEST_PATH)/save
-	ln -fs $(DEST_PATH)/bds.game /usr/bin/bds.game
-	@if [ -d $(DESKTOP_PATH) ] && [ ! -z "$(wildcard $(DESKTOP_PATH)/*.desktop)" ]; then\
-		cp -v bds.desktop $(DESKTOP_PATH)/bds.desktop;\
-	fi
+	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DESTDIR)$(PREFIX)'$(R) $(NC)\n"
+	install -dv $(DESTDIR)$(PREFIX)/bin
+	install -dv $(DATAPATH)
+	install -dv $(DESTDIR)$(APPLICATIONS)
+	install -m 755 $(BIN_GAME) $(DESTDIR)$(PREFIX)/bin/bds
+	cp -vr data/* $(DATAPATH)
+	cp -v favicon.ico $(DATAPATH)
+	chmod -R 755 $(DATAPATH)
+	printf '%s\n' '[Desktop Entry]' 'Version=1.0' 'Name=Beyond Dying Skies' \
+	'Comment=Beyond Dying Skies is a FOSS, FPS-RPG 3D game for GNU/Linux operating systems.' \
+	'Exec=$(DESTDIR)$(PREFIX)/bin/bds' 'Icon=$(DATAPATH)/favicon.ico' \
+	'Terminal=false' 'Type=Application' 'Categories=Game' > $(DESTDIR)$(APPLICATIONS)/bds.desktop
+	chmod 755 $(DESTDIR)$(APPLICATIONS)/bds.desktop
 uninstall:
-	printf "$(R)Uninstalling $(Y)Beyond Dying Skies$(R) from $(G)'$(DEST_PATH)'$(R) $(NC)\n"
-	rm -rI $(DEST_PATH)
-	rm -i /usr/bin/bds.game
-
-# clean targets
+	printf "$(R)Uninstalling $(Y)Beyond Dying Skies$(R) from $(G)'$(DESTDIR)$(PREFIX)'$(R) $(NC)\n"
+	rm -i $(DESTDIR)$(PREFIX)/bin/bds
+	rm -rI $(DATAPATH)
+	rm -i $(DESTDIR)$(APPLICATIONS)/bds.desktop
+	rm -rI $(SAVEPATH)
+savepath:
+	install -dv $(SAVEPATH)/save
 clean:
-	rm -f *.txt
 	rm -f $(BIN_GAME)
 	rm -f $(OBJ_GAME)
 	rm -f $(BIN_MGL) $(LINK_MGL) $(OBJ_MGL)

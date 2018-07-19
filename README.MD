@@ -23,14 +23,15 @@ Verify a bin directory exists before compiling with the makefile.
 - 'mkdir -p bin'
 
 ### The GNU makefile contains various build targets.
-- 'make' - builds with dynamic MGL library with dynamic linking
+- 'make all' - builds with inline sources with dynamic linking
+- 'make dynamic' - builds with dynamic MGL library with dynamic linking
 - 'make static' - builds with sources statically with static linking
-- 'make inline-dynamic' - builds with inline sources with dynamic linking
 - 'make inline-static' - builds with inline sources with static linking
 - 'make clean' - cleans up all generated output files
 - 'make clear' - clears save files created by the game
-- 'make install' - builds and installs the game to /opt/bds
-- 'make uninstall' - uninstalls the game from /opt/bds
+- 'make install' - installs the game
+- 'make uninstall' - uninstalls the game
+- 'make savepath' - creates the save directory as specified by the makefile
 - 'make BUILD=[arch32|arch64|debug]'
     - BUILD specifies the compilation architecture, 32-bit, 64-bit, or debug.
     - If BUILD is not defined it will default to native architecture
@@ -49,25 +50,27 @@ Additional dependencies that are required and not distributed in this package in
 - 'X11' - for linux only
 
 ### Makefile install target
-By default, the makefile will install the game in the /opt/bds directory. You can override this location with the $(DESTDIR) variable in the makefile.
+By default, the makefile will install the game binary in the /usr/local/bin directory. The game data files will be installed in the /usr/local/share/bds directory. You can override this location with the $(PREFIX) variable in the makefile. The default value of $(PREFIX) is /usr/local. $(DATAPATH) and $(SAVEPATH) provide the default locations for reading data files and persisting saved games. These variables can be overriden if you wish to change the location of these files. The default value for $(DATAPATH) is /usr/local/share/bds and $(SAVEPATH) is $(HOME)/.bds-game. If $(DATALOCAL) is defined, the game will be configured to run from within the build directory, using the local data and save directories for running the game.
 You can run this makefile target with the following commands. 
-- `make`
-    - Builds the game with whatever settings you want
+- `make all`
+    - Builds the game executable and tests
+- `make savepath`
+    - Creates the save directory that was compiled into the binary
 - `make install`
-    - Installs the game into the directory you choose
+    - Installs the game binary into the /usr/local/share/bds directory and data files into /usr/local/share/bds
+- `make uninstall`
+    - Removes the game binary and data files
 
 With OpenGL 4.3 and geometry shader optimizations.
-- `make MGL_GS_RENDER=true MGL_VB43=true`
-- `make install`
+- `make all MGL_GS_RENDER=true MGL_VB43=true`
+- `sudo make install`
 
 Customizing the install location.
-- `make DESTDIR=/opt/custom MGL_GS_RENDER=true MGL_VB43=true`
-- `make install`
-
-The install target will create a bash script with $(DESTDIR) captured inside of it. This bash script is called bds.game and will be symlinked into /usr/bin. This allows you to run the game from any directory, since the script will always internally switch to the correct directory to run the game. This is important because the game assumes it will be run in the root folder, and otherwise will not be able to locate the data files.
+- `make all MGL_GS_RENDER=true MGL_VB43=true`
+- `sudo make PREFIX=/opt/custom  install`
 
 ### Makefile uninstall target
-By default, the makefile will uninstall the game from the /opt/bds directory. You can override this location with the $(DESTDIR) variable in the makefile.
+By default, the makefile will uninstall the game from the /usr/local/share/bds directory. You can override this location with the $(PREFIX) variable in the makefile.
 Be extremely careful using this, the uninstall target will not check if the directory is valid. It will simply remove files from this directory after prompting the user to confirm deletion of files and directories. 
 
 **USE THIS TARGET AT YOUR OWN RISK OF DELETING IMPORTANT FILES**
@@ -83,7 +86,7 @@ An alternative rendering mode can be enabled by exporting a variable to bash bef
 - `export MGL_GS_RENDER=true`
 
 You can also pass this variable directly to the makefile without exporting.
-- `make MGL_GS_RENDER=true`
+- `make MGL_GS_RENDER=true all`
 
 This mode benefits computers with slow CPU's but have modern GPU's that run geometry shaders quickly.
 
@@ -93,7 +96,7 @@ An alternative VBO mode can be enabled by exporting a variable to bash before co
 - `export MGL_VB43=true`
 
 You can also pass this variable directly to the makefile without exporting.
-- `make MGL_VB43=true`
+- `make MGL_VB43=true all`
 
 This mode allows faster vertex_buffer.bind_buffer() switching because it uses OpenGL 4.3 features to separate VBO specification from within VAO state. This mode requires using a OpenGL 4.3 core profile.
 

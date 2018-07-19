@@ -143,7 +143,7 @@ class title
             // Load next level callbacks
             for (size_t i = 0; i < 5; i++)
             {
-                if (!exists_file("save/state." + std::to_string(i)))
+                if (!exists_file(SAVE_STATE + std::to_string(i)))
                 {
                     const auto f = [this, i]() -> void {
                         this->menu_new_game(i);
@@ -184,7 +184,7 @@ class title
             // Load next level callbacks
             for (size_t i = 0; i < 5; i++)
             {
-                if (exists_file("save/state." + std::to_string(i)))
+                if (exists_file(SAVE_STATE + std::to_string(i)))
                 {
                     const auto f = [this, i]() -> void {
                         this->menu_load_game(i);
@@ -211,7 +211,7 @@ class title
             // Load next level callbacks
             for (size_t i = 0; i < 5; i++)
             {
-                if (exists_file("save/state." + std::to_string(i)))
+                if (exists_file(SAVE_STATE + std::to_string(i)))
                 {
                     const auto f = [this, i]() -> void {
                         // If deleted save
