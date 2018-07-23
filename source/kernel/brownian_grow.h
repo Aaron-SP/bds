@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __BROWNIAN_GROW__
-#define __BROWNIAN_GROW__
+#ifndef _BDS_BROWNIAN_GROW_BDS_
+#define _BDS_BROWNIAN_GROW_BDS_
 
 #include <game/id.h>
 #include <min/thread_pool.h>

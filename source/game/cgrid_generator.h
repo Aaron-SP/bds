@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __CGRID_GENERATOR__
-#define __CGRID_GENERATOR__
+#ifndef _BDS_CGRID_GENERATOR_BDS_
+#define _BDS_CGRID_GENERATOR_BDS_
 
 #include <chrono>
 #include <cmath>

@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __EVENTS__
-#define __EVENTS__
+#ifndef _BDS_EVENTS_BDS_
+#define _BDS_EVENTS_BDS_
 
 #include <chrono>
 #include <game/ui_overlay.h>

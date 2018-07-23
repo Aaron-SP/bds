@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __TEST_THREAD_POOL__
-#define __TEST_THREAD_POOL__
+#ifndef _BDS_TEST_THREAD_POOL_BDS_
+#define _BDS_TEST_THREAD_POOL_BDS_
 
 #include <min/thread_pool.h>
 #include <stdexcept>

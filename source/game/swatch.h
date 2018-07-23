@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __SWATCH__
-#define __SWATCH__
+#ifndef _BDS_SWATCH_BDS_
+#define _BDS_SWATCH_BDS_
 
 #include <array>
 #include <game/id.h>

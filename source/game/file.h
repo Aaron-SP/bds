@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __FILE_UTILS__
-#define __FILE_UTILS__
+#ifndef _BDS_FILE_UTILS_BDS_
+#define _BDS_FILE_UTILS_BDS_
 
 #include <cstdio>
 #include <cstdlib>

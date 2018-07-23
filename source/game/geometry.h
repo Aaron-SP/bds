@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __GEOMETRY__
-#define __GEOMETRY__
+#ifndef _BDS_GEOMETRY_BDS_
+#define _BDS_GEOMETRY_BDS_
 
 #include <min/vec2.h>
 #include <min/vec3.h>

@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _UI_CONFIG__
-#define _UI_CONFIG__
+#ifndef _UI_CONFIG_BDS_
+#define _UI_CONFIG_BDS_
 
 namespace game
 {

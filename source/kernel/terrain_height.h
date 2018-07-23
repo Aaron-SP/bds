@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __TERRAIN_HEIGHT__
-#define __TERRAIN_HEIGHT__
+#ifndef _BDS_TERRAIN_HEIGHT_BDS_
+#define _BDS_TERRAIN_HEIGHT_BDS_
 
 #include <game/id.h>
 #include <min/height_map.h>

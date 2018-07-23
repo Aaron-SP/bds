@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _UI_OVERLAY__
-#define _UI_OVERLAY__
+#ifndef _UI_OVERLAY_BDS_
+#define _UI_OVERLAY_BDS_
 
 #include <game/inventory.h>
 #include <game/stats.h>

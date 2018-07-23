@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __WORLD__
-#define __WORLD__
+#ifndef _BDS_WORLD_BDS_
+#define _BDS_WORLD_BDS_
 
 #include <chrono>
 #include <cmath>

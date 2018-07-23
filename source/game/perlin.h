@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __PERLIN_NOISE__
-#define __PERLIN_NOISE__
+#ifndef _BDS_PERLIN_NOISE_BDS_
+#define _BDS_PERLIN_NOISE_BDS_
 
 #include <array>
 #include <chrono>

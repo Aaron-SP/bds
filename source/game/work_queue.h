@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __WORK_QUEUE__
-#define __WORK_QUEUE__
+#ifndef _BDS_WORK_QUEUE_BDS_
+#define _BDS_WORK_QUEUE_BDS_
 
 #include <min/thread_pool.h>
 namespace game

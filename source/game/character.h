@@ -15,8 +15,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __MD5_CHARACTER__
-#define __MD5_CHARACTER__
+#ifndef _BDS_MD5_CHARACTER_BDS_
+#define _BDS_MD5_CHARACTER_BDS_
 
 #include <game/memory_map.h>
 #include <game/particle.h>
