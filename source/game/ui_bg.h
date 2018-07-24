@@ -28,7 +28,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/ui_control_menu.h>
 #include <game/ui_info.h>
 #include <game/ui_state.h>
-#include <game/ui_vertex.h>
 #include <game/uniforms.h>
 #include <min/aabbox.h>
 #include <min/dds.h>
@@ -36,6 +35,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <min/shader.h>
 #include <min/text_buffer.h>
 #include <min/texture_buffer.h>
+#include <min/ui_vertex.h>
 #include <min/vec2.h>
 #include <min/vertex_buffer.h>
 #include <sstream>
@@ -54,7 +54,7 @@ class ui_bg
     const GLint _index_location;
 
     // Instance buffer stuff
-    min::vertex_buffer<float, uint32_t, ui_vertex, GL_FLOAT, GL_UNSIGNED_INT> _vb;
+    min::vertex_buffer<float, uint32_t, min::ui_vertex, GL_FLOAT, GL_UNSIGNED_INT> _vb;
     const size_t _mesh_id;
 
     // Texture stuff
