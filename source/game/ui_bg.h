@@ -54,7 +54,7 @@ class ui_bg
     const GLint _index_location;
 
     // Instance buffer stuff
-    min::vertex_buffer<float, uint32_t, min::ui_vertex, GL_FLOAT, GL_UNSIGNED_INT> _vb;
+    min::vertex_buffer<float, uint32_t, min::ui_vertex> _vb;
     const size_t _mesh_id;
 
     // Texture stuff

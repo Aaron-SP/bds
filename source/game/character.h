@@ -47,7 +47,7 @@ class character
     const size_t _shoot_index;
 
     // Buffers for model data and textures
-    min::vertex_buffer<float, uint32_t, min::skeletal_vertex, GL_FLOAT, GL_UNSIGNED_INT> _skbuffer;
+    min::vertex_buffer<float, uint32_t, min::skeletal_vertex> _skbuffer;
     min::texture_buffer _texture_buffer;
     const GLuint _dds_id;
 

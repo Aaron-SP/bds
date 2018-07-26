@@ -42,8 +42,8 @@ class terrain
     min::shader _tv;
     min::shader _tf;
     min::program _prog;
-    min::array_buffer<float, uint32_t, terrain_vertex, GL_FLOAT> _pb;
-    min::array_buffer<float, uint32_t, terrain_vertex, GL_FLOAT> _gb;
+    min::array_buffer<float, uint32_t, terrain_vertex> _pb;
+    min::array_buffer<float, uint32_t, terrain_vertex> _gb;
     min::texture_buffer _tbuffer;
     GLuint _dds_id;
     GLint _pre_loc;

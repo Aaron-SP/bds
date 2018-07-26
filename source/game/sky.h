@@ -20,8 +20,6 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/memory_map.h>
 #include <min/dds.h>
-#include <min/static_vertex.h>
-#include <min/vertex_buffer.h>
 
 namespace game
 {

@@ -35,7 +35,7 @@ namespace game
 class emitter
 {
   protected:
-    min::emitter_buffer<float, GL_FLOAT> _emit;
+    min::emitter_buffer<float> _emit;
     float _time;
     bool _in_view;
     min::vec4<float> _ref;
@@ -47,11 +47,11 @@ class emitter
     {
         _time = -1;
     }
-    inline min::emitter_buffer<float, GL_FLOAT> &emit()
+    inline min::emitter_buffer<float> &emit()
     {
         return _emit;
     }
-    inline const min::emitter_buffer<float, GL_FLOAT> &emit() const
+    inline const min::emitter_buffer<float> &emit() const
     {
         return _emit;
     }
@@ -145,7 +145,7 @@ class particle
 
     // Particle stuff
     std::mt19937 _gen;
-    min::emitter_buffer<float, GL_FLOAT> _emit;
+    min::emitter_buffer<float> _emit;
     std::vector<miss_emitter> _miss;
     size_t _miss_old;
     std::vector<static_emitter> _static;
@@ -427,7 +427,7 @@ class particle
         miss.w(size);
 
         // Update the start position
-        min::emitter_buffer<float, GL_FLOAT> &emit = miss.emit();
+        min::emitter_buffer<float> &emit = miss.emit();
         emit.set_position(p);
 
         // Reset the wind vector
@@ -459,7 +459,7 @@ class particle
         stat.w(size);
 
         // Update the start position
-        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        min::emitter_buffer<float> &emit = stat.emit();
         emit.set_position(p);
 
         // Set speed direction
@@ -480,7 +480,7 @@ class particle
         stat.set_time(time);
 
         // Clear the accum
-        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        min::emitter_buffer<float> &emit = stat.emit();
         emit.reset_accum();
 
         // Set static particle type
@@ -504,7 +504,7 @@ class particle
         stat.set_time(time);
 
         // Clear the accum
-        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        min::emitter_buffer<float> &emit = stat.emit();
         emit.reset_accum();
 
         // Set static particle type
@@ -534,7 +534,7 @@ class particle
         static_emitter &stat = _static[index];
 
         // Set the view flag
-        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        min::emitter_buffer<float> &emit = stat.emit();
         const min::vec3<float> &p = emit.get_position();
         stat.set_view(frust.point_inside(p));
 
@@ -561,7 +561,7 @@ class particle
         // Generate particles in a line
         size_t count = 0;
         const min::vec3<float> spacing = (_line_pos - cam_pos) * _inv_static_count;
-        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        min::emitter_buffer<float> &emit = stat.emit();
         const auto f = [this, &cam_pos, &count, &spacing, &emit](min::vec3<float> &position, min::vec3<float> &speed, const float accum, const float inv_mass) -> void {
             // Calculate particle density
             const float density = (3.75E-6 * count) + 0.00125;
@@ -620,7 +620,7 @@ class particle
         stat.set_ref(cam_pos);
 
         // Update the particle positions
-        min::emitter_buffer<float, GL_FLOAT> &emit = stat.emit();
+        min::emitter_buffer<float> &emit = stat.emit();
         emit.set(_gen, f, dt);
     }
     inline void update(const min::camera<float> &cam, const float dt)
@@ -665,7 +665,7 @@ class particle
             if (miss.time() > 0.0)
             {
                 // Get the emitter
-                min::emitter_buffer<float, GL_FLOAT> &emit = miss.emit();
+                min::emitter_buffer<float> &emit = miss.emit();
 
                 // Set the view flag
                 const min::vec3<float> &p = emit.get_position();

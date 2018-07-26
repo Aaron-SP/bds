@@ -265,7 +265,7 @@ class static_instance
     const GLint _index_location;
 
     // Buffers for model data and textures
-    min::vertex_buffer<float, uint16_t, min::static_vertex, GL_FLOAT, GL_UNSIGNED_SHORT> _buffer;
+    min::vertex_buffer<float, uint16_t, min::static_vertex> _buffer;
     min::texture_buffer _texture_buffer;
     std::vector<static_asset> _assets;
     std::vector<size_t> _sort_index;
