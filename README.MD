@@ -3,9 +3,7 @@
 
 Welcome to the Beyond Dying Skies GitHub repository! This is the prerelease alpha version 0.1.
 
-This package is the source code distribution of the Beyond Dying Skies, hence abbreviated BDS. The library builds on linux and win32 platforms. 
-A GNU makefile is available for compilation with GCC/MINGW for win32 platforms or GCC/X11 for linux platforms. 
-The makefile should work for both environments without modification. 
+This package is the source code distribution of the Beyond Dying Skies, hence abbreviated BDS. The library builds on Linux and Windows platforms. A GNU makefile is available for compilation with GCC|CLANG with MINGW for Windows platforms or GCC|CLANG with X11 for Linux platforms. The makefile should work for both environments without modification. CMAKE is supported for both Windows/VCPKG and Linux environments.
 
 ### Main Project Site
 [Main Project Site](https://aaron-sp.github.io/index.html)
@@ -66,9 +64,12 @@ Additional dependencies that are required and not distributed in this package in
 - 'mgl' - Minimal Graphics Library (https://github.com/Aaron-SP/mgl) 
     - run 'make install' to copy header files into /usr/include/mgl or use git submodules and define MGL_DESTDIR=mgl/source
 - 'g++-5.4' - all platforms
-- 'freetype' - all platforms
-- 'opengl3.3+' - all platforms
-- 'mingw32'/'mingw64' - for win32 only
+- 'opengl3.2+' - all platforms
+- 'openal' - all platforms
+- 'libvorbis' - all platforms
+- 'openal-soft' - for linux only
+- 'mingw32' - for windows only
+- 'freetype' - for windows and linux
 - 'X11' - for linux only
 
 ### Makefile install target
