@@ -105,7 +105,7 @@ GAME = -c source/game.cpp -o $(OBJ_GAME)
 HEAD = source/game/pch.hpp
 INLINE = -DMGL_INLINE source/game.cpp -o $(BIN_GAME)
 MGL = -c source/mgl.cpp -o $(OBJ_MGL)
-TEST = test/test.cpp -o $(BIN_TEST)
+TEST = test/game_test.cpp -o $(BIN_TEST)
 
 # Include directories
 LIB_SOURCES = -I$(MGL_DESTDIR)/file -I$(MGL_DESTDIR)/geom -I$(MGL_DESTDIR)/math -I$(MGL_DESTDIR)/platform -I$(MGL_DESTDIR)/renderer -I$(MGL_DESTDIR)/scene -I$(MGL_DESTDIR)/sound -I$(MGL_DESTDIR)/util -Isource $(FREETYPE2_INCLUDE)
@@ -170,6 +170,7 @@ clean:
 	rm -f $(BIN_MGL) $(LINK_MGL) $(OBJ_MGL)
 	rm -f $(BIN_TEST)
 	rm -f $(BIN_PCH)
+	rm -rf cmake-build/*
 clear:
 	rm -f save/keymap.*
 	rm -f save/state.*

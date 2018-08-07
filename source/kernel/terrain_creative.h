@@ -44,10 +44,10 @@ class terrain_creative
         // Create working function
         const auto work = [this, &write](std::mt19937 &gen, const size_t i) {
             // Dope minerals in base
-            std::uniform_int_distribution<uint_fast8_t> group(0, 2);
-            std::uniform_int_distribution<uint_fast8_t> group1(0, 20);
-            std::uniform_int_distribution<uint_fast8_t> group2(24, 30);
-            std::uniform_int_distribution<uint_fast8_t> group3(32, 37);
+            std::uniform_int_distribution<unsigned> group(0, 2);
+            std::uniform_int_distribution<unsigned> group1(0, 20);
+            std::uniform_int_distribution<unsigned> group2(24, 30);
+            std::uniform_int_distribution<unsigned> group3(32, 37);
 
             // Fill out this section
             for (size_t j = 0; j < _scale; j++)

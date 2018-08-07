@@ -22,6 +22,7 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 #include <game/id.h>
 #include <game/item.h>
 #include <limits>
+#include <numeric>
 #include <random>
 #include <utility>
 #include <vector>
@@ -65,10 +66,10 @@ class inventory
     std::vector<ui_id> _update;
     std::array<craft_item, _cube_size> _craft;
     std::mt19937 _gen;
-    std::uniform_int_distribution<uint_fast8_t> _drop_item;
-    std::uniform_int_distribution<int_fast8_t> _item_mult;
-    std::uniform_int_distribution<int_fast8_t> _level_offset;
-    std::uniform_int_distribution<uint_fast8_t> _random_item;
+    std::uniform_int_distribution<unsigned> _drop_item;
+    std::uniform_int_distribution<int> _item_mult;
+    std::uniform_int_distribution<int> _level_offset;
+    std::uniform_int_distribution<unsigned> _random_item;
     unsigned _player_level;
 
     inline std::pair<bool, item_id> decay(const uint_fast8_t index, const item_id consume_id, uint_fast8_t &count)

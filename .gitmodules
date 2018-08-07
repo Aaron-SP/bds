@@ -1,0 +1,3 @@
+[submodule "mgl"]
+	path = mgl
+	url = https://github.com/Aaron-Sp/mgl

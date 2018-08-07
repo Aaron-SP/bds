@@ -115,7 +115,7 @@ class world
 
     // Random stuff
     std::uniform_real_distribution<float> _crit_dist;
-    std::uniform_int_distribution<uint_fast8_t> _drop_dist;
+    std::uniform_int_distribution<unsigned> _drop_dist;
     std::uniform_real_distribution<float> _drop_off_dist;
     std::uniform_real_distribution<float> _ex_mult;
     std::uniform_real_distribution<float> _grid_dist;

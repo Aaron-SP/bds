@@ -56,9 +56,9 @@ class terrain_height
             const int_fast8_t dirt_end = game::id_value(game::block_id::DIRT2);
             const int_fast8_t sand_start = game::id_value(game::block_id::SAND1);
             const int_fast8_t sand_end = game::id_value(game::block_id::SAND2);
-            std::uniform_int_distribution<int_fast8_t> grass(grass_start, grass_end);
-            std::uniform_int_distribution<int_fast8_t> soil(dirt_start, dirt_end);
-            std::uniform_int_distribution<int_fast8_t> sand(sand_start, sand_end);
+            std::uniform_int_distribution<int> grass(grass_start, grass_end);
+            std::uniform_int_distribution<int> soil(dirt_start, dirt_end);
+            std::uniform_int_distribution<int> sand(sand_start, sand_end);
 
             // Z axis
             for (size_t k = 0; k < _scale; k++)
@@ -98,7 +98,7 @@ class terrain_height
         const auto work = [this, &map, &write](std::mt19937 &gen, const size_t i) {
             const int_fast8_t plant_start = game::id_value(game::block_id::TOMATO);
             const int_fast8_t plant_end = game::id_value(game::block_id::GREEN_PEPPER);
-            std::uniform_int_distribution<int_fast8_t> plant(plant_start, plant_end);
+            std::uniform_int_distribution<int> plant(plant_start, plant_end);
 
             // Get random X/Z coord, Y from height map
             std::uniform_int_distribution<size_t> p(3, _scale - 4);
@@ -127,9 +127,9 @@ class terrain_height
             const int_fast8_t wood_end = game::id_value(game::block_id::WOOD2);
 
             // Random numbers between 5 and 13, including both
-            std::uniform_int_distribution<uint_fast8_t> tree_size(4, 18);
-            std::uniform_int_distribution<int_fast8_t> wood(wood_start, wood_end);
-            std::uniform_int_distribution<int_fast8_t> leaf(leaf_start, leaf_end);
+            std::uniform_int_distribution<unsigned> tree_size(4, 18);
+            std::uniform_int_distribution<int> wood(wood_start, wood_end);
+            std::uniform_int_distribution<int> leaf(leaf_start, leaf_end);
 
             // Get random X/Z coord
             std::uniform_int_distribution<size_t> p(3, _scale - 4);
@@ -156,7 +156,7 @@ class terrain_height
             const int_fast8_t leaf_type = leaf(gen);
 
             // Generate cubic leaves
-            std::uniform_int_distribution<uint_fast8_t> leaf_offset(0, 1);
+            std::uniform_int_distribution<unsigned> leaf_offset(0, 1);
             const size_t dx = leaf_offset(gen);
             const size_t x_end = x_start + (5 - dx);
             for (size_t x = x_start + dx; x < x_end; x++)

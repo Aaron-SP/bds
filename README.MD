@@ -13,16 +13,34 @@ The makefile should work for both environments without modification.
 ### YouTube Channel!
 [![BDS Youtube](https://img.youtube.com/vi/kFtGP4A2ehM/0.jpg)](https://www.youtube.com/watch?v=kFtGP4A2ehM)
 
-### PKGBUILD
-
-If you are running Arch Linux, I have created PKGBUILD's for this project located at https://github.com/Aaron-SP/pkgbuild/blob/master/bds/PKGBUILD.
-
 ### Building
 
 Verify a bin directory exists before compiling with the makefile. 
 - 'mkdir -p bin'
 
-### The GNU makefile contains various build targets.
+### CMake
+
+The CMakeLists.txt file builds all example executables, tests, and benchmarks. Building with CMake has been tested on Cygwin, Unix, and Windows + VCPKG environments.
+
+### CMake + MSVC + VCPKG
+
+MSVC requires use of git submodules to bundle the MGL inside the BDS project.
+
+Install Build Tools for Visual Studio 2017, if you do not have the MSVC compiler on your system at https://visualstudio.microsoft.com/downloads.
+
+Find the VCPKG library directory
+- vcpkg\installed\*-windows
+
+Add the recently found VCPKG library directory to your path so that CMake can find the libraries on the system. Install the required dependencies with VCPKG and make sure to run **'vcpkg integrate install'** to automatically add the include and linker settings to the MSVC build files, since the CMake files do not try to set them for this environment. Use CMake to generate the Visual Studio projects files. 
+
+Then run the following command to build optimized x86 executables.
+- msbuild.exe BDS.sln /p:Configuration=Release /p:Platform=Win32
+
+You can modify the arguments to MSBuild as needed based on your own build criteria. The compiled binaries will be placed in project root bin/(Debug|Release) directory. Visual Studio places these binaries in a secondary folder 'Debug|Release'. You will need to copy the binaries out of that folder to run properly. You may need to copy glew32.dll from the VCPKG directory to run the executables as it may not have been automatically copied by MSBuild. MSVC will not define $(DATAPATH) or $(SAVEPATH) so you can run the game directly from the bin\ directory after removing the secondary folder.
+
+### GNU MAKE
+
+The GNU makefile contains various build targets.
 - 'make all' - builds with inline sources with dynamic linking
 - 'make dynamic' - builds with dynamic MGL library with dynamic linking
 - 'make static' - builds with sources statically with static linking
@@ -38,11 +56,15 @@ Verify a bin directory exists before compiling with the makefile.
 
 These build targets have been tested for compilation on Arch Linux x64 and Windows 7 x86/x86-x64 platforms.
 
+### PKGBUILD
+
+If you are running Arch Linux, I have created PKGBUILD's for this project located at https://github.com/Aaron-SP/pkgbuild/blob/master/bds/PKGBUILD.
+
 ### Dependencies for each platform
 
 Additional dependencies that are required and not distributed in this package include:
 - 'mgl' - Minimal Graphics Library (https://github.com/Aaron-SP/mgl) 
-    - run 'make install' to copy header files into /usr/include/mgl
+    - run 'make install' to copy header files into /usr/include/mgl or use git submodules and define MGL_DESTDIR=mgl/source
 - 'g++-5.4' - all platforms
 - 'freetype' - all platforms
 - 'opengl3.3+' - all platforms

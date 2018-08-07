@@ -1,0 +1,309 @@
+cmake_minimum_required(VERSION 2.8.12)
+project( BDS )
+
+# Set the build flags
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED on)
+set(CMAKE_BUILD_TYPE Release)
+
+# Fast Math
+if((CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR (CMAKE_CXX_COMPILER_ID MATCHES "GNU"))
+		add_compile_options(-fomit-frame-pointer -freciprocal-math -ffast-math)
+        # add_compile_options(--param max-inline-insns-auto=100)
+        # add_compile_options(--param early-inlining-insns=200)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+		add_compile_options(/fp:fast)
+endif()
+
+function( make_program ex )
+
+# Add new example and set output directory
+add_executable( ${ex} ${ex}.cpp )
+set_target_properties( ${ex} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "../../bin" )
+
+# Add threading support
+if( UNIX )
+    target_link_libraries( ${ex} pthread )
+endif()
+
+endfunction ( make_program )
+
+# Add OpenAL support to executable
+function( add_openal ex )
+
+# Find OpenAL on the system
+find_package(OpenAL)
+if(OPENAL_FOUND)
+    target_include_directories( ${ex} PUBLIC ${OPENAL_INCLUDE_DIR} )
+    target_link_libraries( ${ex} ${OPENAL_LIBRARY} )
+endif()
+
+if (NOT OPENAL_FOUND)
+
+    # Fallback to legacy OPENAL detection
+    message( STATUS "Falling back to legacy OPENAL detection" )
+
+    # Specify CYGWIN
+    if ( CYGWIN )
+
+        # 64 bits
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+
+        # Find OPENAL on CYGWIN
+        find_library(openal
+                NAMES libOpenAL32.dll.a
+                HINTS  "/usr/x86_64-w64-mingw32/sys-root/mingw/lib" )
+
+        # Include headers directory
+        target_include_directories( ${ex} PUBLIC "/usr/x86_64-w64-mingw32/sys-root/mingw/include" )
+
+        # 32 bits
+        elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+
+        # Find OPENAL on CYGWIN
+        find_library(openal
+                NAMES libOpenAL32.dll.a
+                HINTS  "/usr/i686-w64-mingw32/sys-root/mingw/lib" )
+
+        # Include headers directory
+        target_include_directories( ${ex} PUBLIC "/usr/i686-w64-mingw32/sys-root/mingw/include" )
+
+        endif()
+    elseif( WIN32 )
+
+        # Find OPENAL on MSVC
+        find_library(openal
+                NAMES OpenAL32.lib)
+
+    elseif( UNIX )
+
+        # Find OPENAL on UNIX
+        find_library(openal
+                NAMES openal)
+
+    endif()
+
+    # Link with openal
+    target_link_libraries( ${ex} ${openal} )
+    message( STATUS "vorbisfile=${openal}" )
+
+endif()
+
+endfunction ( add_openal )
+
+# Add OpenGL support to executable
+function( add_opengl ex )
+
+# Find OpenGL on the system
+find_package(OpenGL)
+if(OPENGL_FOUND)
+    target_include_directories( ${ex} PUBLIC ${OPENGL_INCLUDE_DIR} )
+    target_link_libraries( ${ex} ${OPENGL_LIBRARIES} )
+endif()
+
+# Find GLEW on WINDOWS
+find_package(GLEW)
+if (GLEW_FOUND AND OPENGL_FOUND)
+    target_include_directories( ${ex} PUBLIC ${GLEW_INCLUDE_DIRS} )
+    target_link_libraries( ${ex} ${GLEW_LIBRARIES} )
+endif()
+
+if (NOT GLEW_FOUND OR NOT OPENGL_FOUND)
+
+    # Fallback to legacy OPENGL detection
+    message( STATUS "Falling back to legacy OPENGL and GLEW detection" )
+
+    # Specify CYGWIN
+    if ( CYGWIN )
+
+        # 64 bits
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+
+        # Find GLEW on CYGWIN
+        find_library(glew
+                NAMES libglew32.dll.a
+                HINTS  "/usr/x86_64-w64-mingw32/sys-root/mingw/lib" )
+
+        # Include headers directory
+        target_include_directories( ${ex} PUBLIC "/usr/x86_64-w64-mingw32/sys-root/mingw/include" )
+
+        # 32 bits
+        elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+
+        # Find GLEW on CYGWIN
+        find_library(glew
+                NAMES libglew32.dll.a
+                HINTS  "/usr/i686-w64-mingw32/sys-root/mingw/lib" )
+
+        # Include headers directory
+        target_include_directories( ${ex} PUBLIC "/usr/i686-w64-mingw32/sys-root/mingw/include" )
+
+        endif()
+
+        # Link with opengl
+        target_link_libraries( ${ex} gdi32.dll )
+        target_link_libraries( ${ex} opengl32.dll )
+    elseif( WIN32 )
+
+        # Find GLEW on MSVC
+        find_library(glew 
+                    NAMES glew32.lib)
+
+        # Link with opengl
+        target_link_libraries( ${ex} gdi32.dll )
+        target_link_libraries( ${ex} opengl32.dll )
+
+    elseif( UNIX )
+
+        # Find GLEW on UNIX
+        find_library(glew 
+                NAMES GLEW)
+
+        # Link with opengl
+        target_link_libraries( ${ex} X11 )
+        target_link_libraries( ${ex} GL )
+
+    endif()
+
+    # Link with GLEW
+    target_link_libraries( ${ex} ${glew} )
+    message( STATUS "glew=${glew}" )
+
+endif()
+
+endfunction ( add_opengl )
+
+# Add FREETYPE2 support to executable
+function( add_freetype ex )
+
+# Find FREETYPE
+find_package(Freetype REQUIRED)
+if (FREETYPE_FOUND)
+    target_include_directories( ${ex} PUBLIC ${FREETYPE_INCLUDE_DIRS} )
+    target_link_libraries( ${ex} ${FREETYPE_LIBRARIES} )
+endif()
+
+if (NOT FREETYPE_FOUND)
+
+    # Specify CYGWIN
+    if ( CYGWIN )
+
+        # 64 bits
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+
+        # Find FREETYPE on CYGWIN
+        find_library(freetype
+                NAMES libfreetype.dll.a
+                HINTS  "/usr/x86_64-w64-mingw32/sys-root/mingw/lib" )
+
+        # 32 bits
+        elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+
+        # Find FREETYPE on CYGWIN
+        find_library(freetype
+                NAMES libfreetype.dll.a
+                HINTS  "/usr/i686-w64-mingw32/sys-root/mingw/lib" )
+
+        endif()
+    elseif( WIN32 )
+
+        # Find FREETYPE on MSVC
+        find_library(freetype
+                NAMES freetype.lib)
+
+    elseif( UNIX )
+
+        # Find FREETYPE on UNIX
+        find_library(freetype
+                NAMES freetype)
+
+    endif()
+
+    # Get FREETYPE include path
+    set(MAKE_CMD "pkg-config")
+    execute_process(COMMAND ${MAKE_CMD} "freetype2" "--cflags"
+        RESULT_VARIABLE CMD_ERROR
+        OUTPUT_VARIABLE CMD_OUTPUT )
+
+    # Include FREETYPE path
+    string(REPLACE "-I" "" CMD_OUTPUT ${CMD_OUTPUT})
+    separate_arguments(CMD_OUTPUT UNIX_COMMAND "${CMD_OUTPUT}")
+    target_include_directories( ${ex} PUBLIC ${CMD_OUTPUT} )
+
+    # Link with freetype
+    target_link_libraries( ${ex} ${freetype} )
+    message( STATUS "freetype=${freetype}" )
+
+endif()
+
+endfunction ( add_freetype )
+
+# Add LIBVORVIS support to executable
+function( add_vorbis ex )
+
+# Specify CYGWIN
+    if ( CYGWIN )
+
+        # 64 bits
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+
+        # Find LIBVORBIS on CYGWIN
+        find_library(libvorbis
+                NAMES libvorbisfile.dll.a
+                HINTS  "/usr/x86_64-w64-mingw32/sys-root/mingw/lib" )
+
+        # Include LIBVORBIS path
+        target_include_directories( ${ex} PUBLIC "/usr/x86_64-w64-mingw32/sys-root/mingw/include" )
+
+        # 32 bits
+        elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+
+        # Find LIBVORBIS on CYGWIN
+        find_library(libvorbis
+                NAMES libvorbisfile.dll.a
+                HINTS  "/usr/i686-w64-mingw32/sys-root/mingw/lib" )
+
+        # Include LIBVORBIS path
+        target_include_directories( ${ex} PUBLIC "/usr/i686-w64-mingw32/sys-root/mingw/include" )
+
+        endif()
+    elseif( WIN32 )
+
+        # Find LIBVORBIS on MSVC
+        find_library(libvorbis
+                NAMES vorbisfile.lib)
+
+    elseif( UNIX )
+
+        # Find LIBVORBIS on UNIX
+        find_library(libvorbis
+                NAMES vorbisfile)
+
+    endif()
+
+    # Link with libvorbis
+    target_link_libraries( ${ex} ${libvorbis} )
+    message( STATUS "vorbisfile=${libvorbis}" )
+
+endfunction ( add_vorbis )
+
+# MGL source files
+include_directories( mgl/source/file )
+include_directories( mgl/source/geom )
+include_directories( mgl/source/math )
+include_directories( mgl/source/opt )
+include_directories( mgl/source/platform )
+include_directories( mgl/source/renderer )
+include_directories( mgl/source/scene )
+include_directories( mgl/source/sound )
+include_directories( mgl/source/util )
+
+# BDS source files
+include_directories( source )
+
+# BDS test files
+include_directories( test )
+
+# CPP folders
+add_subdirectory( source )
+add_subdirectory( test )
