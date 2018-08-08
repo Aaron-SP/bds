@@ -62,7 +62,8 @@ If you are running Arch Linux, I have created PKGBUILD's for this project locate
 
 Additional dependencies that are required and not distributed in this package include:
 - 'mgl' - Minimal Graphics Library (https://github.com/Aaron-SP/mgl) 
-    - run 'make install' to copy header files into /usr/include/mgl or use git submodules and define MGL_DESTDIR=mgl/source
+    - **from mgl directory** run 'make install' to copy header files into /usr/include/mgl 
+    - **OR from bds directory** git submodule init && git submodule update (use 'make MGL_DESTDIR=mgl/source all' to build)
 - 'g++-5.4' - all platforms
 - 'opengl3.2+' - all platforms
 - 'openal' - all platforms
