@@ -52,7 +52,7 @@ struct game_state
   public:
     game_state(const min::vec3<float> &p, const min::vec3<float> &dir, const min::vec3<float> &u)
         : position(p), look(dir), up(u),
-          stat_points(0), energy(0.0),
+          stat{}, stat_points(0), energy(0.0),
           exp(0.0), health(0.0), oxygen(0.0) {}
 };
 
