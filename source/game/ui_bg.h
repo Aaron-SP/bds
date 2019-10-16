@@ -142,12 +142,18 @@ class ui_bg
     }
     inline void draw_title() const
     {
+        // Disable depth writes
+        glDepthMask(false);
+
         // Get the start of the opaque ui
         const size_t start = _assets.title_start();
         set_start_index(start);
 
         // Draw the first thing in the buffer, title screen
         _vb.draw_many(GL_TRIANGLES, _mesh_id, 1);
+
+        // Enable depth writes
+        glDepthMask(true);
     }
     inline void draw_tooltip_ui() const
     {
