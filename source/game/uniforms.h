@@ -39,6 +39,7 @@ class uniforms
     size_t _particle_id;
     size_t _preview_id;
     size_t _md5_id;
+    size_t _cam_pos_id;
 
     std::vector<size_t> _ui_scale_id;
     std::vector<size_t> _ui_uv_id;
@@ -73,6 +74,9 @@ class uniforms
         _particle_id = _ub.add_matrix(min::mat4<float>());
         _preview_id = _ub.add_matrix(min::mat4<float>());
         _md5_id = _ub.add_matrix(min::mat4<float>());
+
+        // Load camera position
+        _cam_pos_id = _ub.add_vector(min::vec4<float>());
 
         // Initialize ui scale matrices
         _ui_scale_id.resize(ui);
@@ -135,7 +139,7 @@ class uniforms
     }
 
   public:
-    uniforms() : _ub(2, 435, 0)
+    uniforms() : _ub(2, 435, 1)
     {
         // Load the number of used uniforms into the buffer
         load_uniforms(120, 10, 10, 50, 10, 10, 100);
@@ -175,8 +179,12 @@ class uniforms
     }
     inline void update_camera(min::camera<float> &cam)
     {
+        // Update camera matrices
         _ub.set_matrix(cam.get_pv_matrix(), _proj_view_id);
         _ub.set_matrix(cam.get_v_matrix(), _view_id);
+
+        // Update camera position
+        _ub.set_vector(cam.get_position(), _cam_pos_id);
     }
     inline void update_chests(const std::vector<min::mat4<float>> &matrices)
     {
