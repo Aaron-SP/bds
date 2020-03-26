@@ -143,7 +143,7 @@ $(OBJ_GAME): $(BIN_PCH) $(BIN_TEST)
 $(OBJ_MGL):
 	$(CXX) $(LIB_SOURCES) $(CXXFLAGS) $(MGL)
 
-install:
+install: savepath
 	printf "$(R)Installing $(Y)Beyond Dying Skies$(R) to $(G)'$(DESTDIR)$(PREFIX)'$(R) $(NC)\n"
 	install -dv $(DESTDIR)$(PREFIX)/bin
 	install -dv $(DATAPATH)
