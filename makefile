@@ -58,24 +58,52 @@ DEBUGFLAGS = -std=c++14 $(WARNFLAGS) -O1
 INLINEFLAGS = --param max-inline-insns-auto=100 --param early-inlining-insns=200
 RELEASEFLAGS = -std=c++14 $(WARNFLAGS) -O3 -fomit-frame-pointer -freciprocal-math -ffast-math
 
+# Include directories
+LIB_SOURCES = -I$(MGL_DESTDIR)/file -I$(MGL_DESTDIR)/geom -I$(MGL_DESTDIR)/math -I$(MGL_DESTDIR)/platform -I$(MGL_DESTDIR)/renderer -I$(MGL_DESTDIR)/scene -I$(MGL_DESTDIR)/sound -I$(MGL_DESTDIR)/util -Isource
+TEST_SOURCES = -Itest
+
 # Set architecture
 ifeq ($(BUILD),debug)
 	CXXFLAGS += $(DEBUGFLAGS)
 	SYMBOLS = -g
+	LIB_SOURCES += $(FREETYPE2_INCLUDE)
 else
 ifeq ($(BUILD),arch32)
 	CXXFLAGS += $(RELEASEFLAGS) -m32
 	SYMBOLS = -s
+	LIB_SOURCES += $(FREETYPE2_INCLUDE)
 else
 ifeq ($(BUILD),arch64)
 	CXXFLAGS += $(RELEASEFLAGS) -m64
 	SYMBOLS = -s
+	LIB_SOURCES += $(FREETYPE2_INCLUDE)
+else
+ifeq ($(BUILD),web)
+	undefine INLINEFLAGS
+	undefine LINKER
+	undefine STATIC
+	undefine DYNAMIC
+	DATALOCAL = ""
+	STATIC = --preload-file data
+	BIN_GAME := $(BIN_GAME).js
+	CXX = emcc
+	CXXFLAGS = -std=c++14 -pthread -s TOTAL_MEMORY=1073741824 -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=0 -s DISABLE_EXCEPTION_CATCHING=0 -s ASSERTIONS=2 -s WASM=1 -s USE_SDL=2 -s USE_FREETYPE=1 -s USE_VORBIS=1 -s USE_OGG=1 -s USE_WEBGL2=1 -s ALLOW_MEMORY_GROWTH=1 -s WASM_MEM_MAX=2GB
+	SYMBOLS = -O3
 else
 	CXXFLAGS += $(RELEASEFLAGS) -march=native
 	SYMBOLS = -s
+	LIB_SOURCES += $(FREETYPE2_INCLUDE)
 endif
 endif
 endif
+endif
+
+# Build targets
+GAME = -c source/game.cpp -o $(OBJ_GAME)
+HEAD = source/game/pch.hpp
+INLINE = -DMGL_INLINE source/game.cpp -o $(BIN_GAME)
+MGL = -c source/mgl.cpp -o $(OBJ_MGL)
+TEST = test/game_test.cpp -o $(BIN_TEST)
 
 # Enable GS rendering
 ifdef MGL_GS_RENDER
@@ -99,17 +127,6 @@ ifdef SAVEPATH
 	CXXFLAGS += -DSAVE_PATH=$(SAVEPATH)
 endif
 endif
-
-# Build targets
-GAME = -c source/game.cpp -o $(OBJ_GAME)
-HEAD = source/game/pch.hpp
-INLINE = -DMGL_INLINE source/game.cpp -o $(BIN_GAME)
-MGL = -c source/mgl.cpp -o $(OBJ_MGL)
-TEST = test/game_test.cpp -o $(BIN_TEST)
-
-# Include directories
-LIB_SOURCES = -I$(MGL_DESTDIR)/file -I$(MGL_DESTDIR)/geom -I$(MGL_DESTDIR)/math -I$(MGL_DESTDIR)/platform -I$(MGL_DESTDIR)/renderer -I$(MGL_DESTDIR)/scene -I$(MGL_DESTDIR)/sound -I$(MGL_DESTDIR)/util -Isource $(FREETYPE2_INCLUDE)
-TEST_SOURCES = -Itest
 
 # Printing colors
 R=\033[0;31m

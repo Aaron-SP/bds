@@ -92,24 +92,11 @@ class controls
     inline game::menu_call menu_go_to_title_call()
     {
         return [this]() -> void {
-            // Save
-            this->save();
-
-            // Return to title
-            this->_title->set_show_title(true);
         };
     }
     inline game::menu_call menu_quit_game_call()
     {
         return [this]() -> void {
-            // Save
-            this->save();
-
-            // Quit game
-            this->_win->set_shutdown();
-
-            // Alert that we received the call back
-            std::cout << "controls: Shutdown called by user" << std::endl;
         };
     }
     inline game::menu_call menu_key_control_call()

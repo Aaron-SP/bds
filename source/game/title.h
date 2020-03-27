@@ -235,14 +235,6 @@ class title
     inline game::menu_call menu_quit_game_call()
     {
         return [this]() -> void {
-            // Return to title
-            this->set_show_title(false);
-
-            // Quit game
-            this->_win->set_shutdown();
-
-            // Alert that we received the call back
-            std::cout << "controls: Shutdown called by user" << std::endl;
         };
     }
     inline void reset_menu()

@@ -283,8 +283,8 @@ class ui_text
 
   public:
     ui_text(const ui_menu &menu, const uint_fast16_t width, const uint_fast16_t height)
-        : _vertex(memory_map::memory.get_file("data/shader/text.vertex"), GL_VERTEX_SHADER),
-          _fragment(memory_map::memory.get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory->get_file("data/shader/text.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory->get_file("data/shader/text.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index()),
           _ui_menu(&menu),
           _text(DATA_FONTS "/open_sans.ttf", _text_font_size, 2),

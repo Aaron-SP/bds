@@ -22,165 +22,162 @@ along with Beyond Dying Skies.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <game/game.h>
 
-void show_title(bds &game, min::loop_sync &sync, const size_t frames)
-{
-    // Time between frames
-    double frame_time = 0.0;
+Uint64 last_time = 0;
+Uint64 now_time = SDL_GetPerformanceCounter();
+float frame_time = 0.0f;
+size_t frame = 0;
+size_t debounce = 0;
 
+void main_tick_title(void *data)
+{
+    // Cast data point
+    bds &game = *static_cast<bds *>(data);
+
+    // Break out if not running
+    const bool running = game.is_show_title();
+    if (!running)
+    {
+        // Register the game callbacks
+        if (debounce == 0)
+        {
+            debounce = 1;
+            game.title_screen_disable();
+        }
+
+        // Update the keyboard
+        game.update_keyboard(frame_time);
+
+        // Clear the background color
+        game.clear_background();
+
+        // Update the scene
+        game.update(frame_time);
+
+        // Draw the scene
+        game.draw();
+
+        // Update the window after draw command
+        game.update_window();
+
+        // Run the per second update
+        if (frame++ == 60)
+        {
+            // Reset frame count
+            frame = 0;
+
+            // Perform second update
+            game.update_second();
+
+            // Check for fatal errors
+            game.throw_fatal_error();
+        }
+
+        // Calculate the number of 'average' frames per second
+        const double fps = 1.0 / frame_time;
+
+        // Update the debug text
+        game.update_fps(fps, 0.0);
+    }
+    else
+    {
+        // Clear the background color
+        game.clear_background();
+
+        // Update the title screen
+        game.update_title(frame_time);
+
+        // Draw the title screen
+        game.draw_title();
+
+        // Update the window after draw command
+        game.update_window();
+
+        // Run the per second update
+        if (frame++ == 60)
+        {
+            // Reset frame count
+            frame = 0;
+
+            // Make console message blink
+            game.blink_console_message();
+
+            // Check for OpenGL errors, this won't break out if error found
+            // We want to flush out any non-fatal error before starting
+            if (game.check_gl_error())
+            {
+                std::cout << "OpenGL errors detected in show_title" << std::endl;
+            }
+            else if (game.check_al_error())
+            {
+                std::cout << "OpenAL errors detected in show_game" << std::endl;
+            }
+        }
+    }
+
+    // Update the particles
+    last_time = now_time;
+    now_time = SDL_GetPerformanceCounter();
+    frame_time = (now_time - last_time) / static_cast<float>(SDL_GetPerformanceFrequency());
+}
+
+void main_loop_title(bds &game)
+{
+#if __EMSCRIPTEN__
+    try
+    {
+        emscripten_set_main_loop_arg(main_tick_title, &game, 0, true);
+    }
+    catch (const std::exception &ex)
+    {
+        std::cout << "Exiting title loop!" << std::endl;
+    }
+#else
+    throw std::runtime_error("game.cpp: Not implemented!");
+#endif
+}
+
+void show_title(bds &game)
+{
     // Play the background music
     game.play_music();
 
-    // Draw the title screen before playing
-    bool running = game.is_show_title();
-    while (running)
-    {
-        for (size_t i = 0; i < frames; i++)
-        {
-            // Start synchronizing the loop
-            sync.start();
-
-            // Clear the background color
-            game.clear_background();
-
-            // Update the title screen
-            game.update_title(frame_time);
-
-            // Draw the title screen
-            game.draw_title();
-
-            // Update the window after draw command
-            game.update_window();
-
-            // Break out if not running
-            running = game.is_show_title();
-            if (!running)
-            {
-                break;
-            }
-
-            // Calculate needed delay to hit target
-            frame_time = sync.sync();
-        }
-
-        // Make console message blink
-        game.blink_console_message();
-
-        // Check for OpenGL errors, this won't break out if error found
-        // We want to flush out any non-fatal error before starting
-        if (game.check_gl_error())
-        {
-            std::cout << "OpenGL errors detected in show_title" << std::endl;
-        }
-        else if (game.check_al_error())
-        {
-            std::cout << "OpenAL errors detected in show_game" << std::endl;
-        }
-    }
-}
-
-void show_game(bds &game, min::loop_sync &sync, const size_t frames)
-{
-    // Break out if we close the game in title screen
-    bool running = !game.is_closed() && !game.is_show_title();
-    if (!running)
-    {
-        return;
-    }
-
-    // Register the game callbacks
-    game.title_screen_disable();
-
-    // Calculate number of physics steps per frame
-    double frame_time = 0.0;
-
-    // User can close game or return to title
-    while (running)
-    {
-        for (size_t i = 0; i < frames; i++)
-        {
-            // Start synchronizing the loop
-            sync.start();
-
-            // Update the keyboard
-            game.update_keyboard(frame_time);
-
-            // Clear the background color
-            game.clear_background();
-
-            // Update the scene
-            game.update(frame_time);
-
-            // Draw the scene
-            game.draw();
-
-            // Update the window after draw command
-            game.update_window();
-
-            // Break out if not running
-            running = !game.is_closed() && !game.is_show_title();
-            if (!running)
-            {
-                break;
-            }
-
-            // Calculate needed delay to hit target
-            frame_time = sync.sync();
-
-            // Calculate the number of 'average' frames per second
-            const double fps = sync.get_fps();
-
-            // Calculate the percentage of frame spent idle
-            const double idle = sync.idle();
-
-            // Update the debug text
-            game.update_fps(fps, idle);
-        }
-
-        // Perform second update
-        game.update_second();
-
-        // Check for fatal errors
-        game.throw_fatal_error();
-    }
+    // Run the title main loop
+    main_loop_title(game);
 }
 
 void run(const game::options &opt)
 {
+    game::memory_map::memory = new min::mem_chunk(DATA_FILE);
+
     // Load window shaders and program, enable shader program
-    bds game(opt);
+    bds *game = new bds(opt);
 
     // Catch any errors and print to window
     try
     {
-        // Setup controller to run at 60 frames per second
-        min::loop_sync sync(opt.frames(), 0.25, 0.25, 0.25);
-
         // Maximize the window
         if (opt.resize())
         {
-            game.maximize();
+            game->maximize();
         }
 
         // Loop until we exit game
-        while (!game.is_closed())
+        while (!game->is_closed())
         {
             // Show the title screen
-            show_title(game, sync, 15);
-
-            // Run the game after the title screen
-            show_game(game, sync, opt.frames());
+            show_title(*game);
 
             // If we are not closing the game
-            if (!game.is_closed())
+            if (!game->is_closed())
             {
                 // Switch to title
-                game.title_screen_enable();
+                game->title_screen_enable();
             }
         }
     }
     catch (const std::exception &ex)
     {
-        game.error_message(ex.what());
+        game->error_message(ex.what());
     }
 }
 

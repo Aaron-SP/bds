@@ -373,11 +373,11 @@ class sound
     inline void load_bg_sound()
     {
         // Load a music OGG files
-        const min::mem_file &ogg_file1 = memory_map::memory.get_file("data/sound/music1_s.ogg");
+        const min::mem_file &ogg_file1 = memory_map::memory->get_file("data/sound/music1_s.ogg");
         const min::ogg sound1(ogg_file1);
-        const min::mem_file &ogg_file2 = memory_map::memory.get_file("data/sound/music2_s.ogg");
+        const min::mem_file &ogg_file2 = memory_map::memory->get_file("data/sound/music2_s.ogg");
         const min::ogg sound2(ogg_file2);
-        const min::mem_file &ogg_file3 = memory_map::memory.get_file("data/sound/music3_s.ogg");
+        const min::mem_file &ogg_file3 = memory_map::memory->get_file("data/sound/music3_s.ogg");
         const min::ogg sound3(ogg_file3);
 
         // Create music buffers
@@ -391,7 +391,7 @@ class sound
     inline void load_charge_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/charge_s.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/charge_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _charge_gain, _charge_fade);
 
@@ -401,14 +401,14 @@ class sound
     inline void load_click_sound()
     {
         // Load a WAVE file
-        const min::mem_file &wave = memory_map::memory.get_file("data/sound/click_s.wav");
+        const min::mem_file &wave = memory_map::memory->get_file("data/sound/click_s.wav");
         const min::wave sound(wave);
         load_wave_sound(sound, _click_gain);
     }
     inline void load_drone_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/drone_m.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/drone_m.ogg");
         const min::ogg sound(ogg);
 
         // Load a OGG file into buffer
@@ -442,7 +442,7 @@ class sound
     inline void load_blast_mono_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/blast_m.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/blast_m.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _blast_gain);
 
@@ -452,7 +452,7 @@ class sound
     inline void load_blast_stereo_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/blast_s.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/blast_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _blast_gain);
 
@@ -462,14 +462,14 @@ class sound
     inline void load_focus_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/focus_s.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/focus_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _focus_gain);
     }
     inline void load_grapple_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/grapple_s.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/grapple_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _grap_gain, _grap_fade);
 
@@ -491,7 +491,7 @@ class sound
     inline void load_jet_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/jet_s.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/jet_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _jet_gain, _jet_fade);
 
@@ -501,14 +501,14 @@ class sound
     inline void load_land_sound()
     {
         // Load a WAVE file
-        const min::mem_file &wave = memory_map::memory.get_file("data/sound/land_s.wav");
+        const min::mem_file &wave = memory_map::memory->get_file("data/sound/land_s.wav");
         const min::wave sound(wave);
         load_wave_sound(sound, _land_gain);
     }
     inline void load_explode_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/explode_m.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/explode_m.ogg");
         const min::ogg sound(ogg);
 
         // Load a OGG file into buffer
@@ -539,7 +539,7 @@ class sound
     inline void load_miss_launch_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/jet_m.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/jet_m.ogg");
         const min::ogg sound(ogg);
 
         // Load a OGG file into buffer
@@ -573,7 +573,7 @@ class sound
     inline void load_oxygen_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/oxygen_s.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/oxygen_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _oxygen_gain, _oxygen_fade);
 
@@ -583,21 +583,21 @@ class sound
     inline void load_pickup_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/pickup_s.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/pickup_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _pickup_gain);
     }
     inline void load_shot_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/shot_s.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/shot_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _shot_gain);
     }
     inline void load_shot_ex_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/shot_ex_m.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/shot_ex_m.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _shot_ex_gain);
 
@@ -607,37 +607,37 @@ class sound
     inline void load_thrust_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/thrust_s.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/thrust_s.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _thrust_gain);
     }
     inline void load_zap_sound()
     {
         // Load a OGG file
-        const min::mem_file &ogg = memory_map::memory.get_file("data/sound/zap_m.ogg");
+        const min::mem_file &ogg = memory_map::memory->get_file("data/sound/zap_m.ogg");
         const min::ogg sound(ogg);
         load_ogg_sound(sound, _zap_gain);
     }
     inline void load_voice_sound()
     {
         // Load a music OGG files
-        const min::mem_file &ogg1 = memory_map::memory.get_file("data/sound/voice_comply_s.ogg");
+        const min::mem_file &ogg1 = memory_map::memory->get_file("data/sound/voice_comply_s.ogg");
         const min::ogg sound1(ogg1);
-        const min::mem_file &ogg2 = memory_map::memory.get_file("data/sound/voice_critical_s.ogg");
+        const min::mem_file &ogg2 = memory_map::memory->get_file("data/sound/voice_critical_s.ogg");
         const min::ogg sound2(ogg2);
-        const min::mem_file &ogg3 = memory_map::memory.get_file("data/sound/voice_level_s.ogg");
+        const min::mem_file &ogg3 = memory_map::memory->get_file("data/sound/voice_level_s.ogg");
         const min::ogg sound3(ogg3);
-        const min::mem_file &ogg4 = memory_map::memory.get_file("data/sound/voice_portal_alert_s.ogg");
+        const min::mem_file &ogg4 = memory_map::memory->get_file("data/sound/voice_portal_alert_s.ogg");
         const min::ogg sound4(ogg4);
-        const min::mem_file &ogg5 = memory_map::memory.get_file("data/sound/voice_power_s.ogg");
+        const min::mem_file &ogg5 = memory_map::memory->get_file("data/sound/voice_power_s.ogg");
         const min::ogg sound5(ogg5);
-        const min::mem_file &ogg6 = memory_map::memory.get_file("data/sound/voice_repair_s.ogg");
+        const min::mem_file &ogg6 = memory_map::memory->get_file("data/sound/voice_repair_s.ogg");
         const min::ogg sound6(ogg6);
-        const min::mem_file &ogg7 = memory_map::memory.get_file("data/sound/voice_resource_s.ogg");
+        const min::mem_file &ogg7 = memory_map::memory->get_file("data/sound/voice_resource_s.ogg");
         const min::ogg sound7(ogg7);
-        const min::mem_file &ogg8 = memory_map::memory.get_file("data/sound/voice_shutdown_s.ogg");
+        const min::mem_file &ogg8 = memory_map::memory->get_file("data/sound/voice_shutdown_s.ogg");
         const min::ogg sound8(ogg8);
-        const min::mem_file &ogg9 = memory_map::memory.get_file("data/sound/voice_thrust_alert_s.ogg");
+        const min::mem_file &ogg9 = memory_map::memory->get_file("data/sound/voice_thrust_alert_s.ogg");
         const min::ogg sound9(ogg9);
 
         // Create music buffers

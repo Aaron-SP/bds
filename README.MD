@@ -43,6 +43,7 @@ The GNU makefile contains various build targets.
 - 'make dynamic' - builds with dynamic MGL library with dynamic linking
 - 'make static' - builds with sources statically with static linking
 - 'make inline-static' - builds with inline sources with static linking
+- 'make BUILD=web inline-static' - builds with inline sources with static linking using Emscripten
 - 'make clean' - cleans up all generated output files
 - 'make clear' - clears save files created by the game
 - 'make install' - installs the game

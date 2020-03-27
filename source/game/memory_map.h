@@ -24,14 +24,10 @@ namespace game
 {
 
 // Global memory chunk to load all game data
-class memory_map
+namespace memory_map
 {
-  public:
-    static min::mem_chunk memory;
-};
-
-// Load the memory mapped file
-min::mem_chunk memory_map::memory(DATA_FILE);
+min::mem_chunk *memory;
+}
 }
 
 #endif

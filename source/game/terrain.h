@@ -51,7 +51,7 @@ class terrain
     inline void load_texture()
     {
         // Load texture
-        const min::mem_file &atlas = memory_map::memory.get_file("data/texture/atlas.dds");
+        const min::mem_file &atlas = memory_map::memory->get_file("data/texture/atlas.dds");
         min::dds tex(atlas);
 
         // Load texture buffer
@@ -77,13 +77,13 @@ class terrain
     terrain(const uniforms &uniforms, const size_t chunks, const size_t chunk_size)
         :
 #ifdef MGL_GS_RENDER
-          _tg(memory_map::memory.get_file("data/shader/terrain_gs.geometry"), GL_GEOMETRY_SHADER),
-          _tv(memory_map::memory.get_file("data/shader/terrain_gs.vertex"), GL_VERTEX_SHADER),
-          _tf(memory_map::memory.get_file("data/shader/terrain_gs.fragment"), GL_FRAGMENT_SHADER),
+          _tg(memory_map::memory->get_file("data/shader/terrain_gs.geometry"), GL_GEOMETRY_SHADER),
+          _tv(memory_map::memory->get_file("data/shader/terrain_gs.vertex"), GL_VERTEX_SHADER),
+          _tf(memory_map::memory->get_file("data/shader/terrain_gs.fragment"), GL_FRAGMENT_SHADER),
           _prog({_tv.id(), _tg.id(), _tf.id()}),
 #else
-          _tv(memory_map::memory.get_file("data/shader/terrain.vertex"), GL_VERTEX_SHADER),
-          _tf(memory_map::memory.get_file("data/shader/terrain.fragment"), GL_FRAGMENT_SHADER),
+          _tv(memory_map::memory->get_file("data/shader/terrain.vertex"), GL_VERTEX_SHADER),
+          _tf(memory_map::memory->get_file("data/shader/terrain.fragment"), GL_FRAGMENT_SHADER),
           _prog(_tv, _tf),
 #endif
           _gb(chunks)

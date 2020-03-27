@@ -60,13 +60,13 @@ class character
     inline size_t load_charge_anim()
     {
         // Load charge animation
-        const min::mem_file &gun_charge = memory_map::memory.get_file("data/models/gun_charge.md5anim");
+        const min::mem_file &gun_charge = memory_map::memory->get_file("data/models/gun_charge.md5anim");
         return _md5_model.load_animation(gun_charge);
     }
     inline size_t load_shoot_anim()
     {
         // Load shoot animation
-        const min::mem_file &gun_shoot = memory_map::memory.get_file("data/models/gun_shoot.md5anim");
+        const min::mem_file &gun_shoot = memory_map::memory->get_file("data/models/gun_shoot.md5anim");
         return _md5_model.load_animation(gun_shoot);
     }
     inline void load_model()
@@ -87,7 +87,7 @@ class character
     inline GLuint load_texture()
     {
         // Load textures
-        const min::mem_file &skin = memory_map::memory.get_file("data/texture/skin.dds");
+        const min::mem_file &skin = memory_map::memory->get_file("data/texture/skin.dds");
         const min::dds d = min::dds(skin);
 
         // Load texture buffer
@@ -118,10 +118,10 @@ class character
 
   public:
     character(particle *const particles, const uniforms &uniforms)
-        : _vertex(memory_map::memory.get_file("data/shader/character.vertex"), GL_VERTEX_SHADER),
-          _fragment(memory_map::memory.get_file("data/shader/character.fragment"), GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory->get_file("data/shader/character.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory->get_file("data/shader/character.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
-          _md5_model(min::md5_mesh<float, uint32_t>(memory_map::memory.get_file("data/models/gun.md5mesh"))),
+          _md5_model(min::md5_mesh<float, uint32_t>(memory_map::memory->get_file("data/models/gun.md5mesh"))),
           _charge_index(load_charge_anim()), _shoot_index(load_shoot_anim()), _dds_id(load_texture()),
           _particles(particles), _need_bone_reset(false)
     {

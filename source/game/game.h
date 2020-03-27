@@ -67,15 +67,6 @@ class bds
     double _fps;
     double _idle;
 
-    void center_cursor()
-    {
-        // Get the screen dimensions
-        const uint_fast16_t w = _win.get_width();
-        const uint_fast16_t h = _win.get_height();
-
-        // Center cursor in middle of window
-        _win.set_cursor(w / 2, h / 2);
-    }
     std::pair<uint_fast16_t, uint_fast16_t> get_center() const
     {
         // Get the screen dimensions
@@ -323,7 +314,7 @@ class bds
         min::settings::enable_gamma_correction();
 
         // Delete the mem-file data
-        game::memory_map::memory.clear();
+        game::memory_map::memory->clear();
 
         // Load GPU info
         load_gpu_info();
@@ -412,17 +403,11 @@ class bds
 
         // Load gpu information
         load_game_mode();
-
-        // Center cursor
-        center_cursor();
     }
     void title_screen_enable()
     {
         // Reset the game state
         _title.enable();
-
-        // Center cursor
-        center_cursor();
 
         // Reset loop variables
         _fps = 0.0;
@@ -440,6 +425,7 @@ class bds
         // Process UI if user input
         if (_state.get_user_input())
         {
+            SDL_SetRelativeMouseMode(SDL_FALSE);
             // Get the cursor coordinates
             const auto c = _win.get_cursor();
 
@@ -460,22 +446,15 @@ class bds
             // Get user input
             if (!_state.get_user_input())
             {
-                // Get the cursor coordinates
-                const auto c = get_cursor();
-
+                SDL_SetRelativeMouseMode(SDL_TRUE);
                 // Must update state properties, camera before drawing world
-                _state.update(player.position(), c, _win.get_width(), _win.get_height(), v_mag, dt);
-
-                // Reset cursor position
-                center_cursor();
+                _state.update(player.position(), v_mag, dt);
             }
             else if (_state.get_user_input())
             {
-                // Calculate the center of the screen, to avoid camera movement
-                const auto center = std::make_pair(_win.get_width() / 2, _win.get_height() / 2);
-
+                SDL_SetRelativeMouseMode(SDL_FALSE);
                 // Must update state properties, camera before drawing world
-                _state.update(player.position(), center, _win.get_width(), _win.get_height(), v_mag, dt);
+                //_state.update(player.position(), v_mag, dt);
             }
 
             // Update the game events
@@ -526,6 +505,7 @@ class bds
         // Process UI if user input
         if (_state.get_user_input())
         {
+            SDL_SetRelativeMouseMode(SDL_FALSE);
             // Get the cursor coordinates
             const auto c = _win.get_cursor();
 

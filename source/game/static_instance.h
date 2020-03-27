@@ -314,14 +314,14 @@ class static_instance
     {
         // Load chest data from binary mesh file
         min::mesh<float, uint16_t> mesh("chest");
-        const min::mem_file &bmesh = memory_map::memory.get_file("data/models/chest.bmesh");
+        const min::mem_file &bmesh = memory_map::memory->get_file("data/models/chest.bmesh");
         mesh.from_file(bmesh);
 
         // Add mesh and update buffers
         const size_t iid = _buffer.add_mesh(mesh);
 
         // Load chest textures
-        const min::mem_file &text = memory_map::memory.get_file("data/texture/chest.dds");
+        const min::mem_file &text = memory_map::memory->get_file("data/texture/chest.dds");
         const min::dds chest = min::dds(text);
 
         // Load dds into texture buffer
@@ -339,14 +339,14 @@ class static_instance
     {
         // Load drone data from binary mesh file
         min::mesh<float, uint16_t> mesh("drone");
-        const min::mem_file &bmesh = memory_map::memory.get_file("data/models/drone.bmesh");
+        const min::mem_file &bmesh = memory_map::memory->get_file("data/models/drone.bmesh");
         mesh.from_file(bmesh);
 
         // Add mesh and update buffers
         const size_t iid = _buffer.add_mesh(mesh);
 
         // Load drone textures
-        const min::mem_file &text = memory_map::memory.get_file("data/texture/drone.dds");
+        const min::mem_file &text = memory_map::memory->get_file("data/texture/drone.dds");
         const min::dds drone = min::dds(text);
 
         // Load dds into texture buffer
@@ -394,7 +394,7 @@ class static_instance
         const size_t iid = _buffer.add_mesh(mesh);
 
         // Load drop textures
-        const min::mem_file &text = memory_map::memory.get_file("data/texture/atlas.dds");
+        const min::mem_file &text = memory_map::memory->get_file("data/texture/atlas.dds");
         const min::dds drop = min::dds(text);
 
         // Load dds into texture buffer
@@ -413,14 +413,14 @@ class static_instance
     {
         // Load missile data from binary mesh file
         min::mesh<float, uint16_t> mesh("missile");
-        const min::mem_file &bmesh = memory_map::memory.get_file("data/models/missile.bmesh");
+        const min::mem_file &bmesh = memory_map::memory->get_file("data/models/missile.bmesh");
         mesh.from_file(bmesh);
 
         // Add mesh and update buffers
         const size_t iid = _buffer.add_mesh(mesh);
 
         // Load missile textures
-        const min::mem_file &text = memory_map::memory.get_file("data/texture/missile.dds");
+        const min::mem_file &text = memory_map::memory->get_file("data/texture/missile.dds");
         const min::dds missile = min::dds(text);
 
         // Load dds into texture buffer
@@ -483,8 +483,8 @@ class static_instance
 
   public:
     static_instance(const game::uniforms &uniforms)
-        : _vertex(memory_map::memory.get_file("data/shader/instance.vertex"), GL_VERTEX_SHADER),
-          _fragment(memory_map::memory.get_file("data/shader/instance.fragment"), GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory->get_file("data/shader/instance.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory->get_file("data/shader/instance.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index(uniforms))
     {
         // Since we are using a BMESH, assert floating point compatibility

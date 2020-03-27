@@ -247,7 +247,7 @@ class ui_bg
     inline GLuint load_title_texture()
     {
         // Load texture
-        const min::mem_file &title = memory_map::memory.get_file("data/texture/title.dds");
+        const min::mem_file &title = memory_map::memory->get_file("data/texture/title.dds");
         const min::dds tex(title);
 
         // Load texture into texture buffer
@@ -256,7 +256,7 @@ class ui_bg
     inline GLuint load_ui_texture()
     {
         // Load texture
-        const min::mem_file &ui = memory_map::memory.get_file("data/texture/ui.dds");
+        const min::mem_file &ui = memory_map::memory->get_file("data/texture/ui.dds");
         const min::dds tex(ui);
 
         // Load texture into texture buffer
@@ -354,8 +354,8 @@ class ui_bg
 
   public:
     ui_bg(const uniforms &uniforms, inventory &inv, stats &stat, min::text_buffer &text, ui_menu &menu, const uint_fast16_t width, const uint_fast16_t height)
-        : _vertex(memory_map::memory.get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
-          _fragment(memory_map::memory.get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory->get_file("data/shader/ui.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory->get_file("data/shader/ui.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment), _index_location(load_program_index(uniforms)),
           _mesh_id(load_base_rect()), _title_id(load_title_texture()), _ui_id(load_ui_texture()),
           _focus(false), _state(inv.begin_key()), _assets(width, height), _text(&text),

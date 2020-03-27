@@ -246,7 +246,7 @@ class particle
     inline GLuint load_textures()
     {
         // Load textures
-        const min::mem_file &smoke = memory_map::memory.get_file("data/texture/smoke.dds");
+        const min::mem_file &smoke = memory_map::memory->get_file("data/texture/smoke.dds");
         const min::dds b = min::dds(smoke);
 
         // Load texture buffer
@@ -281,8 +281,8 @@ class particle
 
   public:
     particle(const game::uniforms &uniforms)
-        : _vertex(memory_map::memory.get_file("data/shader/emitter.vertex"), GL_VERTEX_SHADER),
-          _fragment(memory_map::memory.get_file("data/shader/emitter.fragment"), GL_FRAGMENT_SHADER),
+        : _vertex(memory_map::memory->get_file("data/shader/emitter.vertex"), GL_VERTEX_SHADER),
+          _fragment(memory_map::memory->get_file("data/shader/emitter.fragment"), GL_FRAGMENT_SHADER),
           _prog(_vertex, _fragment),
           _index_location(load_program_index(uniforms)),
           _dds_id(load_textures()),

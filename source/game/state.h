@@ -220,6 +220,7 @@ class state
     }
     inline void toggle_wireframe()
     {
+#if !__EMSCRIPTEN__
         // Toggle wireframe mode
         _wireframe = !_wireframe;
         if (_wireframe)
@@ -230,6 +231,7 @@ class state
         {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
+#endif
     }
     inline bool toggle_pause()
     {
@@ -239,7 +241,7 @@ class state
     {
         return _user_input = !_user_input;
     }
-    inline void update(const min::vec3<float> &p, const std::pair<uint_fast16_t, uint_fast16_t> &c, const uint_fast16_t w, const uint_fast16_t h, const float speed, const float dt)
+    inline void update(const min::vec3<float> &p, const float speed, const float dt)
     {
         // Calculate position to move camera to
         const min::vec3<float> move = p + min::vec3<float>(0.0, 0.5, 0.0);
@@ -265,10 +267,8 @@ class state
             const unsigned frame_index = (_frame_count %= _frame_average)++;
 
             // Get the offset from screen center
-            const uint_fast16_t w2 = w / 2;
-            const uint_fast16_t h2 = h / 2;
-            const int_fast16_t dx = c.first - w2;
-            const int_fast16_t dy = c.second - h2;
+            int dx, dy;
+            SDL_GetRelativeMouseState(&dx, &dy);
             constexpr float sensitivity = 0.25;
             _x[frame_index] = dx * sensitivity;
             _y[frame_index] = dy * sensitivity;

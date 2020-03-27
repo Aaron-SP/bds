@@ -39,7 +39,7 @@ class sky
     inline GLuint load_sky_texture()
     {
         // Load texture
-        const min::mem_file &sky = memory_map::memory.get_file("data/texture/sky.dds");
+        const min::mem_file &sky = memory_map::memory->get_file("data/texture/sky.dds");
         min::dds tex(sky);
 
         // Load texture buffer
@@ -48,8 +48,8 @@ class sky
 
   public:
     sky(const game::uniforms &uniforms)
-        : _sv(memory_map::memory.get_file("data/shader/sky.vertex"), GL_VERTEX_SHADER),
-          _sf(memory_map::memory.get_file("data/shader/sky.fragment"), GL_FRAGMENT_SHADER),
+        : _sv(memory_map::memory->get_file("data/shader/sky.vertex"), GL_VERTEX_SHADER),
+          _sf(memory_map::memory->get_file("data/shader/sky.fragment"), GL_FRAGMENT_SHADER),
           _prog(_sv, _sf), _dds_id(load_sky_texture())
     {
         // Let this program use this uniform buffer
