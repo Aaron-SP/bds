@@ -84,7 +84,7 @@ ifeq ($(BUILD),web)
 	undefine STATIC
 	undefine DYNAMIC
 	DATALOCAL = ""
-	STATIC = --preload-file data
+	STATIC = --preload-file data --use-preload-cache
 	BIN_GAME := $(BIN_GAME).js
 	CXX = emcc
 	CXXFLAGS = -std=c++14 -pthread -s TOTAL_MEMORY=1073741824 -s DISABLE_DEPRECATED_FIND_EVENT_TARGET_BEHAVIOR=0 -s DISABLE_EXCEPTION_CATCHING=0 -s ASSERTIONS=2 -s WASM=1 -s USE_SDL=2 -s USE_FREETYPE=1 -s USE_VORBIS=1 -s USE_OGG=1 -s USE_WEBGL2=1 -s ALLOW_MEMORY_GROWTH=1 -s WASM_MEM_MAX=2GB
