@@ -318,7 +318,7 @@ class controls
         keyboard.register_keyup((*_keymap)[14], controls::key7_up, (void *)this);
         keyboard.register_keydown((*_keymap)[15], controls::key8_down, (void *)this);
         keyboard.register_keyup((*_keymap)[15], controls::key8_up, (void *)this);
-        keyboard.register_keydown((*_keymap)[16], controls::jump, (void *)this);
+        keyboard.register_keydown_per_frame((*_keymap)[16], controls::jump, (void *)this);
         keyboard.register_keydown((*_keymap)[17], controls::shift_down, (void *)this);
         keyboard.register_keyup((*_keymap)[17], controls::shift_up, (void *)this);
         keyboard.register_keydown((*_keymap)[18], controls::ui_extend, (void *)this);

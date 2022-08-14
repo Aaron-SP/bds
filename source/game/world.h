@@ -862,7 +862,7 @@ class world
         if (steps > 0)
         {
             // Friction Coefficient
-            const float friction = -10.0 / steps;
+            const float friction = -20.0 / steps;
             const float drop_friction = friction * 2.0;
 
             // Get player position and player level

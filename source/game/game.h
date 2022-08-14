@@ -451,6 +451,9 @@ class bds
         // If game is not paused update game state
         if (!_state.get_pause())
         {
+            // Clear the landed flag
+            player.clear_landed();
+
             // Update stat alerts
             update_alerts();
 
@@ -495,9 +498,6 @@ class bds
                 const min::vec3<float> &lv = player.land_velocity();
                 const float speed = std::abs(lv.y());
                 _sound.play_land(speed);
-
-                // Reset land flag
-                player.clear_landed();
             }
 
             // Update the character state

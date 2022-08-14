@@ -34,7 +34,7 @@ typedef min::physics<float, uint_fast16_t, uint_fast32_t, min::vec3, min::aabbox
 typedef min::tree<float, uint_fast8_t, uint_fast8_t, min::vec2, min::aabbox, min::aabbox> ui_tree;
 
 // Collision constants
-static constexpr float _grav_mag = 10.0;
+static constexpr float _grav_mag = 20.0;
 static constexpr size_t _physics_frames = 180;
 
 // Callbacks

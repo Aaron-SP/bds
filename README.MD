@@ -159,7 +159,7 @@ Any previous saves will be deleted upon resizing the game grid to avoid crashing
 - Example: 'bin/game -grid 36 -chunk 6' produce a grid of size 72x72x72 and chunks of size 6 x 6 x 6.
 
 #### -view flag
-The '-view' flag is an optional parameter for controlling how many chunks are viewable on the screen. The default is 5 and must be an odd number greater than one.
+The '-view' flag is an optional parameter for controlling how many chunks are viewable on the screen. The default is 13 and must be an odd number greater than one.
 - Example: 'bin/game -view 15' will render 7 chunks on each side of the player, (7 * 2) + 1 = 15.
 
 #### -width flag and -height flag

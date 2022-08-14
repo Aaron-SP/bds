@@ -62,7 +62,7 @@ class options
   public:
     options()
         : _chunk(8), _frames(60), _grid(64),
-          _mode(game_type::NORMAL), _slot(0), _view(5),
+          _mode(game_type::NORMAL), _slot(0), _view(13),
           _width(1024), _height(768),
           _map(key_map_type::QWERTY), _persist(true), _resize(true) {}
 

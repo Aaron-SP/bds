@@ -54,7 +54,8 @@ enum class target_id
 class target
 {
   private:
-    union target_value {
+    union target_value
+    {
         uint_fast16_t body_id;
         block_id atlas;
         target_value(const uint_fast16_t i) : body_id(i) {}
@@ -118,7 +119,6 @@ class player
   private:
     static constexpr float _air_threshold = 1.0;
     static constexpr float _fall_threshold = -1.0;
-    static constexpr float _grav_mag = 10.0;
     static constexpr float _project_dist = 1.59;
 
     physics *_sim;
@@ -236,24 +236,24 @@ class player
                 // Flag we just landed
                 _landed = true;
 
-                // Check for fall damage
-                const float speed = _land_vel.magnitude();
-                if (speed > 20.0)
+                // Check for fall damage, use vertical speed
+                const float speed = std::abs(_land_vel.y());
+                if (speed > 50.0)
                 {
                     // Lethal damage
-                    const float percent = speed * 0.05;
+                    const float percent = speed * 0.01;
                     _stats.consume_health(percent * _stats.get_max_health());
                 }
-                else if (speed > 10.0)
+                else if (speed > 30.0)
                 {
-                    const float percent = speed * 0.025;
+                    const float percent = speed * 0.005;
                     _stats.consume_health(percent * _stats.get_max_health());
                 }
             }
             else if (abs_v_y < 0.25)
             {
                 // Clamp Y velocity
-                body().set_linear_velocity(min::vec3<float>(v.x(), 0.0, v.z()));
+                velocity(min::vec3<float>(v.x(), 0.0, v.z()));
 
                 // Apply normal force at surface
                 const min::vec3<float> inv_g(0.0, _grav_mag, 0.0);
@@ -281,8 +281,18 @@ class player
                 // Consume energy
                 _stats.consume_jet();
 
+                // Get the planar forward direction
+                const min::vec3<float> dxz = min::vec3<float>(_forward.x(), 0.0, _forward.z()).normalize();
+
+                // Calculate velocity in the planar direction
+                const min::vec3<float> &v = velocity();
+                const float v_mag = (min::vec3<float>(v.x(), 0.0, v.z())).magnitude();
+
+                // Keep constant planar velocity
+                velocity(min::vec3<float>(dxz.x() * v_mag, v.y(), dxz.z() * v_mag));
+
                 // Apply force to player body
-                force(min::vec3<float>(0.0, 11.0, 0.0));
+                force(min::vec3<float>(0.0, _grav_mag * 1.5, 0.0));
             }
             else
             {
@@ -295,16 +305,20 @@ class player
             const min::vec3<float> &vel = velocity();
             const min::vec3<float> xz(vel.x(), 0.0, vel.z());
 
-            // If we are in speed mode
-            if (_skills.is_speed_mode())
+            // If not airborn
+            if (_jump_count == 0 && !_airborn)
             {
-                // Add reduced friction force opposing lateral motion
-                force(xz * friction * 0.5);
-            }
-            else
-            {
-                // Add friction force opposing lateral motion
-                force(xz * friction);
+                // If we are in speed mode
+                if (_skills.is_speed_mode())
+                {
+                    // Add reduced friction force opposing lateral motion
+                    force(xz * friction * 0.5);
+                }
+                else
+                {
+                    // Add friction force opposing lateral motion
+                    force(xz * friction);
+                }
             }
         }
     }
@@ -505,12 +519,11 @@ class player
             // Consume energy
             _stats.consume_dynamics();
 
-            // Get the current position and set y movement to zero
-            const min::vec3<float> xz(_forward.x(), 0.0, _forward.z());
-            const min::vec3<float> dxz = min::vec3<float>(xz).normalize();
+            // Get the current forward direction
+            const min::vec3<float> dir = _forward;
 
-            // Add force to the player body
-            force(dxz * 3000.0);
+            // Add force to the player body in forward direction
+            force(dir * 5000.0);
 
             // Play the thrust sound
             _sound->play_thrust();
@@ -531,9 +544,9 @@ class player
                 _jump_count++;
 
                 // Add force to the player body
-                force(min::vec3<float>(0.0, 900.0, 0.0));
+                force(min::vec3<float>(0.0, 1250.0, 0.0));
             }
-            else if (_jump_count == 1 && _stats.can_consume_dynamics())
+            else if (_jump_count == 1 && _falling && _stats.can_consume_dynamics())
             {
                 // Reset land info
                 reset_land_info();
@@ -544,8 +557,8 @@ class player
                 // Consume energy
                 _stats.consume_dynamics();
 
-                // Add force to the player body
-                force(min::vec3<float>(0.0, 900.0, 0.0));
+                // Add force to the player body in vertical direction
+                force(min::vec3<float>(0.0, 3000.0, 0.0));
 
                 // Play the thrust sound
                 _sound->play_thrust();
@@ -568,17 +581,44 @@ class player
     {
         return _land_vel;
     }
-    inline void move(const min::vec3<float> &vel)
+    inline void move(const min::vec3<float> &input)
     {
         // If not hooked
         if (!_hooked && !_jet)
         {
             // Get the current position and set y movement to zero
-            const min::vec3<float> xz(vel.x(), 0.0, vel.z());
+            const min::vec3<float> xz(input.x(), 0.0, input.z());
             const min::vec3<float> dxz = min::vec3<float>(xz).normalize();
 
-            // Add force to player body
-            force(dxz * 30.0);
+            // Allow changing direction when bunny hopping
+            if (_landed)
+            {
+                // Change velocity to current direction
+                const min::vec3<float> &v = velocity();
+                const float v_mag = v.magnitude();
+                velocity(min::vec3<float>(dxz.x() * v_mag, v.y(), dxz.z() * v_mag));
+
+                // Add some force for bunny hop surfing
+                force(dxz * 50.0);
+            }
+            // Add force to player body if not airborn
+            else if (_jump_count == 0 && !_airborn)
+            {
+                force(dxz * 50.0);
+            }
+            else
+            {
+                // If the player is barely moving in XZ plane
+                const min::vec3<float> &v = velocity();
+                const min::vec3<float> vxz(v.x(), 0.0, v.z());
+                const float v_mag = vxz.magnitude();
+
+                // Add just enough force to get over a block if moving in a jump
+                if (v_mag < 1.0)
+                {
+                    force(dxz * 5.0);
+                }
+            }
         }
     }
     inline play_mode get_mode() const
@@ -833,7 +873,7 @@ class player
     inline void update(min::camera<float> &cam)
     {
         // Cache the forward vector
-        _forward = cam.get_forward();
+        _forward = min::vec3<float>(cam.get_forward()).normalize();
 
         // Calculate new point to add
         _project = cam.project_point(_project_dist);
