@@ -99,7 +99,7 @@ class stats
         constexpr float C = 75.0;
         const float x = dynamism();
         const float k = B / C;
-        return 1.1 - calc_state_scale(A, k, x);
+        return 1.11 - calc_state_scale(A, k, x);
     }
     inline float calc_damage_reduc() const
     {
