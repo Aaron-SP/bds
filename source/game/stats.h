@@ -87,35 +87,35 @@ class stats
     {
         constexpr float A = 20.0;
         constexpr float B = 1.0;
-        constexpr float C = 75000.0;
-        const float x = power() + _equipped.primary();
+        constexpr float C = 3000.0;
+        const float x = power();
         const float k = B / C;
         return 1.0 + calc_state_scale(A, k, x);
     }
     inline float calc_dynamics_consume() const
     {
-        constexpr float A = 1.9;
+        constexpr float A = 0.9;
         constexpr float B = 1.0;
-        constexpr float C = 1250.0;
-        const float x = dynamism() + _equipped.secondary();
+        constexpr float C = 150.0;
+        const float x = dynamism();
         const float k = B / C;
-        return 2.0 - calc_state_scale(A, k, x);
+        return 1.1 - calc_state_scale(A, k, x);
     }
     inline float calc_damage_reduc() const
     {
-        constexpr float A = 0.95;
+        constexpr float A = 2.0;
         constexpr float B = 1.0;
-        constexpr float C = 5000.0;
-        const float x = tenacity() + _equipped.primary();
+        constexpr float C = 1000.0;
+        const float x = tenacity();
         const float k = B / C;
         return calc_state_scale(A, k, x);
     }
     inline float calc_cooldown_reduc() const
     {
-        constexpr float A = 0.9;
+        constexpr float A = 1.0;
         constexpr float B = 1.0;
-        constexpr float C = 2500.0;
-        const float x = cooldown() + _equipped.secondary();
+        constexpr float C = 150.0;
+        const float x = cooldown();
         const float k = B / C;
         return calc_state_scale(A, k, x);
     }
@@ -123,8 +123,8 @@ class stats
     {
         constexpr float A = 40.0 * _per_second;
         constexpr float B = 1.0;
-        constexpr float C = 2500.0;
-        const float x = regen() + _equipped.secondary();
+        constexpr float C = 250.0;
+        const float x = regen();
         const float k = B / C;
         return 0.01 + calc_state_scale(A, k, x);
     }
@@ -132,8 +132,8 @@ class stats
     {
         constexpr float A = 20.0 * _per_second;
         constexpr float B = 1.0;
-        constexpr float C = 2500.0;
-        const float x = regen() + _equipped.secondary();
+        constexpr float C = 250.0;
+        const float x = regen();
         const float k = B / C;
         return 0.01 + calc_state_scale(A, k, x);
     }
@@ -202,11 +202,11 @@ class stats
     }
     inline float get_beam_cost() const
     {
-        return get_damage_mult() * _beam_cost;
+        return _beam_cost;
     }
     inline float get_charge_cost() const
     {
-        return get_damage_mult() * _charge_cost;
+        return _charge_cost;
     }
     inline float get_grapple_cost() const
     {
@@ -214,7 +214,7 @@ class stats
     }
     inline float get_grenade_cost() const
     {
-        return get_damage_mult() * _grenade_cost;
+        return _grenade_cost;
     }
     inline float get_jet_cost() const
     {
@@ -230,7 +230,7 @@ class stats
     }
     inline float get_missile_cost() const
     {
-        return get_damage_mult() * _missile_cost;
+        return _missile_cost;
     }
     inline float get_portal_cost() const
     {
@@ -238,7 +238,7 @@ class stats
     }
     inline float get_scatter_cost() const
     {
-        return get_damage_mult() * _scatter_cost;
+        return _scatter_cost;
     }
     inline float get_dynamics_cost() const
     {

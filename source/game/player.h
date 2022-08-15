@@ -523,7 +523,7 @@ class player
             const min::vec3<float> dir = _forward;
 
             // Add force to the player body in forward direction
-            force(dir * 5000.0);
+            force(dir * 2000.0);
 
             // Play the thrust sound
             _sound->play_thrust();

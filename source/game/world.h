@@ -944,7 +944,7 @@ class world
           _explosives(_simulation, _instance),
           _missiles(_simulation, particles, _instance, s),
           _invalid_str("Invalid"),
-          _crit_dist(0.5, 2.0),
+          _crit_dist(1.0, 2.0),
           _drop_dist(0, 80),
           _drop_off_dist(-0.5, 0.5),
           _ex_mult(0.1, 3.0),
