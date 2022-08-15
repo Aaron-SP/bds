@@ -87,7 +87,7 @@ class stats
     {
         constexpr float A = 20.0;
         constexpr float B = 1.0;
-        constexpr float C = 3000.0;
+        constexpr float C = 2000.0;
         const float x = power();
         const float k = B / C;
         return 1.0 + calc_state_scale(A, k, x);
@@ -96,7 +96,7 @@ class stats
     {
         constexpr float A = 0.9;
         constexpr float B = 1.0;
-        constexpr float C = 150.0;
+        constexpr float C = 75.0;
         const float x = dynamism();
         const float k = B / C;
         return 1.1 - calc_state_scale(A, k, x);
@@ -105,7 +105,7 @@ class stats
     {
         constexpr float A = 2.0;
         constexpr float B = 1.0;
-        constexpr float C = 1000.0;
+        constexpr float C = 500.0;
         const float x = tenacity();
         const float k = B / C;
         return calc_state_scale(A, k, x);
@@ -114,7 +114,7 @@ class stats
     {
         constexpr float A = 1.0;
         constexpr float B = 1.0;
-        constexpr float C = 150.0;
+        constexpr float C = 75.0;
         const float x = cooldown();
         const float k = B / C;
         return calc_state_scale(A, k, x);
