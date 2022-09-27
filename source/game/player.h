@@ -544,7 +544,7 @@ class player
                 _jump_count++;
 
                 // Add force to the player body
-                force(min::vec3<float>(0.0, 1250.0, 0.0));
+                force(min::vec3<float>(0.0, 1500.0, 0.0));
             }
             else if (_jump_count == 1 && _falling && _stats.can_consume_dynamics())
             {
