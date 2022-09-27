@@ -88,7 +88,7 @@ class ui_overlay
           _drone("Space pirates have invaded your planet!"),
           _drone_kill("Space pirates pillaged all your belongings!"),
           _dynamics("Thrusters are now online!"),
-          _dynamics_unlock("You must need more Dynamism to use this!"),
+          _dynamics_unlock("You need more Dynamism to use this!"),
           _health("Low Health!"),
           _inside("Can't place block inside player!"),
           _intro("You awaken in an unfamiliar, mysterious place."),
